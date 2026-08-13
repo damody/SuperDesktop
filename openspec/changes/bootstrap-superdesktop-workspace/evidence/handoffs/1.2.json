@@ -4,7 +4,7 @@
   "producer": "Workspace/Build owner",
   "consumer": "bootstrap-superdesktop-workspace/2.1",
   "base_revision": "025ca4e60ed3fb0c8b9da7b6cf7c796a8a04f3e1",
-  "result_revision": null,
+  "result_revision": "9b0fa273ee7718a4276632eaf197f25a95523387",
   "ownership_diff": [
     ".cargo/config.toml",
     "Cargo.lock",
@@ -69,6 +69,6 @@
     {"id": "A-W1-1.2-003", "classification": "A", "disposition": "The architecture checker now skips absent forbidden-substring policy entries instead of treating null as a wildcard; its behavior matches the allowlist contract."},
     {"id": "A-W1-1.2-004", "classification": "A", "disposition": "Primary corrected the generated dependency manifest path from cargo/config.toml to .cargo/config.toml and revalidated all manifest inputs before acceptance."}
   ],
-  "reviewer": null,
-  "accepted_revision": null
+  "reviewer": "Primary integrator /root",
+  "accepted_revision": "9b0fa273ee7718a4276632eaf197f25a95523387"
 }
