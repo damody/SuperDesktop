@@ -26,11 +26,11 @@
 **依賴：** 1.1。
 **Owner／Wave：** GPUI platform owner／Wave 2。
 **Gate／Evidence：** `G-ARCH`；`evidence/artifacts/1.2/`。
-**完成門檻：** HWND ownership、creation/destruction、message delivery 與 teardown 全數通過。
+**完成門檻：** 同一個 GPUI-owned borrowed HWND 的 identity、message delivery 與 teardown 全數通過；不得建立第二個測試 HWND或由 bridge 銷毀 HWND。1.2 只允許 capability preview，3.2 通過前不得供 production 或 Shell takeover 使用。
 
 **B-W2-1.2-001 architecture successor：** GPUI example 位於 `desktop-ui`，僅以 dev-dependency composition 使用 `platform-win/common`；禁止 `platform-win -> gpui`，並由 Primary 更新 architecture contract後才開始實作。
 
-- [ ] 1.2.1 建立最小 GPUI native-window spike 並輸出 owned HWND identity。
+- [ ] 1.2.1 建立最小 GPUI native-window spike，從 live `gpui::Window` 輸出 borrowed HWND、PID/thread/session、GPUI WindowId 與 generation identity；不得另建替代 HWND。
 - [ ] 1.2.2 驗證 DPI、display-change 與 activation 訊息可轉為 owned event。
 - [ ] 1.2.3 驗證視窗關閉後 callback 與 HWND 不再被使用。
 - [ ] 1.2.4 保存 headful trace、handles before/after 與 binary hash。
@@ -94,10 +94,10 @@
 **依賴：** 1.2。
 **Owner／Wave：** Platform safety owner／Wave 2。
 **Gate／Evidence：** `G-SAFETY`；`evidence/artifacts/3.2/`。
-**完成門檻：** Panic 轉成 typed fatal event，double callback/shutdown race 無 UB、double-close 或 resource leak。
+**完成門檻：** SuperDesktop-owned callback與 pinned `gpui_windows` 主 WndProc 的真實 public callback path 均不得讓 panic 穿越 ABI；Panic 轉成 typed fatal event，backend HWND terminal、GPUI window-closed terminal、double callback/shutdown race 無 UB、double-close 或 resource leak。未通過即維持 preview-only並阻擋 production/Shell 使用。
 
 - [ ] 3.2.1 實作共用 `extern system` catch-unwind wrapper spike。
-- [ ] 3.2.2 注入 callback panic 並驗證 typed fatal event。
+- [ ] 3.2.2 由真實 public GPUI callback path 對 pinned `gpui_windows` 主 WndProc 注入 callback panic並驗證 typed fatal event；不得以只測外層 subclass 取代。
 - [ ] 3.2.3 執行 double callback 與 shutdown-race 測試。
 - [ ] 3.2.4 保存 ABI signature、handle lifecycle 與 panic evidence。
 

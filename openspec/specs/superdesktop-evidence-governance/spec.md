@@ -26,6 +26,10 @@ Evidence record schema 與 coverage manifest schema SHALL 由支援 schema 所�
 - **WHEN** task 被勾選但 index 無有效紀錄
 - **THEN** validator 失敗且 task 必須重開
 
+#### Scenario: 尚未完成的 mandatory leaf 已先列入 coverage
+- **WHEN** mandatory task 尚未勾選且尚無 passed record
+- **THEN** validator 接受其規劃 coverage，但該 task 不得視為完成；一旦勾選就必須有相同 coverage 的有效 passed evidence
+
 ### Requirement: Mandatory leaf 不得以 N/A 或無效 replacement 規避
 系統 MUST 拒絕 mandatory `not-applicable`，以及 dangling、cyclic、非 mandatory、coverage 不同或尚未 passed 的 superseded replacement。
 
@@ -67,4 +71,3 @@ Adjustment validator SHALL 驗證 append-only supersession graph 的 identity �
 #### Scenario: Adjustment successor 未完整取代 predecessor
 - **WHEN** successor 不存在、形成循環、未 supersede 所有 legacy adjustment，或未完整涵蓋 predecessor effective stale set
 - **THEN** validator MUST 拒絕 lineage 並保持所有相關 replacement 無效
-

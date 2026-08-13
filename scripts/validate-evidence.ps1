@@ -30,6 +30,14 @@ if (-not (Test-Path $engine)) {
 }
 Invoke-Engine $coverageSchemaPath $coveragePath 'JSON_SCHEMA_COVERAGE_INVALID' $coveragePath
 $coverage = Get-Content -Raw $coveragePath | ConvertFrom-Json
+$tasksPath = Join-Path $root 'tasks.md'
+Need (Test-Path -LiteralPath $tasksPath -PathType Leaf) 'TASKS_FILE_MISSING' $tasksPath
+$checkedTaskIds = @{}
+foreach ($line in Get-Content -LiteralPath $tasksPath) {
+  if ($line -match '^\s*- \[[xX]\]\s+([0-9]+\.[0-9]+\.[0-9]+)\b') {
+    $checkedTaskIds["$Change/$($matches[1])"] = $true
+  }
+}
 $records = @(Get-Content $indexPath | Where-Object { $_ } | ForEach-Object { $_ | ConvertFrom-Json })
 $adjustments = @(Get-Content $adjustmentPath | Where-Object { $_ } | ForEach-Object { $_ | ConvertFrom-Json })
 $effectiveStale = @{}
@@ -50,7 +58,7 @@ foreach ($record in $records) {
   $by[$id] = $record
 }
 foreach ($task in @($coverage.tasks)) {
-  if (-not $task.mandatory) { continue }
+  if (-not $task.mandatory -or -not $checkedTaskIds.ContainsKey($task.task_id)) { continue }
   Need (@($records | Where-Object { $_.schema_version -eq '2.0.0' -and $_.task_id -eq $task.task_id -and $_.status -eq 'passed' -and -not $effectiveStale.ContainsKey((Id $_)) }).Count -gt 0) 'MANDATORY_WITHOUT_SCHEMA_COMPLETE_REPLACEMENT' $task.task_id
 }
 foreach ($sourceId in $effectiveStale.Keys) {

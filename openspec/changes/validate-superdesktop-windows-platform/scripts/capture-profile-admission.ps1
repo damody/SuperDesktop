@@ -1,20 +1,21 @@
 [CmdletBinding()]
 param(
     [string]$WorkspaceRoot,
-    [string]$OutputPath
+    [string]$OutputPath,
+    [string]$ProbePath
 )
 
 $ErrorActionPreference = 'Stop'
 if (-not $WorkspaceRoot) { $WorkspaceRoot = (Resolve-Path (Join-Path $PSScriptRoot '../../../..')).Path }
 if (-not $OutputPath) { $OutputPath = Join-Path $WorkspaceRoot 'openspec/changes/validate-superdesktop-windows-platform/evidence/artifacts/1.1/admission-zero-mutation-trace.json' }
 
-$probe = Join-Path $WorkspaceRoot 'openspec/changes/validate-superdesktop-windows-platform/evidence/artifacts/1.1/bin/capability_profile.exe'
-$archiveVerifier = Join-Path $WorkspaceRoot 'scripts/verify-archived-bootstrap-contract.ps1'
+$probe = if($ProbePath){$ProbePath}else{Join-Path $WorkspaceRoot 'openspec/changes/validate-superdesktop-windows-platform/evidence/artifacts/1.1/bin/capability_profile.exe'}
+$currentSubstrateVerifier = Join-Path $PSScriptRoot 'verify-current-substrate-contract.ps1'
 $probeSource = Join-Path $WorkspaceRoot 'crates/platform-win/examples/capability_profile.rs'
 $allowlist = Join-Path $PSScriptRoot 'profile-allowlist.json'
 $profileValidator = Join-Path $PSScriptRoot 'validate-profile-snapshot.ps1'
 $programHandoff = Join-Path $WorkspaceRoot 'openspec/changes/build-superdesktop-shell-foundation/evidence/handoffs/2.1.json'
-foreach ($input in @($probe, $archiveVerifier, $probeSource, $allowlist, $profileValidator, $programHandoff)) { if (-not (Test-Path -LiteralPath $input -PathType Leaf)) { throw "PROFILE_INPUT_MISSING: $input" } }
+foreach ($input in @($probe, $currentSubstrateVerifier, $probeSource, $allowlist, $profileValidator, $programHandoff)) { if (-not (Test-Path -LiteralPath $input -PathType Leaf)) { throw "PROFILE_INPUT_MISSING: $input" } }
 . $profileValidator
 
 $signature = @'
@@ -52,8 +53,8 @@ function Get-StringSha256([string]$Value) {
     finally { $sha.Dispose() }
 }
 
-& powershell -NoProfile -ExecutionPolicy Bypass -File $archiveVerifier -WorkspaceRoot $WorkspaceRoot | Out-Null
-if ($LASTEXITCODE -ne 0) { throw 'ARCHIVE_CONTRACT_FAILED' }
+& powershell -NoProfile -ExecutionPolicy Bypass -File $currentSubstrateVerifier -WorkspaceRoot $WorkspaceRoot | Out-Null
+if ($LASTEXITCODE -ne 0) { throw 'CURRENT_SUBSTRATE_CONTRACT_FAILED' }
 $currentSessionId = (Get-Process -Id $PID).SessionId
 $programArchive = Get-Content -Raw -Encoding utf8 $programHandoff | ConvertFrom-Json
 if (-not $programArchive.archive_path -or -not $programArchive.archive_revision -or -not $programArchive.child_contract_sha256) { throw 'PROGRAM_ARCHIVE_HANDOFF_INVALID' }
@@ -72,7 +73,7 @@ $trace = [ordered]@{
     schema_version = '1.0.0'
     procedure = 'read-only profile admission probe; no AppBar/Hook/Explorer mutation APIs are invoked'
     inputs = [ordered]@{
-        archive_contract_verifier_sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $archiveVerifier).Hash
+        current_substrate_verifier_sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $currentSubstrateVerifier).Hash
         program_archive_handoff_sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $programHandoff).Hash
         program_archive_handoff_path = 'openspec/changes/build-superdesktop-shell-foundation/evidence/handoffs/2.1.json'
         archive_path = [string]$programArchive.archive_path

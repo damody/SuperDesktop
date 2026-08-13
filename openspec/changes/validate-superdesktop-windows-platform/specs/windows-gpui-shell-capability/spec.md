@@ -27,6 +27,14 @@
 ### Requirement: GPUI HWND、AppBar 與 Shell Hook 必須可逆
 系統 SHALL 驗證 native HWND/message bridge、AppBar reserve/update/remove/work-area restore 與 Shell Hook register/event/unregister。
 
+#### Scenario: Native GPUI HWND message bridge
+- **WHEN** 1.2 在 `App::open_window` callback 從 live `gpui::Window` 借用 Win32 HWND 並安裝 SuperDesktop-owned subclass
+- **THEN** trace MUST 證明該 HWND 的 PID、thread、session、GPUI WindowId 與 generation，DPI/display/activation raw message 轉成 owned event，且不得建立第二個替代 HWND或由 bridge 銷毀 GPUI-owned HWND
+
+#### Scenario: Native GPUI HWND terminal
+- **WHEN** GPUI window 關閉或 subclass teardown
+- **THEN** attach、closing、`WM_NCDESTROY`、GPUI `on_window_closed` 與 terminal 順序可判定，late callback 被 generation fence 拒絕，callback/state outstanding 為零，且 handle/USER/GDI 資源在明列 deadline 與 threshold 內回到 baseline
+
 #### Scenario: AppBar spike
 - **WHEN** spike 建立並移除測試 AppBar
 - **THEN** work area 在結束後與開始 snapshot 相同
@@ -49,9 +57,11 @@
 ### Requirement: Guardian Lease 與 FFI Boundary 必須安全
 系統 SHALL 驗證 inherited process handle/one-time channel、crash signal、callback `catch_unwind`、handle ownership 與 at-most-once cleanup。
 
+1.2 MUST 先凍結 SuperDesktop-owned subclass 的 no-unwind wrapper，但不得據此宣稱 pinned `gpui_windows` 主 WndProc 已安全。3.2 MUST 對 pinned backend 的真實 public GPUI callback 路徑注入 panic，只有在取得 typed fatal、backend HWND terminal、GPUI window-closed terminal 與資源清理證據後，才可解除 preview-only 限制或供 production/Shell 使用。
+
 #### Scenario: Callback panic
 - **WHEN** spike callback 注入 Rust panic
-- **THEN** unwind 不穿越 Win32 ABI，轉為 typed fatal result 並完整釋放資源
+- **THEN** unwind 不穿越任何 SuperDesktop-owned 或 pinned GPUI backend Win32 ABI，轉為 typed fatal result，停止 late user callback，並完整釋放 HWND、userdata、callback state 與資源
 
 #### Scenario: Safe Mode 或不支援 session
 - **WHEN** capability probe 判定 Safe Mode、非互動或不支援 session

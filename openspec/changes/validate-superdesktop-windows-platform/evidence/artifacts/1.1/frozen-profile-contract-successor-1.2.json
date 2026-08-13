@@ -1,0 +1,114 @@
+﻿{
+    "schema_version":  "1.0.0",
+    "contract":  "frozen-win11-explorerpatcher-profile-and-readonly-admission-probe",
+    "captured_at":  "2026-08-13T22:24:23.2404721Z",
+    "os_session_display_monitor":  {
+                                       "snapshot_path":  "evidence/artifacts/1.1/profile-snapshot.json",
+                                       "snapshot_sha256":  "7DD0EACF3F1E439AEC605A5B1CBB515927A4E2CC2357DADD9BA230613E91CFAE",
+                                       "values":  {
+                                                      "captured_at":  "2026-08-13T21:22:10.5142967Z",
+                                                      "os":  {
+                                                                 "caption":  "Microsoft Windows 11 專業版",
+                                                                 "version":  "10.0.26200",
+                                                                 "build":  "26200",
+                                                                 "ubr":  8875,
+                                                                 "build_lab":  "26100.1.amd64fre.ge_release.240331-1435"
+                                                             },
+                                                      "session":  {
+                                                                      "probe_process_session_id":  1
+                                                                  },
+                                                      "display_adapters":  [
+                                                                               {
+                                                                                   "name":  "AMD Radeon(TM) Graphics",
+                                                                                   "driver_version":  "32.0.13018.6",
+                                                                                   "pnp_device_id":  "PCI\\VEN_1002\u0026DEV_13C0\u0026SUBSYS_D0001458\u0026REV_C9\\4\u002616012499\u00260\u00260041",
+                                                                                   "video_mode":  null
+                                                                               },
+                                                                               {
+                                                                                   "name":  "NVIDIA GeForce RTX 5090",
+                                                                                   "driver_version":  "32.0.15.9636",
+                                                                                   "pnp_device_id":  "PCI\\VEN_10DE\u0026DEV_2B85\u0026SUBSYS_89EC1043\u0026REV_A1\\0CD99BFAC62DB04800",
+                                                                                   "video_mode":  "3840 x 2160 x 4294967296 色彩"
+                                                                               },
+                                                                               {
+                                                                                   "name":  "vorpX Virtual Display",
+                                                                                   "driver_version":  "15.55.44.204",
+                                                                                   "pnp_device_id":  "ROOT\\DISPLAY\\0000",
+                                                                                   "video_mode":  null
+                                                                               }
+                                                                           ],
+                                                      "monitors":  [
+                                                                       {
+                                                                           "instance_name":  "DISPLAY\\MSI3DC5\\5\u00261cd12157\u00260\u0026UID4352_0",
+                                                                           "manufacturer":  "MSI",
+                                                                           "product_code":  "3DC5",
+                                                                           "serial":  "16843009"
+                                                                       }
+                                                                   ]
+                                                  }
+                                   },
+    "explorerpatcher":  {
+                            "expected_version":  "26100.8457.70.3",
+                            "binaries":  [
+                                             {
+                                                 "path":  "C:\\Windows\\dxgi.dll",
+                                                 "length":  604672,
+                                                 "file_version":  "26100.8457.70.3",
+                                                 "product_version":  "26100.8457.70.3",
+                                                 "sha256":  "70A7D2CE085DC0DB96D00ABF351E5E316572801F5D43648E2AD47FD66BA174CC"
+                                             },
+                                             {
+                                                 "path":  "C:\\Program Files\\ExplorerPatcher\\ep_setup.exe",
+                                                 "length":  12237312,
+                                                 "file_version":  "26100.8457.70.3",
+                                                 "product_version":  "26100.8457.70.3",
+                                                 "sha256":  "8146DB4D3A87201FB80AD1D3712BA8F56883E9A0811758BD39F62D73A9F2C586"
+                                             },
+                                             {
+                                                 "path":  "C:\\Program Files\\ExplorerPatcher\\ExplorerPatcher.amd64.dll",
+                                                 "length":  604672,
+                                                 "file_version":  "26100.8457.70.3",
+                                                 "product_version":  "26100.8457.70.3",
+                                                 "sha256":  "2106313E78EF4EBE079FA648C1277A62794FE7B007389D92FBF6D0D23EF8FA37"
+                                             }
+                                         ],
+                            "settings_snapshot_path":  "evidence/artifacts/1.1/explorerpatcher-profile.json",
+                            "settings_snapshot_sha256":  "020E3E000A3A91B837923722A1081FADA78AF8518F1FBDF3F451878A3665BD6D",
+                            "allowlist_path":  "scripts/profile-allowlist.json",
+                            "allowlist_sha256":  "A1CD05C09056562B3EF72896E74399164F2819D4B2E55720057DA5188F4BDFFF"
+                        },
+    "reference_image":  {
+                            "path":  "evidence/artifacts/1.1/reference-taskbar.jpg",
+                            "sha256":  "48B5F990B9E155C5C2719D8F8B41D88ED4420A46C3B6018278511F9C349B387E"
+                        },
+    "build":  {
+                  "gpui_revision":  "8945e2981b9fd00ca887e042d8adb9acc241b168",
+                  "rust_toolchain_path":  "rust-toolchain.toml",
+                  "rust_toolchain_sha256":  "D9E0313DF779E891C9DB0BFA16F2F9D913D7C5707ABA2766684354694FB9ED01",
+                  "cargo_lock_path":  "Cargo.lock",
+                  "cargo_lock_sha256":  "1AC202574AA3404C648DDDB58E1BC0912B47A874A4851697AF2267BC5525F3D4",
+                  "probe_source_path":  "crates/platform-win/examples/capability_profile.rs",
+                  "probe_source_sha256":  "E9E8E53023D18BFF63A9195BC34ABFAF231BA213D209B4230F4A0FC0042A6EB6",
+                  "probe_binary_path":  "evidence/artifacts/1.1/bin/capability_profile-successor-1.2.exe",
+                  "probe_binary_sha256":  "D7CF490FF2EA021A2ADEA4C9C45F650A43A405625814F366AFC772871A56E635"
+              },
+    "current_substrate_contract":  {
+                                       "path":  "evidence/artifacts/1.1/current-substrate-inputs-successor-1.2.sha256",
+                                       "sha256":  "4603D121BFDFE9A0CEDFE376D25ADB107E00366B5E2230B4FF386A5628FCB896",
+                                       "verifier_path":  "scripts/verify-current-substrate-contract.ps1",
+                                       "verifier_sha256":  "7690F2ED92FF80AA0EEE897DC98CD4F7589FC027A6A6EE1C3F242674E72CE58C",
+                                       "predecessor_archive_contract_sha256":  "9C7B643D880EF4C7135F08D32222075D43428CBF1A50A53CBBFBA7405ED2622E"
+                                   },
+    "archive_contract":  {
+                             "program_handoff_path":  "openspec/changes/build-superdesktop-shell-foundation/evidence/handoffs/2.1.json",
+                             "program_handoff_sha256":  "6E7A429C54B3DF93019F2A719CD1DCFB00FE932E2DA5E15AF1A8C6F16EAD8A32",
+                             "archive_path":  "openspec/changes/archive/2026-08-13-bootstrap-superdesktop-workspace",
+                             "archive_revision":  "9f115980af3804829fc156029ae3b22382c7a146",
+                             "child_contract_sha256":  "9C7B643D880EF4C7135F08D32222075D43428CBF1A50A53CBBFBA7405ED2622E",
+                             "inputs_manifest":  "openspec/changes/archive/2026-08-13-bootstrap-superdesktop-workspace/evidence/artifacts/2.5/aggregate-contract-inputs.sha256"
+                         },
+    "admission_zero_mutation_trace":  {
+                                          "path":  "evidence/artifacts/1.1/admission-zero-mutation-trace-successor-1.2.json",
+                                          "sha256":  "1F42DF4F0C1882858A99792F608BBCB08C8AB0EE521F0047B45C62ECD0698A17"
+                                      }
+}
