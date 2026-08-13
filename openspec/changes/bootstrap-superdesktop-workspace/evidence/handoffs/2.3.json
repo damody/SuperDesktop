@@ -4,7 +4,7 @@
   "producer": "Workspace/Build owner",
   "consumer": "Wave 1 exit / Primary integrator",
   "base_revision": "ccd9e71a542b362b403e0363d1362ae824908296",
-  "result_revision": null,
+  "result_revision": "663edd1d373a5a9a65962908d19bf234e57f2f5a",
   "ownership_diff": [
     "fixtures/evidence-validator/**",
     "scripts/{validate-evidence.ps1,capture-workspace-2.3-evidence.ps1}",
@@ -46,6 +46,6 @@
     {"id":"A-W1-2.3-001","classification":"A","disposition":"Append-only identity is task_id#subcheck; stale replacements must preserve task coverage and pass before a checked mandatory leaf is accepted."},
     {"id":"A-W1-2.3-002","classification":"A","disposition":"Primary normalized logical workspace/change prefixes in the contract manifest to repository-relative paths and revalidated every input hash before acceptance."}
   ],
-  "reviewer":"Workspace/Build owner; Primary integrator Wave 1 exit acceptance pending",
-  "accepted_revision":null
+  "reviewer":"Workspace/Build owner; accepted by Primary integrator /root",
+  "accepted_revision":"663edd1d373a5a9a65962908d19bf234e57f2f5a"
 }
