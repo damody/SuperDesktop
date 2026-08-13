@@ -1,7 +1,7 @@
 ﻿{
     "schema_version":  "1.0.0",
     "contract":  "frozen-win11-explorerpatcher-profile-and-readonly-admission-probe",
-    "captured_at":  "2026-08-13T21:48:31.9808116Z",
+    "captured_at":  "2026-08-13T21:56:17.3622859Z",
     "os_session_display_monitor":  {
                                        "snapshot_path":  "evidence/artifacts/1.1/profile-snapshot.json",
                                        "snapshot_sha256":  "7DD0EACF3F1E439AEC605A5B1CBB515927A4E2CC2357DADD9BA230613E91CFAE",
@@ -102,6 +102,6 @@
                          },
     "admission_zero_mutation_trace":  {
                                           "path":  "evidence/artifacts/1.1/admission-zero-mutation-trace.json",
-                                          "sha256":  "6867D01819E6B6E5FF8EC3F177916DDC1539B442733CA35A39798288B280FD40"
+                                          "sha256":  "076AC5D658B7F6C5EBDDEA1CBF7119369FD13867C5D0E46661A3C34AE85DE915"
                                       }
 }

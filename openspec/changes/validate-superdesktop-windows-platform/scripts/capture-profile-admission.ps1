@@ -12,8 +12,10 @@ $probe = Join-Path $WorkspaceRoot 'openspec/changes/validate-superdesktop-window
 $archiveVerifier = Join-Path $WorkspaceRoot 'scripts/verify-archived-bootstrap-contract.ps1'
 $probeSource = Join-Path $WorkspaceRoot 'crates/platform-win/examples/capability_profile.rs'
 $allowlist = Join-Path $PSScriptRoot 'profile-allowlist.json'
+$profileValidator = Join-Path $PSScriptRoot 'validate-profile-snapshot.ps1'
 $programHandoff = Join-Path $WorkspaceRoot 'openspec/changes/build-superdesktop-shell-foundation/evidence/handoffs/2.1.json'
-foreach ($input in @($probe, $archiveVerifier, $probeSource, $allowlist, $programHandoff)) { if (-not (Test-Path -LiteralPath $input -PathType Leaf)) { throw "PROFILE_INPUT_MISSING: $input" } }
+foreach ($input in @($probe, $archiveVerifier, $probeSource, $allowlist, $profileValidator, $programHandoff)) { if (-not (Test-Path -LiteralPath $input -PathType Leaf)) { throw "PROFILE_INPUT_MISSING: $input" } }
+. $profileValidator
 
 $signature = @'
 using System;
@@ -44,21 +46,6 @@ function Get-ReadOnlySnapshot([int]$Sequence, [int]$ExpectedSessionId) {
     }
 }
 
-function Get-AllowlistedProfile {
-    $policy = Get-Content -Raw -Encoding utf8 $allowlist | ConvertFrom-Json
-    $result = [ordered]@{ schema_version=$policy.schema_version; allowlist_sha256=(Get-FileHash -Algorithm SHA256 -LiteralPath $allowlist).Hash; keys=[ordered]@{} }
-    foreach ($entry in $policy.keys.psobject.Properties) {
-        $key = $entry.Name; $rule = $entry.Value; $actual = [ordered]@{}
-        if (Test-Path -LiteralPath $key) { $item=Get-Item -LiteralPath $key; $properties=Get-ItemProperty -LiteralPath $key; foreach($name in $item.Property){$actual[$name]=[string]$properties.$name} } else { $actual=$null }
-        if ($null -eq $actual) { throw "PROFILE_KEY_ABSENT: $key" }
-        foreach($expected in $rule.expected.psobject.Properties){ if(-not $actual.Contains($expected.Name) -or $actual[$expected.Name] -ne [string]$expected.Value){throw "PROFILE_VALUE_DRIFT: $key::$($expected.Name)"} }
-        if ($rule.reject_unknown_values) { $unknown=@($actual.Keys | Where-Object { -not $rule.expected.psobject.Properties.Name.Contains($_) }); if($unknown.Count){throw "PROFILE_UNKNOWN_VALUE: $key::$($unknown -join ',')"} }
-        if ($rule.important_name_pattern) { $unknownImportant=@($actual.Keys | Where-Object { $_ -match $rule.important_name_pattern -and -not $rule.expected.psobject.Properties.Name.Contains($_) }); if($unknownImportant.Count){throw "PROFILE_UNKNOWN_IMPORTANT_VALUE: $key::$($unknownImportant -join ',')"} }
-        $result.keys[$key]=[ordered]@{values=$actual}
-    }
-    return $result
-}
-
 function Get-StringSha256([string]$Value) {
     $sha = [Security.Cryptography.SHA256]::Create()
     try { return ([BitConverter]::ToString($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($Value)))).Replace('-', '') }
@@ -71,7 +58,8 @@ $currentSessionId = (Get-Process -Id $PID).SessionId
 $programArchive = Get-Content -Raw -Encoding utf8 $programHandoff | ConvertFrom-Json
 if (-not $programArchive.archive_path -or -not $programArchive.archive_revision -or -not $programArchive.child_contract_sha256) { throw 'PROGRAM_ARCHIVE_HANDOFF_INVALID' }
 $before = Get-ReadOnlySnapshot 1 $currentSessionId
-$profile = Get-AllowlistedProfile
+$profile = Get-ProfileSnapshot -AllowlistPath $allowlist
+Assert-ProfileSnapshot -AllowlistPath $allowlist -Snapshot $profile
 $admissionCapturedAt = (Get-Date).ToUniversalTime().ToString('o')
 $probeResult = (& $probe | ConvertFrom-Json)
 $probeExit = $LASTEXITCODE

@@ -14,7 +14,7 @@
                },
     "before":  {
                    "sequence":  1,
-                   "captured_at":  "2026-08-13T21:48:31.5027934Z",
+                   "captured_at":  "2026-08-13T21:56:16.9116501Z",
                    "explorer":  [
                                     {
                                         "pid":  59672,
@@ -136,7 +136,7 @@
                 },
     "admission":  {
                       "sequence":  2,
-                      "captured_at":  "2026-08-13T21:48:31.6481111Z",
+                      "captured_at":  "2026-08-13T21:56:17.0733141Z",
                       "probe_exit_status":  0,
                       "result":  {
                                      "probe":  "capability-profile-read-only",
@@ -158,7 +158,7 @@
                   },
     "after":  {
                   "sequence":  3,
-                  "captured_at":  "2026-08-13T21:48:31.7297865Z",
+                  "captured_at":  "2026-08-13T21:56:17.0903752Z",
                   "explorer":  [
                                    {
                                        "pid":  59672,
