@@ -1,12 +1,12 @@
 {
   "change": "validate-superdesktop-windows-platform",
   "l2": "1.1",
-  "status": "evidence-complete-pending-primary-acceptance",
-  "completed_leaf_ids": [],
+  "status": "accepted",
+  "completed_leaf_ids": ["validate-superdesktop-windows-platform/1.1.1", "validate-superdesktop-windows-platform/1.1.2", "validate-superdesktop-windows-platform/1.1.3", "validate-superdesktop-windows-platform/1.1.4", "validate-superdesktop-windows-platform/1.1.5", "validate-superdesktop-windows-platform/1.1.6", "validate-superdesktop-windows-platform/1.1.7"],
   "producer": "Windows platform owner",
   "consumer": "validate-superdesktop-windows-platform/1.2",
   "base_revision": "db8be622e61f597001e3f99ec75183199b46c523",
-  "result_revision": "4cf74fd9db2db6edbfd56ecbcd949cd576aba987",
+  "result_revision": "eb9c71346e5d05ecf545926cdad71ef2a055f490",
   "ownership_diff": ["crates/platform-win/examples/capability_profile.rs", "openspec/changes/validate-superdesktop-windows-platform/evidence/artifacts/1.1/**", "openspec/changes/validate-superdesktop-windows-platform/evidence/{schema.json,coverage-schema.json,coverage.json,adjustments.jsonl,index.jsonl,handoffs/1.1.json}", "openspec/changes/validate-superdesktop-windows-platform/scripts/{capture-profile-admission.ps1,profile-allowlist.json,validate-profile-snapshot.ps1,test-profile-allowlist.ps1,write-profile-contract.ps1}", "openspec/changes/validate-superdesktop-windows-platform/tasks.md"],
   "commands": [
     {"command":"cargo test -p platform-win --example capability_profile --locked --offline","exit_status":0},
@@ -35,7 +35,7 @@
     {"path":"evidence/artifacts/1.1/bootstrap-archive-negatives.txt","sha256":"518EDFE2A1DFD972020CE49A4FA679067625B1B8795540F4296B799B4FB533C8"}
   ],
   "stale_replacement_lineage": [],
-  "reviewer": "Windows platform owner; preflight reviewer pending final acceptance",
-  "accepted_revision": null,
+  "reviewer": "Independent architecture reviewer: no P0/P1 at eb9c71346e5d05ecf545926cdad71ef2a055f490",
+  "accepted_revision": "eb9c71346e5d05ecf545926cdad71ef2a055f490",
   "risks": ["No AppBar, Hook, Explorer or work-area mutation occurred. Later 1.2+ mutation work remains gated by this trace and Primary acceptance."]
 }
