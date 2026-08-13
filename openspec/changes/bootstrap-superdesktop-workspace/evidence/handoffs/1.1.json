@@ -4,7 +4,7 @@
   "producer": "Workspace/Build owner",
   "consumer": "bootstrap-superdesktop-workspace/1.2",
   "base_revision": "b25c55750bf1e78767a25f243635e11b783b2ff3",
-  "result_revision": null,
+  "result_revision": "badd453872ef74086bb293de2e959b4ea8532139",
   "ownership_diff": [
     ".gitignore",
     "Cargo.toml",
@@ -69,8 +69,13 @@
       "id": "A-W1-1.1-002",
       "classification": "A",
       "disposition": "Cargo created the normal workspace target directory; root .gitignore excludes /target/. Runtime policy prevented recursive cleanup, so it is intentionally excluded from ownership diff and commit scope."
+    },
+    {
+      "id": "A-W1-1.1-003",
+      "classification": "A",
+      "disposition": "Primary normalized the contract hash manifest to one input per line, rehashed the summary and handoff, and independently verified all 21 input hashes. The generated Cargo.lock remains unaccepted and is owned by L2 1.2."
     }
   ],
-  "reviewer": null,
-  "accepted_revision": null
+  "reviewer": "Primary integrator /root",
+  "accepted_revision": "badd453872ef74086bb293de2e959b4ea8532139"
 }
