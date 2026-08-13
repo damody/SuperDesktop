@@ -1,0 +1,10 @@
+﻿command: powershell -NoProfile -ExecutionPolicy Bypass -File "$PSScriptRoot/verify-windows-identity.ps1" -WorkspaceRoot $WorkspaceRoot -Fixture 'fixtures/windows-identity/identity-collision.json'
+exit_status: 1
+output:
+IDENTITY_COLLISION: duplicate app_user_model_id 'com.superdesktop.shell'.
+At D:\SuperDesktop\SuperDesktop\scripts\verify-windows-identity.ps1:31 char:13
++             throw "IDENTITY_COLLISION: duplicate $field '$($duplicate ...
++             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (IDENTITY_COLLIS...desktop.shell'.:String) [], RuntimeException
+    + FullyQualifiedErrorId : IDENTITY_COLLISION: duplicate app_user_model_id 'com.superdesktop.shell'.
+ 

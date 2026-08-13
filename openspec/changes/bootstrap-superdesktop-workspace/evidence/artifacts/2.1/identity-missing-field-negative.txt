@@ -1,0 +1,10 @@
+﻿command: powershell -NoProfile -ExecutionPolicy Bypass -File "$PSScriptRoot/verify-windows-identity.ps1" -WorkspaceRoot $WorkspaceRoot -Fixture 'fixtures/windows-identity/identity-missing-field.json'
+exit_status: 1
+output:
+IDENTITY_MISSING_FIELD: guardian has no original_filename.
+At D:\SuperDesktop\SuperDesktop\scripts\verify-windows-identity.ps1:23 char:17
++ ...             throw "IDENTITY_MISSING_FIELD: $($record.name) has no $fi ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (IDENTITY_MISSIN...ginal_filename.:String) [], RuntimeException
+    + FullyQualifiedErrorId : IDENTITY_MISSING_FIELD: guardian has no original_filename.
+ 

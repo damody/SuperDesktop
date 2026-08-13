@@ -44,10 +44,10 @@
 **Gate／Evidence：** `G-ARCH`；`evidence/artifacts/2.1/`。
 **完成門檻：** App、guardian 與測試 binary identity 唯一、穩定且可機器驗證。
 
-- [ ] 2.1.1 定義 SuperDesktop app、guardian 與 test-support 的 binary identity。
-- [ ] 2.1.2 定義 AppUserModelID、版本與 Windows resource metadata。
-- [ ] 2.1.3 建立 identity collision 與缺欄位的負面測試。
-- [ ] 2.1.4 執行 identity verifier 並保存 binary metadata evidence。
+- [x] 2.1.1 定義 SuperDesktop app、guardian 與 test-support 的 binary identity。
+- [x] 2.1.2 定義 AppUserModelID、版本與 Windows resource metadata。
+- [x] 2.1.3 建立 identity collision 與缺欄位的負面測試。
+- [x] 2.1.4 執行 identity verifier 並保存 binary metadata evidence。
 
 ### 2.2 建立來源與授權邊界
 

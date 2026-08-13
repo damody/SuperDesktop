@@ -1,0 +1,8 @@
+﻿command: git diff --check
+exit_status: 0
+output:
+warning: in the working copy of 'crates/superdesktop-app/Cargo.toml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'crates/superdesktop-app/src/main.rs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'crates/superdesktop-guardian/Cargo.toml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'crates/superdesktop-guardian/src/main.rs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'crates/superdesktop-test-support/Cargo.toml', LF will be replaced by CRLF the next time Git touches it

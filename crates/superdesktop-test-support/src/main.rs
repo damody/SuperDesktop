@@ -1,4 +1,4 @@
-//! Composition-root placeholder. It deliberately starts no UI or Shell integration.
+//! Dedicated binary carrying a machine-verifiable test-support identity.
 
 #[cfg(not(windows))]
 compile_error!("SuperDesktop is supported only on Windows targets.");
@@ -6,6 +6,5 @@ compile_error!("SuperDesktop is supported only on Windows targets.");
 mod identity;
 
 fn main() {
-    // Wave 1 establishes only a buildable binary identity boundary.
     let _ = (identity::APP_USER_MODEL_ID, identity::ORIGINAL_FILENAME);
 }

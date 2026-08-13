@@ -1,0 +1,41 @@
+﻿command: powershell -NoProfile -ExecutionPolicy Bypass -File "$PSScriptRoot/verify-windows-identity.ps1" -WorkspaceRoot $WorkspaceRoot
+exit_status: 0
+output:
+[
+    {
+        "name":  "app",
+        "binary":  "D:\\SuperDesktop\\SuperDesktop\\target\\debug\\superdesktop-app.exe",
+        "app_user_model_id":  "com.superdesktop.shell",
+        "company_name":  "SuperDesktop",
+        "product_name":  "SuperDesktop",
+        "original_filename":  "SuperDesktop.exe",
+        "internal_name":  "superdesktop-app",
+        "file_version":  "0.1.0.0",
+        "product_version":  "0.1.0.0",
+        "icon_resource_size":  20
+    },
+    {
+        "name":  "guardian",
+        "binary":  "D:\\SuperDesktop\\SuperDesktop\\target\\debug\\superdesktop-guardian.exe",
+        "app_user_model_id":  "com.superdesktop.guardian",
+        "company_name":  "SuperDesktop",
+        "product_name":  "SuperDesktop",
+        "original_filename":  "SuperDesktopGuardian.exe",
+        "internal_name":  "superdesktop-guardian",
+        "file_version":  "0.1.0.0",
+        "product_version":  "0.1.0.0",
+        "icon_resource_size":  20
+    },
+    {
+        "name":  "test-support",
+        "binary":  "D:\\SuperDesktop\\SuperDesktop\\target\\debug\\superdesktop-test-support.exe",
+        "app_user_model_id":  "com.superdesktop.test-support",
+        "company_name":  "SuperDesktop",
+        "product_name":  "SuperDesktop",
+        "original_filename":  "SuperDesktopTestSupport.exe",
+        "internal_name":  "superdesktop-test-support",
+        "file_version":  "0.1.0.0",
+        "product_version":  "0.1.0.0",
+        "icon_resource_size":  20
+    }
+]

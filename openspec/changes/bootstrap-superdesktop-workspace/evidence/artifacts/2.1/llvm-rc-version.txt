@@ -1,0 +1,4 @@
+﻿command: llvm-rc.exe --version
+exit_status: 1
+output:
+Exactly one input file should be provided.

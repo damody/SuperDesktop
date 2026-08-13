@@ -1,0 +1,4 @@
+﻿command: cargo build --workspace --locked --offline
+exit_status: 0
+output:
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.26s

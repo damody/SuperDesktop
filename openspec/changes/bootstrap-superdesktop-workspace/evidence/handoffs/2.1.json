@@ -1,0 +1,61 @@
+{
+  "change": "bootstrap-superdesktop-workspace",
+  "l2": "2.1",
+  "producer": "Workspace/Build owner",
+  "consumer": "bootstrap-superdesktop-workspace/2.2",
+  "base_revision": "6ceb27c2",
+  "result_revision": null,
+  "ownership_diff": [
+    "crates/superdesktop-app/{Cargo.toml,build.rs,resources/**,src/identity.rs,src/main.rs}",
+    "crates/superdesktop-guardian/{Cargo.toml,build.rs,resources/**,src/identity.rs,src/main.rs}",
+    "crates/superdesktop-test-support/{Cargo.toml,build.rs,resources/**,src/identity.rs,src/main.rs}",
+    "fixtures/windows-identity/**",
+    "scripts/{verify-windows-identity.ps1,capture-workspace-2.1-evidence.ps1}",
+    "openspec/changes/bootstrap-superdesktop-workspace/evidence/artifacts/2.1/**",
+    "openspec/changes/bootstrap-superdesktop-workspace/evidence/handoffs/2.1.json",
+    "openspec/changes/bootstrap-superdesktop-workspace/tasks.md"
+  ],
+  "excluded_intermediates": [
+    "target/**",
+    "openspec/changes/bootstrap-superdesktop-workspace/evidence/artifacts/2.1/llvm-rc-version.txt"
+  ],
+  "commands": [
+    {"command": "cargo build --workspace --locked --offline", "exit_status": 0},
+    {"command": "powershell -File scripts/verify-windows-identity.ps1", "exit_status": 0},
+    {"command": "powershell -File scripts/verify-windows-identity.ps1 -Fixture fixtures/windows-identity/identity-collision.json", "exit_status": 1, "expected_exit_status": 1},
+    {"command": "powershell -File scripts/verify-windows-identity.ps1 -Fixture fixtures/windows-identity/identity-missing-field.json", "exit_status": 1, "expected_exit_status": 1},
+    {"command": "cargo test --workspace --locked --offline", "exit_status": 0},
+    {"command": "cargo fmt --all -- --check", "exit_status": 0},
+    {"command": "openspec validate bootstrap-superdesktop-workspace --strict", "exit_status": 0},
+    {"command": "git diff --check", "exit_status": 0}
+  ],
+  "gate_dispositions": [
+    {"gate": "G-ARCH", "status": "passed", "scope": "three binary identities, VERSIONINFO, icon resources, AppUserModelID RCDATA, and negative fixtures"}
+  ],
+  "contract_hash": {
+    "algorithm": "SHA-256",
+    "inputs_manifest": "evidence/artifacts/2.1/identity-contract-inputs.sha256",
+    "value": "650C91A2BFD2BB65E0C7EA8B1ED29792A126871788E01D49BE0815E4697F1C2A"
+  },
+  "evidence": [
+    {"path": "evidence/artifacts/2.1/diff-check.txt", "sha256": "E101CAAF6168DB1F6CDA8F85BC3FAA682EE8F88DF7F77593A04CF5373287A16F"},
+    {"path": "evidence/artifacts/2.1/format-check.txt", "sha256": "8C0EF5DFCDFF6DBBB206D7B984B2994F6E7E74F70D92AA70509029049617D04D"},
+    {"path": "evidence/artifacts/2.1/identity-binary-build.txt", "sha256": "CC74B3C5535E6FD9A76E62EBCA17FEEAFADAD31F0B62421116F201557F3E2AA2"},
+    {"path": "evidence/artifacts/2.1/identity-collision-negative.txt", "sha256": "B1E6131A7190D33BEDFC580776533AC11E2C55E2CC39FB887380BB4AED9C1F3F"},
+    {"path": "evidence/artifacts/2.1/identity-contract-inputs.sha256", "sha256": "650C91A2BFD2BB65E0C7EA8B1ED29792A126871788E01D49BE0815E4697F1C2A"},
+    {"path": "evidence/artifacts/2.1/identity-missing-field-negative.txt", "sha256": "18E02C43FBA4C9B6FB9CABA37CA0F06D784777A4344A7D23398037A9CFB47926"},
+    {"path": "evidence/artifacts/2.1/identity-verifier.json", "sha256": "F51C7CA7FC4F4E2C3AB294DE2DEE57A375A741D2BC255900D21567CC773FB3B5"},
+    {"path": "evidence/artifacts/2.1/llvm-rc-tool.txt", "sha256": "1CACD579C7E8427D8E697EF7E59A4E190FC7DB602B9DCE9E894DF80288C03C6A"},
+    {"path": "evidence/artifacts/2.1/strict-openspec-validation.txt", "sha256": "2C94308ADBCF05FBEFC60B000AC5427B937BBB0681B198930D5355C0E1D10E00"},
+    {"path": "evidence/artifacts/2.1/summary.md", "sha256": "058BA18145F540B900723A070807079FD7AB96B3F863E28226FA3B7470FE4072"},
+    {"path": "evidence/artifacts/2.1/workspace-test.txt", "sha256": "EC1FD75B92BF77B03A38B7C36066BCB0470ABEB1A58321C8960CF7B41E496AB0"}
+  ],
+  "stale_replacement_lineage": [
+    {"stale_artifact": "evidence/artifacts/2.1/llvm-rc-version.txt", "replacement_artifacts": ["evidence/artifacts/2.1/llvm-rc-tool.txt", "evidence/artifacts/2.1/identity-binary-build.txt"], "reason": "llvm-rc.exe has no --version switch; actual compilation is the authoritative tool proof."}
+  ],
+  "findings": [
+    {"id": "A-W1-2.1-001", "classification": "A", "disposition": "Use installed llvm-rc.exe in build scripts to compile VERSIONINFO, RCDATA AppUserModelID, and generated icon resources. No Cargo build dependency was added."}
+  ],
+  "reviewer": null,
+  "accepted_revision": null
+}
