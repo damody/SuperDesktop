@@ -49,11 +49,11 @@
 **Gate／Evidence：** `G-SHELL-TAKEOVER-CAPABILITY`；`evidence/artifacts/2.1/`。
 **完成門檻：** 正常、失敗注入與重複 teardown 後 work area、hook 與 handles 回到 baseline。
 
-- [ ] 2.1.1 實作單螢幕 AppBar register/query/remove spike。
-- [ ] 2.1.2 驗證 AppBar remove 後 work area 精確恢復。
-- [ ] 2.1.3 實作 Shell Hook register/unregister 與事件 trace。
-- [ ] 2.1.4 注入中途失敗並驗證冪等 teardown。
-- [ ] 2.1.5 保存每個 subcheck 的 before/after raw snapshot。
+- [x] 2.1.1 實作單螢幕 AppBar register/query/remove spike。
+- [x] 2.1.2 驗證 AppBar remove 後 work area 精確恢復。
+- [x] 2.1.3 實作 Shell Hook register/unregister 與事件 trace。
+- [x] 2.1.4 注入中途失敗並驗證冪等 teardown。
+- [x] 2.1.5 保存每個 subcheck 的 before/after raw snapshot。
 
 ### 2.2 驗證 Monitor、DPI 與 Start Host Probe
 

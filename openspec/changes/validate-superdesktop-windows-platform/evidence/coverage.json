@@ -114,6 +114,56 @@
                       "gates":  [
                                     "G-ARCH"
                                 ]
+                  },
+                  {
+                      "task_id":  "validate-superdesktop-windows-platform/2.1.1",
+                      "mandatory":  true,
+                      "capability_id":  "windows-gpui-shell-capability",
+                      "requirement_id":  "gpui-hwnd-appbar-shell-hook-capability",
+                      "scenario_id":  "appbar-spike",
+                      "gates":  [
+                                    "G-SHELL-TAKEOVER-CAPABILITY"
+                                ]
+                  },
+                  {
+                      "task_id":  "validate-superdesktop-windows-platform/2.1.2",
+                      "mandatory":  true,
+                      "capability_id":  "windows-gpui-shell-capability",
+                      "requirement_id":  "gpui-hwnd-appbar-shell-hook-capability",
+                      "scenario_id":  "appbar-spike",
+                      "gates":  [
+                                    "G-SHELL-TAKEOVER-CAPABILITY"
+                                ]
+                  },
+                  {
+                      "task_id":  "validate-superdesktop-windows-platform/2.1.3",
+                      "mandatory":  true,
+                      "capability_id":  "windows-gpui-shell-capability",
+                      "requirement_id":  "gpui-hwnd-appbar-shell-hook-capability",
+                      "scenario_id":  "hook-unregister",
+                      "gates":  [
+                                    "G-SHELL-TAKEOVER-CAPABILITY"
+                                ]
+                  },
+                  {
+                      "task_id":  "validate-superdesktop-windows-platform/2.1.4",
+                      "mandatory":  true,
+                      "capability_id":  "windows-gpui-shell-capability",
+                      "requirement_id":  "gpui-hwnd-appbar-shell-hook-capability",
+                      "scenario_id":  "appbar-spike",
+                      "gates":  [
+                                    "G-SHELL-TAKEOVER-CAPABILITY"
+                                ]
+                  },
+                  {
+                      "task_id":  "validate-superdesktop-windows-platform/2.1.5",
+                      "mandatory":  true,
+                      "capability_id":  "windows-gpui-shell-capability",
+                      "requirement_id":  "gpui-hwnd-appbar-shell-hook-capability",
+                      "scenario_id":  "appbar-spike",
+                      "gates":  [
+                                    "G-SHELL-TAKEOVER-CAPABILITY"
+                                ]
                   }
               ]
 }

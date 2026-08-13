@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0.0",
+  "work_package": "validate-superdesktop-windows-platform/2.1",
+  "status": "primary-accepted",
+  "base_revision": "ed0e855a",
+  "result_revision": "pending-implementation-commit",
+  "completed_global_task_ids": ["validate-superdesktop-windows-platform/2.1.1","validate-superdesktop-windows-platform/2.1.2","validate-superdesktop-windows-platform/2.1.3","validate-superdesktop-windows-platform/2.1.4","validate-superdesktop-windows-platform/2.1.5"],
+  "input_contract": {"substrate_manifest_sha256":"92D682BF8418B71B4C9807DB5C7D5C09C3767D0A380A23E5E1297CE1AED8004B","pre_mutation_admission_trace_sha256":"161F3E5B63E7E9B392FEE560E7D57C5D1603250B5DD45CDAC0B46E3DDDF266D3"},
+  "output_contract": {"trace_sha256":"16C60EB12BA42FF81415BC13131F3059F526CF984856DA730CB02FB5260D5D59","binary_sha256":"AD086FD59719A67AB4F17DE3338BFE0F2A91800A816D0BA89EEC6ADA8DAC03C5","runner_source_sha256":"C03D66CEAE8758B991B0A2AF93331EAC7CF616A19FCF525D45D4F15C1DD250B3","adapter_source_sha256":"8CDF7E0110931128503AAD1E64E50A7EF590FF4A39E46B1E5F3BADE6E8039A6C"},
+  "review": {"independent_disposition":"no-p0-p1","headful_repeated_by_reviewer":false},
+  "safety": {"controlled_only":true,"explorer_mutations":false,"shell_takeover":false}
+}
