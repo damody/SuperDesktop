@@ -1,0 +1,22 @@
+{
+  "recorded_at": "2026-08-14T02:05:26+08:00",
+  "reference_host": {
+    "os": "Microsoft Windows 11 Pro",
+    "version": "10.0.26200",
+    "build": "26200",
+    "physical_active_display_count": 1,
+    "primary_resolution": "3840x2160"
+  },
+  "windows_10_22h2": {
+    "status": "blocked",
+    "reason": "No Windows 10 22H2 x64 physical host or formal VM is currently available.",
+    "affected_wave": 6,
+    "not_applicable_allowed": false
+  },
+  "physical_mixed_dpi_dual_monitor": {
+    "status": "blocked",
+    "reason": "The current host exposes only one physical active display.",
+    "affected_wave": 6,
+    "not_applicable_allowed": false
+  }
+}

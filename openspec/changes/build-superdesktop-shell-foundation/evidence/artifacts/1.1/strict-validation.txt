@@ -1,0 +1,15 @@
+Command: openspec validate --strict --all
+Working directory: D:\SuperDesktop\SuperDesktop
+Recorded at: 2026-08-14T02:05:26+08:00
+Exit status: 0
+
+PASS change/add-superdesktop-shell-takeover-recovery
+PASS change/bootstrap-superdesktop-workspace
+PASS change/build-superdesktop-gpui-desktop
+PASS change/build-superdesktop-gpui-taskbar
+PASS change/build-superdesktop-shell-core
+PASS change/build-superdesktop-shell-foundation
+PASS change/integrate-superexplorer-process-bridge
+PASS change/validate-superdesktop-windows-platform
+PASS change/verify-superdesktop-m0
+Totals: 9 passed, 0 failed

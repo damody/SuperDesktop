@@ -2,6 +2,8 @@
 
 目前 `D:\SuperDesktop` 只有可供行為研究的舊 C++/Win32 PExplorer，尚無可維護、可驗證且以 Rust/GPUI 實作的 Windows 桌面環境。現在需要先建立 SuperDesktop 的 M0 基礎，使桌面、雙列工作列、SuperExplorer 整合及 Shell 異常復原形成可實際套用與驗收的產品骨架，再於後續 change 擴充完整 Windows 10 相容性。
 
+本 change 是 M0 program change，不應直接作為單一 implementation apply。它凍結跨 change 合約、依賴、blocking gate 與總驗收；程式碼由八個較小的 implementation/verification changes 交付。
+
 ## What Changes
 
 - 建立獨立 Windows-only Rust Cargo workspace，所有 SuperDesktop 擁有的可見介面皆由 GPUI 繪製，Win32/COM 僅位於不可見平台介面層。
@@ -10,8 +12,8 @@
 - 建立依參考圖設計的底部高密度雙列工作列，並支援一至三列、AppBar、多螢幕、視窗追蹤、群組、啟用、最小化、還原及釘選。
 - 建立 SuperExplorer 程序橋接；以既有 `EXPLORER_INITIAL_PATH` 合約開啟檔案系統資料夾，且在執行檔缺失或啟動失敗時提供可復原錯誤。
 - 建立版本化設定、原子寫入、損毀隔離、事件 overflow 對帳、隱私安全診斷與有序關閉。
-- 建立 Windows 10 22H2 參考驗證、Windows 11 可用性檢查、混合 DPI 雙螢幕、協助工具、在地化、效能、壓力與復原證據體系。
-- 明確延後完整開始功能表與搜尋、完整第三方通知區、跳躍清單、縮圖、桌面重新命名與拖放、虛擬桌面、登錄安裝與完整相容性強化；這些能力各自使用後續 OpenSpec change。
+- 建立凍結的 Windows 11 build 26200.8875 + ExplorerPatcher 26100.8457.70.3 UI/互動參考、Windows 10 22H2 相容性、虛擬/真實多螢幕、協助工具、在地化、效能、壓力與復原證據體系。
+- 明確延後完整開始功能表與搜尋、完整第三方通知區、跳躍清單、縮圖、桌面重新命名、桌面檔案拖放、虛擬桌面、登錄安裝與完整相容性強化；這些能力各自使用後續 OpenSpec change。M0 只保留對應的型別化 unavailable 邊界，不顯示尚未實作的操作。
 
 ## Capabilities
 
@@ -35,3 +37,6 @@
 - `D:\SuperExplorer` 維持獨立且不被本 change 修改；整合只透過已存在的程序與 `EXPLORER_INITIAL_PATH` 環境變數合約。
 - `D:\SuperDesktop\PExplorer` 只作行為與 API 研究來源，不複製或機械式翻譯 LGPL 程式碼。
 - Shell 模式可能影響目前使用者工作階段的桌面與工作區，因此所有接管、退出與 crash 路徑都受 blocking recovery gate 約束。
+- 執行順序為 `bootstrap-superdesktop-workspace` → `validate-superdesktop-windows-platform` → `build-superdesktop-shell-core` → 桌面/工作列/SuperExplorer 三個平行 change → `add-superdesktop-shell-takeover-recovery` → `verify-superdesktop-m0`。
+- `EXECUTION.md` 固定多代理 ownership、交接格式與 A/B/C 自主決策界線；A/B 級不需逐項詢問使用者，只有改變核准範圍、blocking gate、安全/權限邊界或需要新外部授權的 C 級事項才停下請示。
+- 目前開發機的 ExplorerPatcher UI 是 M0 reference profile；Windows 10 22H2 與真實 mixed-DPI 雙螢幕只作 release-candidate confirmation。虛擬顯示器可先完成自動化 topology gate，外部環境缺失不阻擋 production changes，但 final confirmation 保持 blocked。

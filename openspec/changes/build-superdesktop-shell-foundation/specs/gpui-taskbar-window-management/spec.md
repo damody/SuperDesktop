@@ -83,12 +83,19 @@
 - **THEN** 只有該狀態顯示 truthful unavailable，時鐘、工作按鈕與其他狀態仍可操作
 
 ### Requirement: 工作列必須固定提供 SuperExplorer 入口
-系統 SHALL 在每個主要工作列固定顯示可由 pointer、keyboard 與 accessibility action 操作的 SuperExplorer 入口；其啟動語意為「本機」，不得依賴目前已有 SuperExplorer 視窗才顯示。
+系統 SHALL 在每個主要工作列固定顯示可由 pointer、keyboard 與 accessibility action 操作的「SuperExplorer」入口；其啟動語意為應用程式預設位置，不得依賴目前已有 SuperExplorer 視窗才顯示，也不得標示為保證導覽至「本機」。
 
 #### Scenario: SuperExplorer 未執行
 - **WHEN** 工作列顯示且目前沒有 SuperExplorer 視窗
-- **THEN** 固定入口仍存在，啟動後透過 `explorer-bridge` 送出一次「本機」請求
+- **THEN** 固定入口仍存在，啟動後透過 `explorer-bridge` 送出一次無 initial-path 的 SuperExplorer 請求
 
 #### Scenario: SuperExplorer 啟動失敗
 - **WHEN** 使用者操作固定入口但 executable resolver 或 spawn 失敗
 - **THEN** 入口保持可操作，系統顯示規範的 GPUI 修復提示，且不靜默改用 Windows Explorer
+
+### Requirement: Reference Start 必須分模式驗證
+系統 SHALL 在凍結 ExplorerPatcher profile 分別驗證 preview 與 Shell mode 的 Start probe/invocation；Shell mode 結果是 takeover health 的必要輸入。
+
+#### Scenario: Reference Preview 與 Shell mode Start
+- **WHEN** 在凍結 ExplorerPatcher profile 分別以 preview 與 Shell mode 啟動 Start
+- **THEN** 兩種模式都必須保存獨立 probe/invocation 結果；Shell mode probe 失敗 SHALL 阻止 takeover

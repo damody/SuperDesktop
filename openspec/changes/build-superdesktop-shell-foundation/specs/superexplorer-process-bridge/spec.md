@@ -22,11 +22,11 @@
 - **WHEN** launch request 包含相對路徑、一般檔案或不存在的資料夾
 - **THEN** 系統在 spawn 前拒絕請求並回報 invalid-initial-directory
 
-### Requirement: 本機入口必須使用 SuperExplorer 的預設位置
-系統 SHALL 在啟動「本機」入口時建立 SuperExplorer 程序，且 child environment 不得設定 `EXPLORER_INITIAL_PATH`。
+### Requirement: SuperExplorer 入口必須使用應用程式預設位置
+系統 SHALL 在啟動「SuperExplorer」入口時建立 SuperExplorer 程序，且 child environment 不得設定 `EXPLORER_INITIAL_PATH`。系統 MUST NOT 把此結果標示為保證導覽至「本機」。
 
-#### Scenario: 啟動本機
-- **WHEN** 使用者從桌面或工作列啟動「本機」
+#### Scenario: 啟動 SuperExplorer 入口
+- **WHEN** 使用者從桌面或工作列啟動「SuperExplorer」
 - **THEN** 系統啟動 SuperExplorer 並讓它選擇自己的預設位置
 
 ### Requirement: 每個啟動請求必須恰好產生一個終端事件

@@ -6,7 +6,7 @@
 
 ## 1. 目的
 
-SuperDesktop 是使用 Rust 實作、僅支援 Windows 的桌面環境。它會重現 Windows 10 22H2 使用者可見的桌面 Shell，並以 `D:\SuperExplorer` 作為檔案總管。所有屬於產品的可見介面皆使用 GPUI 繪製。由於桌面註冊、AppBar、Shell Hook、COM/OLE、通知區相容性、螢幕拓撲及 DPI 事件無法脫離 Windows API 而可靠實作，因此這些功能會封裝於狹窄且不可見的 Windows 平台介面層。
+SuperDesktop 是使用 Rust 實作、僅支援 Windows 的桌面環境。它會重現 Windows 10 風格的使用者可見桌面 Shell，並以 `D:\SuperExplorer` 作為檔案總管。M0 的 UI/互動基準凍結為目前 Windows 11 build 26200.8875 加 ExplorerPatcher 26100.8457.70.3；工作列參考圖 SHA-256 為 `48B5F990B9E155C5C2719D8F8B41D88ED4420A46C3B6018278511F9C349B387E`。所有屬於產品的可見介面皆使用 GPUI 繪製。由於桌面註冊、AppBar、Shell Hook、COM/OLE、通知區相容性、螢幕拓撲及 DPI 事件無法脫離 Windows API 而可靠實作，因此這些功能會封裝於狹窄且不可見的 Windows 平台介面層。
 
 專案根目錄為 `D:\SuperDesktop\SuperDesktop`，並擁有獨立的 Cargo workspace 與 Git 儲存庫。`D:\SuperExplorer` 維持獨立建置，SuperDesktop 透過程序邊界與它整合。
 
@@ -38,7 +38,7 @@ M0 不會一次完成全部長期範圍。M0 的責任是建立正式產品架�
 
 `D:\SuperExplorer` 視為獨立建置的產品。SuperDesktop 不得依賴其未提交的工作樹、內部 crate 或 `vendor/gpui-ce` 路徑，以免兩個專案產生建置耦合，並保護使用者現有的 SuperExplorer 變更。
 
-SuperDesktop 會固定自己的 GPUI-CE revision。初期優先使用與 SuperExplorer 相同且已驗證的 revision，但兩個儲存庫分別管理 dependency lock 與升級時程。
+SuperDesktop 會固定自己的 GPUI-CE revision。M0 候選固定為 `https://github.com/damody/gpui-ce-explorer.git` commit `8945e2981b9fd00ca887e042d8adb9acc241b168` 的乾淨來源；不得依賴 `D:\SuperExplorer\vendor\gpui-ce` 目前的未提交 patch。兩個儲存庫分別管理 dependency lock 與升級時程。
 
 ## 4. 架構方案
 
@@ -104,7 +104,7 @@ M0 會為每個使用中的螢幕建立一個位於最底層的 GPUI 桌面表�
 - 依穩定項目識別、螢幕識別及 DPI-aware 邏輯座標保存圖示位置。
 - 監看檔案系統變更、合併重複事件，並在 watcher overflow 後以完整重新整理復原。
 
-開啟檔案時使用一般 Windows 關聯。開啟檔案系統資料夾時則透過 `explorer-bridge`。由於目前 SuperExplorer 的啟動合約只接受以 `EXPLORER_INITIAL_PATH` 傳入的絕對資料夾路徑，因此「本機」項目會在未設定初始檔案系統路徑的狀態下啟動 SuperExplorer。
+開啟檔案時使用一般 Windows 關聯。開啟檔案系統資料夾時則透過 `explorer-bridge`。由於目前 SuperExplorer 的啟動合約只接受以 `EXPLORER_INITIAL_PATH` 傳入的絕對資料夾路徑，M0 不得把未設定該變數的啟動宣稱為「本機」導覽；桌面與工作列只顯示「SuperExplorer」入口，讓 SuperExplorer 自行選擇預設位置。真正的「本機」synthetic root 導覽必須等版本化 IPC 或明確啟動合約完成後才能啟用。
 
 重新命名、原生右鍵選單、拖放、自動排列、貼齊格線、排序、重新整理命令及資源回收筒異動會在 M0 後的桌面相容性增量中完成。M0 必須預留型別化命令與狀態邊界，但不得提早顯示可操作卻尚未實作的控制項。
 
@@ -112,7 +112,7 @@ M0 會為每個使用中的螢幕建立一個位於最底層的 GPUI 桌面表�
 
 工作列固定於底部，並在 Shell 模式註冊為 Windows AppBar。預設為兩列緊湊配置，資訊密度依照使用者提供的參考圖；使用者可設定一、二或三列。架構從一開始就支援每螢幕工作列；初始驗收矩陣要求雙螢幕環境中的主要與次要工作列皆能運作。
 
-左側為開始按鈕。M0 會呼叫既有 Windows 開始體驗，而不繪製自訂開始功能表。在 Windows 10 參考平台上，僅當開始主機能力探測成功時才允許 Shell 接管；若之後呼叫失敗，應回報為可復原的降級狀態。在預覽模式或非參考 Windows 版本上，若開始主機不存在，按鈕可以顯示為具備正確協助工具語意的不可用狀態。中央區域顯示含應用程式圖示與省略標題的工作按鈕；藍色底線代表執行中工作或群組，作用中背景代表目前前景工作。右側包含溢出入口、核心系統狀態、時間、日期及通知數量。
+左側為開始按鈕。M0 會呼叫目前 ExplorerPatcher/Windows 提供的開始體驗，而不繪製自訂開始功能表。在凍結參考環境上，僅當開始主機能力探測成功時才允許 Shell 接管；若之後呼叫失敗，應回報為可復原的降級狀態。在其他相容環境上，若開始主機不存在，按鈕可以顯示為具備正確協助工具語意的不可用狀態。中央區域顯示含應用程式圖示與省略標題的工作按鈕；藍色底線代表執行中工作或群組，作用中背景代表目前前景工作。右側包含溢出入口、核心系統狀態、時間、日期及通知數量。
 
 M0 視窗行為包含：
 
@@ -134,7 +134,7 @@ M0 使用既有 SuperExplorer 啟動合約，不修改其目前含有未提交�
 - 啟動前必須確認設定的執行檔為確實存在的絕對執行檔路徑。
 - 尋找順序依次為：持久化使用者設定、開發產物 `D:\SuperExplorer\target\release\SuperExplorer.exe`、與 SuperDesktop 相鄰安裝的 `SuperExplorer.exe`。
 - 啟動檔案系統資料夾時，建立新的 SuperExplorer 程序，將 `EXPLORER_INITIAL_PATH` 設為確實存在的絕對資料夾，且不傳入不受支援的命令列參數。
-- 「本機」在未設定 `EXPLORER_INITIAL_PATH` 的情況下啟動 SuperExplorer。
+- 「SuperExplorer」入口在未設定 `EXPLORER_INITIAL_PATH` 的情況下啟動應用程式，且 UI 不得把結果標示為保證導覽至「本機」。
 - 每個啟動請求都有 correlation ID，且只會產生一個成功或失敗結果事件。
 - 執行檔缺失、無效或啟動失敗時，顯示 GPUI 復原提示並寫入診斷事件。SuperDesktop 不得在資料夾導覽時靜默改用 Windows Explorer。
 
@@ -174,6 +174,8 @@ M0 使用既有 SuperExplorer 啟動合約，不修改其目前含有未提交�
 
 Windows 10 視覺目標透過語意 token、幾何量測及參考擷取驗證。第三方圖示繪製、字型 rasterization 及 OS provider 像素屬於受控的外部變異。
 
+候選畫面產生前必須凍結視覺比較 contract：100% DPI 的幾何 anchor、工作列/列高與 hit target 容許 ±2 physical px，其他 DPI 依 scale 四捨五入；只有時間、日期、通知數與 fixture window title 可使用預先雜湊的固定矩形遮罩；遮罩外 SSIM 必須至少 0.95，控制 identity 與 state 必須精確相符。看到候選結果後修改容差、遮罩或演算法會使舊視覺證據失效並要求全數重跑。
+
 ## 11. 驗證策略
 
 ### 11.1 自動化測試
@@ -190,8 +192,8 @@ Windows 10 視覺目標透過語意 token、幾何量測及參考擷取驗證。
 
 ### 11.2 有畫面與人工測試矩陣
 
-- Windows 10 22H2 x64 為參考平台；Windows 11 相容性另行追蹤，且必須維持可用。
-- 單螢幕及混合 DPI 的雙螢幕配置。
+- Windows 11 build 26200.8875 + ExplorerPatcher 26100.8457.70.3 為 M0 UI/互動 reference profile；Windows 10 22H2 x64 為相容性目標。
+- 單螢幕為必要本機 gate；虛擬顯示器 topology 用於自動化多螢幕 gate，真實 mixed-DPI 雙螢幕為 release-candidate confirmation gate。
 - 淺色、深色及高對比主題。
 - 鍵盤、指標、觸控大小 hit target、IME 及 UI Automation 檢查。
 - 視窗事件風暴、標題與圖示頻繁變更、卡住的輔助程序、SuperExplorer 缺失、顯示器熱插拔、Explorer 重啟及 SuperDesktop crash 復原。
@@ -216,7 +218,7 @@ Windows 10 視覺目標透過語意 token、幾何量測及參考擷取驗證。
 5. 檔案系統資料夾依已驗證的 `EXPLORER_INITIAL_PATH` 合約啟動 SuperExplorer；SuperExplorer 缺失時顯示可復原的 GPUI 錯誤。
 6. 雙列工作列能追蹤、啟用、最小化、還原、群組及釘選真實應用程式視窗，且不會發生不穩定重排。
 7. 主要與次要工作列在混合 DPI 顯示器變更期間仍維持正確位置。
-8. 在 Windows 10 22H2 上，開始按鈕能在預覽與 Shell 工作階段呼叫 Windows 開始體驗；若必要能力探測失敗，必須拒絕 Shell 接管。
+8. 在凍結 ExplorerPatcher reference profile 上，開始按鈕能在預覽與 Shell 工作階段呼叫目前開始體驗；若必要能力探測失敗，必須拒絕 Shell 接管。
 9. 協助工具、在地化、視覺、生命週期、壓力及效能 gate 均通過並保存證據。
 10. 任何測試或復原程序都不得修改或刪除明確受控測試根目錄以外的資料。
 11. 相容性矩陣必須如實標示延後的 Windows 10 能力，不得把占位介面宣稱為已完成功能。
@@ -238,10 +240,27 @@ Windows 10 視覺目標透過語意 token、幾何量測及參考擷取驗證。
 
 - 所有產品可見介面使用 GPUI，只保留最小且不可見的 Win32 adapter。
 - 同時納入桌面與工作列，並優先重現使用者提供的雙列工作列參考圖。
-- Windows 10 22H2 是行為參考平台；Windows 11 是相容性目標。
+- Windows 10 風格是產品目標；目前 Windows 11 + ExplorerPatcher 配置是 M0 可重現的 UI/互動 reference profile，Windows 10 22H2 是相容性目標。
 - SuperDesktop 與 SuperExplorer 之間保留程序邊界。
 - M0 使用既有 `EXPLORER_INITIAL_PATH` 合約，不立即修改 SuperExplorer。
 - 預設使用預覽模式；只有明確指定時才進行交易式 Shell 接管。
 - 在任何工作階段層級 Shell 取代前，先加入獨立 Rust guardian。
 - PExplorer 只作為行為參考，不進行機械式原始碼移植。
 - 將完整相容性拆為可獨立規格化的增量，不在第一版宣稱完成全部 Windows 10 相容性。
+
+## 15. M0 OpenSpec 執行分解
+
+M0 不得作為單一巨型 apply 執行。`build-superdesktop-shell-foundation` 是 program change，只凍結跨 change 合約、依賴順序、blocking gate 與整體驗收。實作依序拆為：
+
+1. `bootstrap-superdesktop-workspace`
+2. `validate-superdesktop-windows-platform`
+3. `build-superdesktop-shell-core`
+4. `build-superdesktop-gpui-desktop`
+5. `build-superdesktop-gpui-taskbar`
+6. `integrate-superexplorer-process-bridge`
+7. `add-superdesktop-shell-takeover-recovery`
+8. `verify-superdesktop-m0`
+
+第 4、5、6 項可在第 2、3 項完成後平行進行；第 7 項必須等待桌面與工作列整合完成；第 8 項必須等待所有 production change 完成。
+
+目前開發機是 Windows 11 build 26200.8875，已安裝 ExplorerPatcher 26100.8457.70.3，且只有一個使用中螢幕。此環境可作主要 UI/互動 reference，並可使用虛擬顯示器驗證 topology 邏輯；Windows 10 22H2 相容性與真實 mixed-DPI 雙螢幕確認仍需外部環境。缺少外部環境時，只阻擋 release-candidate confirmation，不阻擋前面的實作 change，也不得把未執行的 confirmation 標為完成。

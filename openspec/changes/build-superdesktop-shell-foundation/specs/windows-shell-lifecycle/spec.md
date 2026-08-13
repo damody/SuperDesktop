@@ -19,7 +19,7 @@
 - **THEN** 系統不切換 Explorer 表面、撤銷已建立的 SuperDesktop 資源、保留可操作 Explorer，並記錄失敗階段
 
 #### Scenario: 必要開始主機能力缺失
-- **WHEN** Windows 10 22H2 上的開始主機能力探測失敗
+- **WHEN** 凍結 ExplorerPatcher reference profile 上的開始主機能力探測失敗
 - **THEN** 系統拒絕 Shell 接管並維持可操作 Explorer，而不把開始按鈕宣稱為可用
 
 ### Requirement: 正常關閉必須有序釋放外部資源
@@ -34,7 +34,7 @@
 - **THEN** 每個清理步驟保持冪等，不產生重複 AppBar、錯誤 work area 或額外 Explorer 程序
 
 ### Requirement: Guardian 必須復原異常終止
-系統 SHALL 由獨立 `superdesktop-guardian` 監看主程序 process handle 與不可偽造租約，並在接管後主程序異常終止時恢復可操作的 Explorer 工作階段。在 Windows 10 reference machine 的 10 次獨立 forced-crash run 中，每次都必須在主程序 handle 變為 signaled 的 monotonic timestamp T0 後 10 秒內恢復可接受 pointer/keyboard 輸入的 Explorer Shell 與正確 work area。
+系統 SHALL 由獨立 `superdesktop-guardian` 監看主程序 process handle 與不可偽造租約，並在接管後主程序異常終止時恢復可操作的 Explorer 工作階段。在凍結 ExplorerPatcher reference profile 的 10 次獨立 forced-crash run 中，每次都必須在主程序 handle 變為 signaled 的 monotonic timestamp T0 後 10 秒內恢復可接受 pointer/keyboard 輸入的 Explorer Shell 與正確 work area。
 
 #### Scenario: 主程序被強制終止
 - **WHEN** SuperDesktop 已完成 Shell 接管後被強制終止

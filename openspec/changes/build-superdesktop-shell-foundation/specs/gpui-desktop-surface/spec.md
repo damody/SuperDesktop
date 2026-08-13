@@ -56,6 +56,20 @@
 - **WHEN** Windows 沒有可用關聯或 association adapter 回報錯誤
 - **THEN** 系統顯示可用鍵盤與協助工具操作的 GPUI 錯誤/重試提示，且不把失敗標成已啟動
 
+### Requirement: 桌面必須固定顯示 truthful SuperExplorer 入口
+系統 SHALL 在每個桌面表面顯示 stable、keyboard/UIA 可操作的「SuperExplorer」固定入口；無 initial path 時不得標示為「本機」。
+
+#### Scenario: 啟動桌面固定入口
+- **WHEN** 使用者以 pointer、Enter 或 UIA invoke 固定入口
+- **THEN** 系統發送恰好一次 default bridge command，並依 exactly-once terminal 顯示 launched 或 repair state
+
+### Requirement: 延後的桌面操作不得提早暴露
+M0 MUST NOT 顯示或執行 rename、native context menu、delete/recycle、explicit refresh command 或 file-transfer drag/drop；系統 SHALL 只預留 typed unavailable 邊界。
+
+#### Scenario: 嘗試延後操作
+- **WHEN** 使用者觸發 F2、Delete、F5、context-menu gesture 或 file-transfer drag
+- **THEN** 系統不得修改檔案、不得顯示虛假成功，且桌面保持可操作
+
 ### Requirement: 桌面位置必須跨 DPI 與重啟持久化
 系統 SHALL 以螢幕 identity、Shell item identity、DPI-aware 邏輯座標與 layout revision 保存桌面項目位置。
 

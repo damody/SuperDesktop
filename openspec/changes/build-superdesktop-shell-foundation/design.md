@@ -2,7 +2,7 @@
 
 SuperDesktop 是全新 Windows-only Rust 專案。核准設計位於 `docs/superpowers/specs/2026-08-13-superdesktop-windows-10-shell-design.md`，本 change 只實作其中 M0：全 GPUI 桌面、預設雙列工作列、SuperExplorer 程序橋接、交易式 Shell 接管、guardian 復原，以及支撐後續 Windows 10 相容性工作的測試與證據架構。
 
-現有 `D:\SuperDesktop\PExplorer` 是 LGPL C++/Win32 參考實作，只能用於觀察行為與 API 流程。`D:\SuperExplorer` 已是大型 Rust/GPUI 專案且工作樹含有使用者變更，因此本 change 不修改也不以 path dependency 連結它。Windows 10 22H2 x64 是行為參考平台；Windows 11 必須維持可用，但不是 M0 的視覺相容性基準。
+現有 `D:\SuperDesktop\PExplorer` 是 LGPL C++/Win32 參考實作，只能用於觀察行為與 API 流程。`D:\SuperExplorer` 已是大型 Rust/GPUI 專案且工作樹含有使用者變更，因此本 change 不修改也不以 path dependency 連結它。M0 的 UI/互動基準凍結為 Windows 11 build 26200.8875 + ExplorerPatcher 26100.8457.70.3；參考圖 SHA-256 為 `48B5F990B9E155C5C2719D8F8B41D88ED4420A46C3B6018278511F9C349B387E`。Windows 10 22H2 x64 改為相容性目標。
 
 本 change 會影響目前使用者工作階段的桌面與工作區，因此 Shell 接管、復原、測試資料邊界與證據完整性是 blocking gate，而不是上線後才補的品質工作。
 
@@ -24,7 +24,7 @@ SuperDesktop 是全新 Windows-only Rust 專案。核准設計位於 `docs/super
 - 不重寫 Windows 核心、DWM、登入畫面、系統設定或內建應用程式。
 - 不複製或機械式翻譯 PExplorer 原始碼。
 - 不新增 SuperExplorer IPC，也不修改 SuperExplorer 的程式碼、建置或工作樹。
-- 不把 Windows 11 視為 Windows 10 像素相容性基準。
+- 不宣稱 ExplorerPatcher reference profile 等同原生 Windows 10 的每個未公開像素或內部行為。
 
 ## Decisions
 
@@ -52,9 +52,9 @@ workspace 建立 `superdesktop-app`、`shell-core`、`platform-win`、`desktop-u
 
 接管前失敗只清理 SuperDesktop 自己的資源。接管後異常由 guardian 執行 idempotent recovery：解除 AppBar、恢復 work area、顯示可用 Explorer 或在缺失時啟動 `explorer.exe`。M0 不修改登入 Shell 登錄值。
 
-**Blocking gate `G-SHELL-TAKEOVER`：** 未通過 Windows 10 真機的成功接管、每階段失敗注入、正常退出與重複復原測試前，不得宣稱 Shell 模式完成。
+**Blocking gate `G-SHELL-TAKEOVER`：** Wave 5 必須在凍結 Windows 11＋ExplorerPatcher reference profile 完成每階段失敗注入、正常退出與重複復原，並只產生 provisional disposition供 Wave 6 開始驗證；Windows 10 22H2 真機或等價正式 VM 另執行啟動、核心互動、正常退出與 forced-crash compatibility confirmation。兩者都通過後最終 gate 才可標為 passed並宣稱 M0 Shell 模式完成。
 
-**Blocking gate `G-GUARDIAN-RECOVERY`：** 以 guardian 所持主程序 handle 變成 signaled 的 monotonic timestamp 為 T0；在 Windows 10 reference machine 進行 10 次獨立 forced-crash run，每次都必須在 T0 後 10 秒內恢復可接受 pointer/keyboard 輸入的 Explorer Shell 與正確 work area，並產生唯一 terminal result。必須保存每次 T0、Explorer-ready timestamp、work-area snapshot 與程序 identity；任一 run 超時或失敗即使 gate 失敗，並禁止發行 Shell 模式。
+**Blocking gate `G-GUARDIAN-RECOVERY`：** 以 guardian 所持主程序 handle 變成 signaled 的 monotonic timestamp 為 T0；在凍結 ExplorerPatcher reference profile 進行 10 次獨立 forced-crash run，每次都必須在 T0 後 10 秒內恢復可接受 pointer/keyboard 輸入的 Explorer Shell 與正確 work area，並產生唯一 terminal result。必須保存每次 T0、Explorer-ready timestamp、work-area snapshot 與程序 identity；任一 run 超時或失敗即使 gate 失敗，並禁止發行 Shell 模式。
 
 Guardian 的控制依據不得來自可被替換的 journal 或 PATH 搜尋。主程序啟動 guardian 時必須以明確 handle inheritance list 傳入 process handle 與 one-time lease channel，並以 PID、process creation time、session ID、主程式 file identity 及 nonce fencing 綁定 owner。journal 只保存稽核資料，不能授權復原。啟動 Explorer 時使用由 Windows directory API 解析、canonicalize 並驗證為 Microsoft Windows Explorer 的絕對路徑，對程序建立 API 提供 explicit application name，限制 inherited handles，使用目前互動使用者 token 與受控 working directory/environment。錯誤 session、偽造/陳舊 lease、PATH/CWD substitution 或不符 file identity 的 target 必須拒絕。
 
@@ -76,7 +76,7 @@ M0 支援選取、Ctrl/Shift 複選、框選、鍵盤導覽、Enter/雙擊啟動
 
 ### 7. SuperExplorer 只使用既有程序合約
 
-resolver 順序為：使用者設定的絕對執行檔、`D:\SuperExplorer\target\release\SuperExplorer.exe`、與 SuperDesktop 相鄰的 `SuperExplorer.exe`。候選必須存在且為檔案。檔案系統資料夾必須是存在的絕對目錄，並以 child process environment 的 `EXPLORER_INITIAL_PATH` 傳入；不傳入 SuperExplorer 不支援的 CLI 參數。「本機」啟動時不設定該變數。
+resolver 順序為：使用者設定的絕對執行檔、`D:\SuperExplorer\target\release\SuperExplorer.exe`、與 SuperDesktop 相鄰的 `SuperExplorer.exe`。候選必須存在且為檔案。檔案系統資料夾必須是存在的絕對目錄，並以 child process environment 的 `EXPLORER_INITIAL_PATH` 傳入；不傳入 SuperExplorer 不支援的 CLI 參數。固定入口名稱為「SuperExplorer」，未設定該變數時不得宣稱已導覽至「本機」。
 
 每個 launch request 產生 correlation ID，並恰好收到一個 terminal event。缺失、無效或 spawn failure 會顯示 GPUI recovery prompt，且不得靜默 fallback 至 Windows Explorer。
 
@@ -92,15 +92,15 @@ Launch admission 從 dispatcher 接受 request 的 monotonic timestamp 起算，
 
 ### 9. 能力探測決定是否允許接管，不偽造成功
 
-Windows 10 22H2 Shell 模式在接管前探測 Windows Start host、AppBar、Shell Hook、monitor/DPI 及 guardian recovery prerequisites。必要能力缺失時拒絕接管並停留於可用 Explorer。預覽模式及非參考 Windows 版本可以將相依控制顯示為 accessibly unavailable，但不得宣稱該能力完成。
+凍結 ExplorerPatcher reference profile 的 Shell 模式在接管前探測目前 Start host、AppBar、Shell Hook、monitor/DPI 及 guardian recovery prerequisites。必要能力缺失時拒絕接管並停留於可用 Explorer。其他相容 profile 可以將相依控制顯示為 accessibly unavailable，但不得宣稱該能力完成。
 
-在 production implementation 前執行 blocking capability spike：以候選固定 GPUI-CE revision 建立最小 GPUI HWND、驗證 native HWND/message bridge、AppBar reserve/restore、per-monitor DPI/topology、Shell Hook、Windows 10 Start host probe/invocation 及 guardian process-handle lease。Spike 必須產生可重現 source revision、binary hash、OS build、raw result 與 resource snapshot；任一必要能力失敗時停止所有相依 work package，依 B 級修正設計/規格/任務或依 C 級取得框架/範圍變更核准。
+在 production implementation 前執行 blocking capability spike：以候選固定 GPUI-CE revision，在凍結的 Windows 11＋ExplorerPatcher reference profile 建立最小 GPUI HWND、驗證 native HWND/message bridge、AppBar reserve/restore、per-monitor DPI/topology、Shell Hook、ExplorerPatcher Start host probe/invocation 及 guardian process-handle lease。Spike 必須產生可重現 source revision、binary hash、OS build、raw result 與 resource snapshot；任一必要能力失敗時停止所有相依 work package，依 B 級修正設計/規格/任務或依 C 級取得框架/範圍變更核准。Windows 10 22H2 的完整啟動、互動與回復另由 release verification change 驗證。
 
 所有 `extern "system"`/FFI callback 都是 no-unwind boundary。workspace release profile 保持可捕捉的 unwind policy；callback wrapper 使用 `catch_unwind` 將 panic 轉為 typed fatal event，進入有序停止或 guardian recovery，且不得讓 Rust unwind 穿越 Win32 ABI。Callback 的 input validation、handle ownership、重複 callback 與 shutdown race 都必須有負面測試。
 
 ### 10. 驗證與證據是交付物
 
-每個 atomic task 對應 `openspec/changes/build-superdesktop-shell-foundation/evidence/index.jsonl` 的唯一 `task_id`，或共用 immutable record 加唯一 `subcheck`。紀錄包含 artifact/command/manual procedure、expected、actual、exit status 或 reviewer、hash、gate、adjustment ID 與 timestamp。大型原始證據存放於 `evidence/artifacts/<task-id>/`，索引只保存相對路徑與 hash。本 tasks.md 內所有 leaf 都是 M0 mandatory leaf，不允許以 `not-applicable` 結案；若日後新增 conditional leaf，必須事前在 task 文字與 schema 中定義客觀 eligibility、替代 coverage 與 gate disposition。`superseded` replacement 必須存在、無循環、仍為 mandatory、trace 至相同 requirement/scenario/gate，且 replacement 已有有效 `passed` evidence；在此前原 leaf 不得勾選完成。取消 mandatory leaf、將它改為 optional 或降低 coverage 屬於 C 級變更。
+每個 child change 在自己的 `evidence/index.jsonl` 保存 append-only records；program change 只彙總各 child index 的 immutable hash 與 archive revision。每個 atomic task 使用全域唯一 `<change-name>/<L3-id>` `task_id`，或共用 immutable record 加唯一 `subcheck`。紀錄包含 artifact/command/manual procedure、expected、actual、exit status 或 reviewer、hash、gate、adjustment ID 與 timestamp；大型原始證據放在該 change 的 `evidence/artifacts/<L2-or-task-id>/`，索引只保存相對路徑與 hash。本 tasks.md 內所有 leaf 都是 M0 mandatory leaf，不允許以 `not-applicable` 結案；若日後新增 conditional leaf，必須事前在 task 文字與 schema 中定義客觀 eligibility、替代 coverage 與 gate disposition。`superseded` replacement 必須存在、無循環、仍為 mandatory、trace 至相同 requirement/scenario/gate，且 replacement 已有有效 `passed` evidence；在此前原 leaf 不得勾選完成。取消 mandatory leaf、將它改為 optional 或降低 coverage 屬於 C 級變更。
 
 Blocking gates：
 
@@ -128,7 +128,7 @@ Blocking gates：
 
 - **[GPUI 無法直接涵蓋部分 Shell HWND 行為]** → 在 `platform-win` 建立最薄原生 adapter；先以 capability spike 與 headful contract gate 驗證 HWND/AppBar/monitor 能力。
 - **[接管失敗造成無工作列或錯誤 work area]** → 交易式啟動、獨立 guardian、每階段 failpoint、idempotent recovery 與 blocking 真機證據。
-- **[Explorer/Windows 版本內部行為差異]** → Windows 10 22H2 為 reference profile；能力探測失敗時拒絕 Shell 接管，Windows 11 僅承諾可用性。
+- **[ExplorerPatcher/Windows 更新造成參考漂移]** → 凍結 OS build、ExplorerPatcher version、設定摘要與參考圖 hash；不同 profile 必須重新建立 baseline，不得靜默覆蓋。
 - **[Shell Hook 遺失或事件風暴造成錯誤 task state]** → bounded queue、overflow event、coalescing、週期性 `EnumWindows` reconciliation。
 - **[桌面 watcher overflow 或 rename storm]** → full namespace refresh、stable identity selection restore、generation rejection。
 - **[第三方或 Shell provider 卡住 UI]** → M0 不啟用未隔離的第三方 tray/context provider；後續能力必須先有 bounded worker/process host。
@@ -150,6 +150,27 @@ Blocking gates：
 
 本 change 不部署登入 Shell。rollback 是停止 SuperDesktop、由 guardian 恢復 Explorer/work area，並保留診斷與隔離設定。任何 installer 或 registry-based migration 必須由後續 change 規範。
 
+## Program Change 分解與依賴
+
+本 change 只作 program coordination，不直接承載 200 多個 production leaf。實作分成八個 apply-ready change：
+
+| 順序 | Change | 完成結果 | 依賴 |
+| --- | --- | --- | --- |
+| 1 | `bootstrap-superdesktop-workspace` | Workspace、架構、證據與離線建置基礎 | 無 |
+| 2 | `validate-superdesktop-windows-platform` | GPUI/Win32 capability spike 與 go/stop | 1 |
+| 3 | `build-superdesktop-shell-core` | reducer、queue/reconciliation、設定 | 1、2 |
+| 4A | `build-superdesktop-gpui-desktop` | GPUI 桌面與一般檔案 association | 2、3 |
+| 4B | `build-superdesktop-gpui-taskbar` | 多螢幕雙列工作列與固定 SuperExplorer 入口 | 2、3 |
+| 4C | `integrate-superexplorer-process-bridge` | 既有程序合約與修復提示 | 2、3 |
+| 5 | `add-superdesktop-shell-takeover-recovery` | 單一 owner、交易式接管、guardian | 4A、4B、4C |
+| 6 | `verify-superdesktop-m0` | 跨 OS/硬體/效能/安全與最終追溯 | 全部 |
+
+4A、4B、4C 可平行執行，但 contract 變更必須先回到 `build-superdesktop-shell-core` 的 contract owner。每個 child change 自行通過 strict validation 與獨立 gate；program change 只在全部 child change 完成、archive 且最終證據通過時結案。
+
+多代理執行採 `EXECUTION.md` 的固定 ownership 與交接契約。A 級技術細化由 task owner 自主處理；B 級矛盾由 Primary integrator 同步修正 design/spec/tasks、標 stale 並建立 lineage 後繼續；只有 C 級範圍、blocking gate、平台、安全/權限或外部授權變更需要使用者核准。這避免 apply 過程把一般工程判斷反覆升級成使用者確認，同時保留已核准邊界。
+
+目前開發機就是 UI/互動 reference environment：Windows 11 build 26200.8875、ExplorerPatcher 26100.8457.70.3、單一使用中螢幕。虛擬顯示器可完成自動化 topology gate；Windows 10 22H2 與真實 mixed-DPI 雙螢幕是 release-candidate confirmation。缺少外部環境時 production changes 仍可完成，但 confirmation leaf 保持 blocked，不能使用 `not-applicable` 或降低 threshold。
+
 ## Open Questions
 
-沒有阻止開始實作的未決問題。GPUI-CE 的精確 revision、AppBar/Start host 的最小可行 HWND 接法與 monitor identity 細節會在已規範的 capability spike leaf 中以 B 級修正流程收斂；若需要改變框架、公開合約或 blocking gate，則升級為 C 級並請使用者核准。
+沒有規格未決問題。GPUI-CE 候選已凍結為 `https://github.com/damody/gpui-ce-explorer.git` commit `8945e2981b9fd00ca887e042d8adb9acc241b168` 的乾淨來源；capability spike只驗證此候選，不引用 `D:\SuperExplorer\vendor\gpui-ce` 的未提交 patch。AppBar/Start host 的最小可行 HWND 接法與 monitor identity 細節會在已規範的 capability spike leaf 中以 B 級修正流程收斂；若需要改變框架、公開合約或 blocking gate，則升級為 C 級並請使用者核准。完整 program 開始前仍須在 Wave 0 readiness record 明列 Windows 10 22H2 與實體 mixed-DPI 環境的 availability；缺失不阻止 Wave 1–5，但必然阻止 final release。
