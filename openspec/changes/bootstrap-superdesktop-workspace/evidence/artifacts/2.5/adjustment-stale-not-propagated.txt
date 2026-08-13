@@ -1,0 +1,16 @@
+﻿case: adjustment-stale-not-propagated
+expected_code: ADJUSTMENT_BACKLINK_INVALID
+exit_status: 1
+actual_output:
+powershell.exe : ADJUSTMENT_BACKLINK_INVALID: fixture-propagation
+At D:\SuperDesktop\SuperDesktop\scripts\run-evidence-mutation-fixtures.ps1:48 char:19
++ ... { $output = & powershell -NoProfile -ExecutionPolicy Bypass -File (Jo ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (ADJUSTMENT_BACK...ure-propagation:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+At D:\SuperDesktop\SuperDesktop\scripts\validate-evidence.ps1:6 char:50
++ ... on Fail([string]$Code, [string]$Message) { throw "$Code`: $Message" }
++                                                ~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (ADJUSTMENT_BACK...ure-propagation:String) [], RuntimeException
+    + FullyQualifiedErrorId : ADJUSTMENT_BACKLINK_INVALID: fixture-propagation

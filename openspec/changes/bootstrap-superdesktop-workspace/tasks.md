@@ -109,8 +109,9 @@
 **Gate／Evidence：** `G-ARCH`、`G-SAFETY`、`G-TRACE`；`evidence/artifacts/2.5/`。
 **完成門檻：** 被取代 contract 的完整 input sets 均逐列通過；兩份 schema 由真正支援宣告 draft 的 engine 驗證；20 個 fixtures 皆 mutation/copy 後走 production path並得到各自預期 diagnostic；adjustment graph 完整、無循環、無 dangling 或 legacy effective lineage；獨立 reviewer 無剩餘 P0/P1。
 
-- [ ] 2.5.1 為 1.1 workspace、1.2 replacement 與 2.2 source-boundary 產生完整 current-input replacement manifests，逐列以 production verifier 通過，並讓 affected replacement records 直接引用對應 manifest。
-- [ ] 2.5.2 以真正支援 schema 所宣告 draft 的 JSON Schema engine 驗證 evidence record schema 與 coverage schema，包括頂層 type、`additionalProperties`、format、array/object 與巢狀 constraints。
-- [ ] 2.5.3 將原 15 個與新增 5 個 fixtures 改為 mutation/copy 真實 index、coverage、schema、artifact 或 adjustment 資料後執行同一 production validation path，逐案例驗證預期 diagnostic。
-- [ ] 2.5.4 驗證 adjustment identity/supersession graph 的存在性、無循環、完整 stale-set 繼承與 immutable record 一一 mapping，並以有效 successor supersede 兩個 legacy A adjustments 與 B-W1-EXIT-001 lineage。
+- [x] 2.5.1 為 1.1 workspace、1.2 replacement 與 2.2 source-boundary 產生完整 current-input replacement manifests，逐列以 production verifier 通過，並讓 affected replacement records 直接引用對應 manifest。
+- [x] 2.5.2 以真正支援 schema 所宣告 draft 的 JSON Schema engine 驗證 evidence record schema 與 coverage schema，包括頂層 type、`additionalProperties`、format、array/object 與巢狀 constraints。
+- [x] 2.5.3 將原 15 個與新增 5 個 fixtures 改為 mutation/copy 真實 index、coverage、schema、artifact 或 adjustment 資料後執行同一 production validation path，逐案例驗證預期 diagnostic。
+- [x] 2.5.4 驗證 adjustment identity/supersession graph 的存在性、無循環、完整 stale-set 繼承與 immutable record 一一 mapping，並以有效 successor supersede 兩個 legacy A adjustments 與 B-W1-EXIT-001 lineage。
 - [ ] 2.5.5 重跑完整 contract/evidence/architecture/strict/tasks matrix，更新 2.4.5 disposition、corrective handoff、contract hash與獨立 Wave 1 exit 複審，確認無未解 P0/P1。
+- [x] 2.5.6 固定 Wave 2 所需 Windows binding 版本/features並納入 lock/vendor/license/provenance/offline contract；只允許 `platform-win` crate-local audited unsafe exception，加入非 platform unsafe/direct-binding 與缺少 SAFETY invariant 的負面 fixtures。

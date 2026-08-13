@@ -1,7 +1,8 @@
 [CmdletBinding()]
-param([string]$WorkspaceRoot = (Split-Path -Parent $PSScriptRoot), [Parameter(Mandatory)][string]$Manifest)
+param([string]$WorkspaceRoot, [Parameter(Mandatory)][string]$Manifest)
 
 $ErrorActionPreference = 'Stop'
+if (-not $WorkspaceRoot) { $WorkspaceRoot = Split-Path -Parent $PSScriptRoot }
 $root = (Resolve-Path $WorkspaceRoot).Path.TrimEnd('\')
 if (-not (Test-Path -LiteralPath $Manifest -PathType Leaf)) { throw 'CONTRACT_MANIFEST_PATH_INVALID' }
 foreach ($line in Get-Content -Encoding UTF8 $Manifest) {

@@ -1,13 +1,14 @@
 [CmdletBinding()]
 param(
     [Parameter()]
-    [string]$WorkspaceRoot = (Split-Path -Parent $PSScriptRoot),
+    [string]$WorkspaceRoot,
 
     [Parameter()]
     [string]$Fixture
 )
 
 $ErrorActionPreference = 'Stop'
+if (-not $WorkspaceRoot) { $WorkspaceRoot = Split-Path -Parent $PSScriptRoot }
 
 function Add-Diagnostic {
     param(
@@ -84,6 +85,7 @@ foreach ($crateName in $expectedNames) {
         if ($dependencyName -notin $allowed) {
             Add-Diagnostic $diagnostics 'DEPENDENCY_DIRECTION' "$crateName -> $dependencyName is not allowlisted."
         }
+        if ($dependencyName -eq 'windows' -and $crateName -ne 'platform-win') { Add-Diagnostic $diagnostics 'WINDOWS_BINDING_OUTSIDE_PLATFORM' "$crateName directly depends on windows." }
 
         $forbiddenProperty = $allowlist.forbidden_dependency_substrings.PSObject.Properties[$crateName]
         if ($null -ne $forbiddenProperty) {
@@ -112,6 +114,8 @@ foreach ($crateName in $expectedNames) {
         if (($crateName -in @('desktop-ui', 'taskbar-ui')) -and ($source -match '(?ms)pub\s+(?:use\s+[^;]*|trait\s+.*?|fn\s+.*?|type\s+.*?|struct\s+.*?|enum\s+.*?)(?:HWND|HANDLE|IUnknown|IDesktop|IShell|COM)')) {
             Add-Diagnostic $diagnostics 'UI_PUBLIC_WINDOWS_OR_COM_TYPE' "$crateName exports a Windows/COM type."
         }
+        if ($crateName -ne 'platform-win' -and $source -match '(?m)^\s*#!\[allow\(unsafe_code\)\]') { Add-Diagnostic $diagnostics 'UNSAFE_OVERRIDE_OUTSIDE_PLATFORM' $crateName }
+        if ($crateName -eq 'platform-win' -and $source -match '(?m)^\s*unsafe\s*\{' -and $source -notmatch '(?m)^\s*//\s*SAFETY:') { Add-Diagnostic $diagnostics 'UNSAFE_WITHOUT_SAFETY_INVARIANT' $sourceFile.FullName }
     }
 
     if (-not $hasGuard) {

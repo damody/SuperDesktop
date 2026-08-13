@@ -1,0 +1,31 @@
+{
+  "l2": "bootstrap-superdesktop-workspace/2.5",
+  "status": "implementation-complete-review-pending",
+  "completed_leaf_ids": ["2.5.1", "2.5.2", "2.5.3", "2.5.4", "2.5.6"],
+  "primary_pending_leaf_ids": ["2.5.5", "2.4.5"],
+  "reviewer": "pending primary integrator independent re-review",
+  "accepted_revision": null,
+  "contract_hash": "B3438EE1B0B5E289A8A61A6269C2EAB5A67351CB8A742010F17D52E4C30E5498",
+  "contract_inputs": {
+    "workspace": "40C7FAF8A08282B1D131BA9431D6B0889DAF45FB19F99B7BEA42169F8E6FD404",
+    "dependency": "5237582C3AEAD482D705714AAA74FA6CD320AA03B335B5F1513291F6F44585DC",
+    "source_boundary": "F5033BFD4F4C934F97B83981296AB17504E51B8DD5CBFCDE6E09D753EFABBD5B"
+  },
+  "evidence": {
+    "validator": "77 records, 37 coverage mappings",
+    "mutation_run": "build/fixture-results/final-2.5b",
+    "mutation_cases": 20,
+    "schema_engine": "jsonschema 0.37.1, Draft 2020-12, formats enabled, default-features=false",
+    "stale_lineage": "B-W1-2.5-SUCCESSOR closes A-W1-1.2-001/A-W1-1.2-003/B-W1-EXIT-001/B-W1-EXIT-001-lineage/B-W1-EXIT-002/B-W1-EXIT-003"
+  },
+  "commands": [
+    "powershell -File scripts/validate-evidence.ps1",
+    "powershell -File scripts/run-evidence-mutation-fixtures.ps1 -RunId final-2.5b",
+    "cargo check --workspace --locked --offline",
+    "cargo test --workspace --locked --offline",
+    "cargo fmt --all -- --check",
+    "openspec validate bootstrap-superdesktop-workspace --strict",
+    "git diff --check"
+  ],
+  "notes": "The committed 71 evidence records are byte-identical; only six uncommitted 2.5 draft records were rebuilt. Raw fixture results are isolated and no seeded production artifact is changed during a mutation run."
+}

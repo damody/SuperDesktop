@@ -1,10 +1,11 @@
 [CmdletBinding()]
 param(
     [Parameter()]
-    [string]$WorkspaceRoot = (Split-Path -Parent $PSScriptRoot)
+    [string]$WorkspaceRoot
 )
 
 $ErrorActionPreference = 'Stop'
+if (-not $WorkspaceRoot) { $WorkspaceRoot = Split-Path -Parent $PSScriptRoot }
 $expectedRevision = '8945e2981b9fd00ca887e042d8adb9acc241b168'
 $expectedUrl = 'https://github.com/damody/gpui-ce-explorer.git'
 $manifest = Get-Content -Raw -Encoding UTF8 (Join-Path $WorkspaceRoot 'Cargo.toml')

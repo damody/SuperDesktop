@@ -33,6 +33,12 @@
     {"task_id":"bootstrap-superdesktop-workspace/2.4.2","mandatory":true,"capability_id":"superdesktop-evidence-governance","requirement_id":"evidence-record-schema","scenario_id":"schema-complete-records","gates":["G-TRACE"]},
     {"task_id":"bootstrap-superdesktop-workspace/2.4.3","mandatory":true,"capability_id":"superdesktop-evidence-governance","requirement_id":"adjustment-lineage","scenario_id":"immutable-adjustment-lineage","gates":["G-TRACE"]},
     {"task_id":"bootstrap-superdesktop-workspace/2.4.4","mandatory":true,"capability_id":"superdesktop-workspace-foundation","requirement_id":"windows-workspace","scenario_id":"recursive-ui-public-api","gates":["G-ARCH","G-SAFETY"]},
-    {"task_id":"bootstrap-superdesktop-workspace/2.4.5","mandatory":true,"capability_id":"superdesktop-evidence-governance","requirement_id":"corrective-wave-exit","scenario_id":"full-corrective-matrix","gates":["G-TRACE","G-ARCH","G-SAFETY"]}
+    {"task_id":"bootstrap-superdesktop-workspace/2.4.5","mandatory":true,"capability_id":"superdesktop-evidence-governance","requirement_id":"corrective-wave-exit","scenario_id":"full-corrective-matrix","gates":["G-TRACE","G-ARCH","G-SAFETY"]},
+    {"task_id":"bootstrap-superdesktop-workspace/2.5.1","mandatory":true,"capability_id":"superdesktop-evidence-governance","requirement_id":"contract-manifest-verification","scenario_id":"canonical-contract-inputs","gates":["G-TRACE"]},
+    {"task_id":"bootstrap-superdesktop-workspace/2.5.2","mandatory":true,"capability_id":"superdesktop-evidence-governance","requirement_id":"evidence-record-schema","scenario_id":"schema-complete-records","gates":["G-TRACE"]},
+    {"task_id":"bootstrap-superdesktop-workspace/2.5.3","mandatory":true,"capability_id":"superdesktop-evidence-governance","requirement_id":"evidence-record-schema","scenario_id":"validator-fixtures","gates":["G-TRACE"]},
+    {"task_id":"bootstrap-superdesktop-workspace/2.5.4","mandatory":true,"capability_id":"superdesktop-evidence-governance","requirement_id":"adjustment-lineage","scenario_id":"immutable-adjustment-lineage","gates":["G-TRACE"]},
+    {"task_id":"bootstrap-superdesktop-workspace/2.5.5","mandatory":true,"capability_id":"superdesktop-evidence-governance","requirement_id":"corrective-wave-exit","scenario_id":"full-corrective-matrix","gates":["G-TRACE","G-ARCH","G-SAFETY"]},
+    {"task_id":"bootstrap-superdesktop-workspace/2.5.6","mandatory":true,"capability_id":"superdesktop-workspace-foundation","requirement_id":"windows-platform-substrate","scenario_id":"offline-windows-substrate","gates":["G-ARCH","G-SAFETY"]}
   ]
 }

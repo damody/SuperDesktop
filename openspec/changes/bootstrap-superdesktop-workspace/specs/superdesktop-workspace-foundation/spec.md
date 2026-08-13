@@ -1,5 +1,16 @@
 ## ADDED Requirements
 
+### Requirement: Windows platform substrate 必須可離線編譯且限制 unsafe 邊界
+Workspace SHALL 固定 Wave 2 所需的直接 Windows binding 版本與 features，納入 lockfile、vendor、license/provenance 與 isolated offline build contract。Workspace SHALL 全域拒絕 unsafe code；只有 `platform-win` MAY 使用 crate-local audited unsafe exception，且每個 unsafe block MUST 具體記錄 SAFETY invariant。Architecture checker SHALL 拒絕任何其他 crate 的 unsafe 例外或 Windows binding direct dependency。
+
+#### Scenario: 非 platform crate 嘗試開啟 unsafe
+- **WHEN** 任一非 `platform-win` crate 降低 workspace unsafe lint或直接依賴 Windows binding
+- **THEN** architecture gate MUST 失敗
+
+#### Scenario: platform-win 使用未稽核 unsafe block
+- **WHEN** `platform-win` 出現沒有具體 SAFETY invariant 的 unsafe block
+- **THEN** architecture gate MUST 失敗
+
 ### Requirement: Workspace 必須是 Windows-only 且依賴方向固定
 系統 SHALL 建立設計中的九個 crate，並以機器 gate 禁止 `shell-core` 依賴 GPUI/Win32、UI 公開 Win32/COM、或非 app crate 擁有 composition root。
 

@@ -1,0 +1,1 @@
+﻿Architecture check passed: nine approved crates, allowlisted graph, Windows guards, and UI type boundary.

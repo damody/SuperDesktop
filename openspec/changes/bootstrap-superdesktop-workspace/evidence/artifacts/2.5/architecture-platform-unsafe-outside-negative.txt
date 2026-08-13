@@ -1,0 +1,12 @@
+﻿powershell.exe : Fixture does not exist: fixtures/architecture/platform-unsafe-outside-negative
+At line:2 char:492
++ ... e';try{$out=& powershell -NoProfile -ExecutionPolicy Bypass -File scr ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Fixture does no...utside-negative:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+At D:\SuperDesktop\SuperDesktop\scripts\check-dependency-architecture.ps1:30 char:9
++         throw "Fixture does not exist: $Fixture"
++         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (Fixture does no...utside-negative:String) [], RuntimeException
+    + FullyQualifiedErrorId : Fixture does not exist: fixtures/architecture/platform-unsafe-outside-negative

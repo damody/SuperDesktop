@@ -1,0 +1,7 @@
+﻿exit_status: 1
+MANDATORY_WITHOUT_SCHEMA_COMPLETE_REPLACEMENT: bootstrap-superdesktop-workspace/1.1.1
+At D:\SuperDesktop\SuperDesktop\scripts\validate-evidence.ps1:4 char:33
++ function Fail($Code,$Message) { throw "${Code}: $Message" }
++                                 ~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (MANDATORY_WITHO...workspace/1.1.1:String) [], RuntimeException
+    + FullyQualifiedErrorId : MANDATORY_WITHOUT_SCHEMA_COMPLETE_REPLACEMENT: bootstrap-superdesktop-workspace/1.1.1

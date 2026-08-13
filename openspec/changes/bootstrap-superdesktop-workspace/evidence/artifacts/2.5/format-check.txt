@@ -1,0 +1,25 @@
+﻿Diff in \\?\D:\SuperDesktop\SuperDesktop\crates\superdesktop-test-support\src\main.rs:12:
+     if args.next().as_deref() == Some("validate-json-schema") {
+         let schema_path = args.next().expect("schema path");
+         let instance_path = args.next().expect("instance path");
+[31m-        let schema: serde_json::Value = serde_json::from_slice(&std::fs::read(schema_path).expect("schema read")).expect("schema json");
+[0m[31m-        let instance: serde_json::Value = serde_json::from_slice(&std::fs::read(instance_path).expect("instance read")).expect("instance json");
+[0m[31m-        let validator = jsonschema::options().with_draft(jsonschema::Draft::Draft202012).should_validate_formats(true).build(&schema).expect("Draft 2020-12 schema");
+[0m[31m-        if let Err(error) = validator.validate(&instance) { eprintln!("JSON_SCHEMA_INVALID: {error}"); std::process::exit(1); }
+[0m[32m+        let schema: serde_json::Value =
+[0m[32m+            serde_json::from_slice(&std::fs::read(schema_path).expect("schema read"))
+[0m[32m+                .expect("schema json");
+[0m[32m+        let instance: serde_json::Value =
+[0m[32m+            serde_json::from_slice(&std::fs::read(instance_path).expect("instance read"))
+[0m[32m+                .expect("instance json");
+[0m[32m+        let validator = jsonschema::options()
+[0m[32m+            .with_draft(jsonschema::Draft::Draft202012)
+[0m[32m+            .should_validate_formats(true)
+[0m[32m+            .build(&schema)
+[0m[32m+            .expect("Draft 2020-12 schema");
+[0m[32m+        if let Err(error) = validator.validate(&instance) {
+[0m[32m+            eprintln!("JSON_SCHEMA_INVALID: {error}");
+[0m[32m+            std::process::exit(1);
+[0m[32m+        }
+[0m     }
+ }

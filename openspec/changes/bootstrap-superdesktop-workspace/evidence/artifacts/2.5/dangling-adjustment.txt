@@ -1,0 +1,16 @@
+﻿case: dangling-adjustment
+expected_code: ADJUSTMENT_DANGLING_RECORD
+exit_status: 1
+actual_output:
+powershell.exe : ADJUSTMENT_DANGLING_RECORD: fixture-dangling
+At D:\SuperDesktop\SuperDesktop\scripts\run-evidence-mutation-fixtures.ps1:48 char:19
++ ... { $output = & powershell -NoProfile -ExecutionPolicy Bypass -File (Jo ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (ADJUSTMENT_DANG...ixture-dangling:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+At D:\SuperDesktop\SuperDesktop\scripts\validate-evidence.ps1:6 char:50
++ ... on Fail([string]$Code, [string]$Message) { throw "$Code`: $Message" }
++                                                ~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (ADJUSTMENT_DANG...ixture-dangling:String) [], RuntimeException
+    + FullyQualifiedErrorId : ADJUSTMENT_DANGLING_RECORD: fixture-dangling

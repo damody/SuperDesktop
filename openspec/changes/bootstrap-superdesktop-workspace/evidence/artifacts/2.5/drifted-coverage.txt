@@ -1,0 +1,16 @@
+﻿case: drifted-coverage
+expected_code: COVERAGE_DRIFT
+exit_status: 1
+actual_output:
+powershell.exe : COVERAGE_DRIFT: bootstrap-superdesktop-workspace/2.5.6#replacement
+At D:\SuperDesktop\SuperDesktop\scripts\run-evidence-mutation-fixtures.ps1:48 char:19
++ ... { $output = & powershell -NoProfile -ExecutionPolicy Bypass -File (Jo ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (COVERAGE_DRIFT:...5.6#replacement:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+At D:\SuperDesktop\SuperDesktop\scripts\validate-evidence.ps1:6 char:50
++ ... on Fail([string]$Code, [string]$Message) { throw "$Code`: $Message" }
++                                                ~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (COVERAGE_DRIFT:...5.6#replacement:String) [], RuntimeException
+    + FullyQualifiedErrorId : COVERAGE_DRIFT: bootstrap-superdesktop-workspace/2.5.6#replacement
