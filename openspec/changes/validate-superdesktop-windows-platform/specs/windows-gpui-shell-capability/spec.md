@@ -3,9 +3,15 @@
 ### Requirement: Capability spike 必須消費已凍結的 Windows/FFI substrate
 系統 SHALL 在任何 spike 前驗證 bootstrap archive handoff 的 workspace contract hash，且直接 Windows binding 版本/features、offline provenance、全域 unsafe deny 與 `platform-win` 唯一 audited unsafe exception均未漂移。每個 unsafe block MUST 具體記錄 SAFETY invariant；其他 crate MUST NOT 直接依賴 Windows binding或降低 unsafe lint。
 
+封存造成的唯一路徑變更 SHALL 由綁定 immutable archive revision 的 relocation verifier 處理：舊 `openspec/changes/bootstrap-superdesktop-workspace/` 前綴只能映射到該封存根目錄，所有宣告 SHA-256 仍須逐 input 相符；不得修改封存 manifest 來製造通過結果。
+
 #### Scenario: Bootstrap substrate contract 漂移
 - **WHEN** Windows binding、features、lock/vendor provenance、unsafe lint或唯一 owner與 bootstrap handoff 不同
 - **THEN** capability change MUST stop，且 Platform owner不得自行修改 root contract後繼續
+
+#### Scenario: Bootstrap archive relocation
+- **WHEN** manifest input 只因已核准封存而從 active change 前綴移到固定 archive revision
+- **THEN** verifier MUST 套用唯一前綴映射、驗證 archive tree與每個 input hash，且任何其他 path或bytes drift MUST stop
 
 ### Requirement: Reference profile 必須凍結
 系統 SHALL 記錄 OS build 26200.8875、ExplorerPatcher 26100.8457.70.3、設定摘要、reference image SHA-256、GPUI source revision 與 spike binary hash。

@@ -16,7 +16,7 @@
 - [ ] 1.1.4 記錄 GPUI-CE revision、Rust toolchain 與 spike binary hash。
 - [ ] 1.1.5 在任何 AppBar/Hook spike 前執行 Safe Mode、interactive user token/session 與 supported-session admission probe。
 - [ ] 1.1.6 保存 admission probe 前後 Explorer、AppBar 與 work-area zero-mutation snapshot；未 passed 則停止本 change。
-- [ ] 1.1.7 驗證 bootstrap archive workspace contract hash、Windows binding/features、lock/vendor provenance、全域 unsafe deny與 `platform-win` 唯一 audited exception；任一漂移即 stop 並交回 Primary。
+- [ ] 1.1.7 以固定 archive revision relocation verifier 驗證 bootstrap archive workspace contract逐 input hash、Windows binding/features、lock/vendor provenance、全域 unsafe deny與 `platform-win` 唯一 audited exception；只允許舊 active-change 前綴映射到封存根目錄，任一其他漂移即 stop 並交回 Primary。
 
 ### 1.2 驗證 GPUI HWND 與 Message Bridge
 
