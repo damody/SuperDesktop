@@ -1,246 +1,247 @@
-# SuperDesktop Windows 10 Shell Design
+# SuperDesktop Windows 10 桌面 Shell 設計
 
-Date: 2026-08-13  
-Status: Approved design; implementation not started
+日期：2026-08-13
 
-## 1. Purpose
+狀態：設計已核准，尚未開始實作
 
-SuperDesktop is a Windows-only desktop environment implemented in Rust. It recreates the user-facing Windows 10 22H2 desktop Shell while using `D:\SuperExplorer` as its file manager. All product-visible surfaces are rendered with GPUI. Windows APIs remain behind a narrow, non-visual adapter because desktop ownership, AppBars, Shell hooks, COM/OLE, notification-area compatibility, monitor topology, and DPI events cannot be implemented reliably without them.
+## 1. 目的
 
-The project root is `D:\SuperDesktop\SuperDesktop`. It is an independent Cargo workspace and Git repository. `D:\SuperExplorer` remains an independently built application and is integrated through a process boundary.
+SuperDesktop 是使用 Rust 實作、僅支援 Windows 的桌面環境。它會重現 Windows 10 22H2 使用者可見的桌面 Shell，並以 `D:\SuperExplorer` 作為檔案總管。所有屬於產品的可見介面皆使用 GPUI 繪製。由於桌面註冊、AppBar、Shell Hook、COM/OLE、通知區相容性、螢幕拓撲及 DPI 事件無法脫離 Windows API 而可靠實作，因此這些功能會封裝於狹窄且不可見的 Windows 平台介面層。
 
-## 2. Scope
+專案根目錄為 `D:\SuperDesktop\SuperDesktop`，並擁有獨立的 Cargo workspace 與 Git 儲存庫。`D:\SuperExplorer` 維持獨立建置，SuperDesktop 透過程序邊界與它整合。
 
-### 2.1 Long-term product scope
+## 2. 範圍
 
-The complete product targets Windows 10 Shell behavior in these areas:
+### 2.1 長期產品範圍
 
-- Desktop surfaces, wallpaper, Shell items, selection, layout, rename, context menus, drag-and-drop, refresh, and multi-monitor behavior.
-- A bottom taskbar whose default high-density layout follows the supplied two-row reference image, with configurable one-to-three-row layouts.
-- Window tracking, activation, minimize/restore, grouping, pinning, ordering, progress/attention states, thumbnails, jump lists, Task View, and Show Desktop.
-- Start button, Start menu, application indexing, search, Run, power, session, and common Shell commands.
-- Notification area, clock, calendar, input/network/volume/power status, notification badges, and compatible third-party tray icons.
-- Keyboard shortcuts, accessibility, high contrast, per-monitor DPI, multiple monitors, virtual-desktop integration, autostart, controlled Shell installation, and recovery.
-- SuperExplorer as the handler for file-system folder navigation.
+完整產品以重現下列 Windows 10 Shell 行為為目標：
 
-“Complete Windows 10 behavior” means the observable desktop-Shell capability and interaction set, tracked in a parity matrix with automated or manual evidence. It does not mean reproducing undocumented implementation details pixel-for-pixel where Windows APIs or third-party providers control the result.
+- 桌面表面、桌布、Shell 項目、選取、版面配置、重新命名、右鍵選單、拖放、重新整理及多螢幕行為。
+- 固定於底部的工作列；預設高密度配置依照使用者提供的雙列參考圖，並可設定為一至三列。
+- 視窗追蹤、啟用、最小化與還原、群組、釘選、排序、進度與注意狀態、縮圖、跳躍清單、工作檢視及顯示桌面。
+- 開始按鈕、開始功能表、應用程式索引、搜尋、執行、電源、工作階段及常用 Shell 命令。
+- 通知區、時鐘、行事曆、輸入法、網路、音量、電源狀態、通知徽章及相容的第三方通知區圖示。
+- 鍵盤快速鍵、協助工具、高對比、每螢幕 DPI、多螢幕、虛擬桌面整合、自動啟動、可控的 Shell 安裝與復原。
+- 由 SuperExplorer 處理檔案系統資料夾導覽。
 
-### 2.2 Out of scope
+「完整 Windows 10 行為」指的是可觀察的桌面 Shell 能力與互動集合。每項能力都必須列入相容性矩陣，並附上自動化或人工驗證證據。若畫面或行為由 Windows API 或第三方提供者控制，則不要求逐像素複製其未公開的實作細節。
 
-SuperDesktop does not reimplement the Windows kernel, compositor, logon or lock screen, security boundary, device drivers, Control Panel internals, Settings internals, bundled UWP applications, networking stack, audio stack, or file system. It integrates the existing Windows services that provide those capabilities.
+### 2.2 不在範圍內
 
-M0 does not deliver the whole long-term scope. It establishes the production architecture and provides the first usable desktop and taskbar slice described below.
+SuperDesktop 不會重新實作 Windows 核心、合成器、登入或鎖定畫面、安全邊界、裝置驅動程式、控制台內部、設定應用程式內部、內建 UWP 應用程式、網路堆疊、音訊堆疊或檔案系統。這些能力由既有 Windows 服務提供，SuperDesktop 只負責整合。
 
-## 3. Source and licensing boundaries
+M0 不會一次完成全部長期範圍。M0 的責任是建立正式產品架構，並交付本文件所定義的第一個可用桌面與工作列切片。
 
-`D:\SuperDesktop\PExplorer` is an LGPL-2.1-or-later C++/Win32 reference derived from ReactOS Explorer work. It may be used to understand behavior, message flows, Shell hooks, AppBar usage, and failure cases. SuperDesktop must not copy or mechanically translate its source. Any intentionally derived code requires a separate licensing decision and explicit attribution before it enters the product.
+## 3. 原始碼與授權邊界
 
-`D:\SuperExplorer` is treated as a separately built product. SuperDesktop must not depend on its uncommitted source tree, internal crates, or `vendor/gpui-ce` path. This protects both projects from build coupling and preserves the user's existing SuperExplorer changes.
+`D:\SuperDesktop\PExplorer` 是源自 ReactOS Explorer 工作的 LGPL-2.1-or-later C++/Win32 參考專案。它可用於理解行為、訊息流程、Shell Hook、AppBar 用法及失敗案例。SuperDesktop 不得複製或機械式翻譯其原始碼。若日後確實要採用衍生程式碼，必須先另行作成授權決策，並在進入產品前加入明確歸屬說明。
 
-SuperDesktop pins its own GPUI-CE revision. Using the same known-good revision as SuperExplorer is preferred initially, but each repository owns its dependency lock and upgrade schedule.
+`D:\SuperExplorer` 視為獨立建置的產品。SuperDesktop 不得依賴其未提交的工作樹、內部 crate 或 `vendor/gpui-ce` 路徑，以免兩個專案產生建置耦合，並保護使用者現有的 SuperExplorer 變更。
 
-## 4. Architectural approach
+SuperDesktop 會固定自己的 GPUI-CE revision。初期優先使用與 SuperExplorer 相同且已驗證的 revision，但兩個儲存庫分別管理 dependency lock 與升級時程。
 
-### 4.1 Visible and platform layers
+## 4. 架構方案
 
-All SuperDesktop-owned visible desktop, taskbar, Start, search, notification, settings, prompt, and recovery surfaces are GPUI views. Windows-owned or third-party surfaces that SuperDesktop invokes, such as the M0 Windows Start experience or a native Shell context menu, remain externally rendered. The platform layer may create invisible/message-only HWNDs and perform Windows API calls, but it must not implement SuperDesktop product UI.
+### 4.1 可見介面與平台層
 
-The primary event flow is:
+所有由 SuperDesktop 擁有的桌面、工作列、開始、搜尋、通知、設定、提示與復原介面都是 GPUI view。由 Windows 或第三方擁有、但由 SuperDesktop 呼叫的表面，例如 M0 的 Windows 開始體驗或原生 Shell 右鍵選單，仍由外部系統繪製。平台層可以建立不可見或 message-only HWND 並呼叫 Windows API，但不得實作 SuperDesktop 的產品介面。
+
+主要事件流程如下：
 
 ```text
-Windows event -> platform-win -> shell-core transition -> immutable snapshot -> GPUI render
-GPUI action -> shell-core command -> platform-win or explorer-bridge effect -> result event
+Windows 事件 → platform-win → shell-core 狀態轉移 → 不可變快照 → GPUI 繪製
+GPUI 操作 → shell-core 命令 → platform-win 或 explorer-bridge 副作用 → 結果事件
 ```
 
-Platform callbacks never mutate GPUI state directly. They emit typed events with stable window, monitor, desktop-item, and request identities. `shell-core` is the only authority for user-visible state transitions.
+平台 callback 不得直接修改 GPUI 狀態。它只能送出帶有穩定視窗、螢幕、桌面項目及請求識別碼的型別化事件。`shell-core` 是所有使用者可見狀態轉移的唯一權威。
 
-### 4.2 Workspace units
+### 4.2 Workspace 單元
 
-- `superdesktop-app`: composition root, command-line modes, diagnostics, process lifetime, and orderly shutdown.
-- `shell-core`: platform-independent state machines for monitors, desktop items, selection, task buttons, grouping, pinning, focus, commands, and recovery phases.
-- `platform-win`: non-visual Windows integration for desktop/Shell registration, Shell hooks, window enumeration, AppBars, monitor/DPI events, COM/OLE, known folders, Shell identities, icons, and context-menu sessions.
-- `desktop-ui`: GPUI desktop surface, wallpaper, item layout, interaction, and accessibility semantics.
-- `taskbar-ui`: GPUI taskbar, task buttons, Start entry point, notification region, clock, overflow, and accessibility semantics.
-- `explorer-bridge`: discovery, validation, launch, error reporting, and future versioned IPC for SuperExplorer.
-- `settings-store`: versioned configuration, atomic writes, migration, corruption quarantine, and layout persistence.
-- `superdesktop-guardian`: minimal Rust recovery process that observes the Shell lease and restores a usable Windows session after abnormal termination.
-- `superdesktop-test-support`: fake platform adapters, deterministic clocks, owned fixture roots, window helpers, visual fixtures, and failure injection.
+- `superdesktop-app`：組合根、命令列模式、診斷、程序生命週期及有序關閉。
+- `shell-core`：與平台無關的狀態機，管理螢幕、桌面項目、選取、工作按鈕、群組、釘選、焦點、命令及復原階段。
+- `platform-win`：不可見的 Windows 整合層，負責桌面與 Shell 註冊、Shell Hook、視窗列舉、AppBar、螢幕與 DPI 事件、COM/OLE、已知資料夾、Shell 識別、圖示及右鍵選單工作階段。
+- `desktop-ui`：GPUI 桌面表面、桌布、項目配置、互動及協助工具語意。
+- `taskbar-ui`：GPUI 工作列、工作按鈕、開始入口、通知區、時鐘、溢出區及協助工具語意。
+- `explorer-bridge`：SuperExplorer 的尋找、驗證、啟動、錯誤回報及未來的版本化 IPC。
+- `settings-store`：版本化設定、原子寫入、遷移、損毀隔離及版面配置持久化。
+- `superdesktop-guardian`：精簡的 Rust 復原程序，監看 Shell 租約，並在 SuperDesktop 異常結束後恢復可用的 Windows 工作階段。
+- `superdesktop-test-support`：假的平台介面、確定性時鐘、受控測試根目錄、視窗輔助程式、視覺 fixture 及失敗注入。
 
-Each unit exposes typed public contracts. `desktop-ui` and `taskbar-ui` depend on `shell-core` values and commands, not on Win32 handles. Windows handles and COM interfaces do not escape `platform-win`.
+每個單元都公開型別化合約。`desktop-ui` 與 `taskbar-ui` 依賴 `shell-core` 的值與命令，而不依賴 Win32 handle。Windows handle 與 COM interface 不得離開 `platform-win`。
 
-## 5. Runtime modes and ownership
+## 5. 執行模式與 Shell 所有權
 
-### 5.1 Preview mode
+### 5.1 預覽模式
 
-Preview mode is the default during development. It renders the desktop and taskbar inside ordinary GPUI windows without hiding Explorer or changing the system work area. It must not modify Shell-related registry values. This mode is safe for UI iteration and automated headful tests.
+開發期間預設使用預覽模式。桌面與工作列會在一般 GPUI 視窗內繪製，不隱藏 Explorer，也不改變系統工作區。此模式不得修改任何 Shell 相關登錄值，適合介面迭代與有畫面的自動化測試。
 
-### 5.2 Shell mode
+### 5.2 Shell 模式
 
-Shell mode is explicit. It uses a transactional takeover:
+Shell 模式必須明確指定，並採用交易式接管：
 
-1. Start `superdesktop-guardian` and establish a lease.
-2. Initialize diagnostics, GPUI, COM apartments, typed event channels, and settings.
-3. Create all monitor desktop surfaces and taskbar AppBars.
-4. Register Shell hooks, hotkeys, notifications, monitor/DPI listeners, and recovery callbacks.
-5. Complete a health check that confirms usable desktop and taskbar input.
-6. Only after all prior steps succeed, hide or replace the Explorer-owned Shell surfaces for the session.
+1. 啟動 `superdesktop-guardian` 並建立租約。
+2. 初始化診斷、GPUI、COM apartment、型別化事件 channel 及設定。
+3. 建立所有螢幕的桌面表面與工作列 AppBar。
+4. 註冊 Shell Hook、全域快速鍵、通知、螢幕與 DPI listener 及復原 callback。
+5. 完成健康檢查，確認桌面與工作列皆能接受輸入。
+6. 僅在前述步驟全部成功後，才隱藏或取代目前工作階段中由 Explorer 擁有的 Shell 表面。
 
-Failure before step 6 unwinds only SuperDesktop resources. Failure after step 6 causes the guardian to remove AppBars, restore work areas, reveal an existing Explorer Shell, or start `explorer.exe` if no usable Explorer Shell exists.
+若在第 6 步前失敗，只撤銷 SuperDesktop 自己建立的資源。若在第 6 步後失敗，guardian 必須移除 AppBar、恢復工作區，並顯示既有 Explorer Shell；若不存在可用的 Explorer Shell，則啟動 `explorer.exe`。
 
-M0 provides runtime Shell mode but does not change the configured Windows logon Shell. Registry installation, startup integration, uninstall, and recovery UI are later controlled-installation work.
+M0 提供執行期間的 Shell 模式，但不變更 Windows 登入時所設定的 Shell。登錄安裝、自動啟動、解除安裝與復原介面屬於後續的可控安裝里程碑。
 
-## 6. M0 functional design
+## 6. M0 功能設計
 
-### 6.1 Desktop
+### 6.1 桌面
 
-M0 creates one bottommost GPUI desktop surface per active monitor. It supports Windows wallpaper placement modes: fill, fit, stretch, center, tile, and span where monitor topology permits it.
+M0 會為每個使用中的螢幕建立一個位於最底層的 GPUI 桌面表面。支援 Windows 桌布配置模式：填滿、適合、延展、置中、並排，以及在螢幕拓撲允許時跨螢幕延展。
 
-The item source combines the current user's Desktop known folder and the Public Desktop known folder. Items use stable Shell identity rather than display name as identity. M0 supports:
+項目來源會合併目前使用者的 Desktop 已知資料夾與 Public Desktop 已知資料夾。項目以穩定 Shell identity 作為識別，而不是以顯示名稱作為識別。M0 支援：
 
-- Real Shell icon and display-name resolution.
-- Single selection, Ctrl/Shift selection, rubber-band selection, focus, keyboard navigation, and activation.
-- Double-click and Enter activation.
-- Persistent icon positions keyed by stable item identity, monitor identity, and DPI-aware logical coordinates.
-- File-system change observation with coalescing and full-refresh recovery after watcher overflow.
+- 解析真實 Shell 圖示與顯示名稱。
+- 單選、Ctrl/Shift 複選、框選、焦點、鍵盤導覽及啟動。
+- 雙擊與 Enter 啟動。
+- 依穩定項目識別、螢幕識別及 DPI-aware 邏輯座標保存圖示位置。
+- 監看檔案系統變更、合併重複事件，並在 watcher overflow 後以完整重新整理復原。
 
-Opening a file uses the normal Windows association. Opening a file-system directory goes through `explorer-bridge`. The “This PC” entry launches SuperExplorer without an initial file-system path because the current SuperExplorer startup contract only accepts absolute directories through `EXPLORER_INITIAL_PATH`.
+開啟檔案時使用一般 Windows 關聯。開啟檔案系統資料夾時則透過 `explorer-bridge`。由於目前 SuperExplorer 的啟動合約只接受以 `EXPLORER_INITIAL_PATH` 傳入的絕對資料夾路徑，因此「本機」項目會在未設定初始檔案系統路徑的狀態下啟動 SuperExplorer。
 
-Rename, native context menus, drag-and-drop, auto-arrange, grid alignment, sorting, refresh commands, and Recycle Bin mutation are planned desktop-parity increments after M0. M0 must reserve typed commands and state boundaries for them without presenting enabled controls prematurely.
+重新命名、原生右鍵選單、拖放、自動排列、貼齊格線、排序、重新整理命令及資源回收筒異動會在 M0 後的桌面相容性增量中完成。M0 必須預留型別化命令與狀態邊界，但不得提早顯示可操作卻尚未實作的控制項。
 
-### 6.2 Taskbar
+### 6.2 工作列
 
-The taskbar docks at the bottom and registers as a Windows AppBar in Shell mode. The default layout is two compact rows, matching the supplied reference's information density. Users can configure one, two, or three rows. Per-monitor taskbars are represented from the start; the initial acceptance matrix requires a primary taskbar and a secondary-monitor taskbar in a two-monitor setup.
+工作列固定於底部，並在 Shell 模式註冊為 Windows AppBar。預設為兩列緊湊配置，資訊密度依照使用者提供的參考圖；使用者可設定一、二或三列。架構從一開始就支援每螢幕工作列；初始驗收矩陣要求雙螢幕環境中的主要與次要工作列皆能運作。
 
-The left edge contains the Start button. In M0 it invokes the existing Windows Start experience rather than drawing a custom Start menu. Shell takeover is allowed on the Windows 10 reference platform only when the Start host capability probe succeeds; a later invocation failure is reported as a recoverable degraded state. Preview mode and non-reference Windows builds may show the button as accessibly unavailable when the host is absent. The central region contains task buttons with the application icon and an ellipsized title. A blue underline indicates a running task or group; an active background indicates the foreground task. The right region contains the overflow entry, core system status, time, date, and notification count.
+左側為開始按鈕。M0 會呼叫既有 Windows 開始體驗，而不繪製自訂開始功能表。在 Windows 10 參考平台上，僅當開始主機能力探測成功時才允許 Shell 接管；若之後呼叫失敗，應回報為可復原的降級狀態。在預覽模式或非參考 Windows 版本上，若開始主機不存在，按鈕可以顯示為具備正確協助工具語意的不可用狀態。中央區域顯示含應用程式圖示與省略標題的工作按鈕；藍色底線代表執行中工作或群組，作用中背景代表目前前景工作。右側包含溢出入口、核心系統狀態、時間、日期及通知數量。
 
-M0 window behavior includes:
+M0 視窗行為包含：
 
-- Discovering eligible top-level windows through Shell-hook events plus periodic `EnumWindows` reconciliation.
-- Filtering tool, cloaked, owned transient, invisible, and explicitly excluded windows.
-- Stable ordering during title, icon, attention, minimize, and foreground changes.
-- Clicking to activate, minimize the foreground window, or restore a minimized window.
-- Launching a pinned application when it has no window.
-- Grouping windows by resolved application identity while retaining per-window child state.
-- Icon and title caching with bounded invalidation.
-- A pinned SuperExplorer entry.
+- 透過 Shell Hook 事件尋找符合資格的頂層視窗，並定期以 `EnumWindows` 對帳。
+- 過濾 tool window、cloaked window、擁有者暫時視窗、不可見視窗及明確排除的視窗。
+- 在標題、圖示、注意、最小化及前景狀態變更時維持穩定順序。
+- 點擊時啟用視窗、最小化目前前景視窗，或還原已最小化視窗。
+- 釘選應用程式沒有視窗時可直接啟動。
+- 依解析後的應用程式 identity 將視窗分組，同時保留各子視窗狀態。
+- 具備有界失效策略的圖示與標題快取。
+- 固定顯示 SuperExplorer 入口。
 
-M0's notification region provides time/date and Windows-derived core status. Full third-party `Shell_NotifyIcon` compatibility, overflow management, jump lists, live thumbnails, drag reordering, badges, progress, and custom Start/search surfaces are later taskbar-parity increments.
+M0 的通知區提供時間、日期及由 Windows 取得的核心狀態。完整第三方 `Shell_NotifyIcon` 相容性、溢出管理、跳躍清單、即時縮圖、拖曳排序、徽章、進度，以及自訂開始與搜尋介面，會在後續工作列相容性增量中完成。
 
-### 6.3 SuperExplorer integration
+### 6.3 SuperExplorer 整合
 
-M0 uses the existing SuperExplorer startup contract instead of changing its dirty working tree:
+M0 使用既有 SuperExplorer 啟動合約，不修改其目前含有未提交變更的工作樹：
 
-- The configured executable is validated as an absolute existing executable before launch.
-- Resolution checks a persisted user setting first, then the development artifact `D:\SuperExplorer\target\release\SuperExplorer.exe`, then an installed `SuperExplorer.exe` adjacent to SuperDesktop.
-- A file-system directory launch creates a new SuperExplorer process with `EXPLORER_INITIAL_PATH` set to that existing absolute directory and no unsupported command-line arguments.
-- “This PC” launches SuperExplorer without `EXPLORER_INITIAL_PATH`.
-- Launch requests carry a correlation ID and produce exactly one success or failure event.
-- A missing, invalid, or failed executable produces a GPUI recovery prompt and diagnostic event. SuperDesktop does not silently substitute Windows Explorer for folder navigation.
+- 啟動前必須確認設定的執行檔為確實存在的絕對執行檔路徑。
+- 尋找順序依次為：持久化使用者設定、開發產物 `D:\SuperExplorer\target\release\SuperExplorer.exe`、與 SuperDesktop 相鄰安裝的 `SuperExplorer.exe`。
+- 啟動檔案系統資料夾時，建立新的 SuperExplorer 程序，將 `EXPLORER_INITIAL_PATH` 設為確實存在的絕對資料夾，且不傳入不受支援的命令列參數。
+- 「本機」在未設定 `EXPLORER_INITIAL_PATH` 的情況下啟動 SuperExplorer。
+- 每個啟動請求都有 correlation ID，且只會產生一個成功或失敗結果事件。
+- 執行檔缺失、無效或啟動失敗時，顯示 GPUI 復原提示並寫入診斷事件。SuperDesktop 不得在資料夾導覽時靜默改用 Windows Explorer。
 
-Targeted navigation in an existing SuperExplorer process requires a future versioned IPC contract. That addition belongs to its own coordinated OpenSpec change in SuperExplorer and is not implied by M0.
+若要導覽已存在的 SuperExplorer 程序，必須另行建立版本化 IPC 合約。這項工作屬於 SuperExplorer 中獨立且需協調的 OpenSpec change，不包含於 M0。
 
-## 7. State, concurrency, and data flow
+## 7. 狀態、並行與資料流
 
-`shell-core` owns a single logical snapshot containing monitor topology, desktop models, taskbar models, selection/focus, application identities, settings revision, and recovery phase. Platform work is asynchronous and tagged with a request ID plus a generation. Results from stale generations are rejected.
+`shell-core` 擁有唯一的邏輯快照，其中包含螢幕拓撲、桌面模型、工作列模型、選取與焦點、應用程式 identity、設定 revision 及復原階段。平台工作採非同步方式執行，且每項工作都帶有 request ID 與 generation。來自過期 generation 的結果必須拒絕。
 
-High-frequency window, foreground, title, icon, and filesystem events are coalesced by stable identity before they reach the renderer. Bounded queues expose overflow rather than dropping state silently. Overflow schedules an authoritative reconciliation: `EnumWindows` for tasks and a full namespace refresh for desktop items.
+高頻率視窗、前景、標題、圖示及檔案系統事件，會先依穩定 identity 合併，再送往 renderer。有界 queue 必須明確回報 overflow，不得靜默遺失狀態。發生 overflow 時，安排權威對帳：工作列使用 `EnumWindows`，桌面項目使用完整 namespace 重新整理。
 
-COM/OLE apartment-affine values remain on their owning platform threads. Cross-thread events contain owned Rust values. Shutdown stops new commands, cancels in-flight requests, unregisters external callbacks, removes AppBars, destroys GPUI windows, releases COM resources, flushes diagnostics/settings, and finally releases the guardian lease.
+具備 COM/OLE apartment affinity 的值留在其擁有的平台執行緒。跨執行緒事件只包含 Rust 擁有的值。關閉時依序停止接受新命令、取消進行中請求、解除外部 callback、移除 AppBar、銷毀 GPUI 視窗、釋放 COM 資源、寫入診斷與設定，最後才釋放 guardian 租約。
 
-## 8. Settings and persistence
+## 8. 設定與持久化
 
-Settings use an explicitly versioned schema and atomic replace-on-success writes. Stored values include runtime mode preferences, taskbar row count, monitor placement, pin ordering, wallpaper placement, desktop item coordinates, SuperExplorer executable path, theme, and accessibility preferences.
+設定使用明確版本化 schema，並以成功後原子取代方式寫入。保存內容包含執行模式偏好、工作列列數、螢幕位置、釘選順序、桌布配置、桌面項目座標、SuperExplorer 執行檔路徑、主題及協助工具偏好。
 
-Invalid fields fall back independently where safe. An unreadable or structurally invalid settings file is renamed to a timestamped quarantine file, recorded in diagnostics, and replaced with safe defaults. Layout data is keyed by stable monitor and Shell-item identities so DPI or display reordering does not corrupt unrelated layouts.
+若個別欄位無效且可安全回復，則只對該欄位使用預設值。若設定檔無法讀取或結構無效，將它重新命名為帶時間戳的隔離檔案、記錄診斷，再以安全預設值重建。版面配置資料以穩定螢幕及 Shell 項目 identity 為鍵，避免 DPI 或顯示器順序變更破壞無關的配置。
 
-## 9. Error handling and recovery
+## 9. 錯誤處理與復原
 
-- Failure to create every required surface or AppBar prevents Shell takeover.
-- Failure to register optional telemetry or a non-essential status provider degrades only that provider and shows truthful availability.
-- Loss or overflow of Shell-hook events triggers authoritative window reconciliation.
-- Desktop watcher overflow triggers an authoritative desktop refresh while preserving selection by stable identity.
-- SuperExplorer launch failure leaves the desktop and taskbar responsive and exposes a repair action.
-- A hung third-party Shell or tray provider must be hosted behind a bounded worker or process boundary before the related capability is enabled.
-- Settings corruption is quarantined and replaced; it must not prevent a usable Shell.
-- Panic or abnormal process termination activates guardian recovery. Recovery is idempotent and safe to repeat.
-- Diagnostics avoid file contents, credentials, clipboard data, and full user paths unless a local debug mode explicitly enables them.
+- 無法建立所有必要桌面表面或 AppBar 時，不得接管 Shell。
+- 選用遙測或非必要狀態提供者註冊失敗時，只降級該提供者，並如實顯示可用狀態。
+- Shell Hook 事件遺失或 overflow 時，執行權威視窗對帳。
+- 桌面 watcher overflow 時，執行權威桌面重新整理，並依穩定 identity 保留選取。
+- SuperExplorer 啟動失敗時，桌面與工作列仍須保持回應，並提供修復動作。
+- 若第三方 Shell 或通知區提供者可能卡住，相關能力在啟用前必須放入有界 worker 或獨立程序。
+- 設定損毀時隔離並重建，不得阻止 Shell 進入可用狀態。
+- panic 或程序異常終止時啟動 guardian 復原。復原操作必須具備冪等性，可安全重複執行。
+- 診斷預設不得記錄檔案內容、憑證、剪貼簿資料或完整使用者路徑；只有明確啟用的本機偵錯模式可以放寬此限制。
 
-## 10. Accessibility, localization, and visual behavior
+## 10. 協助工具、在地化與視覺行為
 
-Every interactive GPUI element has a stable accessibility identity, role, name, state, and action. Keyboard-only operation covers desktop selection, task traversal, activation, context actions when implemented, and recovery prompts. Focus is always visible. High-contrast mode maps semantic tokens to system roles rather than applying fixed colors.
+每個可互動 GPUI 元素都必須具備穩定的協助工具 identity、role、name、state 與 action。純鍵盤操作涵蓋桌面選取、工作切換、啟動、已實作的右鍵動作及復原提示。焦點必須永遠可見。高對比模式以系統語意角色對應 token，不使用固定顏色覆蓋。
 
-Layout uses logical units and per-monitor DPI. Required validation scales are 100%, 125%, 150%, 175%, and 200%. Text truncation, bidirectional layouts, Traditional Chinese, Simplified Chinese, English, and IME interaction are first-class constraints. M0 ships at least Traditional Chinese and English resource coverage for visible strings.
+版面配置使用邏輯單位及 per-monitor DPI。必要驗證比例為 100%、125%、150%、175% 及 200%。文字截斷、雙向版面、繁體中文、簡體中文、英文及 IME 互動都屬於第一級限制。M0 至少提供繁體中文與英文的全部可見字串資源。
 
-The Windows 10 visual target is verified through semantic tokens, geometry measurements, and reference captures. Exact third-party icon rendering, font rasterization, and OS-provider pixels are treated as controlled external variation.
+Windows 10 視覺目標透過語意 token、幾何量測及參考擷取驗證。第三方圖示繪製、字型 rasterization 及 OS provider 像素屬於受控的外部變異。
 
-## 11. Verification strategy
+## 11. 驗證策略
 
-### 11.1 Automated tests
+### 11.1 自動化測試
 
-- Unit tests for every `shell-core` transition, eligibility rule, grouping rule, selection rule, ordering rule, generation check, and recovery transition.
-- Property and sequence tests for duplicate, missing, reordered, stale, and overflowed Shell events.
-- Contract tests with fake platform, monitor, clock, settings, and explorer adapters.
-- Windows integration tests using owned helper windows and owned temporary directories only.
-- Process tests for SuperExplorer resolution and environment construction without modifying the SuperExplorer repository.
-- Crash and startup-failure injection at each takeover phase.
-- Accessibility tree and action tests.
-- Deterministic GPUI visual fixtures for desktop/taskbar states and DPI scales.
-- Cargo format, check, clippy with warnings denied, workspace tests, architecture checks, and dependency/license audits.
+- 測試所有 `shell-core` 狀態轉移、資格規則、群組規則、選取規則、排序規則、generation 檢查及復原轉移。
+- 以 property 與序列測試覆蓋重複、缺漏、重排、過期及 overflow 的 Shell 事件。
+- 使用假的平台、螢幕、時鐘、設定及檔案總管介面進行合約測試。
+- Windows 整合測試只使用受控輔助視窗與受控暫存資料夾。
+- 測試 SuperExplorer 路徑解析及環境變數建立，但不得修改 SuperExplorer 儲存庫。
+- 在每個接管階段注入 crash 與啟動失敗。
+- 測試協助工具樹及 action。
+- 為桌面與工作列狀態及各 DPI 建立確定性 GPUI 視覺 fixture。
+- 執行 Cargo format、check、以 warning 為錯誤的 clippy、workspace test、架構檢查及依賴與授權稽核。
 
-### 11.2 Headful and manual matrix
+### 11.2 有畫面與人工測試矩陣
 
-- Windows 10 22H2 x64 is the reference platform; Windows 11 compatibility is tracked separately and must remain usable.
-- One- and two-monitor configurations with mixed DPI.
-- Light, dark, and high-contrast themes.
-- Keyboard, pointer, touch-sized hit targets, IME, and UI Automation inspection.
-- Window storms, title/icon churn, hung helpers, missing SuperExplorer, display hot-plug, Explorer restart, and SuperDesktop crash recovery.
-- Preview-mode coexistence and Shell-mode takeover/restore.
+- Windows 10 22H2 x64 為參考平台；Windows 11 相容性另行追蹤，且必須維持可用。
+- 單螢幕及混合 DPI 的雙螢幕配置。
+- 淺色、深色及高對比主題。
+- 鍵盤、指標、觸控大小 hit target、IME 及 UI Automation 檢查。
+- 視窗事件風暴、標題與圖示頻繁變更、卡住的輔助程序、SuperExplorer 缺失、顯示器熱插拔、Explorer 重啟及 SuperDesktop crash 復原。
+- 預覽模式共存及 Shell 模式接管與還原。
 
-### 11.3 M0 performance budgets
+### 11.3 M0 效能預算
 
-- Cold launch to interactive preview or completed Shell health check: no more than 2 seconds on the reference machine.
-- Idle CPU median after settling: below 0.5%.
-- Shell event to visible taskbar update: p95 below 100 ms.
-- M0 working set after settling: below 150 MiB on the reference machine.
-- Event queues remain bounded during stress; recovery reaches an authoritative state after overflow.
+- 在參考機器上，冷啟動至可互動預覽或完成 Shell 健康檢查不得超過 2 秒。
+- 穩定後閒置 CPU 中位數低於 0.5%。
+- Shell 事件至工作列可見更新的 p95 低於 100 ms。
+- 在參考機器上，M0 穩定後 working set 低於 150 MiB。
+- 壓力期間事件 queue 保持有界；overflow 後必須能恢復至權威狀態。
 
-## 12. M0 acceptance criteria
+## 12. M0 驗收條件
 
-M0 is complete only when all of the following are verified:
+只有在下列項目全部驗證通過後，M0 才算完成：
 
-1. Preview mode renders usable desktop and taskbar surfaces without changing the active Windows Shell.
-2. Shell mode completes transactional takeover and normal exit restores Explorer and the work area.
-3. Guardian recovery restores a usable Explorer session after forced SuperDesktop termination.
-4. Desktop selection, rubber-band selection, keyboard navigation, activation, wallpaper modes, and persisted icon positions work on real Shell items.
-5. File-system folders launch SuperExplorer with the verified `EXPLORER_INITIAL_PATH` contract; missing SuperExplorer produces a recoverable GPUI error.
-6. The two-row taskbar tracks, activates, minimizes, restores, groups, and pins real application windows without unstable reordering.
-7. Primary and secondary taskbars remain correctly placed through mixed-DPI display changes.
-8. On Windows 10 22H2, the Start button invokes the Windows Start experience in both preview and Shell sessions; Shell takeover is refused if its prerequisite capability probe fails.
-9. Accessibility, localization, visual, lifecycle, stress, and performance gates pass with recorded evidence.
-10. No test or recovery routine modifies or deletes data outside an explicitly owned fixture root.
-11. The parity matrix truthfully marks deferred Windows 10 capabilities rather than presenting placeholders as completed functionality.
+1. 預覽模式可繪製並操作桌面與工作列，且不改變目前 Windows Shell。
+2. Shell 模式完成交易式接管；正常退出時恢復 Explorer 與工作區。
+3. 強制終止 SuperDesktop 後，guardian 能恢復可用的 Explorer 工作階段。
+4. 真實 Shell 項目的桌面選取、框選、鍵盤導覽、啟動、桌布模式及持久化圖示位置皆能運作。
+5. 檔案系統資料夾依已驗證的 `EXPLORER_INITIAL_PATH` 合約啟動 SuperExplorer；SuperExplorer 缺失時顯示可復原的 GPUI 錯誤。
+6. 雙列工作列能追蹤、啟用、最小化、還原、群組及釘選真實應用程式視窗，且不會發生不穩定重排。
+7. 主要與次要工作列在混合 DPI 顯示器變更期間仍維持正確位置。
+8. 在 Windows 10 22H2 上，開始按鈕能在預覽與 Shell 工作階段呼叫 Windows 開始體驗；若必要能力探測失敗，必須拒絕 Shell 接管。
+9. 協助工具、在地化、視覺、生命週期、壓力及效能 gate 均通過並保存證據。
+10. 任何測試或復原程序都不得修改或刪除明確受控測試根目錄以外的資料。
+11. 相容性矩陣必須如實標示延後的 Windows 10 能力，不得把占位介面宣稱為已完成功能。
 
-## 13. Delivery sequence after M0
+## 13. M0 後交付順序
 
-Later changes remain independently specified and verified:
+後續變更仍須個別定義與驗證：
 
-1. Desktop parity: rename, menus, drag/drop, arrange/sort, refresh, Recycle Bin, and advanced namespace items.
-2. Taskbar parity: reordering, jump lists, thumbnails, progress, badges, attention, full pin lifecycle, and multi-monitor policy.
-3. Start and search: application index, Win32/UWP entries, pinned tiles/list behavior, search, Run, power, and session commands.
-4. Notification area and Action Center: third-party tray compatibility, overflow, flyouts, clock/calendar, quick actions, and notifications.
-5. Shell integration: shortcuts, virtual-desktop integration, settings, autostart, controlled installation, uninstall, and recovery UI.
-6. Parity hardening: complete Windows 10 capability matrix, accessibility, localization, performance, soak, and release evidence.
+1. 桌面相容性：重新命名、選單、拖放、排列與排序、重新整理、資源回收筒及進階 namespace 項目。
+2. 工作列相容性：重排、跳躍清單、縮圖、進度、徽章、注意狀態、完整釘選生命週期及多螢幕策略。
+3. 開始與搜尋：應用程式索引、Win32/UWP 項目、釘選配置、搜尋、執行、電源及工作階段命令。
+4. 通知區與重要訊息中心：第三方通知區相容性、溢出、flyout、時鐘與行事曆、快速操作及通知。
+5. Shell 整合：快速鍵、虛擬桌面整合、設定、自動啟動、可控安裝、解除安裝及復原介面。
+6. 相容性強化：完整 Windows 10 能力矩陣、協助工具、在地化、效能、soak 及發行證據。
 
-Each increment receives its own OpenSpec proposal, design, delta specs, task plan, implementation, and verification evidence.
+每個增量都必須擁有自己的 OpenSpec proposal、design、delta spec、task plan、implementation 與 verification evidence。
 
-## 14. Decisions made during brainstorming
+## 14. Brainstorming 階段決策
 
-- Use all-GPUI visible UI, with only a minimal invisible Win32 adapter.
-- Include both desktop and taskbar; prioritize the supplied two-row taskbar reference.
-- Treat Windows 10 22H2 as the behavioral reference and Windows 11 as a compatibility target.
-- Preserve a process boundary between SuperDesktop and SuperExplorer.
-- Use the existing `EXPLORER_INITIAL_PATH` contract for M0 instead of modifying SuperExplorer immediately.
-- Use preview mode by default and transactional Shell takeover only when explicitly requested.
-- Add an independent Rust guardian before any session-level Shell replacement.
-- Treat PExplorer as behavioral reference material, not a source to port mechanically.
-- Decompose full parity into separately specifiable increments rather than claiming complete Windows 10 parity in the first build.
+- 所有產品可見介面使用 GPUI，只保留最小且不可見的 Win32 adapter。
+- 同時納入桌面與工作列，並優先重現使用者提供的雙列工作列參考圖。
+- Windows 10 22H2 是行為參考平台；Windows 11 是相容性目標。
+- SuperDesktop 與 SuperExplorer 之間保留程序邊界。
+- M0 使用既有 `EXPLORER_INITIAL_PATH` 合約，不立即修改 SuperExplorer。
+- 預設使用預覽模式；只有明確指定時才進行交易式 Shell 接管。
+- 在任何工作階段層級 Shell 取代前，先加入獨立 Rust guardian。
+- PExplorer 只作為行為參考，不進行機械式原始碼移植。
+- 將完整相容性拆為可獨立規格化的增量，不在第一版宣稱完成全部 Windows 10 相容性。
