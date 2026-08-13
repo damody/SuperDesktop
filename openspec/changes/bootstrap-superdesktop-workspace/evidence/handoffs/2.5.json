@@ -1,7 +1,7 @@
 {
     "change":  "bootstrap-superdesktop-workspace",
     "l2":  "2.5",
-    "status":  "implementation-complete-review-pending",
+    "status":  "accepted",
     "completed_leaf_ids":  [
                                "2.5.1",
                                "2.5.2",
@@ -9,15 +9,12 @@
                                "2.5.4",
                                "2.5.6"
                            ],
-    "primary_pending_leaf_ids":  [
-                                     "2.5.5",
-                                     "2.4.5"
-                                 ],
+    "primary_pending_leaf_ids":  [],
     "producer":  "Workspace/Build and Evidence owners",
     "consumer":  "Primary integrator Wave 1 exit",
-    "result_revision":  null,
-    "reviewer":  "pending independent Wave 1 exit re-review",
-    "accepted_revision":  null,
+    "result_revision":  "c3364a3b0112286e116f5c83f4d9a3d6412b7a8d",
+    "reviewer":  "Independent Wave 1 exit reviewer and independent Wave 2 sequence reviewer: no P0/P1",
+    "accepted_revision":  "c3364a3b0112286e116f5c83f4d9a3d6412b7a8d",
     "contract_hash":  {
                           "algorithm":  "SHA-256 of exact aggregate manifest file; manifest is verified by scripts/verify-contract-manifest.ps1",
                           "inputs_manifest":  "evidence/artifacts/2.5/aggregate-contract-inputs.sha256",
@@ -78,5 +75,5 @@
                          "exit_status":  0
                      }
                  ],
-    "notes":  "No Shell, AppBar, Explorer or external repository mutation occurred. The hash-drifted 2.5.6#wave25-final is marked stale by the effective adjustment lineage; a new immutable stale/passed successor pair is appended. Independent review and Primary acceptance remain pending."
+    "notes":  "No Shell, AppBar, Explorer or external repository mutation occurred. All record-qualified stale_evidence identities have unique direct current-hash successors. Independent reviewers accepted fixed revision c3364a3b with no P0/P1."
 }

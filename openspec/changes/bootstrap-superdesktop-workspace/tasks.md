@@ -97,7 +97,7 @@
 - [x] 2.4.2 擴充 evidence/coverage JSON Schema 與 validator，強制 procedure、expected、actual 及真實 schema validation，補齊 append-only replacement records與缺欄/type/pattern fixtures。
 - [x] 2.4.3 將 adjustment stale/replacement lineage 改為 immutable record IDs，驗證雙向連結、同 coverage、passed、完整受影響集合與 C approval，加入 malformed/dangling fixture。
 - [x] 2.4.4 強化 UI public API boundary 為遞迴 module/re-export/trait/跨行 signature 檢查，加入巢狀 `pub use HWND` 負面 fixture並重跑正負 architecture gate。
-- [ ] 2.4.5 執行完整 contract/evidence/architecture matrix、strict OpenSpec 與獨立 Wave 1 exit 複審，保存 corrective handoff 與無未解 P0/P1 disposition。（首輪複審仍有 P1，改由 2.5 corrective lineage 閉合後重驗。）
+- [x] 2.4.5 執行完整 contract/evidence/architecture matrix、strict OpenSpec 與獨立 Wave 1 exit 複審，保存 corrective handoff 與無未解 P0/P1 disposition。（首輪複審仍有 P1，已由 2.5 corrective lineage 閉合並於 `c3364a3b` 重驗通過。）
 
 ### 2.5 閉合 Wave 1 Corrective Replacement 與 Production Validator
 
@@ -113,5 +113,5 @@
 - [x] 2.5.2 以真正支援 schema 所宣告 draft 的 JSON Schema engine 驗證 evidence record schema 與 coverage schema，包括頂層 type、`additionalProperties`、format、array/object 與巢狀 constraints。
 - [x] 2.5.3 將原15、既定corrective 5及額外date-time共21個fixtures改為mutation/copy真實資料後執行同一production path；replacement案例必須命中dangling/cycle/nonmandatory/coverage-drift/unpassed專屬diagnostic。
 - [x] 2.5.4 驗證replacement與adjustment identity/supersession graph的存在性、間接循環、完整effective stale-set繼承與immutable record一一mapping，並以有效successor完整閉合所有legacy A/B adjustments。
-- [ ] 2.5.5 重跑完整 contract/evidence/architecture/strict/tasks matrix，更新 2.4.5 disposition、corrective handoff、contract hash與獨立 Wave 1 exit 複審，確認無未解 P0/P1。
+- [x] 2.5.5 重跑完整 contract/evidence/architecture/strict/tasks matrix，更新 2.4.5 disposition、corrective handoff、contract hash與獨立 Wave 1 exit 複審，確認無未解 P0/P1。
 - [x] 2.5.6 固定Wave 2所需Windows binding版本/features，從current locked metadata重生完整license inventory與direct provenance並通過source-boundary/offline contract；只允許`platform-win` crate-local audited unsafe exception，加入非platform unsafe/direct-binding與缺少SAFETY invariant負面fixtures。
