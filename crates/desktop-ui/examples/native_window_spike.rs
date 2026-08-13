@@ -207,6 +207,7 @@ fn run() -> Result<String, String> {
         admission_trace_sha256: required_sha256_env("NATIVE_WINDOW_SPIKE_ADMISSION_TRACE_SHA256")?,
         binary_sha256: required_sha256_env("NATIVE_WINDOW_SPIKE_BINARY_SHA256")?,
     };
+    let trace_output = env::var("NATIVE_WINDOW_SPIKE_OUTPUT").ok();
     let result = Rc::new(RefCell::new(None::<Result<String, String>>));
     let result_for_app = Rc::clone(&result);
     let platform = gpui_windows::WindowsPlatform::new(false).map_err(|error| error.to_string())?;
@@ -289,9 +290,50 @@ fn run() -> Result<String, String> {
             });
             root.update(cx, |view, _| view.close_subscription = Some(subscription));
 
+            // Warm GPUI's executors before freezing the resource baseline. Their
+            // first timer creates process handles that are not window leaks.
+            let close_root = root.clone();
+            let close_result = Rc::clone(&result_for_app);
+            let close_background = cx.background_executor().clone();
+            let close_foreground = cx.foreground_executor().clone();
+            let close_app = cx.to_async();
+            close_foreground
+                .spawn(async move {
+                    close_background.timer(Duration::from_millis(100)).await;
+                    close_app.update(|app| {
+                        let close_ready = close_root.update(app, |view, _| {
+                            let lease = view.lease.as_mut().ok_or("root-lease-missing")?;
+                            lease.rebaseline_resources()?;
+                            lease.begin_closing()?;
+                            match lease.reject_late_adapter_event() {
+                                Err("retired-subclass-generation") => {}
+                                Err(error) => return Err(error),
+                                Ok(()) => return Err("late-adapter-event-was-not-rejected"),
+                            }
+                            Ok::<(), &'static str>(())
+                        });
+                        if let Err(error) = close_ready {
+                            *close_result.borrow_mut() =
+                                Some(Err(format!("close-initiation:{error}")));
+                            app.quit();
+                            return;
+                        }
+                        if let Err(error) = handle.update(app, |_, window, _| {
+                            window.remove_window();
+                            Ok::<(), &'static str>(())
+                        }) {
+                            *close_result.borrow_mut() =
+                                Some(Err(format!("close-initiation:{error}")));
+                            app.quit();
+                        }
+                    });
+                })
+                .detach();
+
             let poll_root = root.clone();
             let poll_result = Rc::clone(&result_for_app);
             let poll_bindings = bindings.clone();
+            let poll_trace_output = trace_output.clone();
             let background = cx.background_executor().clone();
             let foreground = cx.foreground_executor().clone();
             let async_app = cx.to_async();
@@ -304,8 +346,15 @@ fn run() -> Result<String, String> {
                         let complete = async_app.update(|app| {
                             match poll_root.update(app, |view, _| view.try_finalize()) {
                                 Ok(Some(trace)) => {
-                                    *poll_result.borrow_mut() =
-                                        Some(Ok(trace_json(trace, &poll_bindings)));
+                                    let json = trace_json(trace, &poll_bindings);
+                                    if let Some(path) = &poll_trace_output
+                                        && let Err(error) = fs::write(path, &json)
+                                    {
+                                        *poll_result.borrow_mut() =
+                                            Some(Err(format!("trace-write:{error}")));
+                                        return true;
+                                    }
+                                    *poll_result.borrow_mut() = Some(Ok(json));
                                     true
                                 }
                                 Ok(None) => false,
@@ -327,29 +376,6 @@ fn run() -> Result<String, String> {
                     });
                 })
                 .detach();
-
-            let close_ready = root.update(cx, |view, _| {
-                let lease = view.lease.as_ref().ok_or("root-lease-missing")?;
-                lease.begin_closing()?;
-                match lease.reject_late_adapter_event() {
-                    Err("retired-subclass-generation") => {}
-                    Err(error) => return Err(error),
-                    Ok(()) => return Err("late-adapter-event-was-not-rejected"),
-                }
-                Ok::<(), &'static str>(())
-            });
-            if let Err(error) = close_ready {
-                *result_for_app.borrow_mut() = Some(Err(format!("close-initiation:{error}")));
-                cx.quit();
-                return;
-            }
-            if let Err(error) = handle.update(cx, |_, window, _| {
-                window.remove_window();
-                Ok::<(), &'static str>(())
-            }) {
-                *result_for_app.borrow_mut() = Some(Err(format!("close-initiation:{error}")));
-                cx.quit();
-            }
         });
     result
         .borrow_mut()

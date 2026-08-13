@@ -99,8 +99,8 @@
                       "task_id":  "validate-superdesktop-windows-platform/1.2.3",
                       "mandatory":  true,
                       "capability_id":  "windows-gpui-shell-capability",
-                      "requirement_id":  "guardian-ffi-boundary",
-                      "scenario_id":  "callback-panic",
+                      "requirement_id":  "gpui-hwnd-appbar-shell-hook-capability",
+                      "scenario_id":  "native-window-terminal",
                       "gates":  [
                                     "G-ARCH"
                                 ]

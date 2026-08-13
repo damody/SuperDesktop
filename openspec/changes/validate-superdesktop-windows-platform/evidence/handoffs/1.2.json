@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0.0",
+  "work_package": "validate-superdesktop-windows-platform/1.2",
+  "status": "implementation-complete-primary-verification-pending",
+  "base_revision": "ab74e4ba",
+  "result_revision": "uncommitted",
+  "completed_global_task_ids": [],
+  "input_contract": {
+    "path": "evidence/artifacts/1.1/frozen-profile-contract-successor-1.2-manifest-v3.json",
+    "sha256": "82B7EF7275CB036D9D041B9B0E5E2299062C3EB76A642FF6C5C02F1245837429",
+    "admission_trace_sha256": "B057BF54B0245F03D243B490EA324529800D5438DC8F78780400339F383E1880"
+  },
+  "output_contract": {
+    "trace": "evidence/artifacts/1.2/native-window-trace.json",
+    "trace_sha256": "3AEFD276A7B2B0B0434ADBF2E8773E84C9C3F1C6518545B66D24089B9F6411F2",
+    "binary": "evidence/artifacts/1.2/bin/native_window_spike.exe",
+    "binary_sha256": "AB011423C7E52F2CBFBD327883D21D249FBAFA0107305FC3B591BFB629BD0FE6",
+    "manifest_sha256": "98E7D280FE2F9AFB69E7B5CDCBA61C299BE0A7A82A1CEEB864C9DA38716049D8"
+  },
+  "source_hashes": {
+    "example": "BEF2252E08C95604AE473E7BA5A10D2C3ED823974097C3FA8B6DDB4525F814E6",
+    "bridge": "EC1D5C9682F52EE65F6F360A46F3F119C5E99EDCB803AE75CD5CC7533BC1C4D0",
+    "semantic_verifier": "ED73F1185C0DBDC0AD3F7BB8E33DFD9187F9B6F7F5F9A71B2D0303197FCE9FF1"
+  },
+  "gates": ["G-ARCH"],
+  "safety": {
+    "preview_only": true,
+    "appbar_or_hook_mutations": false,
+    "bridge_created_hwnd": false,
+    "bridge_destroyed_hwnd": false
+  }
+}

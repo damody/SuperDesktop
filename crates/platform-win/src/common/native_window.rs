@@ -73,6 +73,29 @@ pub enum FatalReason {
     RemoveSubclassFailed,
 }
 
+/// Read-only lifecycle phase for controlled spike diagnostics. It intentionally
+/// exposes no Win32 handle and permits no state transition.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TerminalPhase {
+    Attached,
+    Closing,
+    NativeDestroyed,
+    Fatal,
+}
+
+/// A point-in-time diagnostic snapshot. `hwnd_still_valid` is only queried on
+/// the owner thread; `None` means the caller is not on that thread, rather than
+/// treating a cross-thread probe as evidence about a borrowed HWND.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct TerminalStatus {
+    pub phase: TerminalPhase,
+    pub wm_ncdestroy_seen: bool,
+    pub on_window_closed_seen: bool,
+    pub raw_ref_outstanding: bool,
+    pub finalized: bool,
+    pub hwnd_still_valid: Option<bool>,
+}
+
 #[derive(Clone, Debug)]
 pub struct BridgeTrace {
     pub hwnd: usize,
@@ -473,6 +496,30 @@ impl TerminalCoordinator {
         self.finalized_at.load(Ordering::Acquire) != 0
     }
 
+    fn status(&self, hwnd: HWND, owner_thread: u32) -> TerminalStatus {
+        let phase = match self.phase.load(Ordering::Acquire) {
+            PHASE_ATTACHED => TerminalPhase::Attached,
+            PHASE_CLOSING => TerminalPhase::Closing,
+            PHASE_NCDESTROY => TerminalPhase::NativeDestroyed,
+            _ => TerminalPhase::Fatal,
+        };
+        let hwnd_still_valid = if unsafe { GetCurrentThreadId() } == owner_thread {
+            // SAFETY: query-only status check on the owner thread. It neither
+            // dereferences nor retains the borrowed HWND.
+            Some(unsafe { IsWindow(Some(hwnd)).as_bool() })
+        } else {
+            None
+        };
+        TerminalStatus {
+            phase,
+            wm_ncdestroy_seen: self.ncdestroy_at.load(Ordering::Acquire) != 0,
+            on_window_closed_seen: self.on_closed_at.load(Ordering::Acquire) != 0,
+            raw_ref_outstanding: !self.raw_ref_released.load(Ordering::Acquire),
+            finalized: self.terminal_ready(),
+            hwnd_still_valid,
+        }
+    }
+
     fn trace(
         &self,
         identity: &BorrowedHwnd,
@@ -783,10 +830,26 @@ impl SubclassLease {
         self.coordinator.begin_closing()
     }
 
+    /// Re-captures the resource baseline after GPUI's executors have completed
+    /// their one-time initialization, but before close begins.
+    pub fn rebaseline_resources(&mut self) -> Result<(), &'static str> {
+        self.validate_active()?;
+        self.resources_before = resource_snapshot()?;
+        Ok(())
+    }
+
     /// Records the App-level GPUI close notification. It is deliberately distinct
     /// from the native terminal signal and rejects an unverifiable order.
     pub fn on_window_closed(&self) -> Result<(), &'static str> {
         self.coordinator.record_on_window_closed()
+    }
+
+    /// Returns a read-only terminal diagnostic for the composition root. This
+    /// must not be used to make ownership decisions: the bridge remains borrowed
+    /// until both terminal signals have been observed.
+    pub fn terminal_status(&self) -> TerminalStatus {
+        self.coordinator
+            .status(self.hwnd.hwnd, self.hwnd.owner_thread)
     }
 
     /// Validates that a late event is fenced without touching a retired HWND.
@@ -1007,6 +1070,25 @@ mod tests {
         assert!(state.claim_raw_release());
         assert!(!state.claim_raw_release());
         assert!(state.raw_ref_released.load(Ordering::Acquire));
+    }
+
+    #[test]
+    fn terminal_status_is_read_only_and_reports_independent_terminal_signals() {
+        let state = TerminalCoordinator::new(7);
+        let owner_thread = unsafe { super::GetCurrentThreadId() };
+        let attached = state.status(super::HWND(std::ptr::null_mut()), owner_thread);
+        assert_eq!(attached.phase, super::TerminalPhase::Attached);
+        assert!(!attached.wm_ncdestroy_seen);
+        assert!(!attached.on_window_closed_seen);
+        assert!(attached.raw_ref_outstanding);
+        assert_eq!(attached.hwnd_still_valid, Some(false));
+
+        state.record_on_window_closed().unwrap();
+        let closing = state.status(super::HWND(std::ptr::null_mut()), owner_thread);
+        assert_eq!(closing.phase, super::TerminalPhase::Closing);
+        assert!(closing.on_window_closed_seen);
+        assert!(!closing.wm_ncdestroy_seen);
+        assert!(!closing.finalized);
     }
 
     #[test]
