@@ -16,7 +16,7 @@ use std::{
 };
 
 use windows::Win32::{
-    Foundation::{HWND, LPARAM, LRESULT, WPARAM},
+    Foundation::{HWND, LPARAM, LRESULT, RECT, WPARAM},
     System::Threading::{
         GR_GDIOBJECTS, GR_USEROBJECTS, GetCurrentProcess, GetCurrentProcessId, GetCurrentThreadId,
         GetGuiResources, GetProcessHandleCount,
@@ -34,6 +34,10 @@ const TEST_EVENT_MESSAGE: u32 = WM_APP + 0x4d2;
 const TEST_DPI: usize = 1;
 const TEST_DISPLAY: usize = 2;
 const TEST_ACTIVATION: usize = 3;
+const TEST_DPI_X: usize = 96;
+const TEST_DPI_Y: usize = 96;
+const TEST_DISPLAY_WIDTH: isize = 320;
+const TEST_DISPLAY_HEIGHT: isize = 180;
 
 const PHASE_ATTACHED: u8 = 1;
 const PHASE_CLOSING: u8 = 2;
@@ -613,6 +617,50 @@ impl SubclassLease {
         Ok(())
     }
 
+    /// Synchronously sends representative native messages through the actual
+    /// subclass path. The callback records each raw message before forwarding it
+    /// to GPUI. The DPI suggested-rectangle remains on this stack until its
+    /// synchronous `SendMessageW` call returns; callers never receive a Win32 type
+    /// or pointer and cannot fabricate an invalid DPI payload.
+    pub fn send_test_raw_messages(&self) -> Result<(), &'static str> {
+        self.validate_active()?;
+        let suggested_bounds = RECT {
+            left: 0,
+            top: 0,
+            right: TEST_DISPLAY_WIDTH as i32,
+            bottom: TEST_DISPLAY_HEIGHT as i32,
+        };
+        let dpi_wparam = WPARAM(TEST_DPI_X | (TEST_DPI_Y << 16));
+        let display_lparam = LPARAM((TEST_DISPLAY_WIDTH & 0xffff) | (TEST_DISPLAY_HEIGHT << 16));
+        // SAFETY: `validate_active` proved a same-thread live GPUI HWND. Each call
+        // is synchronous. `suggested_bounds` stays valid for the entire DPI call,
+        // and the bridge's subclass observes raw messages before DefSubclassProc
+        // can dispatch to GPUI's WndProc.
+        unsafe {
+            SendMessageW(
+                self.hwnd.hwnd,
+                WM_DPICHANGED,
+                Some(dpi_wparam),
+                Some(LPARAM(
+                    (&suggested_bounds as *const RECT).cast::<()>() as isize
+                )),
+            );
+            SendMessageW(
+                self.hwnd.hwnd,
+                WM_DISPLAYCHANGE,
+                Some(WPARAM(32)),
+                Some(display_lparam),
+            );
+            SendMessageW(
+                self.hwnd.hwnd,
+                WM_ACTIVATE,
+                Some(WPARAM(1)),
+                Some(LPARAM(0)),
+            );
+        }
+        Ok(())
+    }
+
     /// Marks close intent before GPUI is asked to close the owning window.
     pub fn begin_closing(&self) -> Result<(), &'static str> {
         self.validate_active()?;
@@ -727,6 +775,27 @@ mod tests {
             EVENT_DPI | EVENT_DISPLAY | EVENT_ACTIVATION
         );
         assert_eq!(state.event_mask.load(Ordering::Acquire), 0);
+    }
+
+    #[test]
+    fn raw_messages_are_observed_before_they_are_forwarded_and_stay_separate_from_adapter() {
+        let state = TerminalCoordinator::new(7);
+        for message in [
+            super::WM_DPICHANGED,
+            super::WM_DISPLAYCHANGE,
+            super::WM_ACTIVATE,
+        ] {
+            let invocation = invoke_callback(&state, message, WPARAM(0), 7);
+            assert!(
+                invocation.forward,
+                "raw message must be recorded before GPUI forwarding"
+            );
+        }
+        assert_eq!(
+            state.event_mask.load(Ordering::Acquire),
+            EVENT_DPI | EVENT_DISPLAY | EVENT_ACTIVATION
+        );
+        assert_eq!(state.adapter_event_mask.load(Ordering::Acquire), 0);
     }
 
     #[test]
