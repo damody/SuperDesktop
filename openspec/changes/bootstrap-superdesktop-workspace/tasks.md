@@ -59,10 +59,10 @@
 **Gate／Evidence：** `G-ARCH`、`G-SAFETY`；`evidence/artifacts/2.2/`。
 **完成門檻：** 所有 dependency 有授權，PExplorer/SuperExplorer 邊界可由 audit 判定。
 
-- [ ] 2.2.1 記錄 PExplorer 僅供行為與 API 研究的來源政策。
-- [ ] 2.2.2 建立 production source provenance 與 third-party license inventory。
-- [ ] 2.2.3 建立來源邊界掃描與未揭露 dependency 負面 fixture。
-- [ ] 2.2.4 執行授權及來源 audit 並保存 reviewer disposition。
+- [x] 2.2.1 記錄 PExplorer 僅供行為與 API 研究的來源政策。
+- [x] 2.2.2 建立 production source provenance 與 third-party license inventory。
+- [x] 2.2.3 建立來源邊界掃描與未揭露 dependency 負面 fixture。
+- [x] 2.2.4 執行授權及來源 audit 並保存 reviewer disposition。
 
 ### 2.3 建立 Evidence Schema 與 Validator
 

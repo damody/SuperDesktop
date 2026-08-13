@@ -1,0 +1,4 @@
+﻿command: powershell -NoProfile -ExecutionPolicy Bypass -File "$PSScriptRoot/generate-license-inventory.ps1" -WorkspaceRoot $WorkspaceRoot
+exit_status: 0
+output:
+Generated D:\SuperDesktop\SuperDesktop\openspec\changes\bootstrap-superdesktop-workspace\compliance\third-party-license-inventory.json with 399 package records.

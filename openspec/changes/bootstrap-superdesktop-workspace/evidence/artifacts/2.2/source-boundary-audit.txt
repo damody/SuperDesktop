@@ -1,0 +1,4 @@
+﻿command: powershell -NoProfile -ExecutionPolicy Bypass -File "$PSScriptRoot/audit-source-boundary.ps1" -WorkspaceRoot $WorkspaceRoot
+exit_status: 0
+output:
+Source boundary audit passed: 399 package records have inventory/license/checksum coverage; no external local path dependency or PExplorer-derived production source marker was found.

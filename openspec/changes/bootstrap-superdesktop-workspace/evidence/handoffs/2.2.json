@@ -1,0 +1,58 @@
+{
+  "change": "bootstrap-superdesktop-workspace",
+  "l2": "2.2",
+  "producer": "Workspace/Build owner",
+  "consumer": "bootstrap-superdesktop-workspace/2.3",
+  "base_revision": "ec98600b59946e8ba119b5d23c276dc22f7c2b07",
+  "result_revision": null,
+  "ownership_diff": [
+    "fixtures/source-boundary/**",
+    "scripts/{generate-license-inventory.ps1,audit-source-boundary.ps1,capture-workspace-2.2-evidence.ps1}",
+    "openspec/changes/bootstrap-superdesktop-workspace/compliance/{source-boundary-policy.md,third-party-license-inventory.json,reviewer-disposition.md}",
+    "openspec/changes/bootstrap-superdesktop-workspace/evidence/artifacts/2.2/**",
+    "openspec/changes/bootstrap-superdesktop-workspace/evidence/handoffs/2.2.json",
+    "openspec/changes/bootstrap-superdesktop-workspace/tasks.md"
+  ],
+  "excluded_intermediates": [
+    "target/**",
+    "build/**",
+    "vendor-config.generated.toml"
+  ],
+  "commands": [
+    {"command": "powershell -File scripts/generate-license-inventory.ps1", "exit_status": 0},
+    {"command": "powershell -File scripts/audit-source-boundary.ps1", "exit_status": 0},
+    {"command": "powershell -File scripts/audit-source-boundary.ps1 -Fixture fixtures/source-boundary/superexplorer-path-dependency", "exit_status": 1, "expected_exit_status": 1},
+    {"command": "powershell -File scripts/audit-source-boundary.ps1 -Fixture fixtures/source-boundary/pexplorer-derived-source", "exit_status": 1, "expected_exit_status": 1},
+    {"command": "cargo metadata --locked --offline --format-version 1", "exit_status": 0},
+    {"command": "cargo fmt --all -- --check", "exit_status": 0},
+    {"command": "openspec validate bootstrap-superdesktop-workspace --strict", "exit_status": 0},
+    {"command": "git diff --check", "exit_status": 0}
+  ],
+  "gate_dispositions": [
+    {"gate": "G-ARCH", "status": "passed", "scope": "locked offline Cargo graph, source provenance, license inventory, and vendor checksum coverage for 399 packages"},
+    {"gate": "G-SAFETY", "status": "passed", "scope": "production scans reject external SuperExplorer/PExplorer local paths and PExplorer/ReactOS derived-source markers; both negative fixtures fail as expected"}
+  ],
+  "contract_hash": {
+    "algorithm": "SHA-256",
+    "inputs_manifest": "evidence/artifacts/2.2/source-boundary-contract-inputs.sha256",
+    "value": "2AA67DF41E97F305E2069B20800B5F260D62B30D1C5020D5CFBBDFAA9CBC7D7B"
+  },
+  "evidence": [
+    {"path": "evidence/artifacts/2.2/diff-check.txt", "sha256": "29F9D0F8887EA499106C8867587104E542507F3363A1EC1CD9099256E8AF4205"},
+    {"path": "evidence/artifacts/2.2/format-check.txt", "sha256": "8C0EF5DFCDFF6DBBB206D7B984B2994F6E7E74F70D92AA70509029049617D04D"},
+    {"path": "evidence/artifacts/2.2/license-inventory-generation.txt", "sha256": "618AA58C663809994EEB6E935488B2DB820B245E2C907D40AACE3F8606502661"},
+    {"path": "evidence/artifacts/2.2/offline-metadata.txt", "sha256": "DB42EFAAFA3024B2A4B5563C68DF3E78BE2B17AD4E25DECF198D312618B23729"},
+    {"path": "evidence/artifacts/2.2/pexplorer-derived-source-negative.txt", "sha256": "87C5EE77833D5565F3016C5C00B27FBBCCD469926579991CC893CFFCD9714D66"},
+    {"path": "evidence/artifacts/2.2/source-boundary-audit.txt", "sha256": "99F99DD5E84CB6C898918D3F91E6E2928EDC05CA455F0B4E1B6991043BEB1843"},
+    {"path": "evidence/artifacts/2.2/source-boundary-contract-inputs.sha256", "sha256": "2AA67DF41E97F305E2069B20800B5F260D62B30D1C5020D5CFBBDFAA9CBC7D7B"},
+    {"path": "evidence/artifacts/2.2/strict-openspec-validation.txt", "sha256": "2C94308ADBCF05FBEFC60B000AC5427B937BBB0681B198930D5355C0E1D10E00"},
+    {"path": "evidence/artifacts/2.2/summary.md", "sha256": "2CC9F4EF32EE09E6B938E0D436062525374C7ADC9DC6C6A1DE2D72F66849804E"},
+    {"path": "evidence/artifacts/2.2/superexplorer-path-negative.txt", "sha256": "9452DA1A5B9833443417CB22E0F8F32C4F82F89C14C5A87BFB306AD9E72B9BB1"}
+  ],
+  "stale_replacement_lineage": [],
+  "findings": [
+    {"id": "A-W1-2.2-001", "classification": "A", "disposition": "Use Cargo locked offline metadata and vendored checksum manifests as the provenance authority; static production scans enforce the external SuperExplorer and PExplorer source boundary without adding a production dependency."}
+  ],
+  "reviewer": "Workspace/Build owner pre-review; Primary integrator Wave 1 exit acceptance pending",
+  "accepted_revision": null
+}

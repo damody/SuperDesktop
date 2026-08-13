@@ -1,0 +1,5 @@
+command: scripts/audit-source-boundary.ps1 -Fixture fixtures/source-boundary/superexplorer-path-dependency
+expected_exit_status: 1
+actual_exit_status: 1
+diagnostic: SUPEREXPLORER_PATH_DEPENDENCY
+result: passed

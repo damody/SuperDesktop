@@ -1,0 +1,5 @@
+command: scripts/audit-source-boundary.ps1 -Fixture fixtures/source-boundary/pexplorer-derived-source
+expected_exit_status: 1
+actual_exit_status: 1
+diagnostic: PEXPLORER_DERIVED_SOURCE
+result: passed
