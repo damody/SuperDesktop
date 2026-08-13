@@ -6,4 +6,3 @@ At D:\SuperDesktop\SuperDesktop\scripts\validate-evidence.ps1:4 char:33
 +                                 ~~~~~~~~~~~~~~~~~~~~~~~~~
     + CategoryInfo          : OperationStopped: (SCHEMA_VALIDATI...pattern fixture:String) [], RuntimeException
     + FullyQualifiedErrorId : SCHEMA_VALIDATION_FAILED: pattern fixture
- 
