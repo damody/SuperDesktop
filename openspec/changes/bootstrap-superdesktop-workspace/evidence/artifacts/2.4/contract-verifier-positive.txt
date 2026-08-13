@@ -1,0 +1,3 @@
+﻿exit_status: 0
+output:
+Contract manifest passed: D:\SuperDesktop\SuperDesktop\openspec\changes\bootstrap-superdesktop-workspace\evidence\artifacts\2.4/wave1-corrective-contract-inputs.sha256

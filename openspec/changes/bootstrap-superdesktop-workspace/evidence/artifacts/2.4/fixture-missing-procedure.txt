@@ -1,0 +1,9 @@
+﻿exit_status: 1
+output:
+SCHEMA_MISSING_FIELD: procedure fixture
+At D:\SuperDesktop\SuperDesktop\scripts\validate-evidence.ps1:4 char:33
++ function Fail($Code,$Message) { throw "${Code}: $Message" }
++                                 ~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (SCHEMA_MISSING_FIELD: procedure fixture:String) [], RuntimeException
+    + FullyQualifiedErrorId : SCHEMA_MISSING_FIELD: procedure fixture
+ 

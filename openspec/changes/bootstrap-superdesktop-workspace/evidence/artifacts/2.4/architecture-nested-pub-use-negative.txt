@@ -1,0 +1,3 @@
+﻿exit_status: 1
+output:
+UI_PUBLIC_WINDOWS_OR_COM_TYPE: UI fixture exports a Windows/COM type.

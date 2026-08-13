@@ -1,0 +1,8 @@
+﻿exit_status: 0
+output:
+warning: in the working copy of 'openspec/changes/bootstrap-superdesktop-workspace/evidence/adjustments.jsonl', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'openspec/changes/bootstrap-superdesktop-workspace/evidence/coverage.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'openspec/changes/bootstrap-superdesktop-workspace/evidence/index.jsonl', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'openspec/changes/bootstrap-superdesktop-workspace/evidence/schema.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'scripts/check-dependency-architecture.ps1', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'scripts/validate-evidence.ps1', LF will be replaced by CRLF the next time Git touches it

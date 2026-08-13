@@ -28,6 +28,11 @@
     {"task_id":"bootstrap-superdesktop-workspace/2.3.5","mandatory":true,"capability_id":"superdesktop-evidence-governance","requirement_id":"coverage-manifest","scenario_id":"coverage-drift","gates":["G-TRACE"]},
     {"task_id":"bootstrap-superdesktop-workspace/2.3.6","mandatory":true,"capability_id":"superdesktop-evidence-governance","requirement_id":"mandatory-replacement","scenario_id":"replacement-lineage","gates":["G-TRACE"]},
     {"task_id":"bootstrap-superdesktop-workspace/2.3.7","mandatory":true,"capability_id":"superdesktop-evidence-governance","requirement_id":"adjustment-lineage","scenario_id":"adjustment-stale-propagation","gates":["G-TRACE"]},
-    {"task_id":"bootstrap-superdesktop-workspace/2.3.8","mandatory":true,"capability_id":"superdesktop-evidence-governance","requirement_id":"evidence-record-schema","scenario_id":"validator-fixtures","gates":["G-TRACE"]}
+    {"task_id":"bootstrap-superdesktop-workspace/2.3.8","mandatory":true,"capability_id":"superdesktop-evidence-governance","requirement_id":"evidence-record-schema","scenario_id":"validator-fixtures","gates":["G-TRACE"]},
+    {"task_id":"bootstrap-superdesktop-workspace/2.4.1","mandatory":true,"capability_id":"superdesktop-evidence-governance","requirement_id":"contract-manifest-verification","scenario_id":"canonical-contract-inputs","gates":["G-TRACE","G-ARCH"]},
+    {"task_id":"bootstrap-superdesktop-workspace/2.4.2","mandatory":true,"capability_id":"superdesktop-evidence-governance","requirement_id":"evidence-record-schema","scenario_id":"schema-complete-records","gates":["G-TRACE"]},
+    {"task_id":"bootstrap-superdesktop-workspace/2.4.3","mandatory":true,"capability_id":"superdesktop-evidence-governance","requirement_id":"adjustment-lineage","scenario_id":"immutable-adjustment-lineage","gates":["G-TRACE"]},
+    {"task_id":"bootstrap-superdesktop-workspace/2.4.4","mandatory":true,"capability_id":"superdesktop-workspace-foundation","requirement_id":"windows-workspace","scenario_id":"recursive-ui-public-api","gates":["G-ARCH","G-SAFETY"]},
+    {"task_id":"bootstrap-superdesktop-workspace/2.4.5","mandatory":true,"capability_id":"superdesktop-evidence-governance","requirement_id":"corrective-wave-exit","scenario_id":"full-corrective-matrix","gates":["G-TRACE","G-ARCH","G-SAFETY"]}
   ]
 }

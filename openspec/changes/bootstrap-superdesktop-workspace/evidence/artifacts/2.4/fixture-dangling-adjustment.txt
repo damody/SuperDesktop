@@ -1,0 +1,9 @@
+﻿exit_status: 1
+output:
+ADJUSTMENT_DANGLING_RECORD: fixture
+At D:\SuperDesktop\SuperDesktop\scripts\validate-evidence.ps1:4 char:33
++ function Fail($Code,$Message) { throw "${Code}: $Message" }
++                                 ~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (ADJUSTMENT_DANGLING_RECORD: fixture:String) [], RuntimeException
+    + FullyQualifiedErrorId : ADJUSTMENT_DANGLING_RECORD: fixture
+ 

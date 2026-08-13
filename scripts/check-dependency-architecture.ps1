@@ -37,7 +37,7 @@ if ($Fixture) {
         Add-Diagnostic $diagnostics 'CORE_FORBIDDEN_DEPENDENCY' 'shell-core fixture declares gpui.'
     }
 
-    foreach ($pattern in $allowlist.forbidden_public_type_patterns) {
+    foreach ($pattern in @($allowlist.forbidden_public_type_patterns) + @('(?ms)pub\s+use\s+[^;]*(?:HWND|HANDLE|IUnknown|IDesktop|IShell|COM)', '(?ms)pub\s+trait\s+.*?(?:HWND|HANDLE|IUnknown|IDesktop|IShell|COM)', '(?ms)pub\s+fn\s+.*?(?:HWND|HANDLE|IUnknown|IDesktop|IShell|COM)')) {
         if ($fixtureSource -match $pattern) {
             Add-Diagnostic $diagnostics 'UI_PUBLIC_WINDOWS_OR_COM_TYPE' 'UI fixture exports a Windows/COM type.'
         }
@@ -96,7 +96,7 @@ foreach ($crateName in $expectedNames) {
     }
 
     $sourceDirectory = Join-Path (Split-Path -Parent $package.manifest_path) 'src'
-    $sourceFiles = @(Get-ChildItem -Path $sourceDirectory -Filter '*.rs' -File -ErrorAction SilentlyContinue)
+    $sourceFiles = @(Get-ChildItem -Path $sourceDirectory -Filter '*.rs' -File -Recurse -ErrorAction SilentlyContinue)
     if ($sourceFiles.Count -eq 0) {
         Add-Diagnostic $diagnostics 'MISSING_WINDOWS_GUARD' "$crateName has no Rust source file."
         continue
@@ -109,7 +109,7 @@ foreach ($crateName in $expectedNames) {
             $hasGuard = $true
         }
 
-        if (($crateName -in @('desktop-ui', 'taskbar-ui')) -and ($source -match $allowlist.forbidden_public_type_patterns[0])) {
+        if (($crateName -in @('desktop-ui', 'taskbar-ui')) -and ($source -match '(?ms)pub\s+(?:use\s+[^;]*|trait\s+.*?|fn\s+.*?|type\s+.*?|struct\s+.*?|enum\s+.*?)(?:HWND|HANDLE|IUnknown|IDesktop|IShell|COM)')) {
             Add-Diagnostic $diagnostics 'UI_PUBLIC_WINDOWS_OR_COM_TYPE' "$crateName exports a Windows/COM type."
         }
     }

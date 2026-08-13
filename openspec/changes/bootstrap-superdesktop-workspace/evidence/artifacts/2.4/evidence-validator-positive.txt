@@ -1,0 +1,3 @@
+﻿exit_status: 0
+output:
+Evidence validation passed: 71 records, 31 task coverage mappings.

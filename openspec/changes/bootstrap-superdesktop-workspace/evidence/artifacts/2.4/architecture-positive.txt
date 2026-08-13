@@ -1,0 +1,3 @@
+﻿exit_status: 0
+output:
+Architecture check passed: nine approved crates, allowlisted graph, Windows guards, and UI type boundary.
