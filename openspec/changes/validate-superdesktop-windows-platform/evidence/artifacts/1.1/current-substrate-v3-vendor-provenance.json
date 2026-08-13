@@ -1,0 +1,177 @@
+﻿{
+    "schema_version":  "1.0.0",
+    "contract":  "B-W2-1.2-007-current-substrate-v3-vendor-license-provenance",
+    "cargo_lock_sha256":  "32E8DB23DABB9859928D35121D3DB1A08ECDE8E09FA7CE3BC4E7E6A0030DE62E",
+    "gpui":  {
+                 "vendor_path":  "vendor/gpui",
+                 "license":  "Apache-2.0",
+                 "checksum_path":  "vendor/gpui/.cargo-checksum.json",
+                 "build_script_path":  "vendor/gpui/build.rs",
+                 "resources":  [
+                                   "vendor/gpui/resources/windows/gpui.manifest.xml",
+                                   "vendor/gpui/resources/windows/gpui.rc"
+                               ]
+             },
+    "packages":  [
+                     {
+                         "name":  "embed-resource",
+                         "version":  "3.0.11",
+                         "vendor_path":  "vendor/embed-resource",
+                         "cargo_toml_sha256":  "3BC244A60965DCBFA04215B73D50A13B8A3663648B20C2977FAFF5DB259E5BBF",
+                         "cargo_checksum_sha256":  "0F7C47A3515374F56FD996C76C688E641DFC43CC31B31A203DB483ED3CE14EB1",
+                         "license":  "MIT",
+                         "license_files":  [
+                                               {
+                                                   "path":  "vendor/embed-resource/LICENSE",
+                                                   "sha256":  "1ABDBBD4E3F95E56C79D4A8AF190254C23DDB14DB34AADADFAFEF9C3AF041113"
+                                               }
+                                           ]
+                     },
+                     {
+                         "name":  "serde_spanned",
+                         "version":  "1.1.1",
+                         "vendor_path":  "vendor/serde_spanned-1.1.1",
+                         "cargo_toml_sha256":  "9FDEF53FF77894A933022135DFCF0733C9257807A23A387176B2DE16B4CB48BA",
+                         "cargo_checksum_sha256":  "07937F8B169B3018CE628F6A2354803A120B8E9EBEDFA531CB64516A321DD9F9",
+                         "license":  "MIT OR Apache-2.0",
+                         "license_files":  [
+                                               {
+                                                   "path":  "vendor/serde_spanned-1.1.1/LICENSE-APACHE",
+                                                   "sha256":  "C6596EB7BE8581C18BE736C846FB9173B69ECCF6EF94C5135893EC56BD92BA08"
+                                               },
+                                               {
+                                                   "path":  "vendor/serde_spanned-1.1.1/LICENSE-MIT",
+                                                   "sha256":  "6EFB0476A1CC085077ED49357026D8C173BF33017278EF440F222FB9CBCB66E6"
+                                               }
+                                           ]
+                     },
+                     {
+                         "name":  "toml",
+                         "version":  "1.1.4+spec-1.1.0",
+                         "vendor_path":  "vendor/toml-1.1.4",
+                         "cargo_toml_sha256":  "C0D1B50A0D325C1AB77D748F27994CEF75CB1EE4CA48EEA56C90DB723905AEB5",
+                         "cargo_checksum_sha256":  "A24837F2A3C55B3BA6293184C294FA18E45D41FDB755E9E2E82B56363FDD07BD",
+                         "license":  "MIT OR Apache-2.0",
+                         "license_files":  [
+                                               {
+                                                   "path":  "vendor/toml-1.1.4/LICENSE-APACHE",
+                                                   "sha256":  "C6596EB7BE8581C18BE736C846FB9173B69ECCF6EF94C5135893EC56BD92BA08"
+                                               },
+                                               {
+                                                   "path":  "vendor/toml-1.1.4/LICENSE-MIT",
+                                                   "sha256":  "6EFB0476A1CC085077ED49357026D8C173BF33017278EF440F222FB9CBCB66E6"
+                                               }
+                                           ]
+                     },
+                     {
+                         "name":  "toml_datetime",
+                         "version":  "1.1.1+spec-1.1.0",
+                         "vendor_path":  "vendor/toml_datetime-1.1.1",
+                         "cargo_toml_sha256":  "97287A69CE6E80E64F90577D254185694042C91903C908001E8C3073E00BEA3D",
+                         "cargo_checksum_sha256":  "FDA1E8F1190A2F3A60C266FB907FE2451680AC03EB89FAB7C4DB4B704210E8B6",
+                         "license":  "MIT OR Apache-2.0",
+                         "license_files":  [
+                                               {
+                                                   "path":  "vendor/toml_datetime-1.1.1/LICENSE-APACHE",
+                                                   "sha256":  "C6596EB7BE8581C18BE736C846FB9173B69ECCF6EF94C5135893EC56BD92BA08"
+                                               },
+                                               {
+                                                   "path":  "vendor/toml_datetime-1.1.1/LICENSE-MIT",
+                                                   "sha256":  "6EFB0476A1CC085077ED49357026D8C173BF33017278EF440F222FB9CBCB66E6"
+                                               }
+                                           ]
+                     },
+                     {
+                         "name":  "toml_parser",
+                         "version":  "1.1.3+spec-1.1.0",
+                         "vendor_path":  "vendor/toml_parser",
+                         "cargo_toml_sha256":  "23BF7BC66A7090D0048555EC05A81216A5D335E5648952D7FB266C7529A7AD90",
+                         "cargo_checksum_sha256":  "20EA34AF74954F484EF178A2158544EA7DD7221771E71F40435100AFCE191CBB",
+                         "license":  "MIT OR Apache-2.0",
+                         "license_files":  [
+                                               {
+                                                   "path":  "vendor/toml_parser/LICENSE-APACHE",
+                                                   "sha256":  "C6596EB7BE8581C18BE736C846FB9173B69ECCF6EF94C5135893EC56BD92BA08"
+                                               },
+                                               {
+                                                   "path":  "vendor/toml_parser/LICENSE-MIT",
+                                                   "sha256":  "6EFB0476A1CC085077ED49357026D8C173BF33017278EF440F222FB9CBCB66E6"
+                                               }
+                                           ]
+                     },
+                     {
+                         "name":  "toml_writer",
+                         "version":  "1.1.2+spec-1.1.0",
+                         "vendor_path":  "vendor/toml_writer",
+                         "cargo_toml_sha256":  "A7AC80731E6C3680DAA6DD6051B1199856D162EC213CBFB8706A0A9FD5077CE9",
+                         "cargo_checksum_sha256":  "67745FB42AA68DD0B2676ABE3626CBC0C183BD9A68552D5B6436EA0C3E6098E8",
+                         "license":  "MIT OR Apache-2.0",
+                         "license_files":  [
+                                               {
+                                                   "path":  "vendor/toml_writer/LICENSE-APACHE",
+                                                   "sha256":  "C6596EB7BE8581C18BE736C846FB9173B69ECCF6EF94C5135893EC56BD92BA08"
+                                               },
+                                               {
+                                                   "path":  "vendor/toml_writer/LICENSE-MIT",
+                                                   "sha256":  "6EFB0476A1CC085077ED49357026D8C173BF33017278EF440F222FB9CBCB66E6"
+                                               }
+                                           ]
+                     },
+                     {
+                         "name":  "vswhom",
+                         "version":  "0.1.0",
+                         "vendor_path":  "vendor/vswhom",
+                         "cargo_toml_sha256":  "A3AC2F682740DC45875A9593A9CC2BB1D104212648C2F8519CEF8B7B20E7C8F5",
+                         "cargo_checksum_sha256":  "85691231E160E12B986A1E3887272DAAF7DA74EA3656830827CB3361C161E8C5",
+                         "license":  "MIT",
+                         "license_files":  [
+                                               {
+                                                   "path":  "vendor/vswhom/LICENSE",
+                                                   "sha256":  "B9B7E5D4BF8857061FBECAB39EF1923644EBA639337AF22D7AD0BB9B3CE59C49"
+                                               }
+                                           ]
+                     },
+                     {
+                         "name":  "vswhom-sys",
+                         "version":  "0.1.3",
+                         "vendor_path":  "vendor/vswhom-sys",
+                         "cargo_toml_sha256":  "7876C42233B9CD2ADB8263DF1ECD77E19DFC359F2135A5E23103E2CF28418F16",
+                         "cargo_checksum_sha256":  "BE6AE1946BFE95C988BA8811E91DB1AB85B23F1510003E7F0F770FCA061D27B4",
+                         "license":  "MIT",
+                         "license_files":  [
+                                               {
+                                                   "path":  "vendor/vswhom-sys/LICENSE",
+                                                   "sha256":  "B9B7E5D4BF8857061FBECAB39EF1923644EBA639337AF22D7AD0BB9B3CE59C49"
+                                               }
+                                           ]
+                     },
+                     {
+                         "name":  "winnow",
+                         "version":  "1.0.4",
+                         "vendor_path":  "vendor/winnow-1.0.4",
+                         "cargo_toml_sha256":  "CFF392F2E5AF8A662AED09551F50BBE74EAFA5A53DC051C62ADD73EA82A3CAB0",
+                         "cargo_checksum_sha256":  "F453A2731086E9FE6EB1CB80375390C57C1E7F64162A52942185F5B05ACFB74E",
+                         "license":  "MIT",
+                         "license_files":  [
+                                               {
+                                                   "path":  "vendor/winnow-1.0.4/LICENSE-MIT",
+                                                   "sha256":  "CB5AEDB296C5246D1F22E9099F925A65146F9F0D6B4EEBBA97FD27A6CDBBAB2D"
+                                               }
+                                           ]
+                     },
+                     {
+                         "name":  "winreg",
+                         "version":  "0.55.0",
+                         "vendor_path":  "vendor/winreg",
+                         "cargo_toml_sha256":  "D116D1C92C0BE054D7760320891286E643A8B82632580C0109F33D5FBCDEE171",
+                         "cargo_checksum_sha256":  "439E20449C71DBFB39D4460CF049A5A61C70A7C8CC4C90C4F743F0239496A56B",
+                         "license":  "MIT",
+                         "license_files":  [
+                                               {
+                                                   "path":  "vendor/winreg/LICENSE",
+                                                   "sha256":  "EA021D8C6383C84D19C15CE90D3B1602CF448FDCC0BF3772C98E43C7BF1BF1D1"
+                                               }
+                                           ]
+                     }
+                 ]
+}

@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "status": "primary-reviewed-ready-for-1.2-headful",
+  "predecessor_implementation_revision": "349f43e1",
+  "contract_path": "evidence/artifacts/1.1/frozen-profile-contract-successor-1.2-manifest-v3.json",
+  "contract_sha256": "82B7EF7275CB036D9D041B9B0E5E2299062C3EB76A642FF6C5C02F1245837429",
+  "substrate_manifest_sha256": "92D682BF8418B71B4C9807DB5C7D5C09C3767D0A380A23E5E1297CE1AED8004B",
+  "vendor_provenance_sha256": "B9EDA20B33C283D2BC64BEF2ECC21F032D2F881455054940413B295905D8279D",
+  "admission_trace_sha256": "B057BF54B0245F03D243B490EA324529800D5438DC8F78780400339F383E1880",
+  "probe_binary_sha256": "9A594F8356C01AF324D17E0F1619F45CF0D1B1C38469B338C0F7BFE22D64CC49",
+  "negative_fixture_evidence_sha256": "9AA2C8D5F9B1EC9857E91C533A5D9F4645DBECF470C8E94CBE9D22ACCED32698",
+  "disposition": "B-W2-1.2-008"
+}

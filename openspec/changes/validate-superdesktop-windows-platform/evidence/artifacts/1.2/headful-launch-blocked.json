@@ -1,0 +1,38 @@
+{
+  "schema": "native-window-headful-launch/v1",
+  "status": "failed-corrected",
+  "recorded_at": "2026-08-14T07:05:00Z",
+  "execution": {
+    "command": "target/release/examples/native_window_spike.exe",
+    "exit_code_signed": -1073741511,
+    "ntstatus": "0xC0000139",
+    "ntstatus_name": "STATUS_ENTRYPOINT_NOT_FOUND",
+    "trace_emitted": false,
+    "headful_retries": 1
+  },
+  "gates_before_launch": {
+    "current_substrate_contract": "passed",
+    "frozen_profile_snapshot": "passed",
+    "successor_contract_sha256": "C6EC3C3AB0C5E9654D189A766CE476CFACC567CDB2AFC9CE0DE2176A971AF817",
+    "admission_trace_sha256": "1F42DF4F0C1882858A99792F608BBCB08C8AB0EE521F0047B45C62ECD0698A17"
+  },
+  "binary": {
+    "path": "target/release/examples/native_window_spike.exe",
+    "sha256": "379B2C6CD9365898A5E2553AA94A49B0554E2B0141C17A8B925D65A498299469"
+  },
+  "source": {
+    "path": "crates/desktop-ui/examples/native_window_spike.rs",
+    "sha256": "2D4DCEF4472E38457A5E88342B1ABC4F432E51F554FBEC855F45C627E236BE94"
+  },
+  "environment_observation": {
+    "explorerpatcher_dxgi_proxy": "C:\\Windows\\dxgi.dll",
+    "explorerpatcher_dxgi_version": "26100.8457.70.3",
+    "create_dxgi_factory2_export_present": true
+  },
+  "corrective_lineage": {
+    "cause": "Primary import probe identified comctl32.dll!TaskDialogIndirect; the GPUI executable lacked the Common-Controls v6 activation-context manifest.",
+    "owner": "Primary integrator",
+    "planned_correction": "Enable the pinned gpui windows-manifest feature in the root composition, then reissue the 1.1 successor contract and rerun the gated preview."
+  },
+  "disposition": "No native trace was accepted from this failed launch. The failure is superseded by the controlled activation-context correction; 1.2 remains preview-only until a fresh trace is verified."
+}

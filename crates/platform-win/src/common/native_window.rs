@@ -11,7 +11,7 @@ use std::{
     rc::Rc,
     sync::{
         Arc,
-        atomic::{AtomicBool, AtomicU8, AtomicU64, AtomicUsize, Ordering},
+        atomic::{AtomicBool, AtomicI32, AtomicU8, AtomicU64, AtomicUsize, Ordering},
     },
 };
 
@@ -82,7 +82,10 @@ pub struct BridgeTrace {
     pub gpui_window_id: u64,
     pub generation: u64,
     pub lifecycle: Vec<(&'static str, u64)>,
-    pub observed_events: Vec<&'static str>,
+    /// Owned, copied raw Win32 payloads. This Vec is constructed only after the
+    /// callback has quiesced; the callback itself writes fixed atomic slots.
+    pub owned_events: Vec<OwnedWindowEvent>,
+    /// Private non-forwarded adapter events used by the spike harness.
     pub adapter_events: Vec<&'static str>,
     pub callbacks_before_close: usize,
     pub callbacks_after_close: usize,
@@ -93,6 +96,28 @@ pub struct BridgeTrace {
     pub fatal_callback: Option<FatalReason>,
     pub resources_before: ResourceSnapshot,
     pub resources_after: ResourceSnapshot,
+}
+
+/// An owned value extracted by the bridge before it forwards the corresponding
+/// raw Win32 message to GPUI. It contains no native pointer or borrowed memory.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum OwnedWindowEvent {
+    DpiChanged {
+        x: u16,
+        y: u16,
+        suggested_left: i32,
+        suggested_top: i32,
+        suggested_right: i32,
+        suggested_bottom: i32,
+    },
+    DisplayChanged {
+        bits_per_pixel: u16,
+        width: u16,
+        height: u16,
+    },
+    ActivationChanged {
+        state: u16,
+    },
 }
 
 /// A numeric identity borrowed from GPUI. It is intentionally neither `Copy` nor
@@ -186,6 +211,16 @@ pub struct TerminalCoordinator {
     phase: AtomicU8,
     event_mask: AtomicU8,
     adapter_event_mask: AtomicU8,
+    dpi_x: AtomicUsize,
+    dpi_y: AtomicUsize,
+    dpi_left: AtomicI32,
+    dpi_top: AtomicI32,
+    dpi_right: AtomicI32,
+    dpi_bottom: AtomicI32,
+    display_bpp: AtomicUsize,
+    display_width: AtomicUsize,
+    display_height: AtomicUsize,
+    activation_state: AtomicUsize,
     fatal: AtomicU8,
     sequence: AtomicU64,
     attached_at: AtomicU64,
@@ -206,6 +241,16 @@ impl TerminalCoordinator {
             phase: AtomicU8::new(PHASE_ATTACHED),
             event_mask: AtomicU8::new(0),
             adapter_event_mask: AtomicU8::new(0),
+            dpi_x: AtomicUsize::new(0),
+            dpi_y: AtomicUsize::new(0),
+            dpi_left: AtomicI32::new(0),
+            dpi_top: AtomicI32::new(0),
+            dpi_right: AtomicI32::new(0),
+            dpi_bottom: AtomicI32::new(0),
+            display_bpp: AtomicUsize::new(0),
+            display_width: AtomicUsize::new(0),
+            display_height: AtomicUsize::new(0),
+            activation_state: AtomicUsize::new(0),
             fatal: AtomicU8::new(FATAL_NONE),
             sequence: AtomicU64::new(1),
             attached_at: AtomicU64::new(1),
@@ -255,7 +300,13 @@ impl TerminalCoordinator {
         self.callbacks_before_close.fetch_add(1, Ordering::AcqRel);
     }
 
-    fn observe_message(&self, message: u32, adapter: bool) -> Result<bool, &'static str> {
+    fn observe_message(
+        &self,
+        message: u32,
+        wparam: WPARAM,
+        lparam: LPARAM,
+        adapter: bool,
+    ) -> Result<bool, &'static str> {
         if message == WM_NCDESTROY {
             self.observe_nc_destroy();
             return Ok(true);
@@ -266,9 +317,44 @@ impl TerminalCoordinator {
             return Ok(false);
         }
         let bit = match message {
-            WM_DPICHANGED => EVENT_DPI,
-            WM_DISPLAYCHANGE => EVENT_DISPLAY,
-            WM_ACTIVATE => EVENT_ACTIVATION,
+            WM_DPICHANGED => {
+                if lparam.0 == 0 {
+                    return Err("dpi-changed-null-suggested-rect");
+                }
+                // SAFETY: the Win32 WM_DPICHANGED contract supplies a pointer to a
+                // RECT valid for the duration of this synchronous callback. We copy
+                // it before forwarding and never retain the pointer.
+                let suggested = unsafe { (lparam.0 as *const RECT).read() };
+                self.dpi_x
+                    .store((wparam.0 & 0xffff) as u16 as usize, Ordering::Release);
+                self.dpi_y.store(
+                    ((wparam.0 >> 16) & 0xffff) as u16 as usize,
+                    Ordering::Release,
+                );
+                self.dpi_left.store(suggested.left, Ordering::Release);
+                self.dpi_top.store(suggested.top, Ordering::Release);
+                self.dpi_right.store(suggested.right, Ordering::Release);
+                self.dpi_bottom.store(suggested.bottom, Ordering::Release);
+                EVENT_DPI
+            }
+            WM_DISPLAYCHANGE => {
+                self.display_bpp
+                    .store((wparam.0 & 0xffff) as u16 as usize, Ordering::Release);
+                self.display_width.store(
+                    (lparam.0 as usize & 0xffff) as u16 as usize,
+                    Ordering::Release,
+                );
+                self.display_height.store(
+                    ((lparam.0 as usize >> 16) & 0xffff) as u16 as usize,
+                    Ordering::Release,
+                );
+                EVENT_DISPLAY
+            }
+            WM_ACTIVATE => {
+                self.activation_state
+                    .store((wparam.0 & 0xffff) as u16 as usize, Ordering::Release);
+                EVENT_ACTIVATION
+            }
             _ => 0,
         };
         if bit != 0 {
@@ -298,6 +384,46 @@ impl TerminalCoordinator {
         self.adapter_event_mask.fetch_or(bit, Ordering::AcqRel);
         self.callbacks_before_close.fetch_add(1, Ordering::AcqRel);
         Ok(())
+    }
+
+    fn owned_events(&self, mask: u8) -> Vec<OwnedWindowEvent> {
+        let mut events = Vec::with_capacity(3);
+        if mask & EVENT_DPI != 0 {
+            events.push(OwnedWindowEvent::DpiChanged {
+                x: self.dpi_x.load(Ordering::Acquire) as u16,
+                y: self.dpi_y.load(Ordering::Acquire) as u16,
+                suggested_left: self.dpi_left.load(Ordering::Acquire),
+                suggested_top: self.dpi_top.load(Ordering::Acquire),
+                suggested_right: self.dpi_right.load(Ordering::Acquire),
+                suggested_bottom: self.dpi_bottom.load(Ordering::Acquire),
+            });
+        }
+        if mask & EVENT_DISPLAY != 0 {
+            events.push(OwnedWindowEvent::DisplayChanged {
+                bits_per_pixel: self.display_bpp.load(Ordering::Acquire) as u16,
+                width: self.display_width.load(Ordering::Acquire) as u16,
+                height: self.display_height.load(Ordering::Acquire) as u16,
+            });
+        }
+        if mask & EVENT_ACTIVATION != 0 {
+            events.push(OwnedWindowEvent::ActivationChanged {
+                state: self.activation_state.load(Ordering::Acquire) as u16,
+            });
+        }
+        events
+    }
+
+    fn adapter_event_names(&self) -> Vec<&'static str> {
+        [
+            (EVENT_DPI, "dpi-changed"),
+            (EVENT_DISPLAY, "display-changed"),
+            (EVENT_ACTIVATION, "activation"),
+        ]
+        .into_iter()
+        .filter_map(|(bit, name)| {
+            (self.adapter_event_mask.load(Ordering::Acquire) & bit != 0).then_some(name)
+        })
+        .collect()
     }
 
     fn fail(&self, reason: u8) {
@@ -382,17 +508,6 @@ impl TerminalCoordinator {
         {
             return Err("terminal-order-invalid");
         }
-        let event_names = |mask: u8| {
-            [
-                (EVENT_DPI, "dpi-changed"),
-                (EVENT_DISPLAY, "display-changed"),
-                (EVENT_ACTIVATION, "activation"),
-                (EVENT_DESTROYED, "destroyed"),
-            ]
-            .into_iter()
-            .filter_map(|(bit, name)| (mask & bit != 0).then_some(name))
-            .collect()
-        };
         let fatal_callback = match self.fatal.load(Ordering::Acquire) {
             FATAL_NONE => None,
             FATAL_CALLBACK_PANIC => Some(FatalReason::CallbackPanic),
@@ -408,8 +523,8 @@ impl TerminalCoordinator {
             gpui_window_id: identity.gpui_window_id,
             generation: identity.generation,
             lifecycle: lifecycle.to_vec(),
-            observed_events: event_names(self.event_mask.load(Ordering::Acquire)),
-            adapter_events: event_names(self.adapter_event_mask.load(Ordering::Acquire)),
+            owned_events: self.owned_events(self.event_mask.load(Ordering::Acquire)),
+            adapter_events: self.adapter_event_names(),
             callbacks_before_close: self.callbacks_before_close.load(Ordering::Acquire),
             callbacks_after_close: self.callbacks_after_close.load(Ordering::Acquire),
             late_event_rejected: self.late_event_rejected.load(Ordering::Acquire),
@@ -456,6 +571,7 @@ fn invoke_callback(
     coordinator: &TerminalCoordinator,
     message: u32,
     wparam: WPARAM,
+    lparam: LPARAM,
     callback_id: usize,
 ) -> CallbackInvocation {
     guard_callback(coordinator, || {
@@ -478,7 +594,7 @@ fn invoke_callback(
                 ncdestroy: false,
             });
         }
-        let forward = coordinator.observe_message(message, false)?;
+        let forward = coordinator.observe_message(message, wparam, lparam, false)?;
         Ok(CallbackInvocation {
             forward,
             ncdestroy: message == WM_NCDESTROY,
@@ -508,7 +624,7 @@ unsafe extern "system" fn subclass_proc(
     // SAFETY: balances the temporary increment above, never the registered Arc.
     let coordinator = unsafe { Arc::from_raw(raw) };
     let outer = catch_unwind(AssertUnwindSafe(|| {
-        let invocation = invoke_callback(&coordinator, message, wparam, id);
+        let invocation = invoke_callback(&coordinator, message, wparam, lparam, id);
         let result = if invocation.forward {
             // SAFETY: no lock is held and all arguments are supplied by Win32.
             unsafe { DefSubclassProc(hwnd, message, wparam, lparam) }
@@ -734,7 +850,7 @@ mod tests {
         panic::{AssertUnwindSafe, catch_unwind},
         sync::atomic::Ordering,
     };
-    use windows::Win32::Foundation::WPARAM;
+    use windows::Win32::Foundation::{LPARAM, RECT, WPARAM};
 
     #[test]
     fn closing_fence_rejects_late_adapter_event() {
@@ -780,12 +896,28 @@ mod tests {
     #[test]
     fn raw_messages_are_observed_before_they_are_forwarded_and_stay_separate_from_adapter() {
         let state = TerminalCoordinator::new(7);
-        for message in [
+        let suggested = RECT {
+            left: -10,
+            top: 20,
+            right: 310,
+            bottom: 200,
+        };
+        let dpi = invoke_callback(
+            &state,
             super::WM_DPICHANGED,
+            WPARAM(144 | (192 << 16)),
+            LPARAM((&suggested as *const RECT) as isize),
+            7,
+        );
+        let display = invoke_callback(
+            &state,
             super::WM_DISPLAYCHANGE,
-            super::WM_ACTIVATE,
-        ] {
-            let invocation = invoke_callback(&state, message, WPARAM(0), 7);
+            WPARAM(32),
+            LPARAM(320 | (180 << 16)),
+            7,
+        );
+        let activation = invoke_callback(&state, super::WM_ACTIVATE, WPARAM(2), LPARAM(0), 7);
+        for invocation in [dpi, display, activation] {
             assert!(
                 invocation.forward,
                 "raw message must be recorded before GPUI forwarding"
@@ -796,12 +928,31 @@ mod tests {
             EVENT_DPI | EVENT_DISPLAY | EVENT_ACTIVATION
         );
         assert_eq!(state.adapter_event_mask.load(Ordering::Acquire), 0);
+        assert_eq!(
+            state.owned_events(state.event_mask.load(Ordering::Acquire)),
+            vec![
+                super::OwnedWindowEvent::DpiChanged {
+                    x: 144,
+                    y: 192,
+                    suggested_left: -10,
+                    suggested_top: 20,
+                    suggested_right: 310,
+                    suggested_bottom: 200,
+                },
+                super::OwnedWindowEvent::DisplayChanged {
+                    bits_per_pixel: 32,
+                    width: 320,
+                    height: 180,
+                },
+                super::OwnedWindowEvent::ActivationChanged { state: 2 },
+            ]
+        );
     }
 
     #[test]
     fn callback_generation_mismatch_is_fenced_without_forwarding() {
         let state = TerminalCoordinator::new(7);
-        let invocation = invoke_callback(&state, super::WM_ACTIVATE, WPARAM(0), 8);
+        let invocation = invoke_callback(&state, super::WM_ACTIVATE, WPARAM(0), LPARAM(0), 8);
         assert!(!invocation.forward);
         assert!(state.late_event_rejected.load(Ordering::Acquire));
         assert_eq!(state.callbacks_after_close.load(Ordering::Acquire), 1);
@@ -866,5 +1017,48 @@ mod tests {
             gdi_objects: 3,
         };
         assert_eq!(snapshot, snapshot);
+    }
+
+    #[test]
+    fn dpi_payload_is_copied_before_forwarding_and_never_borrows_rect_memory() {
+        let state = TerminalCoordinator::new(7);
+        let mut suggested = RECT {
+            left: 1,
+            top: 2,
+            right: 3,
+            bottom: 4,
+        };
+        let invocation = invoke_callback(
+            &state,
+            super::WM_DPICHANGED,
+            WPARAM(120 | (144 << 16)),
+            LPARAM((&suggested as *const RECT) as isize),
+            7,
+        );
+        assert!(invocation.forward);
+        suggested.left = 101;
+        suggested.top = 102;
+        suggested.right = 103;
+        suggested.bottom = 104;
+        assert_eq!(
+            (
+                suggested.left,
+                suggested.top,
+                suggested.right,
+                suggested.bottom
+            ),
+            (101, 102, 103, 104)
+        );
+        assert_eq!(
+            state.owned_events(EVENT_DPI),
+            vec![super::OwnedWindowEvent::DpiChanged {
+                x: 120,
+                y: 144,
+                suggested_left: 1,
+                suggested_top: 2,
+                suggested_right: 3,
+                suggested_bottom: 4,
+            }]
+        );
     }
 }
