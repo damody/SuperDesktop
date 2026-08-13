@@ -17,7 +17,7 @@ The complete product targets Windows 10 Shell behavior in these areas:
 
 - Desktop surfaces, wallpaper, Shell items, selection, layout, rename, context menus, drag-and-drop, refresh, and multi-monitor behavior.
 - A bottom taskbar whose default high-density layout follows the supplied two-row reference image, with configurable one-to-three-row layouts.
-- Window tracking, activation, minimize/restore, grouping, pinning, ordering, progress/attention states, thumbnails, and jump lists.
+- Window tracking, activation, minimize/restore, grouping, pinning, ordering, progress/attention states, thumbnails, jump lists, Task View, and Show Desktop.
 - Start button, Start menu, application indexing, search, Run, power, session, and common Shell commands.
 - Notification area, clock, calendar, input/network/volume/power status, notification badges, and compatible third-party tray icons.
 - Keyboard shortcuts, accessibility, high contrast, per-monitor DPI, multiple monitors, virtual-desktop integration, autostart, controlled Shell installation, and recovery.
@@ -43,7 +43,7 @@ SuperDesktop pins its own GPUI-CE revision. Using the same known-good revision a
 
 ### 4.1 Visible and platform layers
 
-All visible desktop, taskbar, Start, search, notification, settings, prompt, and recovery surfaces are GPUI views. The platform layer may create invisible/message-only HWNDs and perform Windows API calls, but it must not implement product UI.
+All SuperDesktop-owned visible desktop, taskbar, Start, search, notification, settings, prompt, and recovery surfaces are GPUI views. Windows-owned or third-party surfaces that SuperDesktop invokes, such as the M0 Windows Start experience or a native Shell context menu, remain externally rendered. The platform layer may create invisible/message-only HWNDs and perform Windows API calls, but it must not implement SuperDesktop product UI.
 
 The primary event flow is:
 
@@ -111,7 +111,7 @@ Rename, native context menus, drag-and-drop, auto-arrange, grid alignment, sorti
 
 The taskbar docks at the bottom and registers as a Windows AppBar in Shell mode. The default layout is two compact rows, matching the supplied reference's information density. Users can configure one, two, or three rows. Per-monitor taskbars are represented from the start; the initial acceptance matrix requires a primary taskbar and a secondary-monitor taskbar in a two-monitor setup.
 
-The left edge contains the Start button. In M0 it invokes the existing Windows Start experience rather than drawing a custom Start menu. The central region contains task buttons with the application icon and an ellipsized title. A blue underline indicates a running task or group; an active background indicates the foreground task. The right region contains the overflow entry, core system status, time, date, and notification count.
+The left edge contains the Start button. In M0 it invokes the existing Windows Start experience rather than drawing a custom Start menu. Shell takeover is allowed on the Windows 10 reference platform only when the Start host capability probe succeeds; a later invocation failure is reported as a recoverable degraded state. Preview mode and non-reference Windows builds may show the button as accessibly unavailable when the host is absent. The central region contains task buttons with the application icon and an ellipsized title. A blue underline indicates a running task or group; an active background indicates the foreground task. The right region contains the overflow entry, core system status, time, date, and notification count.
 
 M0 window behavior includes:
 
@@ -215,9 +215,10 @@ M0 is complete only when all of the following are verified:
 5. File-system folders launch SuperExplorer with the verified `EXPLORER_INITIAL_PATH` contract; missing SuperExplorer produces a recoverable GPUI error.
 6. The two-row taskbar tracks, activates, minimizes, restores, groups, and pins real application windows without unstable reordering.
 7. Primary and secondary taskbars remain correctly placed through mixed-DPI display changes.
-8. Accessibility, localization, visual, lifecycle, stress, and performance gates pass with recorded evidence.
-9. No test or recovery routine modifies or deletes data outside an explicitly owned fixture root.
-10. The parity matrix truthfully marks deferred Windows 10 capabilities rather than presenting placeholders as completed functionality.
+8. On Windows 10 22H2, the Start button invokes the Windows Start experience in both preview and Shell sessions; Shell takeover is refused if its prerequisite capability probe fails.
+9. Accessibility, localization, visual, lifecycle, stress, and performance gates pass with recorded evidence.
+10. No test or recovery routine modifies or deletes data outside an explicitly owned fixture root.
+11. The parity matrix truthfully marks deferred Windows 10 capabilities rather than presenting placeholders as completed functionality.
 
 ## 13. Delivery sequence after M0
 
