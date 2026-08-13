@@ -3,6 +3,8 @@
 ### Requirement: 每個完成 leaf 必須有有效證據
 系統 SHALL 讓每個 change 擁有自己的 append-only `evidence/index.jsonl`，並以全域唯一 `<change-name>/<L3-id>` task_id 或 immutable shared record/subcheck 記錄 command/procedure、expected、actual、status/reviewer、hash、capability ID、requirement ID、scenario ID、gate、adjustment 與 timestamp。Capability、requirement 與 scenario ID SHALL 由版本化 machine-readable coverage manifest 提供。
 
+Contract hash manifest SHALL 使用 repository-relative canonical path，逐列重算 input SHA-256 並拒絕不存在、漂移或逃逸 workspace 的 path；只驗證 manifest 自身 hash 不構成有效 contract evidence。
+
 #### Scenario: Task ID 只包含局部編號
 - **WHEN** evidence record 的 task_id 只有 `3.1.3` 而沒有 change-name namespace
 - **THEN** validator MUST 以 ambiguous identity 拒絕該 record
@@ -28,6 +30,8 @@
 
 ### Requirement: 調整必須保留 lineage
 系統 SHALL 記錄 A/B/C adjustment；B 級使相依證據 stale，C 級在使用者核准前不得套用。
+
+Adjustment 的 stale 與 replacement lineage MUST 引用 immutable `task_id#subcheck` record identity；validator SHALL 驗證雙向連結、同 coverage、replacement passed、完整受影響集合，以及 C 級 adjustment 的有效使用者核准 record。
 
 #### Scenario: B 級規格修正
 - **WHEN** 已完成 evidence 所依賴的 requirement 被 B 級修正

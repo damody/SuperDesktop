@@ -82,3 +82,19 @@
 - [x] 2.3.6 加入 dangling、cyclic、non-mandatory、coverage-drift 與 unpassed replacement fixtures。
 - [x] 2.3.7 實作 A/B/C adjustment lineage 與受影響 evidence stale propagation。
 - [x] 2.3.8 執行全部 validator fixtures 並保存逐 fixture 結果。
+
+### 2.4 修正 Wave 1 Exit Contract 與 Validator 缺口
+
+**目的：** 關閉獨立 Wave 1 exit review 發現的 contract、schema、adjustment lineage 與巢狀 UI API boundary P1。
+**輸入：** 1.1–2.3 已完成 evidence、Wave 1 exit review、B-W1-EXIT-001。
+**產出：** 可逐 input 驗證的 contract、schema-complete replacement records、record-identity adjustment lineage、遞迴 public API checker與負面 fixtures。
+**依賴：** 2.3。
+**Owner／Wave：** Workspace owner／Wave 1 corrective。
+**Gate／Evidence：** `G-ARCH`、`G-SAFETY`、`G-TRACE`；`evidence/artifacts/2.4/`。
+**完成門檻：** 四個 P1 都有 passed replacement evidence；舊漂移 evidence 保留為 stale；全部正負 gate、26 原 leaf 與本 L2 mandatory leaf 通過 validator，獨立 reviewer 無剩餘 P0/P1。
+
+- [ ] 2.4.1 實作 contract manifest verifier，逐列 canonicalize repository-relative path、拒絕逃逸/缺失/漂移，並重發受影響 contract replacement records。
+- [ ] 2.4.2 擴充 evidence/coverage JSON Schema 與 validator，強制 procedure、expected、actual 及真實 schema validation，補齊 append-only replacement records與缺欄/type/pattern fixtures。
+- [ ] 2.4.3 將 adjustment stale/replacement lineage 改為 immutable record IDs，驗證雙向連結、同 coverage、passed、完整受影響集合與 C approval，加入 malformed/dangling fixture。
+- [ ] 2.4.4 強化 UI public API boundary 為遞迴 module/re-export/trait/跨行 signature 檢查，加入巢狀 `pub use HWND` 負面 fixture並重跑正負 architecture gate。
+- [ ] 2.4.5 執行完整 contract/evidence/architecture matrix、strict OpenSpec 與獨立 Wave 1 exit 複審，保存 corrective handoff 與無未解 P0/P1 disposition。

@@ -11,6 +11,10 @@
 - **WHEN** fixture 讓 UI 公開 HWND 或 core 依賴 GPUI
 - **THEN** architecture checker 以非零結果拒絕
 
+#### Scenario: 巢狀模組重新匯出 Windows 型別
+- **WHEN** UI crate 在巢狀 Rust module 以 `pub use`、public trait 或跨行 signature 暴露 HWND/COM 型別
+- **THEN** architecture checker 必須以非零結果拒絕，不能只掃描 `src` 根目錄或單行宣告
+
 ### Requirement: Toolchain 與 dependency source 必須固定且離線可重現
 系統 SHALL 固定 Rust、GPUI-CE、Windows bindings 與 lockfile，並保存 source/hash manifest；isolated network-disabled environment MUST 通過 `cargo check --locked --offline`。Dev 與 release profile SHALL 明確使用 `panic = "unwind"`；因 Cargo 忽略 test profile 的 panic setting，test profile MUST 不設定 `abort` 或其他 panic 覆寫，並由 machine assertion 驗證其測試 harness unwind 語義。
 
