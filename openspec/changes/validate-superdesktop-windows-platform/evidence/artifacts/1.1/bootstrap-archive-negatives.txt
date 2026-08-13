@@ -1,0 +1,1 @@
+﻿Archived bootstrap negative fixtures passed: revision override rejected; separator-boundary path escape rejected.

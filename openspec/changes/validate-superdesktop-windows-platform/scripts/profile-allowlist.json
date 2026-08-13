@@ -1,0 +1,76 @@
+{
+  "schema_version": "1.0.0",
+  "purpose": "Frozen UI-affecting ExplorerPatcher and Explorer taskbar/Start profile",
+  "keys": {
+    "HKCU:\\Software\\ExplorerPatcher": {
+      "reject_unknown_values": true,
+      "expected": {
+        "AllocConsole": "0",
+        "CrashCounter": "0",
+        "DisableImmersiveContextMenu": "0",
+        "FileExplorerCommandUI": "0",
+        "IsUpdatePending": "0",
+        "LegacyFileTransferDialog": "1",
+        "MigratedFromOldSettings": "1",
+        "Start_MaximumFrequentApps": "99999",
+        "StartDocked_DisableRecommendedSection": "0",
+        "SymbolsLastNotifiedOSBuild": "10.0.26200.8875"
+      }
+    },
+    "HKCU:\\Software\\ExplorerPatcher\\explorer": {
+      "reject_unknown_values": true,
+      "expected": {
+        "CTaskBand_CreateInstance": "0",
+        "HandleFirstTimeLegacy": "0",
+        "Hash": "b9f0a971413eebbed5dafe9cadfe9a74",
+        "ImmersiveTray::AttachWindowToTray": "0",
+        "ImmersiveTray::RaiseWindow": "0",
+        "SetColorPreferenceForLogonUI": "979928",
+        "TrayUI::_UpdatePearlSize": "0",
+        "Version": "3"
+      }
+    },
+    "HKCU:\\Software\\ExplorerPatcher\\sws": {
+      "reject_unknown_values": true,
+      "expected": {}
+    },
+    "HKCU:\\Software\\ExplorerPatcher\\twinui.pcshell": {
+      "reject_unknown_values": true,
+      "expected": {
+        "CImmersiveContextMenuOwnerDrawHelper::s_ContextMenuWndProc": "7037140",
+        "CLauncherTipContextMenu::_ExecuteCommand": "1949096",
+        "CLauncherTipContextMenu::_ExecuteShutdownCommand": "6481576",
+        "CMultitaskingViewManager::_CreateDCompMTVHost": "5033676",
+        "CMultitaskingViewManager::_CreateXamlMTVHost": "2426136",
+        "Hash": "af939e0cec7996a4f70ae022798e2f9a",
+        "ImmersiveContextMenuHelper::ApplyOwnerDrawToMenu": "7043920",
+        "ImmersiveContextMenuHelper::RemoveOwnerDrawFromMenu": "7046260",
+        "Version": "2"
+      }
+    },
+    "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced": {
+      "reject_unknown_values": false,
+      "important_name_pattern": "^(Taskbar.*|Start.*|Show(TaskViewButton|SecondsInSystemClock|ClockInNotificationCenter)|DisablePreviewDesktop|ProgrammableTaskbarStatus|IconSizePreference)$",
+      "expected": {
+        "DisablePreviewDesktop": "1",
+        "IconSizePreference": "0",
+        "ProgrammableTaskbarStatus": "2",
+        "ShowClockInNotificationCenter": "0",
+        "ShowSecondsInSystemClock": "1",
+        "ShowTaskViewButton": "0",
+        "Start_Layout": "1",
+        "Start_SearchFiles": "2",
+        "Start_TrackProgs": "1",
+        "StartMenuInit": "13",
+        "StartShownOnUpgrade": "1",
+        "TaskbarAl": "0",
+        "TaskbarAnimations": "1",
+        "TaskbarAutoHideInTabletMode": "0",
+        "TaskbarGlomLevel": "2",
+        "TaskbarSizeMove": "1",
+        "TaskbarSmallIcons": "0",
+        "TaskbarStateLastRun": "128 85 12 106 0 0 0 0"
+      }
+    }
+  }
+}

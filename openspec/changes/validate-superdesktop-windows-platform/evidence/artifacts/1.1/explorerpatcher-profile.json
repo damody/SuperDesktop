@@ -1,0 +1,14 @@
+{
+  "captured_at": "2026-08-13T21:18:52.3957661Z",
+  "expected_version": "26100.8457.70.3",
+  "binaries": [
+    {"path": "C:\\Windows\\dxgi.dll", "length": 604672, "file_version": "26100.8457.70.3", "product_version": "26100.8457.70.3", "sha256": "70A7D2CE085DC0DB96D00ABF351E5E316572801F5D43648E2AD47FD66BA174CC"},
+    {"path": "C:\\Program Files\\ExplorerPatcher\\ep_setup.exe", "length": 12237312, "file_version": "26100.8457.70.3", "product_version": "26100.8457.70.3", "sha256": "8146DB4D3A87201FB80AD1D3712BA8F56883E9A0811758BD39F62D73A9F2C586"},
+    {"path": "C:\\Program Files\\ExplorerPatcher\\ExplorerPatcher.amd64.dll", "length": 604672, "file_version": "26100.8457.70.3", "product_version": "26100.8457.70.3", "sha256": "2106313E78EF4EBE079FA648C1277A62794FE7B007389D92FBF6D0D23EF8FA37"}
+  ],
+  "ui_affecting_settings": {
+    "HKEY_CURRENT_USER\\Software\\ExplorerPatcher\\explorer": {"CTaskBand_CreateInstance": "0", "HandleFirstTimeLegacy": "0", "Hash": "b9f0a971413eebbed5dafe9cadfe9a74", "ImmersiveTray::AttachWindowToTray": "0", "ImmersiveTray::RaiseWindow": "0", "SetColorPreferenceForLogonUI": "979928", "TrayUI::_UpdatePearlSize": "0", "Version": "3"},
+    "HKEY_CURRENT_USER\\Software\\ExplorerPatcher\\sws": {},
+    "HKEY_CURRENT_USER\\Software\\ExplorerPatcher\\twinui.pcshell": {"CImmersiveContextMenuOwnerDrawHelper::s_ContextMenuWndProc": "7037140", "CLauncherTipContextMenu::_ExecuteCommand": "1949096", "CLauncherTipContextMenu::_ExecuteShutdownCommand": "6481576", "CMultitaskingViewManager::_CreateDCompMTVHost": "5033676", "CMultitaskingViewManager::_CreateXamlMTVHost": "2426136", "Hash": "af939e0cec7996a4f70ae022798e2f9a", "ImmersiveContextMenuHelper::ApplyOwnerDrawToMenu": "7043920", "ImmersiveContextMenuHelper::RemoveOwnerDrawFromMenu": "7046260", "Version": "2"}
+  }
+}
