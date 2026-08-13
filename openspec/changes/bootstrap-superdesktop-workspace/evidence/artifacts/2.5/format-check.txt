@@ -1,4 +1,4 @@
-﻿Diff in \\?\D:\SuperDesktop\SuperDesktop\crates\superdesktop-test-support\src\main.rs:12:
+Diff in \\?\D:\SuperDesktop\SuperDesktop\crates\superdesktop-test-support\src\main.rs:12:
      if args.next().as_deref() == Some("validate-json-schema") {
          let schema_path = args.next().expect("schema path");
          let instance_path = args.next().expect("instance path");

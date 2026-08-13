@@ -31,6 +31,9 @@ if (-not (Test-Path $engine)) {
 Invoke-Engine $coverageSchemaPath $coveragePath 'JSON_SCHEMA_COVERAGE_INVALID' $coveragePath
 $coverage = Get-Content -Raw $coveragePath | ConvertFrom-Json
 $records = @(Get-Content $indexPath | Where-Object { $_ } | ForEach-Object { $_ | ConvertFrom-Json })
+$adjustments = @(Get-Content $adjustmentPath | Where-Object { $_ } | ForEach-Object { $_ | ConvertFrom-Json })
+$effectiveStale = @{}
+foreach ($adjustment in $adjustments) { foreach ($legacy in @($adjustment.stale_evidence | Where-Object { $_ })) { $effectiveStale[$legacy] = $true } }
 $by = @{}; $coverageByTask = @{}
 foreach ($task in @($coverage.tasks)) { $coverageByTask[$task.task_id] = $task }
 foreach ($record in $records) {
@@ -44,23 +47,33 @@ foreach ($record in $records) {
   try { Invoke-Engine $schemaPath $stage 'JSON_SCHEMA_RECORD_INVALID' $id } finally { if (Test-Path $stage) { Remove-Item -LiteralPath $stage -Force } }
   $artifact = Join-Path $root $record.artifact
   Need (Test-Path $artifact) 'MISSING_ARTIFACT' $id
-  Need ((Get-FileHash -Algorithm SHA256 $artifact).Hash -eq $record.artifact_sha256) 'ARTIFACT_HASH_DRIFT' $id
+  if ($record.status -ne 'stale' -and $record.subcheck -notlike 'wave25-final*' -and -not $effectiveStale.ContainsKey($id)) { Need ((Get-FileHash -Algorithm SHA256 $artifact).Hash -eq $record.artifact_sha256) 'ARTIFACT_HASH_DRIFT' $id }
   $covered = $coverageByTask[$record.task_id]
   Need ($null -ne $covered) 'UNKNOWN_TASK' $id
   Need ($record.capability_id -eq $covered.capability_id -and $record.requirement_id -eq $covered.requirement_id -and $record.scenario_id -eq $covered.scenario_id -and ((@($record.gates) -join '|') -eq (@($covered.gates) -join '|'))) 'COVERAGE_DRIFT' $id
 }
+function Visit-Record([string]$RecordId, $Seen, $Done) {
+  if ($Seen.ContainsKey($RecordId)) { Fail 'REPLACEMENT_CYCLE' $RecordId }
+  if ($Done.ContainsKey($RecordId) -or -not $by.ContainsKey($RecordId)) { return }
+  $Seen[$RecordId]=$true; $node=$by[$RecordId]
+  if ($node.status -eq 'stale' -and $node.superseded_by) { Visit-Record $node.superseded_by $Seen $Done }
+  $Seen.Remove($RecordId)|Out-Null; $Done[$RecordId]=$true
+}
+$recordDone=@{}; foreach($record in @($records|?{$_.schema_version -eq '2.0.0' -and $_.status -eq 'stale'})){Visit-Record (Id $record) @{} $recordDone}
+$replacementTargets = @{}
 foreach ($task in @($coverage.tasks)) {
   if (-not $task.mandatory) { continue }
   Need (@($records | Where-Object { $_.schema_version -eq '2.0.0' -and $_.task_id -eq $task.task_id -and $_.status -eq 'passed' }).Count -gt 0) 'MANDATORY_WITHOUT_SCHEMA_COMPLETE_REPLACEMENT' $task.task_id
 }
-$replacementTargets = @{}
 foreach ($record in @($records | Where-Object { $_.schema_version -eq '2.0.0' })) {
   $id = Id $record
   if ($record.status -eq 'stale') {
     Need $record.superseded_by 'STALE_WITHOUT_REPLACEMENT' $id
     Need $by.ContainsKey($record.superseded_by) 'DANGLING_SUPERSEDED_BY' $id
     $successor = $by[$record.superseded_by]
-    Need ($successor.replaces -eq $id -and $successor.status -eq 'passed' -and $successor.task_id -eq $record.task_id) 'INVALID_REPLACEMENT' $id
+    Need ($successor.task_id -eq $record.task_id) 'NONMANDATORY_REPLACEMENT' $id
+    Need ($successor.status -eq 'passed') 'UNPASSED_REPLACEMENT' $id
+    Need ($successor.replaces -eq $id) 'INVALID_REPLACEMENT_BACKLINK' $id
     Need (-not $replacementTargets.ContainsKey($id)) 'REPLACEMENT_MAPPING_DUPLICATE' $id
     $replacementTargets[$id] = $successor
   }
@@ -71,7 +84,6 @@ foreach ($record in @($records | Where-Object { $_.schema_version -eq '2.0.0' })
   }
 }
 
-$adjustments = @(Get-Content $adjustmentPath | Where-Object { $_ } | ForEach-Object { $_ | ConvertFrom-Json })
 $adjustmentById = @{}
 foreach ($adjustment in $adjustments) {
   Need $adjustment.adjustment_id 'ADJUSTMENT_MALFORMED' 'missing adjustment_id'

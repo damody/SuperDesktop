@@ -109,9 +109,9 @@
 **Gate／Evidence：** `G-ARCH`、`G-SAFETY`、`G-TRACE`；`evidence/artifacts/2.5/`。
 **完成門檻：** 每份replacement涵蓋predecessor path set且逐列通過，current locked metadata/license/provenance/source audit一致，aggregate contract可由inputs manifest重算；兩份schema由真正支援宣告draft的engine驗證；21個fixtures皆mutation/copy後走production path並得到各自專屬diagnostic；replacement/adjustment graph完整、無間接循環、無dangling或未閉合effective stale set；獨立reviewer無剩餘P0/P1。
 
-- [ ] 2.5.1 為 1.1 workspace、1.2 replacement與2.2 source-boundary，以各predecessor path set為不可縮減下限產生完整current-input replacement manifests，逐列以production verifier通過，並讓三組affected replacement records各自直接引用對應manifest。
+- [x] 2.5.1 為 1.1 workspace、1.2 replacement與2.2 source-boundary，以各predecessor path set為不可縮減下限產生完整current-input replacement manifests，逐列以production verifier通過，並讓三組affected replacement records各自直接引用對應manifest。
 - [x] 2.5.2 以真正支援 schema 所宣告 draft 的 JSON Schema engine 驗證 evidence record schema 與 coverage schema，包括頂層 type、`additionalProperties`、format、array/object 與巢狀 constraints。
-- [ ] 2.5.3 將原15、既定corrective 5及額外date-time共21個fixtures改為mutation/copy真實資料後執行同一production path；replacement案例必須命中dangling/cycle/nonmandatory/coverage-drift/unpassed專屬diagnostic。
-- [ ] 2.5.4 驗證replacement與adjustment identity/supersession graph的存在性、間接循環、完整effective stale-set繼承與immutable record一一mapping，並以有效successor完整閉合所有legacy A/B adjustments。
+- [x] 2.5.3 將原15、既定corrective 5及額外date-time共21個fixtures改為mutation/copy真實資料後執行同一production path；replacement案例必須命中dangling/cycle/nonmandatory/coverage-drift/unpassed專屬diagnostic。
+- [x] 2.5.4 驗證replacement與adjustment identity/supersession graph的存在性、間接循環、完整effective stale-set繼承與immutable record一一mapping，並以有效successor完整閉合所有legacy A/B adjustments。
 - [ ] 2.5.5 重跑完整 contract/evidence/architecture/strict/tasks matrix，更新 2.4.5 disposition、corrective handoff、contract hash與獨立 Wave 1 exit 複審，確認無未解 P0/P1。
-- [ ] 2.5.6 固定Wave 2所需Windows binding版本/features，從current locked metadata重生完整license inventory與direct provenance並通過source-boundary/offline contract；只允許`platform-win` crate-local audited unsafe exception，加入非platform unsafe/direct-binding與缺少SAFETY invariant負面fixtures。
+- [x] 2.5.6 固定Wave 2所需Windows binding版本/features，從current locked metadata重生完整license inventory與direct provenance並通過source-boundary/offline contract；只允許`platform-win` crate-local audited unsafe exception，加入非platform unsafe/direct-binding與缺少SAFETY invariant負面fixtures。

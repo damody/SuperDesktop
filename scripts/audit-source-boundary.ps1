@@ -1,13 +1,14 @@
 [CmdletBinding()]
 param(
     [Parameter()]
-    [string]$WorkspaceRoot = (Split-Path -Parent $PSScriptRoot),
+    [string]$WorkspaceRoot,
 
     [Parameter()]
     [string]$Fixture
 )
 
 $ErrorActionPreference = 'Stop'
+if (-not $WorkspaceRoot) { $WorkspaceRoot = Split-Path -Parent $PSScriptRoot }
 $changeRoot = Join-Path $WorkspaceRoot 'openspec/changes/bootstrap-superdesktop-workspace'
 $inventoryPath = Join-Path $changeRoot 'compliance/third-party-license-inventory.json'
 $forbiddenPathPattern = '(?i)(?:D:\\+SuperExplorer|D:\\+SuperDesktop\\+PExplorer|(?:\.\.[\\/])+SuperExplorer|vendor[\\/]gpui-ce)'

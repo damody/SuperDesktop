@@ -1,4 +1,4 @@
-﻿expected_code: ARTIFACT_HASH_DRIFT
+expected_code: ARTIFACT_HASH_DRIFT
 actual_code: powershell.exe : ARTIFACT_HASH_DRIFT: bootstrap-superdesktop-workspace/2.5.4#primary
 At D:\SuperDesktop\SuperDesktop\scripts\run-evidence-mutation-fixtures.ps1:5 char:2321
 + ... ontinue';$o=& powershell -NoProfile -ExecutionPolicy Bypass -File "$P ...

@@ -1,10 +1,11 @@
 [CmdletBinding()]
 param(
     [Parameter()]
-    [string]$WorkspaceRoot = (Split-Path -Parent $PSScriptRoot)
+    [string]$WorkspaceRoot
 )
 
 $ErrorActionPreference = 'Stop'
+if (-not $WorkspaceRoot) { $WorkspaceRoot = Split-Path -Parent $PSScriptRoot }
 $changeRoot = Join-Path $WorkspaceRoot 'openspec/changes/bootstrap-superdesktop-workspace'
 $outputPath = Join-Path $changeRoot 'compliance/third-party-license-inventory.json'
 $metadata = cargo metadata --locked --offline --format-version 1 | ConvertFrom-Json

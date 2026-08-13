@@ -1,4 +1,4 @@
-﻿cargo :     Checking superdesktop-test-support v0.1.0 (D:\SuperDesktop\SuperDesktop\crates\superdesktop-test-support)
+cargo :     Checking superdesktop-test-support v0.1.0 (D:\SuperDesktop\SuperDesktop\crates\superdesktop-test-support)
 At line:2 char:138
 + ... \2.5\ -Force; cargo check --workspace --locked --offline 2>&1 | Tee-O ...
 +                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

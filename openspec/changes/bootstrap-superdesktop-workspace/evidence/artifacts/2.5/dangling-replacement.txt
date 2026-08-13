@@ -1,16 +1,16 @@
-﻿case: dangling-replacement
-expected_code: MANDATORY_WITHOUT_SCHEMA_COMPLETE_REPLACEMENT
+case: dangling-replacement
+expected_code: DANGLING_SUPERSEDED_BY
 exit_status: 1
 actual_output:
-powershell.exe : MANDATORY_WITHOUT_SCHEMA_COMPLETE_REPLACEMENT: bootstrap-superdesktop-workspace/2.5.6
-At D:\SuperDesktop\SuperDesktop\scripts\run-evidence-mutation-fixtures.ps1:48 char:19
+powershell.exe : DANGLING_SUPERSEDED_BY: bootstrap-superdesktop-workspace/2.5.6#replacement
+At D:\SuperDesktop\SuperDesktop\scripts\run-evidence-mutation-fixtures.ps1:53 char:19
 + ... { $output = & powershell -NoProfile -ExecutionPolicy Bypass -File (Jo ...
 +                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    + CategoryInfo          : NotSpecified: (MANDATORY_WITHO...workspace/2.5.6:String) [], RemoteException
+    + CategoryInfo          : NotSpecified: (DANGLING_SUPERS...5.6#replacement:String) [], RemoteException
     + FullyQualifiedErrorId : NativeCommandError
 
 At D:\SuperDesktop\SuperDesktop\scripts\validate-evidence.ps1:6 char:50
 + ... on Fail([string]$Code, [string]$Message) { throw "$Code`: $Message" }
 +                                                ~~~~~~~~~~~~~~~~~~~~~~~~
-    + CategoryInfo          : OperationStopped: (MANDATORY_WITHO...workspace/2.5.6:String) [], RuntimeException
-    + FullyQualifiedErrorId : MANDATORY_WITHOUT_SCHEMA_COMPLETE_REPLACEMENT: bootstrap-superdesktop-workspace/2.5.6
+    + CategoryInfo          : OperationStopped: (DANGLING_SUPERS...5.6#replacement:String) [], RuntimeException
+    + FullyQualifiedErrorId : DANGLING_SUPERSEDED_BY: bootstrap-superdesktop-workspace/2.5.6#replacement

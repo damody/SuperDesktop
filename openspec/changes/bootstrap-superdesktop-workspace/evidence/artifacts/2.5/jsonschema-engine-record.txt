@@ -1,0 +1,2 @@
+exit_status: 0
+Draft 2020-12 evidence-record schema accepted the valid record fixture with format assertions enabled.

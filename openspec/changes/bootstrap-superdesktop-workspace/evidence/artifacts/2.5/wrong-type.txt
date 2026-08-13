@@ -1,9 +1,9 @@
-﻿case: wrong-type
+case: wrong-type
 expected_code: JSON_SCHEMA_RECORD_INVALID
 exit_status: 1
 actual_output:
 powershell.exe : JSON_SCHEMA_RECORD_INVALID: bootstrap-superdesktop-workspace/2.5.6#replacement
-At D:\SuperDesktop\SuperDesktop\scripts\run-evidence-mutation-fixtures.ps1:48 char:19
+At D:\SuperDesktop\SuperDesktop\scripts\run-evidence-mutation-fixtures.ps1:53 char:19
 + ... { $output = & powershell -NoProfile -ExecutionPolicy Bypass -File (Jo ...
 +                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     + CategoryInfo          : NotSpecified: (JSON_SCHEMA_REC...5.6#replacement:String) [], RemoteException

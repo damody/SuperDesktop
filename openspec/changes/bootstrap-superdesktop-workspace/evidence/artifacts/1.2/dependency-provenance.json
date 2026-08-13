@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-08-14T02:35:00+08:00",
+  "generated_at": "2026-08-14T11:30:00+08:00",
   "toolchain": {
     "channel": "1.97.1",
     "targets": ["x86_64-pc-windows-msvc"],
@@ -15,8 +15,35 @@
       "license": "Apache-2.0",
       "vendored_path": "vendor/gpui",
       "source_boundary": "clean remote source; D:\\SuperExplorer\\vendor\\gpui-ce is prohibited"
+    },
+    {
+      "name": "windows",
+      "version": "0.62.2",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "license": "MIT OR Apache-2.0",
+      "vendored_path": "vendor/windows",
+      "features": ["Win32_Foundation", "Win32_UI_WindowsAndMessaging", "Win32_UI_Shell", "Win32_System_Threading", "Win32_System_ProcessStatus", "Win32_System_Console", "Win32_System_SystemInformation", "Win32_Security", "Win32_Storage_FileSystem", "Win32_Graphics_Gdi"]
+    },
+    {
+      "name": "jsonschema",
+      "version": "0.37.1",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "license": "MIT",
+      "vendored_path": "vendor/jsonschema",
+      "default_features": false
+    },
+    {
+      "name": "serde_json",
+      "version": "1.0.151",
+      "source": "registry+https://github.com/rust-lang/crates.io-index",
+      "license": "MIT OR Apache-2.0",
+      "vendored_path": "vendor/serde_json"
     }
   ],
+  "resolved_parallel_versions": {
+    "windows": ["0.61.3", "0.62.2"],
+    "note": "0.62.2 is the direct platform substrate; 0.61.3 remains a locked transitive dependency and is separately covered by the generated full license inventory."
+  },
   "lockfile": "Cargo.lock",
   "vendor_strategy": "cargo vendor with project .cargo/config.toml source replacement; isolated CARGO_HOME uses no registry or git cache"
 }

@@ -1,4 +1,4 @@
-﻿cargo :    Compiling parking_lot_core v0.9.12
+cargo :    Compiling parking_lot_core v0.9.12
 At line:2 char:336
 + ... $LASTEXITCODE; cargo test --workspace --locked --offline 2>&1 | Tee-O ...
 +                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

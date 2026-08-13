@@ -1,19 +1,8 @@
-﻿powershell :    Compiling proc-macro2 v1.0.107
-At line:2 char:240
-+ ... STEXITCODE; powershell -NoProfile -ExecutionPolicy Bypass -File scrip ...
+powershell :     Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.18s
+At line:2 char:149
++ ... perDesktop; powershell -NoProfile -ExecutionPolicy Bypass -File scrip ...
 +                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    + CategoryInfo          : NotSpecified: (   Compiling proc-macro2 v1.0.107:String) [], RemoteException
+    + CategoryInfo          : NotSpecified: (    Finished `d...get(s) in 0.18s:String) [], RemoteException
     + FullyQualifiedErrorId : NativeCommandError
 
-   Compiling quote v1.0.47
-   Compiling syn v2.0.119
-   Compiling windows-implement v0.60.2
-   Compiling windows-interface v0.59.3
-    Checking windows-core v0.62.2
-    Checking windows-future v0.3.2
-    Checking windows-collections v0.3.2
-    Checking windows-numerics v0.3.1
-    Checking windows v0.62.2
-    Checking platform-win v0.1.0 (D:\SuperDesktop\SuperDesktop\crates\platform-win)
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 7.74s
-Windows 0.62.2 substrate/features, bounded platform unsafe exception, lock/vendor and isolated offline check passed.
+Windows 0.62.2 substrate/features, direct-pin provenance/license coverage, 0.61.3 transitive coverage, bounded platform unsafe exception, lock/vendor and isolated offline check passed.

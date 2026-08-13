@@ -1,9 +1,9 @@
-﻿case: malformed-adjustment
+case: malformed-adjustment
 expected_code: ADJUSTMENT_LINEAGE_INCOMPLETE
 exit_status: 1
 actual_output:
 powershell.exe : ADJUSTMENT_LINEAGE_INCOMPLETE: fixture-malformed
-At D:\SuperDesktop\SuperDesktop\scripts\run-evidence-mutation-fixtures.ps1:48 char:19
+At D:\SuperDesktop\SuperDesktop\scripts\run-evidence-mutation-fixtures.ps1:53 char:19
 + ... { $output = & powershell -NoProfile -ExecutionPolicy Bypass -File (Jo ...
 +                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     + CategoryInfo          : NotSpecified: (ADJUSTMENT_LINE...xture-malformed:String) [], RemoteException

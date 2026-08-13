@@ -1,4 +1,4 @@
-﻿powershell.exe : Fixture does not exist: fixtures/architecture/core-gpui-negative
+powershell.exe : Fixture does not exist: fixtures/architecture/core-gpui-negative
 At line:2 char:492
 + ... e';try{$out=& powershell -NoProfile -ExecutionPolicy Bypass -File scr ...
 +                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

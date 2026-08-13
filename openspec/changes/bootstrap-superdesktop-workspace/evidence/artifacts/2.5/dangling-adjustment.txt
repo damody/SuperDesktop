@@ -1,9 +1,9 @@
-﻿case: dangling-adjustment
+case: dangling-adjustment
 expected_code: ADJUSTMENT_DANGLING_RECORD
 exit_status: 1
 actual_output:
 powershell.exe : ADJUSTMENT_DANGLING_RECORD: fixture-dangling
-At D:\SuperDesktop\SuperDesktop\scripts\run-evidence-mutation-fixtures.ps1:48 char:19
+At D:\SuperDesktop\SuperDesktop\scripts\run-evidence-mutation-fixtures.ps1:53 char:19
 + ... { $output = & powershell -NoProfile -ExecutionPolicy Bypass -File (Jo ...
 +                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     + CategoryInfo          : NotSpecified: (ADJUSTMENT_DANG...ixture-dangling:String) [], RemoteException
