@@ -1,10 +1,16 @@
 {
   "schema_version": "1.0.0",
   "work_package": "validate-superdesktop-windows-platform/1.2",
-  "status": "implementation-complete-primary-verification-pending",
+  "status": "primary-accepted",
   "base_revision": "ab74e4ba",
-  "result_revision": "uncommitted",
-  "completed_global_task_ids": [],
+  "result_revision": "61f7fafe",
+  "accepted_revision": "61f7fafe",
+  "completed_global_task_ids": [
+    "validate-superdesktop-windows-platform/1.2.1",
+    "validate-superdesktop-windows-platform/1.2.2",
+    "validate-superdesktop-windows-platform/1.2.3",
+    "validate-superdesktop-windows-platform/1.2.4"
+  ],
   "input_contract": {
     "path": "evidence/artifacts/1.1/frozen-profile-contract-successor-1.2-manifest-v3.json",
     "sha256": "82B7EF7275CB036D9D041B9B0E5E2299062C3EB76A642FF6C5C02F1245837429",
