@@ -137,7 +137,9 @@ function Visit([string]$Node, $Seen, $Done) {
   $Seen.Remove($Node) | Out-Null; $Done[$Node] = $true
 }
 $done = @{}; foreach ($id in $adjustmentById.Keys) { Visit $id @{} $done }
-$legacy = @('A-W1-1.2-001','A-W1-1.2-003','B-W1-EXIT-001','B-W1-EXIT-001-lineage','B-W1-EXIT-002','B-W1-EXIT-003')
+$legacy = if ($Change -eq 'bootstrap-superdesktop-workspace' -or $Change -like '*bootstrap-superdesktop-workspace') {
+  @('A-W1-1.2-001','A-W1-1.2-003','B-W1-EXIT-001','B-W1-EXIT-001-lineage','B-W1-EXIT-002','B-W1-EXIT-003')
+} else { @() }
 $children = @{}; foreach ($child in $parents.Keys) { foreach ($parent in @($parents[$child] | Where-Object { $_ })) { if (-not $children.ContainsKey($parent)) { $children[$parent]=@() }; $children[$parent] += $child } }
 foreach ($legacyId in $legacy) {
   Need $adjustmentById.ContainsKey($legacyId) 'ADJUSTMENT_LEGACY_MISSING' $legacyId
