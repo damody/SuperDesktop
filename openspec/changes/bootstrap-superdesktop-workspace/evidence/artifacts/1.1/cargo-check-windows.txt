@@ -1,0 +1,4 @@
+﻿command: cargo check --workspace
+exit_status: 0
+output:
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.01s

@@ -1,0 +1,24 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/desktop-ui",
+    "crates/explorer-bridge",
+    "crates/platform-win",
+    "crates/settings-store",
+    "crates/shell-core",
+    "crates/superdesktop-app",
+    "crates/superdesktop-guardian",
+    "crates/superdesktop-test-support",
+    "crates/taskbar-ui",
+]
+
+[workspace.package]
+edition = "2024"
+rust-version = "1.97"
+version = "0.1.0"
+license = "MIT OR Apache-2.0"
+authors = ["SuperDesktop contributors"]
+repository = "https://github.com/damody/SuperDesktop"
+
+[workspace.lints.rust]
+unsafe_code = "deny"

@@ -1,0 +1,4 @@
+﻿command: git diff --check
+exit_status: 0
+output:
+warning: in the working copy of 'openspec/changes/bootstrap-superdesktop-workspace/tasks.md', LF will be replaced by CRLF the next time Git touches it

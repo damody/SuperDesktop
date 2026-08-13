@@ -1,0 +1,76 @@
+{
+  "change": "bootstrap-superdesktop-workspace",
+  "l2": "1.1",
+  "producer": "Workspace/Build owner",
+  "consumer": "bootstrap-superdesktop-workspace/1.2",
+  "base_revision": "b25c55750bf1e78767a25f243635e11b783b2ff3",
+  "result_revision": null,
+  "ownership_diff": [
+    ".gitignore",
+    "Cargo.toml",
+    "crates/desktop-ui/**",
+    "crates/explorer-bridge/**",
+    "crates/platform-win/**",
+    "crates/settings-store/**",
+    "crates/shell-core/**",
+    "crates/superdesktop-app/**",
+    "crates/superdesktop-guardian/**",
+    "crates/superdesktop-test-support/**",
+    "crates/taskbar-ui/**",
+    "fixtures/dependency-architecture/**",
+    "scripts/architecture-allowlist.json",
+    "scripts/check-dependency-architecture.ps1",
+    "scripts/capture-workspace-1.1-evidence.ps1",
+    "openspec/changes/bootstrap-superdesktop-workspace/evidence/artifacts/1.1/**",
+    "openspec/changes/bootstrap-superdesktop-workspace/evidence/handoffs/1.1.json",
+    "openspec/changes/bootstrap-superdesktop-workspace/tasks.md"
+  ],
+  "commands": [
+    {"command": "cargo metadata --format-version 1 --no-deps", "exit_status": 0},
+    {"command": "scripts/check-dependency-architecture.ps1", "exit_status": 0},
+    {"command": "scripts/check-dependency-architecture.ps1 -Fixture fixtures/dependency-architecture/core-depends-on-gpui", "exit_status": 1, "expected_exit_status": 1},
+    {"command": "scripts/check-dependency-architecture.ps1 -Fixture fixtures/dependency-architecture/ui-public-hwnd", "exit_status": 1, "expected_exit_status": 1},
+    {"command": "cargo check --workspace", "exit_status": 0},
+    {"command": "cargo test --workspace", "exit_status": 0},
+    {"command": "cargo fmt --all -- --check", "exit_status": 0},
+    {"command": "openspec validate bootstrap-superdesktop-workspace --strict", "exit_status": 0},
+    {"command": "git diff --check", "exit_status": 0}
+  ],
+  "gate_dispositions": [
+    {"gate": "G-ARCH", "status": "passed", "scope": "workspace graph, Windows guards, and two architecture negative fixtures"}
+  ],
+  "contract_hash": {
+    "algorithm": "SHA-256",
+    "inputs_manifest": "evidence/artifacts/1.1/workspace-contract-inputs.sha256",
+    "value": "C09A2FA13A5FD7D6194D28B7D009CD2C8C3633935FBC21761A02F918941700A5"
+  },
+  "evidence": [
+    {"path": "evidence/artifacts/1.1/architecture-check.txt", "sha256": "7375DA220A18C431AB25EEDAB244EA9FEAF9FBC14144ADA4EE4EB755056E373F"},
+    {"path": "evidence/artifacts/1.1/cargo-check-windows.txt", "sha256": "BF393AA6F828DDB70928DE7A8E5E1964C55F2747DAD70CA8352BBE4B8F8B1AF7"},
+    {"path": "evidence/artifacts/1.1/cargo-metadata.json", "sha256": "C89875BCA275401821D64B1DF3D4F4A29CD81265888AF5E1B135A631D6997413"},
+    {"path": "evidence/artifacts/1.1/cargo-test-windows.txt", "sha256": "831B2BD13867BE8B1F17D2354A0BB886A7C9C3EB3EB76B4BEE1B1AA097748498"},
+    {"path": "evidence/artifacts/1.1/core-depends-on-gpui-negative.txt", "sha256": "DF5DE11D4A5BEC1C0F4CDD0468A0B27F561F679C48646F45859A8874D34A6B07"},
+    {"path": "evidence/artifacts/1.1/diff-check.txt", "sha256": "29F9D0F8887EA499106C8867587104E542507F3363A1EC1CD9099256E8AF4205"},
+    {"path": "evidence/artifacts/1.1/format-check.txt", "sha256": "8C0EF5DFCDFF6DBBB206D7B984B2994F6E7E74F70D92AA70509029049617D04D"},
+    {"path": "evidence/artifacts/1.1/nonwindows-target-availability.txt", "sha256": "45D823DBBFF9F780381E9E88B854C6051C59D0211E2DEDC901BB980DFB7D47FF"},
+    {"path": "evidence/artifacts/1.1/strict-openspec-validation.txt", "sha256": "2C94308ADBCF05FBEFC60B000AC5427B937BBB0681B198930D5355C0E1D10E00"},
+    {"path": "evidence/artifacts/1.1/summary.md", "sha256": "8669E264383F8E573D3E5E69BCF969C98C222871837038DD831EB0124860C580"},
+    {"path": "evidence/artifacts/1.1/ui-public-hwnd-negative.txt", "sha256": "CBF86DDD934FBA84DD7A7D41F8CC7C721DAF0953855FD200C20915ED522BEF31"},
+    {"path": "evidence/artifacts/1.1/workspace-contract-inputs.sha256", "sha256": "C09A2FA13A5FD7D6194D28B7D009CD2C8C3633935FBC21761A02F918941700A5"}
+  ],
+  "stale_replacement_lineage": [],
+  "findings": [
+    {
+      "id": "A-W1-1.1-001",
+      "classification": "A",
+      "disposition": "The installed Rust toolchain has no non-Windows target. The deterministic compile-time refusal is retained in every crate and verified structurally; no target download was introduced."
+    },
+    {
+      "id": "A-W1-1.1-002",
+      "classification": "A",
+      "disposition": "Cargo created the normal workspace target directory; root .gitignore excludes /target/. Runtime policy prevented recursive cleanup, so it is intentionally excluded from ownership diff and commit scope."
+    }
+  ],
+  "reviewer": null,
+  "accepted_revision": null
+}

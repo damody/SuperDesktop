@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "approved_crates": [
+    "desktop-ui",
+    "explorer-bridge",
+    "platform-win",
+    "settings-store",
+    "shell-core",
+    "superdesktop-app",
+    "superdesktop-guardian",
+    "superdesktop-test-support",
+    "taskbar-ui"
+  ],
+  "allowed_direct_dependencies": {
+    "desktop-ui": ["shell-core"],
+    "explorer-bridge": ["shell-core"],
+    "platform-win": ["shell-core"],
+    "settings-store": [],
+    "shell-core": [],
+    "superdesktop-app": [
+      "desktop-ui",
+      "explorer-bridge",
+      "platform-win",
+      "settings-store",
+      "shell-core",
+      "superdesktop-guardian",
+      "superdesktop-test-support",
+      "taskbar-ui"
+    ],
+    "superdesktop-guardian": [],
+    "superdesktop-test-support": ["settings-store", "shell-core"],
+    "taskbar-ui": ["shell-core"]
+  },
+  "forbidden_dependency_substrings": {
+    "shell-core": ["gpui", "windows", "winapi", "win32", "com"]
+  },
+  "forbidden_public_type_patterns": ["pub\\s+(?:type|struct|enum|fn)\\s+.*(?:HWND|HANDLE|IUnknown|IDesktop|IShell|COM)"]
+}

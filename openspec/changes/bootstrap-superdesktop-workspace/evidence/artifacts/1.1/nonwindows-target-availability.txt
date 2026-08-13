@@ -1,0 +1,5 @@
+﻿command: rustup target list --installed
+exit_status: 0
+output:
+x86_64-pc-windows-gnu
+x86_64-pc-windows-msvc

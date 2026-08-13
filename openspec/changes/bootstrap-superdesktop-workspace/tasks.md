@@ -10,10 +10,10 @@
 **Gate／Evidence：** `G-ARCH`；`evidence/artifacts/1.1/`。
 **完成門檻：** Windows workspace metadata 與 dependency graph 符合設計，非 Windows target 明確拒絕。
 
-- [ ] 1.1.1 建立 workspace root 與九個核准 crate 的最小 manifests。
-- [ ] 1.1.2 為非 Windows target 加入可判定的 compile-time refusal。
-- [ ] 1.1.3 建立 crate dependency-direction 檢查腳本與允許清單。
-- [ ] 1.1.4 執行 workspace metadata 與 dependency graph 測試並保存輸出。
+- [x] 1.1.1 建立 workspace root 與九個核准 crate 的最小 manifests。
+- [x] 1.1.2 為非 Windows target 加入可判定的 compile-time refusal。
+- [x] 1.1.3 建立 crate dependency-direction 檢查腳本與允許清單。
+- [x] 1.1.4 執行 workspace metadata 與 dependency graph 測試並保存輸出。
 
 ### 1.2 固定 Toolchain 與依賴來源
 

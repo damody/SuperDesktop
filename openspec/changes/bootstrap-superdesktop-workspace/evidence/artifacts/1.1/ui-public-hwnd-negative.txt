@@ -1,0 +1,4 @@
+﻿command: & "$PSScriptRoot/check-dependency-architecture.ps1" -WorkspaceRoot $WorkspaceRoot -Fixture 'fixtures/dependency-architecture/ui-public-hwnd'
+exit_status: 1
+output:
+UI_PUBLIC_WINDOWS_OR_COM_TYPE: UI fixture exports a Windows/COM type.

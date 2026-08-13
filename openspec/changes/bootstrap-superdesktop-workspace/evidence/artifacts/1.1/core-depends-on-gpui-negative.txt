@@ -1,0 +1,4 @@
+﻿command: & "$PSScriptRoot/check-dependency-architecture.ps1" -WorkspaceRoot $WorkspaceRoot -Fixture 'fixtures/dependency-architecture/core-depends-on-gpui'
+exit_status: 1
+output:
+CORE_FORBIDDEN_DEPENDENCY: shell-core fixture declares gpui.
