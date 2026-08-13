@@ -25,12 +25,12 @@
 **Gate／Evidence：** `G-ARCH`；`evidence/artifacts/1.2/`。
 **完成門檻：** Online 與 isolated offline build 使用相同來源 hash 並成功。
 
-- [ ] 1.2.1 固定 Rust toolchain、target 與 workspace build profiles。
-- [ ] 1.2.2 加入 machine assertion，要求 dev/test/release profiles 的 `panic = "unwind"`。
-- [ ] 1.2.3 由乾淨遠端來源固定 GPUI-CE commit `8945e2981b9fd00ca887e042d8adb9acc241b168` 並產生 Cargo.lock，不使用 SuperExplorer vendor 未提交 patch。
-- [ ] 1.2.4 產生 dependency source URL、revision、license 與 hash manifest。
-- [ ] 1.2.5 在 isolated CARGO_HOME 準備已驗證的 vendored 或 mirrored sources。
-- [ ] 1.2.6 停用網路執行 `cargo check --locked --offline` 並保存完整輸出。
+- [x] 1.2.1 固定 Rust toolchain、target 與 workspace build profiles。
+- [x] 1.2.2 加入 machine assertion：要求 dev/release 明確 `panic = "unwind"`，且 test profile 不設定 `abort` 或其他 Cargo 會忽略的 panic 覆寫，保留測試 harness unwind 語義。
+- [x] 1.2.3 由乾淨遠端來源固定 GPUI-CE commit `8945e2981b9fd00ca887e042d8adb9acc241b168` 並產生 Cargo.lock，不使用 SuperExplorer vendor 未提交 patch。
+- [x] 1.2.4 產生 dependency source URL、revision、license 與 hash manifest。
+- [x] 1.2.5 在 isolated CARGO_HOME 準備已驗證的 vendored 或 mirrored sources。
+- [x] 1.2.6 停用網路執行 `cargo check --locked --offline` 並保存完整輸出。
 
 ## 2. Identity、授權與證據治理
 

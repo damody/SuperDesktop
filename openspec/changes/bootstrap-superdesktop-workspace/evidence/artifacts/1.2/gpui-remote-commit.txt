@@ -1,0 +1,4 @@
+﻿remote: 8945e2981b9fd00ca887e042d8adb9acc241b168
+commit_time_unix: 1785544638
+parent: 5604b378294e83ceb78ae846af72cfe3a9c330e5
+subject: 停用 gpui 相依元件預設功能

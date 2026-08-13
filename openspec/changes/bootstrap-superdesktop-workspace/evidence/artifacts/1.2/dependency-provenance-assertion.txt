@@ -1,0 +1,4 @@
+﻿command: & "$PSScriptRoot/verify-dependency-provenance.ps1" -WorkspaceRoot $WorkspaceRoot
+exit_status: 0
+output:
+Dependency provenance assertion passed: gpui uses https://github.com/damody/gpui-ce-explorer.git at 8945e2981b9fd00ca887e042d8adb9acc241b168 and vendor/gpui.

@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-08-14T02:35:00+08:00",
+  "toolchain": {
+    "channel": "1.97.1",
+    "targets": ["x86_64-pc-windows-msvc"],
+    "components": ["cargo", "rustfmt"]
+  },
+  "dependencies": [
+    {
+      "name": "gpui",
+      "version": "0.2.2",
+      "source_url": "https://github.com/damody/gpui-ce-explorer.git",
+      "revision": "8945e2981b9fd00ca887e042d8adb9acc241b168",
+      "license": "Apache-2.0",
+      "vendored_path": "vendor/gpui",
+      "source_boundary": "clean remote source; D:\\SuperExplorer\\vendor\\gpui-ce is prohibited"
+    }
+  ],
+  "lockfile": "Cargo.lock",
+  "vendor_strategy": "cargo vendor with project .cargo/config.toml source replacement; isolated CARGO_HOME uses no registry or git cache"
+}

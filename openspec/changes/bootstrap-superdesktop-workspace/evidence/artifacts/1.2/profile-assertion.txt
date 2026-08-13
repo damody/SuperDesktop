@@ -1,0 +1,4 @@
+﻿command: & "$PSScriptRoot/assert-build-profiles.ps1" -WorkspaceRoot $WorkspaceRoot
+exit_status: 0
+output:
+Build profile assertion passed: dev/release explicitly unwind; test retains Cargo default unwind behavior without ignored override.

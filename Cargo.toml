@@ -20,5 +20,14 @@ license = "MIT OR Apache-2.0"
 authors = ["SuperDesktop contributors"]
 repository = "https://github.com/damody/SuperDesktop"
 
+[workspace.dependencies]
+gpui = { git = "https://github.com/damody/gpui-ce-explorer.git", rev = "8945e2981b9fd00ca887e042d8adb9acc241b168", default-features = false }
+
 [workspace.lints.rust]
 unsafe_code = "deny"
+
+[profile.dev]
+panic = "unwind"
+
+[profile.release]
+panic = "unwind"

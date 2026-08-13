@@ -1,0 +1,74 @@
+{
+  "change": "bootstrap-superdesktop-workspace",
+  "l2": "1.2",
+  "producer": "Workspace/Build owner",
+  "consumer": "bootstrap-superdesktop-workspace/2.1",
+  "base_revision": "025ca4e60ed3fb0c8b9da7b6cf7c796a8a04f3e1",
+  "result_revision": null,
+  "ownership_diff": [
+    ".cargo/config.toml",
+    "Cargo.lock",
+    "Cargo.toml",
+    "crates/desktop-ui/Cargo.toml",
+    "crates/taskbar-ui/Cargo.toml",
+    "rust-toolchain.toml",
+    "scripts/architecture-allowlist.json",
+    "scripts/assert-build-profiles.ps1",
+    "scripts/capture-workspace-1.2-evidence.ps1",
+    "scripts/check-dependency-architecture.ps1",
+    "scripts/verify-dependency-provenance.ps1",
+    "vendor/**",
+    "openspec/changes/bootstrap-superdesktop-workspace/evidence/artifacts/1.2/**",
+    "openspec/changes/bootstrap-superdesktop-workspace/evidence/handoffs/1.2.json",
+    "openspec/changes/bootstrap-superdesktop-workspace/tasks.md"
+  ],
+  "excluded_intermediates": [
+    ".cache/gpui-ce-remote",
+    "build/isolated-cargo-home",
+    "build/isolated-target",
+    "vendor-config.generated.toml"
+  ],
+  "commands": [
+    {"command": "cargo generate-lockfile", "exit_status": 0},
+    {"command": "cargo vendor --locked vendor", "exit_status": 0},
+    {"command": "scripts/assert-build-profiles.ps1", "exit_status": 0},
+    {"command": "scripts/verify-dependency-provenance.ps1", "exit_status": 0},
+    {"command": "scripts/check-dependency-architecture.ps1", "exit_status": 0},
+    {"command": "cargo check --workspace --locked", "exit_status": 0},
+    {"command": "CARGO_HOME=build/isolated-cargo-home CARGO_TARGET_DIR=build/isolated-target CARGO_NET_OFFLINE=true cargo check --workspace --locked --offline", "exit_status": 0},
+    {"command": "cargo test --workspace --locked --offline", "exit_status": 0},
+    {"command": "cargo fmt --all -- --check", "exit_status": 0},
+    {"command": "openspec validate bootstrap-superdesktop-workspace --strict", "exit_status": 0},
+    {"command": "git diff --check", "exit_status": 0}
+  ],
+  "gate_dispositions": [
+    {"gate": "G-ARCH", "status": "passed", "scope": "pinned source, lockfile, vendor mirror, profile assertion, and isolated offline workspace check"}
+  ],
+  "contract_hash": {
+    "algorithm": "SHA-256",
+    "inputs_manifest": "evidence/artifacts/1.2/dependency-inputs.sha256",
+    "value": "96E4583E3A042512D39EF2A38D02603A0FF0359A5C7D90B1AABCA6087DA3B55A"
+  },
+  "evidence": [
+    {"path": "evidence/artifacts/1.2/dependency-inputs.sha256", "sha256": "96E4583E3A042512D39EF2A38D02603A0FF0359A5C7D90B1AABCA6087DA3B55A"},
+    {"path": "evidence/artifacts/1.2/dependency-provenance.json", "sha256": "37E2B267885F8700DDD2511B4ACCAD0A19A7D60607C2AC140030CE5F04A14664"},
+    {"path": "evidence/artifacts/1.2/dependency-provenance-assertion.txt", "sha256": "EB1FABEC7C759F5B08EB6C00003F84E7D68F7308576B55077F648A51019D9313"},
+    {"path": "evidence/artifacts/1.2/gpui-remote-commit.txt", "sha256": "3A074AED5FC5C15AEFC6C96AE6410D8E761FFE7F4F71472EAF9C9E3DB39E6C67"},
+    {"path": "evidence/artifacts/1.2/offline-isolated-locked-check.txt", "sha256": "3804765AC493D7AD32E71DA257A68C4DDD6BBC0109765BFA4734EA5E20F2505F"},
+    {"path": "evidence/artifacts/1.2/offline-metadata.json", "sha256": "BFD8A6835A2E1E5A844FEF27B31C7D582CAA8AD6DDFE1E5C7F055F3DFB2B67DB"},
+    {"path": "evidence/artifacts/1.2/online-locked-check.txt", "sha256": "94DDA199CCB2691F856422C8FA276132BBD2C3C58BFBD360198E4153401A092C"},
+    {"path": "evidence/artifacts/1.2/profile-assertion.txt", "sha256": "3AAE9C9BA99FA0FA43CCE4AE0725EDFE5AE7AB1AA66F2D136F80979828507703"},
+    {"path": "evidence/artifacts/1.2/summary.md", "sha256": "D2CC9F998FAA5AEB34205ADA4DCF1B10E4008ED104F800C80A7558C1053D9B63"},
+    {"path": "evidence/artifacts/1.2/toolchain.txt", "sha256": "A4B0A351D044BEC829EDEDE61E70E0D3DD0632228105D19517E7C1643569C20D"}
+    ,{"path": "evidence/artifacts/1.2/workspace-contract-replacement.sha256", "sha256": "4730B598B9CB8F307A87F67E5EEA05E9E5FEE524ED14558CF13D9275750C3EE6"}
+  ],
+  "stale_replacement_lineage": ["B-W1-1.2-002"],
+  "findings": [
+    {"id": "A-W1-1.2-001", "classification": "A", "disposition": "Primary integrated the approved all-GPUI dependency extension: desktop-ui and taskbar-ui may directly depend on the pinned workspace gpui dependency."},
+    {"id": "B-W1-1.2-002", "classification": "B", "disposition": "Cargo ignores profile.test panic; requirements were corrected by Primary before this L2 evidence. No earlier 1.2 evidence required staling."},
+    {"id": "A-W1-1.2-003", "classification": "A", "disposition": "The architecture checker now skips absent forbidden-substring policy entries instead of treating null as a wildcard; its behavior matches the allowlist contract."},
+    {"id": "A-W1-1.2-004", "classification": "A", "disposition": "Primary corrected the generated dependency manifest path from cargo/config.toml to .cargo/config.toml and revalidated all manifest inputs before acceptance."}
+  ],
+  "reviewer": null,
+  "accepted_revision": null
+}

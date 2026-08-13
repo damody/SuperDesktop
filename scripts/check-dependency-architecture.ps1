@@ -85,9 +85,12 @@ foreach ($crateName in $expectedNames) {
             Add-Diagnostic $diagnostics 'DEPENDENCY_DIRECTION' "$crateName -> $dependencyName is not allowlisted."
         }
 
-        foreach ($forbidden in @($allowlist.forbidden_dependency_substrings.PSObject.Properties[$crateName].Value)) {
-            if ($dependencyName -like "*$forbidden*") {
-                Add-Diagnostic $diagnostics 'CORE_FORBIDDEN_DEPENDENCY' "$crateName -> $dependencyName is forbidden."
+        $forbiddenProperty = $allowlist.forbidden_dependency_substrings.PSObject.Properties[$crateName]
+        if ($null -ne $forbiddenProperty) {
+            foreach ($forbidden in @($forbiddenProperty.Value)) {
+                if ($dependencyName -like "*$forbidden*") {
+                    Add-Diagnostic $diagnostics 'CORE_FORBIDDEN_DEPENDENCY' "$crateName -> $dependencyName is forbidden."
+                }
             }
         }
     }

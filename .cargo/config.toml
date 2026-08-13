@@ -1,0 +1,10 @@
+[source.crates-io]
+replace-with = "vendored-sources"
+
+[source."git+https://github.com/damody/gpui-ce-explorer.git?rev=8945e2981b9fd00ca887e042d8adb9acc241b168"]
+git = "https://github.com/damody/gpui-ce-explorer.git"
+rev = "8945e2981b9fd00ca887e042d8adb9acc241b168"
+replace-with = "vendored-sources"
+
+[source.vendored-sources]
+directory = "vendor"

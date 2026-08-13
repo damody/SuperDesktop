@@ -12,7 +12,7 @@
 - **THEN** architecture checker 以非零結果拒絕
 
 ### Requirement: Toolchain 與 dependency source 必須固定且離線可重現
-系統 SHALL 固定 Rust、GPUI-CE、Windows bindings 與 lockfile，並保存 source/hash manifest；isolated network-disabled environment MUST 通過 `cargo check --locked --offline`。
+系統 SHALL 固定 Rust、GPUI-CE、Windows bindings 與 lockfile，並保存 source/hash manifest；isolated network-disabled environment MUST 通過 `cargo check --locked --offline`。Dev 與 release profile SHALL 明確使用 `panic = "unwind"`；因 Cargo 忽略 test profile 的 panic setting，test profile MUST 不設定 `abort` 或其他 panic 覆寫，並由 machine assertion 驗證其測試 harness unwind 語義。
 
 #### Scenario: 離線建置
 - **WHEN** 使用已驗證 source cache/vendor 與 isolated `CARGO_HOME` 停用網路建置
@@ -21,6 +21,10 @@
 #### Scenario: Source 缺失或 hash 漂移
 - **WHEN** 任一 dependency source 缺失或 hash 不符
 - **THEN** gate 失敗，不能只用連網建置取代
+
+#### Scenario: Panic policy 漂移
+- **WHEN** dev/release 不再是 unwind，或 test profile 設定 `abort`／其他無效 panic 覆寫
+- **THEN** machine assertion 必須失敗，且 gate 不得把 Cargo 忽略的 test profile 設定視為有效證據
 
 ### Requirement: Windows 產品 Identity 必須可驗證
 系統 SHALL 為 SuperDesktop 與 guardian 建立獨立 manifest、VERSIONINFO、檔名與 icon resource。

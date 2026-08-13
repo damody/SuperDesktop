@@ -12,7 +12,7 @@
     "taskbar-ui"
   ],
   "allowed_direct_dependencies": {
-    "desktop-ui": ["shell-core"],
+    "desktop-ui": ["gpui", "shell-core"],
     "explorer-bridge": ["shell-core"],
     "platform-win": ["shell-core"],
     "settings-store": [],
@@ -29,7 +29,7 @@
     ],
     "superdesktop-guardian": [],
     "superdesktop-test-support": ["settings-store", "shell-core"],
-    "taskbar-ui": ["shell-core"]
+    "taskbar-ui": ["gpui", "shell-core"]
   },
   "forbidden_dependency_substrings": {
     "shell-core": ["gpui", "windows", "winapi", "win32", "com"]
