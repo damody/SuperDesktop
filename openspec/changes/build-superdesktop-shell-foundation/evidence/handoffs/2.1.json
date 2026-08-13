@@ -1,0 +1,20 @@
+{
+  "change": "build-superdesktop-shell-foundation",
+  "l2": "2.1",
+  "status": "passed-archived",
+  "producer": "Primary integrator",
+  "consumer": "Wave 2 Windows/GPUI capability gate",
+  "child_change": "bootstrap-superdesktop-workspace",
+  "archive_path": "openspec/changes/archive/2026-08-13-bootstrap-superdesktop-workspace",
+  "archive_revision": "9f115980af3804829fc156029ae3b22382c7a146",
+  "reviewed_revision": "c3364a3b0112286e116f5c83f4d9a3d6412b7a8d",
+  "accepted_revision": "43e0e2c6edf52d2289f03d42b719b3b4c6f2ac91",
+  "contract_manifest": "evidence/artifacts/2.1/archive-inputs.sha256",
+  "child_contract_sha256": "9C7B643D880EF4C7135F08D32222075D43428CBF1A50A53CBBFBA7405ED2622E",
+  "gates": {
+    "G-ARCH": "passed",
+    "G-TRACE": "passed",
+    "G-SAFETY": "passed"
+  },
+  "review": "Two independent reviewers reported no P0/P1 at c3364a3b."
+}

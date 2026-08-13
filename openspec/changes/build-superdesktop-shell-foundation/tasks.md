@@ -34,13 +34,13 @@
 **Gate／Evidence：** `G-ARCH`、`G-TRACE`；program `evidence/artifacts/2.1/`。
 **完成門檻：** Strict/tasks validation、全部 mandatory evidence、兩個 gates、handoff 與 archive revision 分項通過。
 
-- [ ] 2.1.1 記錄 child `openspec validate --strict` 成功輸出。
-- [ ] 2.1.2 記錄 child 詳細 tasks validator 成功輸出。
-- [ ] 2.1.3 驗證 child mandatory evidence index 無 failed/blocked/stale/N/A/invalid replacement。
-- [ ] 2.1.4 驗證 `G-ARCH` disposition passed。
-- [ ] 2.1.5 驗證 `G-TRACE` disposition passed。
-- [ ] 2.1.6 驗證 workspace/toolchain/source/evidence handoff manifest hashes。
-- [ ] 2.1.7 封存 child 並記錄 immutable archive revision。
+- [x] 2.1.1 記錄 child `openspec validate --strict` 成功輸出。
+- [x] 2.1.2 記錄 child 詳細 tasks validator 成功輸出。
+- [x] 2.1.3 驗證 child mandatory evidence index 無 failed/blocked/stale/N/A/invalid replacement。
+- [x] 2.1.4 驗證 `G-ARCH` disposition passed。
+- [x] 2.1.5 驗證 `G-TRACE` disposition passed。
+- [x] 2.1.6 驗證 workspace/toolchain/source/evidence handoff manifest hashes。
+- [x] 2.1.7 封存 child 並記錄 immutable archive revision。
 
 ### 2.2 驗證並封存 Windows/GPUI Capability Gate
 
