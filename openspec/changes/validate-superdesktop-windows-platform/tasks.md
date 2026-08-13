@@ -3,12 +3,12 @@
 ### 1.1 凍結 Capability Spike Profile
 
 **目的：** 建立後續 spike 可重現的 OS、ExplorerPatcher、工具鏈與資源快照。
-**輸入：** Bootstrap change、目前 Windows 11＋ExplorerPatcher 環境、參考截圖。
+**輸入：** 已封存 Bootstrap change 的 accepted workspace contract hash（含固定 Windows binding/features、offline provenance與 audited unsafe boundary）、目前 Windows 11＋ExplorerPatcher 環境、參考截圖。
 **產出：** Immutable capability profile 與 hashes。
 **依賴：** `bootstrap-superdesktop-workspace` 已通過。
 **Owner／Wave：** Platform owner／Wave 2。
 **Gate／Evidence：** `G-ARCH`；`evidence/artifacts/1.1/`。
-**完成門檻：** OS build、EP version/binary、設定、GPUI revision、reference image 與 resource snapshot 完整，且目前 session admission probe 在任何 AppBar/Hook mutation 前 passed。
+**完成門檻：** Bootstrap workspace contract逐 input有效且無 dependency/lint/ownership drift；OS build、EP version/binary、設定、GPUI revision、reference image與resource snapshot完整；目前 session admission probe在任何AppBar/Hook mutation前 passed。
 
 - [ ] 1.1.1 擷取 OS build、session、display adapter 與 monitor identity。
 - [ ] 1.1.2 擷取 ExplorerPatcher version、binary hash 與影響 UI 的設定。
@@ -16,6 +16,7 @@
 - [ ] 1.1.4 記錄 GPUI-CE revision、Rust toolchain 與 spike binary hash。
 - [ ] 1.1.5 在任何 AppBar/Hook spike 前執行 Safe Mode、interactive user token/session 與 supported-session admission probe。
 - [ ] 1.1.6 保存 admission probe 前後 Explorer、AppBar 與 work-area zero-mutation snapshot；未 passed 則停止本 change。
+- [ ] 1.1.7 驗證 bootstrap archive workspace contract hash、Windows binding/features、lock/vendor provenance、全域 unsafe deny與 `platform-win` 唯一 audited exception；任一漂移即 stop 並交回 Primary。
 
 ### 1.2 驗證 GPUI HWND 與 Message Bridge
 

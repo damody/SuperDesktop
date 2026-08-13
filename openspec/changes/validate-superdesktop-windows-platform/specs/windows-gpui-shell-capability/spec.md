@@ -1,5 +1,12 @@
 ## ADDED Requirements
 
+### Requirement: Capability spike 必須消費已凍結的 Windows/FFI substrate
+系統 SHALL 在任何 spike 前驗證 bootstrap archive handoff 的 workspace contract hash，且直接 Windows binding 版本/features、offline provenance、全域 unsafe deny 與 `platform-win` 唯一 audited unsafe exception均未漂移。每個 unsafe block MUST 具體記錄 SAFETY invariant；其他 crate MUST NOT 直接依賴 Windows binding或降低 unsafe lint。
+
+#### Scenario: Bootstrap substrate contract 漂移
+- **WHEN** Windows binding、features、lock/vendor provenance、unsafe lint或唯一 owner與 bootstrap handoff 不同
+- **THEN** capability change MUST stop，且 Platform owner不得自行修改 root contract後繼續
+
 ### Requirement: Reference profile 必須凍結
 系統 SHALL 記錄 OS build 26200.8875、ExplorerPatcher 26100.8457.70.3、設定摘要、reference image SHA-256、GPUI source revision 與 spike binary hash。
 

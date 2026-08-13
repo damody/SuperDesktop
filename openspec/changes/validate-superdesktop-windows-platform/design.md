@@ -11,6 +11,7 @@
 ## Decisions
 
 - 每個 capability 是獨立 mandatory subcheck，不能由其他成功項取代。
+- 本 change 只在 bootstrap archive 發布可逐 input 驗證的 Wave 1 contract hash 後開始；該 contract 必須固定直接 Windows binding 版本/features、offline source provenance，並保留全域 unsafe deny 與 `platform-win` 唯一 crate-local audited unsafe exception。任何 root dependency/lint drift 先回 Primary，不由 Platform owner 越界修改。
 - Reference profile 必須保存 OS/ExplorerPatcher/config/image/source/binary hashes。
 - Spike 只在受控測試 HWND/AppBar 上執行，不隱藏 Explorer。
 - 任一 required capability stop disposition 會阻擋下游，走 B/C correction。
