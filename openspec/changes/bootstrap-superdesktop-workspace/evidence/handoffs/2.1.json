@@ -4,7 +4,7 @@
   "producer": "Workspace/Build owner",
   "consumer": "bootstrap-superdesktop-workspace/2.2",
   "base_revision": "6ceb27c2",
-  "result_revision": null,
+  "result_revision": "bb435380e60e83611748618a79f62238ff0f448b",
   "ownership_diff": [
     "crates/superdesktop-app/{Cargo.toml,build.rs,resources/**,src/identity.rs,src/main.rs}",
     "crates/superdesktop-guardian/{Cargo.toml,build.rs,resources/**,src/identity.rs,src/main.rs}",
@@ -56,6 +56,6 @@
   "findings": [
     {"id": "A-W1-2.1-001", "classification": "A", "disposition": "Use installed llvm-rc.exe in build scripts to compile VERSIONINFO, RCDATA AppUserModelID, and generated icon resources. No Cargo build dependency was added."}
   ],
-  "reviewer": null,
-  "accepted_revision": null
+  "reviewer": "Primary integrator /root",
+  "accepted_revision": "bb435380e60e83611748618a79f62238ff0f448b"
 }
