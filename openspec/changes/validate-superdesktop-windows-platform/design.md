@@ -14,6 +14,7 @@
 - 本 change 只在 bootstrap archive 發布可逐 input 驗證的 Wave 1 contract hash 後開始；archive relocation 不改寫封存 manifest，而由固定 archive revision 的 relocation verifier 將舊 active-change 前綴唯一映射到封存根目錄並逐 input 驗 hash。該 contract 必須固定直接 Windows binding 版本/features、offline source provenance，並保留全域 unsafe deny 與 `platform-win` 唯一 crate-local audited unsafe exception。任何 bytes、root dependency/lint 或非 relocation path drift 先回 Primary，不由 Platform owner 越界修改。
 - Reference profile 必須保存 OS/ExplorerPatcher/config/image/source與 1.1 read-only profile/admission probe binary hashes；1.2 才建立 native-window spike binary。
 - Spike 只在受控測試 HWND/AppBar 上執行，不隱藏 Explorer。
+- GPUI native-window spike 由 `desktop-ui` example composition 擁有，並以 dev-dependency 呼叫 `platform-win/common` 的 HWND/message bridge；`platform-win` 不得反向依賴 GPUI，該 dev-only architecture successor 不得進入 product public API。
 - 任一 required capability stop disposition 會阻擋下游，走 B/C correction。
 
 ## Risks / Trade-offs

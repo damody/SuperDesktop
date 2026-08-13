@@ -10,3 +10,6 @@ workspace = true
 
 [dependencies]
 gpui.workspace = true
+
+[dev-dependencies]
+platform-win = { path = "../platform-win" }

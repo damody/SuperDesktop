@@ -681,6 +681,7 @@ name = "desktop-ui"
 version = "0.1.0"
 dependencies = [
  "gpui",
+ "platform-win",
 ]
 
 [[package]]

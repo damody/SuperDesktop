@@ -12,7 +12,7 @@
     "taskbar-ui"
   ],
   "allowed_direct_dependencies": {
-    "desktop-ui": ["gpui", "shell-core"],
+    "desktop-ui": ["gpui", "platform-win", "shell-core"],
     "explorer-bridge": ["shell-core"],
     "platform-win": ["shell-core", "windows"],
     "settings-store": [],
