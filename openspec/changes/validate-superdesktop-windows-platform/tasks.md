@@ -32,7 +32,7 @@
 
 - [ ] 1.2.1 建立最小 GPUI native-window spike，從 live `gpui::Window` 輸出 borrowed HWND、PID/thread/session、GPUI WindowId 與 generation identity；不得另建替代 HWND。
 - [ ] 1.2.2 驗證 DPI、display-change 與 activation 訊息可轉為 owned event。
-- [ ] 1.2.3 驗證視窗關閉後 callback 與 HWND 不再被使用。
+- [ ] 1.2.3 驗證 closing 後 `WM_NCDESTROY` 與 GPUI `on_window_closed` 兩個無固定先後的 terminal signal 均抵達，finalized 晚於兩者、raw callback reference已釋放，且 callback/HWND 不再被使用。
 - [ ] 1.2.4 保存 headful trace、handles before/after 與 binary hash。
 
 ## 2. Shell API 可逆性與顯示器能力

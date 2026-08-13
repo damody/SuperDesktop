@@ -33,7 +33,7 @@
 
 #### Scenario: Native GPUI HWND terminal
 - **WHEN** GPUI window 關閉或 subclass teardown
-- **THEN** attach、closing、`WM_NCDESTROY`、GPUI `on_window_closed` 與 terminal 順序可判定，late callback 被 generation fence 拒絕，callback/state outstanding 為零，且 handle/USER/GDI 資源在明列 deadline 與 threshold 內回到 baseline
+- **THEN** attach 與 closing 先發生，`WM_NCDESTROY` 與 GPUI `on_window_closed` 作為順序不保證的兩個獨立 terminal signal，finalized 必須晚於兩者且 raw callback reference 已釋放；late callback 被 generation fence 拒絕，callback/state outstanding 為零，且 handle/USER/GDI 資源在明列 deadline 與 threshold 內回到 baseline
 
 #### Scenario: AppBar spike
 - **WHEN** spike 建立並移除測試 AppBar

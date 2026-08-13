@@ -17,6 +17,7 @@
 - GPUI native-window spike 由 `desktop-ui` example composition 擁有，並以 dev-dependency 呼叫 `platform-win/common` 的 HWND/message bridge；`platform-win` 不得反向依賴 GPUI，該 dev-only architecture successor 不得進入 product public API。
 - Headful `Application` factory 使用同一 GPUI-CE pinned repository/revision的 `gpui_windows` package且停用 default features，僅為 `desktop-ui` dev-dependency；由 `Application::with_platform` 注入 Windows backend，其 lock/vendor/license/provenance與離線建置必須在1.2 evidence中閉合。
 - 1.2 僅驗證真實 GPUI-owned borrowed HWND 與 SuperDesktop-owned subclass callback boundary；不得另建替代 HWND，也不得由 bridge 呼叫 `DestroyWindow`。固定 revision 的 `gpui_windows` 主 WndProc 尚未提供完整 no-unwind/typed-fatal contract，因此 deliberate upstream callback-panic fixture、backend terminal cleanup 與任何 production/Shell 使用都由 3.2 blocking gate 負責；3.2 通過前 1.2 只能作 capability preview。
+- Pinned GPUI 的 `on_window_closed` 通知可能早於 Windows backend 非同步 `DestroyWindow`/`WM_NCDESTROY`；bridge 將兩者視為無固定先後的獨立 terminal signal，只在兩者皆完成且 raw callback reference 已釋放後產生 finalized trace。
 - 任一 required capability stop disposition 會阻擋下游，走 B/C correction。
 
 ## Risks / Trade-offs
