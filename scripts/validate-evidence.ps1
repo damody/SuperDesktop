@@ -33,13 +33,36 @@ $coverage = Get-Content -Raw $coveragePath | ConvertFrom-Json
 $records = @(Get-Content $indexPath | Where-Object { $_ } | ForEach-Object { $_ | ConvertFrom-Json })
 $adjustments = @(Get-Content $adjustmentPath | Where-Object { $_ } | ForEach-Object { $_ | ConvertFrom-Json })
 $effectiveStale = @{}
-foreach ($adjustment in $adjustments) { foreach ($legacy in @($adjustment.stale_evidence | Where-Object { $_ })) { $effectiveStale[$legacy] = $true } }
+ $allEffectiveMappings=@()
+foreach($adjustment in $adjustments){$allEffectiveMappings+=@($adjustment.effective_stale_mappings)}
+foreach ($adjustment in $adjustments) {
+  foreach ($legacy in @($adjustment.stale_evidence | Where-Object { $_ -and $_ -match '#' })) {
+    $mapping=@($allEffectiveMappings|Where-Object{$_.source_record_id -eq $legacy})
+    Need ($mapping.Count -eq 1) 'EFFECTIVE_STALE_MAPPING_MISSING' "$($adjustment.adjustment_id):$legacy"
+    $effectiveStale[$legacy] = $mapping[0].replacement_record_id
+  }
+}
 $by = @{}; $coverageByTask = @{}
 foreach ($task in @($coverage.tasks)) { $coverageByTask[$task.task_id] = $task }
 foreach ($record in $records) {
   $id = Id $record
   Need (-not $by.ContainsKey($id)) 'DUPLICATE_RECORD_IDENTITY' $id
   $by[$id] = $record
+}
+foreach ($task in @($coverage.tasks)) {
+  if (-not $task.mandatory) { continue }
+  Need (@($records | Where-Object { $_.schema_version -eq '2.0.0' -and $_.task_id -eq $task.task_id -and $_.status -eq 'passed' -and -not $effectiveStale.ContainsKey((Id $_)) }).Count -gt 0) 'MANDATORY_WITHOUT_SCHEMA_COMPLETE_REPLACEMENT' $task.task_id
+}
+foreach ($sourceId in $effectiveStale.Keys) {
+  Need $by.ContainsKey($sourceId) 'EFFECTIVE_STALE_SOURCE_DANGLING' $sourceId
+  $replacementId = $effectiveStale[$sourceId]
+  Need $by.ContainsKey($replacementId) 'EFFECTIVE_STALE_REPLACEMENT_DANGLING' $sourceId
+  $source = $by[$sourceId]; $replacement = $by[$replacementId]
+  Need ($replacement.status -eq 'passed' -and $replacement.task_id -eq $source.task_id) 'EFFECTIVE_STALE_REPLACEMENT_INVALID' $sourceId
+  Need ($replacement.capability_id -eq $source.capability_id -and $replacement.requirement_id -eq $source.requirement_id -and $replacement.scenario_id -eq $source.scenario_id -and ((@($replacement.gates) -join '|') -eq (@($source.gates) -join '|'))) 'EFFECTIVE_STALE_COVERAGE_DRIFT' $sourceId
+}
+foreach ($record in $records) {
+  $id = Id $record
   if ($record.schema_version -ne '2.0.0') { continue }
   $stage = Join-Path $workspace ('build/validator-stage/' + [guid]::NewGuid().ToString('N') + '.json')
   New-Item -ItemType Directory -Force (Split-Path -Parent $stage) | Out-Null
@@ -47,7 +70,10 @@ foreach ($record in $records) {
   try { Invoke-Engine $schemaPath $stage 'JSON_SCHEMA_RECORD_INVALID' $id } finally { if (Test-Path $stage) { Remove-Item -LiteralPath $stage -Force } }
   $artifact = Join-Path $root $record.artifact
   Need (Test-Path $artifact) 'MISSING_ARTIFACT' $id
-  if ($record.status -ne 'stale' -and -not $effectiveStale.ContainsKey($id)) { Need ((Get-FileHash -Algorithm SHA256 $artifact).Hash -eq $record.artifact_sha256) 'ARTIFACT_HASH_DRIFT' $id }
+  if ($effectiveStale.ContainsKey($id)) {
+    $replacementId=$effectiveStale[$id];Need $by.ContainsKey($replacementId) 'EFFECTIVE_STALE_REPLACEMENT_DANGLING' $id
+    $replacement=$by[$replacementId];Need ($replacement.status -eq 'passed' -and $replacement.task_id -eq $record.task_id) 'EFFECTIVE_STALE_REPLACEMENT_INVALID' $id
+  } elseif ($record.status -ne 'stale') { Need ((Get-FileHash -Algorithm SHA256 $artifact).Hash -eq $record.artifact_sha256) 'ARTIFACT_HASH_DRIFT' $id }
   $covered = $coverageByTask[$record.task_id]
   Need ($null -ne $covered) 'UNKNOWN_TASK' $id
   Need ($record.capability_id -eq $covered.capability_id -and $record.requirement_id -eq $covered.requirement_id -and $record.scenario_id -eq $covered.scenario_id -and ((@($record.gates) -join '|') -eq (@($covered.gates) -join '|'))) 'COVERAGE_DRIFT' $id
@@ -61,10 +87,6 @@ function Visit-Record([string]$RecordId, $Seen, $Done) {
 }
 $recordDone=@{}; foreach($record in @($records|?{$_.schema_version -eq '2.0.0' -and $_.status -eq 'stale'})){Visit-Record (Id $record) @{} $recordDone}
 $replacementTargets = @{}
-foreach ($task in @($coverage.tasks)) {
-  if (-not $task.mandatory) { continue }
-  Need (@($records | Where-Object { $_.schema_version -eq '2.0.0' -and $_.task_id -eq $task.task_id -and $_.status -eq 'passed' }).Count -gt 0) 'MANDATORY_WITHOUT_SCHEMA_COMPLETE_REPLACEMENT' $task.task_id
-}
 foreach ($record in @($records | Where-Object { $_.schema_version -eq '2.0.0' })) {
   $id = Id $record
   if ($record.status -eq 'stale') {

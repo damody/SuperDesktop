@@ -14,14 +14,19 @@ $expected = [ordered]@{
   'missing-artifact'='MISSING_ARTIFACT'; 'missing-coverage'='UNKNOWN_TASK'; 'unknown-coverage'='COVERAGE_DRIFT'; 'drifted-coverage'='COVERAGE_DRIFT'; 'drifted-scenario'='COVERAGE_DRIFT'; 'stale-without-replacement'='STALE_WITHOUT_REPLACEMENT';
   'dangling-replacement'='DANGLING_SUPERSEDED_BY'; 'cyclic-replacement'='REPLACEMENT_CYCLE'; 'nonmandatory-replacement'='NONMANDATORY_REPLACEMENT'; 'replacement-coverage-drift'='COVERAGE_DRIFT'; 'unpassed-replacement'='UNPASSED_REPLACEMENT';
   'duplicate-identity'='DUPLICATE_RECORD_IDENTITY'; 'adjustment-stale-not-propagated'='ADJUSTMENT_BACKLINK_INVALID'; 'missing-procedure'='JSON_SCHEMA_RECORD_INVALID'; 'wrong-type'='JSON_SCHEMA_RECORD_INVALID'; 'wrong-pattern'='JSON_SCHEMA_RECORD_INVALID';
-  'date-time-format'='JSON_SCHEMA_RECORD_INVALID'; 'dangling-adjustment'='ADJUSTMENT_DANGLING_RECORD'; 'malformed-adjustment'='ADJUSTMENT_LINEAGE_INCOMPLETE'
+  'date-time-format'='JSON_SCHEMA_RECORD_INVALID'; 'dangling-adjustment'='ADJUSTMENT_DANGLING_RECORD'; 'malformed-adjustment'='ADJUSTMENT_LINEAGE_INCOMPLETE';
+  'effective-stale-unmapped'='EFFECTIVE_STALE_MAPPING_MISSING'
 }
 foreach ($case in $expected.Keys) {
   $stage = Join-Path $resultRoot "cases/$case"; New-Item -ItemType Directory -Force $stage | Out-Null
   Copy-Item $seed (Join-Path $stage 'evidence') -Recurse -Force
   $index = Join-Path $stage 'evidence/index.jsonl'; $lines = [System.Collections.Generic.List[string]](Get-Content $index)
-  # Keep fixtures independent of appended corrective chains: this is the immutable 2.5.6 draft record at line 77.
-  $n = 76
+  # Add an isolated, current-hash record that is not a source or target in the
+  # production adjustment graph, so each mutation tests only its intended rule.
+  $fixtureBase = @($lines | Where-Object { $_ -match '"task_id":"bootstrap-superdesktop-workspace/2\.5\.6"' -and $_ -match '"subcheck":"effective-25"' })[0]
+  if (-not $fixtureBase) { throw 'FIXTURE_BASE_RECORD_MISSING' }
+  $lines.Add(($fixtureBase -replace '"subcheck":"effective-25"','"subcheck":"fixture-base"'))
+  $n = $lines.Count - 1
   switch ($case) {
     'mandatory-not-applicable' { $lines[$n]=$lines[$n] -replace '"status":"passed"','"status":"not-applicable"' }
     'mandatory-blocked' { $lines[$n]=$lines[$n] -replace '"status":"passed"','"status":"blocked"' }
@@ -32,10 +37,10 @@ foreach ($case in $expected.Keys) {
     'drifted-coverage' { $lines[$n]=$lines[$n] -replace '"gates":\["G-ARCH","G-SAFETY"\]','"gates":["G-DRIFT"]' }
     'drifted-scenario' { $lines[$n]=$lines[$n] -replace '"scenario_id":"offline-windows-substrate"','"scenario_id":"drift"' }
     'dangling-replacement' { $lines[$n]=$lines[$n] -replace '"status":"passed"','"status":"stale"'; $lines[$n]=$lines[$n] -replace '"actual":"passed"','"actual":"passed","superseded_by":"missing#record"' }
-    'cyclic-replacement' { $lines[$n]=$lines[$n] -replace '"status":"passed"','"status":"stale"'; $lines[$n]=$lines[$n] -replace '"actual":"passed"','"actual":"passed","superseded_by":"bootstrap-superdesktop-workspace/2.5.6#replacement"'; $lines[$n]=$lines[$n] -replace '"subcheck":"replacement"','"subcheck":"cycle-a"'; $lines.Add(($lines[$n] -replace '"subcheck":"cycle-a"','"subcheck":"replacement"' -replace '"status":"stale"','"status":"stale"' -replace '"superseded_by":"bootstrap-superdesktop-workspace/2.5.6#replacement"','"superseded_by":"bootstrap-superdesktop-workspace/2.5.6#cycle-a"')); Add-Content -Encoding utf8 (Join-Path $stage 'evidence/adjustments.jsonl') '{"adjustment_id":"fixture-cycle-stale","classification":"B","status":"corrective-in-progress","stale_evidence":["bootstrap-superdesktop-workspace/2.5.6#cycle-a","bootstrap-superdesktop-workspace/2.5.6#replacement"]}' }
-    'nonmandatory-replacement' { $lines[$n]=$lines[$n] -replace '"status":"passed"','"status":"stale"'; $lines[$n]=$lines[$n] -replace '"actual":"passed"','"actual":"passed","superseded_by":"bootstrap-superdesktop-workspace/2.4.1#primary"'; $lines[$n]=$lines[$n] -replace '"subcheck":"replacement"','"subcheck":"nonmandatory-a"'; Add-Content -Encoding utf8 (Join-Path $stage 'evidence/adjustments.jsonl') '{"adjustment_id":"fixture-nonmandatory-stale","classification":"B","status":"corrective-in-progress","stale_evidence":["bootstrap-superdesktop-workspace/2.5.6#nonmandatory-a"]}' }
+    'cyclic-replacement' { $lines[$n]=$lines[$n] -replace '"status":"passed"','"status":"stale"'; $lines[$n]=$lines[$n] -replace '"actual":"passed"','"actual":"passed","superseded_by":"bootstrap-superdesktop-workspace/2.5.6#fixture-cycle-b"'; $lines[$n]=$lines[$n] -replace '"subcheck":"fixture-base"','"subcheck":"fixture-cycle-a"'; $lines.Add(($lines[$n] -replace '"subcheck":"fixture-cycle-a"','"subcheck":"fixture-cycle-b"' -replace '"superseded_by":"bootstrap-superdesktop-workspace/2.5.6#fixture-cycle-b"','"superseded_by":"bootstrap-superdesktop-workspace/2.5.6#fixture-cycle-a"')); }
+    'nonmandatory-replacement' { $lines[$n]=$lines[$n] -replace '"status":"passed"','"status":"stale"'; $lines[$n]=$lines[$n] -replace '"actual":"passed"','"actual":"passed","superseded_by":"bootstrap-superdesktop-workspace/2.4.1#primary"'; $lines[$n]=$lines[$n] -replace '"subcheck":"fixture-base"','"subcheck":"nonmandatory-a"' }
     'replacement-coverage-drift' { $lines[$n]=$lines[$n] -replace '"scenario_id":"offline-windows-substrate"','"scenario_id":"drift"' }
-    'unpassed-replacement' { $original=$lines[$n]; $lines[$n]=$lines[$n] -replace '"status":"passed"','"status":"stale"'; $lines[$n]=$lines[$n] -replace '"actual":"passed"','"actual":"passed","superseded_by":"bootstrap-superdesktop-workspace/2.5.6#unpassed-b"'; $lines[$n]=$lines[$n] -replace '"subcheck":"replacement"','"subcheck":"unpassed-a"'; $lines.Add(($original -replace '"subcheck":"replacement"','"subcheck":"unpassed-b"' -replace '"status":"passed"','"status":"failed"' -replace '"actual":"passed"','"actual":"failed","replaces":"bootstrap-superdesktop-workspace/2.5.6#unpassed-a"')); Add-Content -Encoding utf8 (Join-Path $stage 'evidence/adjustments.jsonl') '{"adjustment_id":"fixture-unpassed-stale","classification":"B","status":"corrective-in-progress","stale_evidence":["bootstrap-superdesktop-workspace/2.5.6#unpassed-a","bootstrap-superdesktop-workspace/2.5.6#unpassed-b"]}' }
+    'unpassed-replacement' { $original=$lines[$n]; $lines[$n]=$lines[$n] -replace '"status":"passed"','"status":"stale"'; $lines[$n]=$lines[$n] -replace '"actual":"passed"','"actual":"passed","superseded_by":"bootstrap-superdesktop-workspace/2.5.6#unpassed-b"'; $lines[$n]=$lines[$n] -replace '"subcheck":"fixture-base"','"subcheck":"unpassed-a"'; $lines.Add(($original -replace '"subcheck":"fixture-base"','"subcheck":"unpassed-b"' -replace '"status":"passed"','"status":"failed"' -replace '"actual":"passed"','"actual":"failed","replaces":"bootstrap-superdesktop-workspace/2.5.6#unpassed-a"')); }
     'duplicate-identity' { $lines.Add($lines[$n]) }
     'adjustment-stale-not-propagated' { Add-Content -Encoding utf8 (Join-Path $stage 'evidence/adjustments.jsonl') '{"adjustment_id":"fixture-propagation","classification":"B","status":"replacement-passed","stale_record_ids":["bootstrap-superdesktop-workspace/2.3.1#corrective-stale"],"replacement_record_ids":["bootstrap-superdesktop-workspace/2.3.2#corrective"]}' }
     'missing-procedure' { $lines[$n]=$lines[$n] -replace ',"procedure":"[^"]+"','' }
@@ -44,6 +49,7 @@ foreach ($case in $expected.Keys) {
     'date-time-format' { $lines[$n]=$lines[$n] -replace '"recorded_at":"[^"]+"','"recorded_at":"not-a-date"' }
     'dangling-adjustment' { Add-Content -Encoding utf8 (Join-Path $stage 'evidence/adjustments.jsonl') '{"adjustment_id":"fixture-dangling","classification":"B","status":"replacement-passed","stale_record_ids":["missing#x"],"replacement_record_ids":["missing#y"]}' }
     'malformed-adjustment' { Add-Content -Encoding utf8 (Join-Path $stage 'evidence/adjustments.jsonl') '{"adjustment_id":"fixture-malformed","classification":"B","status":"replacement-passed","stale_record_ids":["bootstrap-superdesktop-workspace/2.3.1#corrective-stale"],"replacement_record_ids":[]}' }
+    'effective-stale-unmapped' { Add-Content -Encoding utf8 (Join-Path $stage 'evidence/adjustments.jsonl') '{"adjustment_id":"fixture-effective-stale-unmapped","classification":"B","status":"replacement-passed","stale_evidence":["bootstrap-superdesktop-workspace/2.5.6#fixture-base"]}' }
   }
   if ($case -in @('mandatory-not-applicable','mandatory-blocked')) {
     for ($i=0; $i -lt $lines.Count; $i++) { if ($lines[$i] -match '"task_id":"bootstrap-superdesktop-workspace/2\.5\.6"' -and $lines[$i] -match '"status":"passed"') { $lines[$i]=$lines[$i] -replace '"status":"passed"', ('"status":"' + $(if($case -eq 'mandatory-blocked'){'blocked'}else{'not-applicable'}) + '"') } }

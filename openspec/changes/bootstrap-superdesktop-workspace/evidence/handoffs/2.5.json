@@ -29,12 +29,12 @@
                             "source_boundary":  "0778179DBB559561A463FBF6741B8A08B1F14499572F04A01AE6F84D08D58E4D"
                         },
     "evidence":  {
-                     "validator":  "119 records, 37 coverage mappings; immutable committed records preserved, all corrective lineage append-only",
-                     "mutation_run":  "build/fixture-results/primary-final-arch2",
-                     "mutation_cases":  21,
+                     "validator":  "144 records, 37 coverage mappings; immutable committed records preserved, all corrective lineage append-only",
+                     "mutation_run":  "build/fixture-results/primary-effective-overlay-final",
+                     "mutation_cases":  22,
                      "schema_engine":  "jsonschema 0.37.1, Draft 2020-12, formats enabled, default-features=false",
                      "license_inventory":  "427 locked/offline package records",
-                     "stale_lineage":  "B-W1-EXIT-004-FULL-MAPPINGS supplies five explicit stale-to-passed effective mappings; B-W1-ARCH-FIX-SUCCESSOR records the later architecture-fixture artifact refresh."
+                     "stale_lineage":  "B-W1-EFFECTIVE-STALE-OVERLAYS directly maps every record identity named by stale_evidence, including the five original B-W1-EXIT-004 identities, to same-task current-hash passed successors."
                  },
     "commands":  [
                      {
@@ -42,7 +42,7 @@
                          "exit_status":  0
                      },
                      {
-                         "command":  "scripts/run-evidence-mutation-fixtures.ps1 -RunId primary-final-arch2",
+                         "command":  "scripts/run-evidence-mutation-fixtures.ps1 -RunId primary-effective-overlay-final",
                          "exit_status":  0
                      },
                      {
