@@ -14,7 +14,7 @@
 - **THEN** verifier MUST 套用唯一前綴映射、驗證 archive tree與每個 input hash，且任何其他 path或bytes drift MUST stop
 
 ### Requirement: Reference profile 必須凍結
-系統 SHALL 記錄 OS build 26200.8875、ExplorerPatcher 26100.8457.70.3、設定摘要、reference image SHA-256、GPUI source revision 與 spike binary hash。
+系統 SHALL 記錄 OS build 26200.8875、ExplorerPatcher 26100.8457.70.3、設定摘要、reference image SHA-256、GPUI source revision 與 1.1 read-only profile/admission probe binary hash。該 binary MUST NOT 建立 HWND、AppBar、Shell Hook或修改 Explorer；native-window spike binary 屬後續 1.2。
 
 #### Scenario: Profile 相符
 - **WHEN** spike 在目前凍結 profile 執行
