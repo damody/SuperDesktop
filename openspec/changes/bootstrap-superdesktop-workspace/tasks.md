@@ -102,16 +102,16 @@
 ### 2.5 閉合 Wave 1 Corrective Replacement 與 Production Validator
 
 **目的：** 關閉 2.4 首輪複審仍存在的完整 contract replacement、真實 JSON Schema execution 與 adjustment supersession graph P1。
-**輸入：** 1.1／1.2 replacement／2.2 原 contract input sets、全部 20 個 validator fixtures、append-only adjustments/index、Wave 1 corrective re-review。
+**輸入：** 1.1／1.2 replacement／2.2 原 contract input sets、原15＋既定corrective 5＋date-time共21個validator fixtures、append-only adjustments/index、Wave 1 corrective re-review。
 **產出：** 三份完整 replacement manifests、production schema/semantic validator、有效 adjustment supersession graph、mutation-driven fixture matrix 與最終無 blocking finding disposition。
 **依賴：** 2.4.1–2.4.4；2.4.5 由本 L2 完成後回填。
 **Owner／Wave：** Workspace owner／Wave 1 corrective。
 **Gate／Evidence：** `G-ARCH`、`G-SAFETY`、`G-TRACE`；`evidence/artifacts/2.5/`。
-**完成門檻：** 被取代 contract 的完整 input sets 均逐列通過；兩份 schema 由真正支援宣告 draft 的 engine 驗證；20 個 fixtures 皆 mutation/copy 後走 production path並得到各自預期 diagnostic；adjustment graph 完整、無循環、無 dangling 或 legacy effective lineage；獨立 reviewer 無剩餘 P0/P1。
+**完成門檻：** 每份replacement涵蓋predecessor path set且逐列通過，current locked metadata/license/provenance/source audit一致，aggregate contract可由inputs manifest重算；兩份schema由真正支援宣告draft的engine驗證；21個fixtures皆mutation/copy後走production path並得到各自專屬diagnostic；replacement/adjustment graph完整、無間接循環、無dangling或未閉合effective stale set；獨立reviewer無剩餘P0/P1。
 
-- [x] 2.5.1 為 1.1 workspace、1.2 replacement 與 2.2 source-boundary 產生完整 current-input replacement manifests，逐列以 production verifier 通過，並讓 affected replacement records 直接引用對應 manifest。
+- [ ] 2.5.1 為 1.1 workspace、1.2 replacement與2.2 source-boundary，以各predecessor path set為不可縮減下限產生完整current-input replacement manifests，逐列以production verifier通過，並讓三組affected replacement records各自直接引用對應manifest。
 - [x] 2.5.2 以真正支援 schema 所宣告 draft 的 JSON Schema engine 驗證 evidence record schema 與 coverage schema，包括頂層 type、`additionalProperties`、format、array/object 與巢狀 constraints。
-- [x] 2.5.3 將原 15 個與新增 5 個 fixtures 改為 mutation/copy 真實 index、coverage、schema、artifact 或 adjustment 資料後執行同一 production validation path，逐案例驗證預期 diagnostic。
-- [x] 2.5.4 驗證 adjustment identity/supersession graph 的存在性、無循環、完整 stale-set 繼承與 immutable record 一一 mapping，並以有效 successor supersede 兩個 legacy A adjustments 與 B-W1-EXIT-001 lineage。
+- [ ] 2.5.3 將原15、既定corrective 5及額外date-time共21個fixtures改為mutation/copy真實資料後執行同一production path；replacement案例必須命中dangling/cycle/nonmandatory/coverage-drift/unpassed專屬diagnostic。
+- [ ] 2.5.4 驗證replacement與adjustment identity/supersession graph的存在性、間接循環、完整effective stale-set繼承與immutable record一一mapping，並以有效successor完整閉合所有legacy A/B adjustments。
 - [ ] 2.5.5 重跑完整 contract/evidence/architecture/strict/tasks matrix，更新 2.4.5 disposition、corrective handoff、contract hash與獨立 Wave 1 exit 複審，確認無未解 P0/P1。
-- [x] 2.5.6 固定 Wave 2 所需 Windows binding 版本/features並納入 lock/vendor/license/provenance/offline contract；只允許 `platform-win` crate-local audited unsafe exception，加入非 platform unsafe/direct-binding 與缺少 SAFETY invariant 的負面 fixtures。
+- [ ] 2.5.6 固定Wave 2所需Windows binding版本/features，從current locked metadata重生完整license inventory與direct provenance並通過source-boundary/offline contract；只允許`platform-win` crate-local audited unsafe exception，加入非platform unsafe/direct-binding與缺少SAFETY invariant負面fixtures。

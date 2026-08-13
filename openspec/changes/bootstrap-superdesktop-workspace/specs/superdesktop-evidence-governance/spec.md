@@ -7,6 +7,8 @@ Contract hash manifest SHALL 使用 repository-relative canonical path，逐列�
 
 Corrective replacement manifest SHALL 涵蓋被取代 contract 的完整 effective input set，逐 input 通過同一 production verifier；replacement evidence SHALL 直接引用該 replacement manifest，而非只引用通用摘要或 corrective script manifest。
 
+每個 predecessor manifest 的 path set SHALL 是 replacement 的不可縮減下限。Dependency/vendor更新後，locked metadata、license inventory及direct dependency provenance MUST 同步重生並通過source-boundary audit。Handoff aggregate contract MUST 提供明確 inputs manifest、hash演算法與可由production verifier重算的檔案hash。
+
 Evidence record schema 與 coverage manifest schema SHALL 由支援 schema 所宣告 draft 的真正 JSON Schema engine 驗證，包括頂層型別、`additionalProperties`、format 與巢狀型別；所有負面 fixture MUST mutation/copy 真實資料後進入相同 production validation path。
 
 #### Scenario: Task ID 只包含局部編號
@@ -47,9 +49,17 @@ Adjustment validator SHALL 驗證 append-only supersession graph 的 identity �
 - **WHEN** replacement manifest 只涵蓋 corrective scripts，或少於 predecessor 的 effective input set
 - **THEN** contract verifier MUST 拒絕 replacement，且相關 gate 保持 failed
 
+#### Scenario: 依賴 inventory 與 lock/vendor 漂移
+- **WHEN** locked package/version/vendor path沒有唯一且正確的license inventory/provenance coverage，或source-boundary audit失敗
+- **THEN** dependency、source-boundary及aggregate contract MUST保持stale
+
 #### Scenario: Fixture 旁路 production validator
 - **WHEN** fixture 依名稱或 fault metadata 直接產生預期錯誤，而未 mutation/copy 資料並執行正式 schema、coverage、replacement 或 adjustment path
 - **THEN** fixture matrix MUST 失敗且不得作為 passed evidence
+
+#### Scenario: 專屬 replacement failure 被通用錯誤遮蔽
+- **WHEN** dangling、cycle、nonmandatory、coverage-drift或unpassed fixture只觸發mandatory-without-evidence等通用前置錯誤
+- **THEN** fixture MUST失敗；validator與mutation必須讓案例命中其專屬semantic diagnostic
 
 #### Scenario: Adjustment successor 未完整取代 predecessor
 - **WHEN** successor 不存在、形成循環、未 supersede 所有 legacy adjustment，或未完整涵蓋 predecessor effective stale set
