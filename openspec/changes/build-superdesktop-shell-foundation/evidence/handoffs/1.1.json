@@ -1,0 +1,25 @@
+{
+  "change": "build-superdesktop-shell-foundation",
+  "l2": "1.1",
+  "producer": "Primary integrator with independent reviewers",
+  "consumer": "bootstrap-superdesktop-workspace/1.1",
+  "base_revision": "3dce67f",
+  "result_revision": "1f52bf83ceeb6381cfebd7720e180ce3136b7446",
+  "ownership_diff": ["docs/superpowers/specs/2026-08-13-superdesktop-windows-10-shell-design.md", "openspec/changes/**"],
+  "commands": [
+    {"command":"openspec validate --strict --all","exit_status":0},
+    {"command":"L3 identity/duplicate task scan across 9 changes","exit_status":0},
+    {"command":"git diff --check","exit_status":0}
+  ],
+  "gate_dispositions": [{"gate":"G-TRACE","status":"passed"}],
+  "contract_hash": {"algorithm":"git-commit-sha1","inputs":["approved design","program and eight child OpenSpec changes","EXECUTION.md"],"value":"1f52bf83ceeb6381cfebd7720e180ce3136b7446"},
+  "evidence": [
+    {"path":"evidence/artifacts/1.1/readiness-report.md","sha256":"57AE38BA715E3AF70018675A954DC7885FBF0CF438DFBD91E9D5E2D199BBD593"},
+    {"path":"evidence/artifacts/1.1/external-prerequisites.json","sha256":"80DA9C42F6965933578B7D21F1992882692B62F8D89D4276ADA28620580EC817"},
+    {"path":"evidence/artifacts/1.1/strict-validation.txt","sha256":"85D57708BA362DBD8DABB2956D2B60C0546F43F0749B56A8FDA3C0E161991F71"},
+    {"path":"evidence/artifacts/1.1/planning-review.md","sha256":"236926625C4504DF473E79632C4610DB2F557E4B5B7FBA2C491D11BF4A1ECFB8"}
+  ],
+  "stale_replacement_lineage": ["B-W0-001", "B-W0-002"],
+  "reviewer": "Independent reviewers: agent_plan_review, coverage_review, sequence_review",
+  "accepted_revision": "1f52bf83ceeb6381cfebd7720e180ce3136b7446"
+}

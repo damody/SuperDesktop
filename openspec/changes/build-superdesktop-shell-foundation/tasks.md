@@ -14,13 +14,13 @@
 **Gate／Evidence：** `G-TRACE`；program `evidence/artifacts/1.1/`。
 **完成門檻：** DAG 無循環、每個 shared file/contract 唯一 owner、所有 P0/P1 已修正，外部 prerequisites 狀態已明列。
 
-- [ ] 1.1.1 驗證八個 child change 各自具 proposal、design、specs、tasks 與 apply-required status complete。
-- [ ] 1.1.2 驗證 Wave 1→2→3→4A/4B/4C→5→6 dependency DAG 無循環或隱藏 predecessor。
-- [ ] 1.1.3 驗證每個 shared contract/file、program artifact 與 evidence index 有唯一 writer。
-- [ ] 1.1.4 驗證所有 program requirement/scenario/gate 映射到 child coverage manifest。
-- [ ] 1.1.5 記錄 monolith-to-program B 級 lineage 與舊 task replacement mapping。
-- [ ] 1.1.6 驗證 Windows 10 22H2 與實體 mixed-DPI 環境的 availability/schedule；缺失時預先標記 Wave 6 external blocked。
-- [ ] 1.1.7 由 Independent reviewer 簽署無未解 P0/P1 的 planning disposition。
+- [x] 1.1.1 驗證八個 child change 各自具 proposal、design、specs、tasks 與 apply-required status complete。
+- [x] 1.1.2 驗證 Wave 1→2→3→4A/4B/4C→5→6 dependency DAG 無循環或隱藏 predecessor。
+- [x] 1.1.3 驗證每個 shared contract/file、program artifact 與 evidence index 有唯一 writer。
+- [x] 1.1.4 驗證所有 program requirement/scenario/gate 映射到 child coverage manifest。
+- [x] 1.1.5 記錄 monolith-to-program B 級 lineage 與舊 task replacement mapping。
+- [x] 1.1.6 驗證 Windows 10 22H2 與實體 mixed-DPI 環境的 availability/schedule；缺失時預先標記 Wave 6 external blocked。
+- [x] 1.1.7 由 Independent reviewer 簽署無未解 P0/P1 的 planning disposition。
 
 ## 2. Foundation Roll-up
 

@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "change": "build-superdesktop-shell-foundation",
+  "entries": [
+    {"task_id":"build-superdesktop-shell-foundation/1.1.1","mandatory":true,"capability_id":"shell-foundation-verification","requirement_id":"每個任務結果必須可追溯","scenario_id":"任務勾選但缺少證據","gate":"G-TRACE"},
+    {"task_id":"build-superdesktop-shell-foundation/1.1.2","mandatory":true,"capability_id":"shell-foundation-verification","requirement_id":"每個任務結果必須可追溯","scenario_id":"任務勾選但缺少證據","gate":"G-TRACE"},
+    {"task_id":"build-superdesktop-shell-foundation/1.1.3","mandatory":true,"capability_id":"shell-foundation-verification","requirement_id":"每個任務結果必須可追溯","scenario_id":"任務勾選但缺少證據","gate":"G-TRACE"},
+    {"task_id":"build-superdesktop-shell-foundation/1.1.4","mandatory":true,"capability_id":"shell-foundation-verification","requirement_id":"每個任務結果必須可追溯","scenario_id":"任務勾選但缺少證據","gate":"G-TRACE"},
+    {"task_id":"build-superdesktop-shell-foundation/1.1.5","mandatory":true,"capability_id":"shell-foundation-verification","requirement_id":"每個任務結果必須可追溯","scenario_id":"證據因 B 級修正過期","gate":"G-TRACE"},
+    {"task_id":"build-superdesktop-shell-foundation/1.1.6","mandatory":true,"capability_id":"shell-foundation-verification","requirement_id":"DPI 與多螢幕矩陣必須完整","scenario_id":"任一必要 DPI 未執行","gate":"G-DPI-MONITOR"},
+    {"task_id":"build-superdesktop-shell-foundation/1.1.7","mandatory":true,"capability_id":"shell-foundation-verification","requirement_id":"Blocking gate 不得被靜默降低","scenario_id":"實作發現 gate 難以通過","gate":"G-TRACE"}
+  ]
+}
