@@ -1,0 +1,9 @@
+﻿command: powershell -NoProfile -ExecutionPolicy Bypass -File "$PSScriptRoot/validate-evidence.ps1" -Fixture $case.fixture
+exit_status: 1
+output:
+CYCLIC_REPLACEMENT: bootstrap-superdesktop-workspace/1.1.3#replacement
+At D:\SuperDesktop\SuperDesktop\scripts\validate-evidence.ps1:17 char:50
++ ... n Fail([string]$Code, [string]$Message) { throw "${Code}: $Message" }
++                                               ~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (CYCLIC_REPLACEM...1.3#replacement:String) [], RuntimeException
+    + FullyQualifiedErrorId : CYCLIC_REPLACEMENT: bootstrap-superdesktop-workspace/1.1.3#replacement

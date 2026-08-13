@@ -74,11 +74,11 @@
 **Gate／Evidence：** `G-TRACE`；`evidence/artifacts/2.3/`。
 **完成門檻：** Validator 接受有效 passed record，拒絕 N/A、stale、blocked 與無效 replacement。
 
-- [ ] 2.3.1 定義 `<change-name>/<L3-id>` task_id、change-local index、subcheck、artifact、hash、capability/requirement/scenario ID、gate、reviewer 與 timestamp schema。
-- [ ] 2.3.2 定義版本化 task-to-capability/requirement/scenario/gate coverage manifest schema 與穩定 slug 規則。
-- [ ] 2.3.3 實作 append-only evidence index validator、coverage manifest lookup 與 artifact hash 驗證。
-- [ ] 2.3.4 加入 mandatory `not-applicable`、blocked、stale 與 missing artifact 負面 fixtures。
-- [ ] 2.3.5 加入 unknown/missing/drifted requirement/scenario/gate coverage 負面 fixtures。
-- [ ] 2.3.6 加入 dangling、cyclic、non-mandatory、coverage-drift 與 unpassed replacement fixtures。
-- [ ] 2.3.7 實作 A/B/C adjustment lineage 與受影響 evidence stale propagation。
-- [ ] 2.3.8 執行全部 validator fixtures 並保存逐 fixture 結果。
+- [x] 2.3.1 定義 `<change-name>/<L3-id>` task_id、change-local index、subcheck、artifact、hash、capability/requirement/scenario ID、gate、reviewer 與 timestamp schema。
+- [x] 2.3.2 定義版本化 task-to-capability/requirement/scenario/gate coverage manifest schema 與穩定 slug 規則。
+- [x] 2.3.3 實作 append-only evidence index validator、coverage manifest lookup 與 artifact hash 驗證。
+- [x] 2.3.4 加入 mandatory `not-applicable`、blocked、stale 與 missing artifact 負面 fixtures。
+- [x] 2.3.5 加入 unknown/missing/drifted requirement/scenario/gate coverage 負面 fixtures。
+- [x] 2.3.6 加入 dangling、cyclic、non-mandatory、coverage-drift 與 unpassed replacement fixtures。
+- [x] 2.3.7 實作 A/B/C adjustment lineage 與受影響 evidence stale propagation。
+- [x] 2.3.8 執行全部 validator fixtures 並保存逐 fixture 結果。

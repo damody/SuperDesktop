@@ -1,0 +1,51 @@
+{
+  "change": "bootstrap-superdesktop-workspace",
+  "l2": "2.3",
+  "producer": "Workspace/Build owner",
+  "consumer": "Wave 1 exit / Primary integrator",
+  "base_revision": "ccd9e71a542b362b403e0363d1362ae824908296",
+  "result_revision": null,
+  "ownership_diff": [
+    "fixtures/evidence-validator/**",
+    "scripts/{validate-evidence.ps1,capture-workspace-2.3-evidence.ps1}",
+    "openspec/changes/bootstrap-superdesktop-workspace/evidence/{schema.json,coverage-schema.json,coverage.json,governance.md,index.jsonl,adjustments.jsonl,artifacts/2.3/**,handoffs/2.3.json}",
+    "openspec/changes/bootstrap-superdesktop-workspace/tasks.md"
+  ],
+  "excluded_intermediates": ["target/**", "build/**", "vendor-config.generated.toml"],
+  "commands": [
+    {"command":"powershell -File scripts/validate-evidence.ps1","exit_status":0},
+    {"command":"powershell -File scripts/capture-workspace-2.3-evidence.ps1","exit_status":0},
+    {"command":"15 individual validator fixture invocations from fixtures/evidence-validator/fixtures.json","exit_status":1,"expected_exit_status":1},
+    {"command":"openspec validate bootstrap-superdesktop-workspace --strict","exit_status":0},
+    {"command":"git diff --check","exit_status":0}
+  ],
+  "gate_dispositions": [
+    {"gate":"G-TRACE","status":"passed","scope":"26 mandatory task coverage entries, 28 valid append-only records, artifact SHA-256 checks, replacement graph and adjustment stale propagation, plus 15 expected-rejection fixtures"}
+  ],
+  "contract_hash": {
+    "algorithm":"SHA-256",
+    "inputs_manifest":"evidence/artifacts/2.3/evidence-contract-inputs.sha256",
+    "value":"F0F4D90226B150549D74B20BE6B67867E035DE68A6F79F54C2758F4B2AB1AF1C"
+  },
+  "evidence": [
+    {"path":"evidence/artifacts/2.3/evidence-contract-inputs.sha256","sha256":"F0F4D90226B150549D74B20BE6B67867E035DE68A6F79F54C2758F4B2AB1AF1C"},
+    {"path":"evidence/artifacts/2.3/validator-positive.txt","sha256":"F02EE0859E2354E96F0BC2D1B98EE94D9EB50B5A8475C4FE8DB0778C66AABF50"},
+    {"path":"evidence/artifacts/2.3/fixture-mandatory-not-applicable.txt","sha256":"10C55B6CFD1652D433ED62A74A949F4E913F731AE5EF0F41A03B7D8A8E00C140"},
+    {"path":"evidence/artifacts/2.3/fixture-missing-artifact.txt","sha256":"3AEC9FE92A33FC3E36A5F2B037C96121F0863B208E11DDE05640E277F16BC459"},
+    {"path":"evidence/artifacts/2.3/fixture-drifted-coverage.txt","sha256":"F3E3E5F889EC8C4B21C02FAAA67CE179D2FC31FACB6E989CB70BDFF41753050C"},
+    {"path":"evidence/artifacts/2.3/fixture-cyclic-replacement.txt","sha256":"27606B349414975344A4C0E7A03F3149936DFF7C0D83131B38594A22610102A9"},
+    {"path":"evidence/artifacts/2.3/fixture-adjustment-stale-not-propagated.txt","sha256":"50E2FC579736D4127A685EBD24F861C99F9B89AFC79166DAA17B43A5D92140A8"},
+    {"path":"evidence/artifacts/2.3/strict-openspec-validation.txt","sha256":"61CD13E6DD27E3E291200E603148504E9EBF13C965CB07245F5A5695148E94F7"},
+    {"path":"evidence/artifacts/2.3/summary.md","sha256":"1FF9D43981D81518CF21E04A8DB790A30059AD2485D3AF3B39A63712F9F8B21E"}
+  ],
+  "fixture_matrix":"fixtures/evidence-validator/fixtures.json; each of 15 cases has a separately captured fixture-<id>.txt output under evidence/artifacts/2.3/",
+  "stale_replacement_lineage": [
+    {"stale_records":["bootstrap-superdesktop-workspace/1.1.3#primary","bootstrap-superdesktop-workspace/1.1.4#primary"],"replacement_records":["bootstrap-superdesktop-workspace/1.1.3#replacement","bootstrap-superdesktop-workspace/1.1.4#replacement"],"reason":"A-W1-1.2-001 and A-W1-1.2-003 declared workspace architecture evidence stale; passed replacement contract is coverage-identical."}
+  ],
+  "findings": [
+    {"id":"A-W1-2.3-001","classification":"A","disposition":"Append-only identity is task_id#subcheck; stale replacements must preserve task coverage and pass before a checked mandatory leaf is accepted."},
+    {"id":"A-W1-2.3-002","classification":"A","disposition":"Primary normalized logical workspace/change prefixes in the contract manifest to repository-relative paths and revalidated every input hash before acceptance."}
+  ],
+  "reviewer":"Workspace/Build owner; Primary integrator Wave 1 exit acceptance pending",
+  "accepted_revision":null
+}

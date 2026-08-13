@@ -1,0 +1,4 @@
+﻿command: openspec validate bootstrap-superdesktop-workspace --strict
+exit_status: 0
+output:
+Change 'bootstrap-superdesktop-workspace' is valid

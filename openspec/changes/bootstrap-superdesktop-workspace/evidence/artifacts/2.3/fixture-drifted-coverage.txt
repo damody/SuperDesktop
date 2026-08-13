@@ -1,0 +1,9 @@
+﻿command: powershell -NoProfile -ExecutionPolicy Bypass -File "$PSScriptRoot/validate-evidence.ps1" -Fixture $case.fixture
+exit_status: 1
+output:
+COVERAGE_DRIFT_GATE: bootstrap-superdesktop-workspace/1.1.1#primary
+At D:\SuperDesktop\SuperDesktop\scripts\validate-evidence.ps1:17 char:50
++ ... n Fail([string]$Code, [string]$Message) { throw "${Code}: $Message" }
++                                               ~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (COVERAGE_DRIFT_...e/1.1.1#primary:String) [], RuntimeException
+    + FullyQualifiedErrorId : COVERAGE_DRIFT_GATE: bootstrap-superdesktop-workspace/1.1.1#primary

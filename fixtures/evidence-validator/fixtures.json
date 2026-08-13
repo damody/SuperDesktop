@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0.0",
+  "cases": [
+    {"id":"mandatory-not-applicable","fixture":"fixtures/evidence-validator/mandatory-not-applicable","expected_exit":1,"expected_code":"MANDATORY_NONPASS_STATUS"},
+    {"id":"mandatory-blocked","fixture":"fixtures/evidence-validator/mandatory-blocked","expected_exit":1,"expected_code":"MANDATORY_NONPASS_STATUS"},
+    {"id":"stale-without-replacement","fixture":"fixtures/evidence-validator/stale-without-replacement","expected_exit":1,"expected_code":"STALE_WITHOUT_REPLACEMENT"},
+    {"id":"missing-artifact","fixture":"fixtures/evidence-validator/missing-artifact","expected_exit":1,"expected_code":"MISSING_ARTIFACT"},
+    {"id":"unknown-coverage","fixture":"fixtures/evidence-validator/unknown-coverage","expected_exit":1,"expected_code":"COVERAGE_DRIFT_REQUIREMENT"},
+    {"id":"missing-coverage","fixture":"fixtures/evidence-validator/missing-coverage","expected_exit":1,"expected_code":"MISSING_COVERAGE"},
+    {"id":"drifted-coverage","fixture":"fixtures/evidence-validator/drifted-coverage","expected_exit":1,"expected_code":"COVERAGE_DRIFT_GATE"},
+    {"id":"drifted-scenario","fixture":"fixtures/evidence-validator/drifted-scenario","expected_exit":1,"expected_code":"COVERAGE_DRIFT_SCENARIO"},
+    {"id":"dangling-replacement","fixture":"fixtures/evidence-validator/dangling-replacement","expected_exit":1,"expected_code":"DANGLING_SUPERSEDED_BY"},
+    {"id":"cyclic-replacement","fixture":"fixtures/evidence-validator/cyclic-replacement","expected_exit":1,"expected_code":"CYCLIC_REPLACEMENT"},
+    {"id":"nonmandatory-replacement","fixture":"fixtures/evidence-validator/nonmandatory-replacement","expected_exit":1,"expected_code":"REPLACEMENT_COVERAGE_DRIFT"},
+    {"id":"replacement-coverage-drift","fixture":"fixtures/evidence-validator/replacement-coverage-drift","expected_exit":1,"expected_code":"REPLACEMENT_COVERAGE_DRIFT"},
+    {"id":"unpassed-replacement","fixture":"fixtures/evidence-validator/unpassed-replacement","expected_exit":1,"expected_code":"UNPASSED_REPLACEMENT"},
+    {"id":"duplicate-identity","fixture":"fixtures/evidence-validator/duplicate-identity","expected_exit":1,"expected_code":"DUPLICATE_RECORD_IDENTITY"},
+    {"id":"adjustment-stale-not-propagated","fixture":"fixtures/evidence-validator/adjustment-stale-not-propagated","expected_exit":1,"expected_code":"ADJUSTMENT_STALE_NOT_PROPAGATED"}
+  ]
+}

@@ -1,0 +1,4 @@
+﻿command: powershell -NoProfile -ExecutionPolicy Bypass -File "$PSScriptRoot/validate-evidence.ps1"
+exit_status: 0
+output:
+Evidence validation passed: 28 append-only records cover 26 tasks.

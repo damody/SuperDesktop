@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.0.0",
+  "change": "bootstrap-superdesktop-workspace",
+  "capabilities": ["superdesktop-workspace-foundation", "superdesktop-evidence-governance"],
+  "tasks": [
+    {"task_id":"bootstrap-superdesktop-workspace/1.1.1","mandatory":true,"capability_id":"superdesktop-workspace-foundation","requirement_id":"windows-workspace","scenario_id":"valid-workspace","gates":["G-ARCH"]},
+    {"task_id":"bootstrap-superdesktop-workspace/1.1.2","mandatory":true,"capability_id":"superdesktop-workspace-foundation","requirement_id":"windows-workspace","scenario_id":"valid-workspace","gates":["G-ARCH"]},
+    {"task_id":"bootstrap-superdesktop-workspace/1.1.3","mandatory":true,"capability_id":"superdesktop-workspace-foundation","requirement_id":"windows-workspace","scenario_id":"invalid-architecture-fixture","gates":["G-ARCH"]},
+    {"task_id":"bootstrap-superdesktop-workspace/1.1.4","mandatory":true,"capability_id":"superdesktop-workspace-foundation","requirement_id":"windows-workspace","scenario_id":"valid-workspace","gates":["G-ARCH"]},
+    {"task_id":"bootstrap-superdesktop-workspace/1.2.1","mandatory":true,"capability_id":"superdesktop-workspace-foundation","requirement_id":"pinned-toolchain-and-sources","scenario_id":"reproducible-offline-build","gates":["G-ARCH"]},
+    {"task_id":"bootstrap-superdesktop-workspace/1.2.2","mandatory":true,"capability_id":"superdesktop-workspace-foundation","requirement_id":"pinned-toolchain-and-sources","scenario_id":"panic-policy-drift","gates":["G-ARCH"]},
+    {"task_id":"bootstrap-superdesktop-workspace/1.2.3","mandatory":true,"capability_id":"superdesktop-workspace-foundation","requirement_id":"pinned-toolchain-and-sources","scenario_id":"source-or-hash-drift","gates":["G-ARCH"]},
+    {"task_id":"bootstrap-superdesktop-workspace/1.2.4","mandatory":true,"capability_id":"superdesktop-workspace-foundation","requirement_id":"pinned-toolchain-and-sources","scenario_id":"source-or-hash-drift","gates":["G-ARCH"]},
+    {"task_id":"bootstrap-superdesktop-workspace/1.2.5","mandatory":true,"capability_id":"superdesktop-workspace-foundation","requirement_id":"pinned-toolchain-and-sources","scenario_id":"reproducible-offline-build","gates":["G-ARCH"]},
+    {"task_id":"bootstrap-superdesktop-workspace/1.2.6","mandatory":true,"capability_id":"superdesktop-workspace-foundation","requirement_id":"pinned-toolchain-and-sources","scenario_id":"reproducible-offline-build","gates":["G-ARCH"]},
+    {"task_id":"bootstrap-superdesktop-workspace/2.1.1","mandatory":true,"capability_id":"superdesktop-workspace-foundation","requirement_id":"windows-product-identity","scenario_id":"three-product-binaries","gates":["G-ARCH"]},
+    {"task_id":"bootstrap-superdesktop-workspace/2.1.2","mandatory":true,"capability_id":"superdesktop-workspace-foundation","requirement_id":"windows-product-identity","scenario_id":"three-product-binaries","gates":["G-ARCH"]},
+    {"task_id":"bootstrap-superdesktop-workspace/2.1.3","mandatory":true,"capability_id":"superdesktop-workspace-foundation","requirement_id":"windows-product-identity","scenario_id":"three-product-binaries","gates":["G-ARCH"]},
+    {"task_id":"bootstrap-superdesktop-workspace/2.1.4","mandatory":true,"capability_id":"superdesktop-workspace-foundation","requirement_id":"windows-product-identity","scenario_id":"three-product-binaries","gates":["G-ARCH"]},
+    {"task_id":"bootstrap-superdesktop-workspace/2.2.1","mandatory":true,"capability_id":"superdesktop-workspace-foundation","requirement_id":"source-boundary","scenario_id":"source-boundary-audit","gates":["G-ARCH","G-SAFETY"]},
+    {"task_id":"bootstrap-superdesktop-workspace/2.2.2","mandatory":true,"capability_id":"superdesktop-workspace-foundation","requirement_id":"source-boundary","scenario_id":"source-boundary-audit","gates":["G-ARCH","G-SAFETY"]},
+    {"task_id":"bootstrap-superdesktop-workspace/2.2.3","mandatory":true,"capability_id":"superdesktop-workspace-foundation","requirement_id":"source-boundary","scenario_id":"source-boundary-audit","gates":["G-ARCH","G-SAFETY"]},
+    {"task_id":"bootstrap-superdesktop-workspace/2.2.4","mandatory":true,"capability_id":"superdesktop-workspace-foundation","requirement_id":"source-boundary","scenario_id":"source-boundary-audit","gates":["G-ARCH","G-SAFETY"]},
+    {"task_id":"bootstrap-superdesktop-workspace/2.3.1","mandatory":true,"capability_id":"superdesktop-evidence-governance","requirement_id":"evidence-record-schema","scenario_id":"ambiguous-task-id","gates":["G-TRACE"]},
+    {"task_id":"bootstrap-superdesktop-workspace/2.3.2","mandatory":true,"capability_id":"superdesktop-evidence-governance","requirement_id":"coverage-manifest","scenario_id":"coverage-drift","gates":["G-TRACE"]},
+    {"task_id":"bootstrap-superdesktop-workspace/2.3.3","mandatory":true,"capability_id":"superdesktop-evidence-governance","requirement_id":"evidence-record-schema","scenario_id":"checked-leaf-evidence","gates":["G-TRACE"]},
+    {"task_id":"bootstrap-superdesktop-workspace/2.3.4","mandatory":true,"capability_id":"superdesktop-evidence-governance","requirement_id":"mandatory-replacement","scenario_id":"mandatory-invalid-status","gates":["G-TRACE"]},
+    {"task_id":"bootstrap-superdesktop-workspace/2.3.5","mandatory":true,"capability_id":"superdesktop-evidence-governance","requirement_id":"coverage-manifest","scenario_id":"coverage-drift","gates":["G-TRACE"]},
+    {"task_id":"bootstrap-superdesktop-workspace/2.3.6","mandatory":true,"capability_id":"superdesktop-evidence-governance","requirement_id":"mandatory-replacement","scenario_id":"replacement-lineage","gates":["G-TRACE"]},
+    {"task_id":"bootstrap-superdesktop-workspace/2.3.7","mandatory":true,"capability_id":"superdesktop-evidence-governance","requirement_id":"adjustment-lineage","scenario_id":"adjustment-stale-propagation","gates":["G-TRACE"]},
+    {"task_id":"bootstrap-superdesktop-workspace/2.3.8","mandatory":true,"capability_id":"superdesktop-evidence-governance","requirement_id":"evidence-record-schema","scenario_id":"validator-fixtures","gates":["G-TRACE"]}
+  ]
+}

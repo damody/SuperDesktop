@@ -1,0 +1,9 @@
+﻿command: powershell -NoProfile -ExecutionPolicy Bypass -File "$PSScriptRoot/validate-evidence.ps1" -Fixture $case.fixture
+exit_status: 1
+output:
+DUPLICATE_RECORD_IDENTITY: bootstrap-superdesktop-workspace/1.1.1#primary
+At D:\SuperDesktop\SuperDesktop\scripts\validate-evidence.ps1:17 char:50
++ ... n Fail([string]$Code, [string]$Message) { throw "${Code}: $Message" }
++                                               ~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (DUPLICATE_RECOR...e/1.1.1#primary:String) [], RuntimeException
+    + FullyQualifiedErrorId : DUPLICATE_RECORD_IDENTITY: bootstrap-superdesktop-workspace/1.1.1#primary
