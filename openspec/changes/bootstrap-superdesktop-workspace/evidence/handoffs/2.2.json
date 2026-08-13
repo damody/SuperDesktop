@@ -4,7 +4,7 @@
   "producer": "Workspace/Build owner",
   "consumer": "bootstrap-superdesktop-workspace/2.3",
   "base_revision": "ec98600b59946e8ba119b5d23c276dc22f7c2b07",
-  "result_revision": null,
+  "result_revision": "3f217d742c82cac711892d8537ed09dcb3c42e03",
   "ownership_diff": [
     "fixtures/source-boundary/**",
     "scripts/{generate-license-inventory.ps1,audit-source-boundary.ps1,capture-workspace-2.2-evidence.ps1}",
@@ -53,6 +53,6 @@
   "findings": [
     {"id": "A-W1-2.2-001", "classification": "A", "disposition": "Use Cargo locked offline metadata and vendored checksum manifests as the provenance authority; static production scans enforce the external SuperExplorer and PExplorer source boundary without adding a production dependency."}
   ],
-  "reviewer": "Workspace/Build owner pre-review; Primary integrator Wave 1 exit acceptance pending",
-  "accepted_revision": null
+  "reviewer": "Workspace/Build owner; accepted by Primary integrator /root",
+  "accepted_revision": "3f217d742c82cac711892d8537ed09dcb3c42e03"
 }

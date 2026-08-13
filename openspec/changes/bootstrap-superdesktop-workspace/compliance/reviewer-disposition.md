@@ -2,7 +2,7 @@
 
 - 稽核執行者：Workspace/Build owner
 - 日期：2026-08-14（Asia/Taipei）
-- 處置：**pre-review passed**；交由 Primary integrator 在 Wave 1 exit 進行獨立驗收。
+- 處置：**passed**；Primary integrator 已重跑正常/負面 audit、驗證 399 筆 inventory 與全部 contract/evidence hash，並接受 revision `3f217d742c82cac711892d8537ed09dcb3c42e03`。
 
 已完成的機器稽核結果如下：
 
