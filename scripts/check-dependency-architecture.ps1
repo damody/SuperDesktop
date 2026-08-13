@@ -37,6 +37,15 @@ if ($Fixture) {
     if ($fixtureManifest -match '(?m)^gpui\s*=') {
         Add-Diagnostic $diagnostics 'CORE_FORBIDDEN_DEPENDENCY' 'shell-core fixture declares gpui.'
     }
+    if ($fixtureManifest -match '(?m)^windows\s*=') {
+        Add-Diagnostic $diagnostics 'WINDOWS_BINDING_OUTSIDE_PLATFORM' 'non-platform fixture directly declares windows.'
+    }
+    if ($fixtureManifest -match '(?m)^\s*unsafe_code\s*=\s*"allow"' -or $fixtureSource -match '(?m)^\s*#!\[allow\(unsafe_code\)\]' -or $fixtureSource -match '(?m)^\s*unsafe\s*\{') {
+        if ($Fixture -notmatch 'platform-unsafe-missing-safety') { Add-Diagnostic $diagnostics 'UNSAFE_OVERRIDE_OUTSIDE_PLATFORM' 'non-platform fixture permits or uses unsafe code.' }
+    }
+    if ($Fixture -match 'platform-unsafe-missing-safety' -and $fixtureSource -match '(?m)^\s*unsafe\s*\{' -and $fixtureSource -notmatch '(?m)^\s*//\s*SAFETY:') {
+        Add-Diagnostic $diagnostics 'UNSAFE_WITHOUT_SAFETY_INVARIANT' 'platform fixture unsafe block lacks an adjacent SAFETY invariant.'
+    }
 
     foreach ($pattern in @($allowlist.forbidden_public_type_patterns) + @('(?ms)pub\s+use\s+[^;]*(?:HWND|HANDLE|IUnknown|IDesktop|IShell|COM)', '(?ms)pub\s+trait\s+.*?(?:HWND|HANDLE|IUnknown|IDesktop|IShell|COM)', '(?ms)pub\s+fn\s+.*?(?:HWND|HANDLE|IUnknown|IDesktop|IShell|COM)')) {
         if ($fixtureSource -match $pattern) {

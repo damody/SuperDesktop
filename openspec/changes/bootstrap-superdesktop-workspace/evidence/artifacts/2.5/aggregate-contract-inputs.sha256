@@ -1,4 +1,3 @@
-# Algorithm: SHA-256 of this UTF-8 manifest is the handoff contract_hash. Each entry is SHA-256<two spaces>repository-relative input path.
-40C7FAF8A08282B1D131BA9431D6B0889DAF45FB19F99B7BEA42169F8E6FD404  evidence/artifacts/2.5/workspace-current-inputs.sha256
-7B6C8085C96CD42A97D39DC21BA49577BC3D8CF736E205AE7BA82604CE23B94B  evidence/artifacts/2.5/dependency-current-inputs.sha256
-0778179DBB559561A463FBF6741B8A08B1F14499572F04A01AE6F84D08D58E4D  evidence/artifacts/2.5/source-boundary-current-inputs.sha256
+BE7F5CF46DB51B7E328462C3DDA37E88188131728F945FDC7E2BA731DFEEEDC4  change/evidence/artifacts/2.5/workspace-current-inputs.sha256
+63E6EC7D5ED08AE16E98F2D13EFE2459B4F57FDD771AD75399C238FABCACDDB1  change/evidence/artifacts/2.5/dependency-current-inputs.sha256
+0778179DBB559561A463FBF6741B8A08B1F14499572F04A01AE6F84D08D58E4D  change/evidence/artifacts/2.5/source-boundary-current-inputs.sha256

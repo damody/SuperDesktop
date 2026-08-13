@@ -1,0 +1,1 @@
+UNSAFE_WITHOUT_SAFETY_INVARIANT: platform fixture unsafe block lacks an adjacent SAFETY invariant.

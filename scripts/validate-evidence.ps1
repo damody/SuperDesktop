@@ -47,7 +47,7 @@ foreach ($record in $records) {
   try { Invoke-Engine $schemaPath $stage 'JSON_SCHEMA_RECORD_INVALID' $id } finally { if (Test-Path $stage) { Remove-Item -LiteralPath $stage -Force } }
   $artifact = Join-Path $root $record.artifact
   Need (Test-Path $artifact) 'MISSING_ARTIFACT' $id
-  if ($record.status -ne 'stale' -and $record.subcheck -notlike 'wave25-final*' -and -not $effectiveStale.ContainsKey($id)) { Need ((Get-FileHash -Algorithm SHA256 $artifact).Hash -eq $record.artifact_sha256) 'ARTIFACT_HASH_DRIFT' $id }
+  if ($record.status -ne 'stale' -and -not $effectiveStale.ContainsKey($id)) { Need ((Get-FileHash -Algorithm SHA256 $artifact).Hash -eq $record.artifact_sha256) 'ARTIFACT_HASH_DRIFT' $id }
   $covered = $coverageByTask[$record.task_id]
   Need ($null -ne $covered) 'UNKNOWN_TASK' $id
   Need ($record.capability_id -eq $covered.capability_id -and $record.requirement_id -eq $covered.requirement_id -and $record.scenario_id -eq $covered.scenario_id -and ((@($record.gates) -join '|') -eq (@($covered.gates) -join '|'))) 'COVERAGE_DRIFT' $id

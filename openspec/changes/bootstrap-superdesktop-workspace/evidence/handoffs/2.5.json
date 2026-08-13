@@ -1,43 +1,82 @@
 {
-  "change": "bootstrap-superdesktop-workspace",
-  "l2": "2.5",
-  "status": "implementation-complete-review-pending",
-  "completed_leaf_ids": ["2.5.1", "2.5.2", "2.5.3", "2.5.4", "2.5.6"],
-  "primary_pending_leaf_ids": ["2.5.5", "2.4.5"],
-  "producer": "Workspace/Build and Evidence owners",
-  "consumer": "Primary integrator Wave 1 exit",
-  "result_revision": null,
-  "reviewer": "pending independent Wave 1 exit re-review",
-  "accepted_revision": null,
-  "contract_hash": {
-    "algorithm": "SHA-256 of UTF-8 inputs manifest file",
-    "inputs_manifest": "evidence/artifacts/2.5/aggregate-contract-inputs.sha256",
-    "value": "69034C7A82F3E22B12F177E4752FD935E93AF8E0BE08FC2138BF70F8E18262FF"
-  },
-  "contract_inputs": {
-    "workspace": "40C7FAF8A08282B1D131BA9431D6B0889DAF45FB19F99B7BEA42169F8E6FD404",
-    "dependency": "7B6C8085C96CD42A97D39DC21BA49577BC3D8CF736E205AE7BA82604CE23B94B",
-    "source_boundary": "0778179DBB559561A463FBF6741B8A08B1F14499572F04A01AE6F84D08D58E4D"
-  },
-  "evidence": {
-    "validator": "107 records, 37 coverage mappings; committed records 1-77 preserved and corrective records appended",
-    "mutation_run": "build/fixture-results/final-21i",
-    "mutation_cases": 21,
-    "schema_engine": "jsonschema 0.37.1, Draft 2020-12, formats enabled, default-features=false",
-    "license_inventory": "427 locked/offline package records",
-    "stale_lineage": "B-W1-2.5-FULL-SUCCESSOR-002 closes all predecessor effective stale sets including B-W1-EXIT-004"
-  },
-  "commands": [
-    {"command": "scripts/validate-evidence.ps1", "exit_status": 0},
-    {"command": "scripts/run-evidence-mutation-fixtures.ps1 -RunId final-21i", "exit_status": 0},
-    {"command": "scripts/audit-source-boundary.ps1", "exit_status": 0},
-    {"command": "scripts/verify-windows-substrate.ps1", "exit_status": 0},
-    {"command": "three contract manifest verifications", "exit_status": 0},
-    {"command": "cargo check/test --workspace --locked --offline", "exit_status": 0},
-    {"command": "cargo fmt --all -- --check", "exit_status": 0},
-    {"command": "architecture positive and three negative fixtures", "exit_status": 0},
-    {"command": "openspec validate bootstrap-superdesktop-workspace --strict", "exit_status": 0},
-    {"command": "git diff --check excluding verbatim third-party vendor sources", "exit_status": 0}
-  ],
-  "notes": "No Shell, AppBar, Explorer or external repository mutation occurred. Independent review and Primary acceptance remain pending."
+    "change":  "bootstrap-superdesktop-workspace",
+    "l2":  "2.5",
+    "status":  "implementation-complete-review-pending",
+    "completed_leaf_ids":  [
+                               "2.5.1",
+                               "2.5.2",
+                               "2.5.3",
+                               "2.5.4",
+                               "2.5.6"
+                           ],
+    "primary_pending_leaf_ids":  [
+                                     "2.5.5",
+                                     "2.4.5"
+                                 ],
+    "producer":  "Workspace/Build and Evidence owners",
+    "consumer":  "Primary integrator Wave 1 exit",
+    "result_revision":  null,
+    "reviewer":  "pending independent Wave 1 exit re-review",
+    "accepted_revision":  null,
+    "contract_hash":  {
+                          "algorithm":  "SHA-256 of exact aggregate manifest file; manifest is verified by scripts/verify-contract-manifest.ps1",
+                          "inputs_manifest":  "evidence/artifacts/2.5/aggregate-contract-inputs.sha256",
+                          "value":  "9C7B643D880EF4C7135F08D32222075D43428CBF1A50A53CBBFBA7405ED2622E"
+                      },
+    "contract_inputs":  {
+                            "workspace":  "BE7F5CF46DB51B7E328462C3DDA37E88188131728F945FDC7E2BA731DFEEEDC4",
+                            "dependency":  "63E6EC7D5ED08AE16E98F2D13EFE2459B4F57FDD771AD75399C238FABCACDDB1",
+                            "source_boundary":  "0778179DBB559561A463FBF6741B8A08B1F14499572F04A01AE6F84D08D58E4D"
+                        },
+    "evidence":  {
+                     "validator":  "119 records, 37 coverage mappings; immutable committed records preserved, all corrective lineage append-only",
+                     "mutation_run":  "build/fixture-results/primary-final-arch2",
+                     "mutation_cases":  21,
+                     "schema_engine":  "jsonschema 0.37.1, Draft 2020-12, formats enabled, default-features=false",
+                     "license_inventory":  "427 locked/offline package records",
+                     "stale_lineage":  "B-W1-EXIT-004-FULL-MAPPINGS supplies five explicit stale-to-passed effective mappings; B-W1-ARCH-FIX-SUCCESSOR records the later architecture-fixture artifact refresh."
+                 },
+    "commands":  [
+                     {
+                         "command":  "scripts/validate-evidence.ps1",
+                         "exit_status":  0
+                     },
+                     {
+                         "command":  "scripts/run-evidence-mutation-fixtures.ps1 -RunId primary-final-arch2",
+                         "exit_status":  0
+                     },
+                     {
+                         "command":  "scripts/audit-source-boundary.ps1",
+                         "exit_status":  0
+                     },
+                     {
+                         "command":  "scripts/verify-windows-substrate.ps1",
+                         "exit_status":  0
+                     },
+                     {
+                         "command":  "three contract manifest verifications",
+                         "exit_status":  0
+                     },
+                     {
+                         "command":  "cargo check/test --workspace --locked --offline",
+                         "exit_status":  0
+                     },
+                     {
+                         "command":  "cargo fmt --all -- --check",
+                         "exit_status":  0
+                     },
+                     {
+                         "command":  "architecture positive and three negative fixtures",
+                         "exit_status":  0
+                     },
+                     {
+                         "command":  "openspec validate bootstrap-superdesktop-workspace --strict",
+                         "exit_status":  0
+                     },
+                     {
+                         "command":  "git diff --check excluding verbatim third-party vendor sources",
+                         "exit_status":  0
+                     }
+                 ],
+    "notes":  "No Shell, AppBar, Explorer or external repository mutation occurred. The hash-drifted 2.5.6#wave25-final is marked stale by the effective adjustment lineage; a new immutable stale/passed successor pair is appended. Independent review and Primary acceptance remain pending."
 }

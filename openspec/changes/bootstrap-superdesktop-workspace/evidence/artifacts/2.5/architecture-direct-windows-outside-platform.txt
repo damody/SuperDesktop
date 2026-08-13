@@ -1,0 +1,1 @@
+WINDOWS_BINDING_OUTSIDE_PLATFORM: non-platform fixture directly declares windows.
