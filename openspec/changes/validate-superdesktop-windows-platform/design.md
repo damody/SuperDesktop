@@ -15,6 +15,7 @@
 - Reference profile 必須保存 OS/ExplorerPatcher/config/image/source與 1.1 read-only profile/admission probe binary hashes；1.2 才建立 native-window spike binary。
 - Spike 只在受控測試 HWND/AppBar 上執行，不隱藏 Explorer。
 - GPUI native-window spike 由 `desktop-ui` example composition 擁有，並以 dev-dependency 呼叫 `platform-win/common` 的 HWND/message bridge；`platform-win` 不得反向依賴 GPUI，該 dev-only architecture successor 不得進入 product public API。
+- Headful `Application` factory 使用同一 GPUI-CE pinned repository/revision的 `gpui_windows` package且停用 default features，僅為 `desktop-ui` dev-dependency；由 `Application::with_platform` 注入 Windows backend，其 lock/vendor/license/provenance與離線建置必須在1.2 evidence中閉合。
 - 任一 required capability stop disposition 會阻擋下游，走 B/C correction。
 
 ## Risks / Trade-offs

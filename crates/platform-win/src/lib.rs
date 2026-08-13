@@ -1,5 +1,8 @@
 //! Windows integration boundary. No Shell capability is active in this crate yet.
 
+/// Shared Windows capability adapters used by controlled composition spikes.
+pub mod common;
+
 #[cfg(not(windows))]
 compile_error!("SuperDesktop is supported only on Windows targets.");
 
