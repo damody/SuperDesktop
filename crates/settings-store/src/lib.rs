@@ -1,7 +1,19 @@
-//! Versioned settings boundary. Persistence behavior is intentionally deferred.
+//! Versioned, platform-neutral settings schema and persistence boundary.
 
 #[cfg(not(windows))]
 compile_error!("SuperDesktop is supported only on Windows targets.");
 
-/// Marker proving this crate is a workspace foundation only.
+mod json;
+mod schema;
+mod store;
+
+pub use schema::{
+    AccessibilitySettings, DecodeOutcome, DesktopPosition, ExecutionPreference, RuntimeMode,
+    SettingsCorrection, SettingsError, SettingsV1, TaskbarSettings, ThemePreference, WallpaperMode,
+    WallpaperSettings,
+};
+pub use store::{
+    AtomicSettingsFileSystem, FixtureRootGuard, LoadOutcome, SettingsStore, StoreError,
+};
+
 pub const CRATE_ROLE: &str = "settings persistence boundary";

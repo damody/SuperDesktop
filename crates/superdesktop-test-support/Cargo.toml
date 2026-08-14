@@ -9,6 +9,8 @@ build = "build.rs"
 [dependencies]
 jsonschema.workspace = true
 serde_json.workspace = true
+settings-store = { path = "../settings-store" }
+shell-core = { path = "../shell-core" }
 
 [[bin]]
 name = "superdesktop-test-support"

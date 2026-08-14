@@ -3715,6 +3715,8 @@ version = "0.1.0"
 dependencies = [
  "jsonschema",
  "serde_json",
+ "settings-store",
+ "shell-core",
 ]
 
 [[package]]
