@@ -1,6 +1,6 @@
 {
     "schema":  "foundation-wave6-local-gates/v1",
-    "recorded_at":  "2026-08-14T10:00:46.7537448Z",
+    "recorded_at":  "2026-08-14T10:03:12.9448129Z",
     "verification_change":  "verify-superdesktop-m0",
     "strict_validation":  {
                               "status":  "passed",
@@ -17,7 +17,8 @@
                   "G-A11Y-I18N":  "passed",
                   "G-PERF":  "passed",
                   "G-SAFETY":  "passed",
-                  "G-ARCH":  "passed"
+                  "G-ARCH":  "passed",
+                  "G-TRACE":  "passed"
               },
     "source_artifacts":  [
                              {
@@ -43,6 +44,18 @@
                              {
                                  "sha256":  "9EDBB5FDDB75BE116A16F02442B3310B00B58730A26163229261A0DD25114CAE",
                                  "path":  "verify-superdesktop-m0/evidence/artifacts/1.2/build-offline-gate.json"
+                             },
+                             {
+                                 "sha256":  "24A74D0E190F10DDE49A3C8E694CB711628223DB5DA0DBCB10DA5503433BBE97",
+                                 "path":  "verify-superdesktop-m0/evidence/artifacts/5.3/traceability-review.json"
+                             },
+                             {
+                                 "sha256":  "CD996E7819AAD10EFC459FAC2DD4CFD881B76388E190E51FA59D37D062126D35",
+                                 "path":  "verify-superdesktop-m0/evidence/coverage.json"
+                             },
+                             {
+                                 "sha256":  "8462344CCF65BC00B977CE7081C7CE60AD6ADDE1146185958CBC604652D9D166",
+                                 "path":  "verify-superdesktop-m0/evidence/adjustments.jsonl"
                              }
                          ],
     "unresolved":  [
