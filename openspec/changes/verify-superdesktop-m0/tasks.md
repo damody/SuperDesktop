@@ -160,7 +160,7 @@
 - [x] 4.1.2 掃描 taskbar/Start/SuperExplorer controls 的 accessibility identity 與 actions。
 - [x] 4.1.3 執行 desktop keyboard-only selection/activate flow，並驗證 rename/delete/refresh/context menu 不被暴露或造成 mutation。
 - [x] 4.1.4 執行 taskbar keyboard-only navigation/group/Start/bridge flow。
-- [ ] 4.1.5 執行高對比 visual、focus indicator 與 hit-target test。
+- [x] 4.1.5 執行高對比 visual、focus indicator 與 hit-target test。
 
 ### 4.2 執行 Localization、Fallback、Bidi 與 IME Gate
 
