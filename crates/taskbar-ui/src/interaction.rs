@@ -40,6 +40,9 @@ pub struct AccessibleTask {
     pub role: &'static str,
     pub active: bool,
     pub minimized: bool,
+    pub attention: bool,
+    pub group_size: usize,
+    pub available: bool,
     pub actions: Vec<TaskAction>,
 }
 
@@ -167,6 +170,9 @@ impl TaskInteraction {
             role: "button",
             active,
             minimized,
+            attention: group.attention,
+            group_size: group.windows.len().max(1),
+            available: true,
             actions: vec![
                 TaskAction::Focus,
                 TaskAction::Select,

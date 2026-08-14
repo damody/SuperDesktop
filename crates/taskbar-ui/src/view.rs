@@ -135,7 +135,33 @@ impl Render for TaskbarView {
                 let key_callback = callback.clone();
                 let stable_id = task.stable_id.clone();
                 let key_stable_id = stable_id.clone();
-                let underline = if task.active {
+                let available = task.available;
+                let state = if !available {
+                    "unavailable".to_owned()
+                } else if task.attention {
+                    "attention".to_owned()
+                } else if task.group_size > 1 {
+                    format!("group:{}", task.group_size)
+                } else if task.active {
+                    "active".to_owned()
+                } else if task.minimized {
+                    "minimized".to_owned()
+                } else {
+                    "available".to_owned()
+                };
+                let accessible_name = format!("{} [{state}]", task.name);
+                let display_name = if task.group_size > 1 {
+                    format!("{} ({})", task.name, task.group_size)
+                } else {
+                    task.name.clone()
+                };
+                let underline = if !available {
+                    rgb(0x6b6b6b)
+                } else if task.attention {
+                    rgb(0xff8c00)
+                } else if task.group_size > 1 {
+                    rgb(0x744da9)
+                } else if task.active {
                     rgb(0x0067c0)
                 } else if task.minimized {
                     rgb(0x87949a)
@@ -145,8 +171,7 @@ impl Render for TaskbarView {
                 div()
                     .id(task.stable_id.clone())
                     .role(gpui::Role::Button)
-                    .aria_label(task.name.clone())
-                    .aria_selected(task.active)
+                    .aria_label(accessible_name)
                     .tab_index(0)
                     .w(px(190.))
                     .h(px(40.))
@@ -159,19 +184,23 @@ impl Render for TaskbarView {
                     .whitespace_nowrap()
                     .border_b_1()
                     .border_color(underline)
-                    .on_click(move |_, _, _| {
-                        if let Some(callback) = &callback {
-                            callback(&stable_id);
-                        }
+                    .when(!available, |element| element.opacity(0.55))
+                    .when(available, move |element| {
+                        element
+                            .on_click(move |_, _, _| {
+                                if let Some(callback) = &callback {
+                                    callback(&stable_id);
+                                }
+                            })
+                            .on_key_down(move |event, _, _| {
+                                if matches!(event.keystroke.key.as_str(), "enter" | "space")
+                                    && let Some(callback) = &key_callback
+                                {
+                                    callback(&key_stable_id);
+                                }
+                            })
                     })
-                    .on_key_down(move |event, _, _| {
-                        if matches!(event.keystroke.key.as_str(), "enter" | "space")
-                            && let Some(callback) = &key_callback
-                        {
-                            callback(&key_stable_id);
-                        }
-                    })
-                    .child(task.name.clone())
+                    .child(display_name)
             }))
             .child(
                 div()

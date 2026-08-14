@@ -114,6 +114,9 @@ fn visible_tasks() -> Result<Vec<AccessibleTask>, &'static str> {
                     role: "button",
                     active: window.foreground,
                     minimized: window.minimized,
+                    attention: false,
+                    group_size: 1,
+                    available: true,
                     actions: vec![
                         TaskAction::Focus,
                         TaskAction::Select,
@@ -124,6 +127,35 @@ fn visible_tasks() -> Result<Vec<AccessibleTask>, &'static str> {
                 })
                 .collect()
         })
+}
+
+fn verification_state_tasks() -> Vec<AccessibleTask> {
+    [
+        ("active", true, false, false, 1, true),
+        ("minimized", false, true, false, 1, true),
+        ("attention", false, false, true, 1, true),
+        ("group", false, false, false, 3, true),
+        ("unavailable", false, false, false, 1, false),
+    ]
+    .into_iter()
+    .map(
+        |(state, active, minimized, attention, group_size, available)| AccessibleTask {
+            stable_id: format!("verification-state:{state}"),
+            name: format!("State {state}"),
+            role: "button",
+            active,
+            minimized,
+            attention,
+            group_size,
+            available,
+            actions: if available {
+                vec![TaskAction::Focus, TaskAction::Select, TaskAction::Invoke]
+            } else {
+                vec![TaskAction::Focus]
+            },
+        },
+    )
+    .collect()
 }
 
 fn hwnd(window: &gpui::Window) -> Result<isize, &'static str> {
@@ -210,7 +242,12 @@ fn fixed_node(monitor: &str) -> AccessibleNode {
 pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> {
     enable_per_monitor_v2()?;
     let snapshot = snapshot_real_monitors()?;
-    let initial_tasks = visible_tasks()?;
+    let state_matrix = std::env::var_os("SUPERDESKTOP_VERIFICATION_STATE_MATRIX").is_some();
+    let initial_tasks = if state_matrix {
+        verification_state_tasks()
+    } else {
+        visible_tasks()?
+    };
     let verification_surface = std::env::var("SUPERDESKTOP_VERIFICATION_SURFACE").ok();
     let interactive = verification_surface.is_some();
     let terminal = Rc::new(RefCell::new(None::<Result<(), &'static str>>));
@@ -374,7 +411,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
             }
 
             let refresh_handles = taskbar_handles.clone();
-            if !refresh_handles.is_empty() {
+            if !refresh_handles.is_empty() && !state_matrix {
                 let refresh_background = cx.background_executor().clone();
                 let refresh_foreground = cx.foreground_executor().clone();
                 let refresh_app = cx.to_async();
