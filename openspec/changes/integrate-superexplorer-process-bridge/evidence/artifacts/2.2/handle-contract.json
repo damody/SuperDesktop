@@ -1,0 +1,11 @@
+{
+    "schema":  "bridge-handle-contract/v1",
+    "application_name":  "explicit-absolute",
+    "stdio":  "null",
+    "arbitrary_handle_inheritance":  false,
+    "raii_child_handle":  true,
+    "successful_child_killed_on_cancel":  false,
+    "unit_handle_delta_max":  2,
+    "integration_first_use_handle_delta":  5,
+    "tests":  2
+}

@@ -1,0 +1,21 @@
+{
+    "schema":  "bridge-admission-contract/v1",
+    "deadline_ms":  5000,
+    "identity":  [
+                     "request-id",
+                     "correlation-id",
+                     "generation"
+                 ],
+    "terminals":  [
+                      "launched",
+                      "validation-failed",
+                      "spawn-failed",
+                      "cancelled",
+                      "timed-out"
+                  ],
+    "policy":  "first-terminal-wins",
+    "late_callback":  "diagnostic-only",
+    "shutdown":  "cancel-pending",
+    "callback":  "wave-2-no-unwind-fence",
+    "tests":  4
+}

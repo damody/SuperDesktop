@@ -1,0 +1,66 @@
+{
+    "schema":  "bridge-contract-manifest/v1",
+    "change":  "integrate-superexplorer-process-bridge",
+    "result_revision":  "0abaf8e2",
+    "generated_at":  "2026-08-14T04:54:29.1387119Z",
+    "public_schema":  "evidence/artifacts/3.1/bridge-public.schema.json",
+    "effect_schema":  "evidence/artifacts/3.1/bridge-effect.schema.json",
+    "binary":  "evidence/artifacts/3.1/bridge_integration_contract.exe",
+    "binary_sha256":  "E9EE7AC8C18014BEE8F9F83C71280D763D98F195343D08088DB24BEE775EF549",
+    "real_integration_trace":  "evidence/artifacts/3.1/real-integration-trace.json",
+    "repository_audit":  "evidence/artifacts/3.1/superexplorer-repository-audit.json",
+    "inputs":  [
+                   {
+                       "path":  "Cargo.lock",
+                       "sha256":  "F8D30D1908BD8C177053BC9A7CEAE0B2CC11BBC561821D633479FA8B2906952F",
+                       "bytes":  123969
+                   },
+                   {
+                       "path":  "crates/explorer-bridge/Cargo.toml",
+                       "sha256":  "2460AA232D2129E8DC0FDCC666214D7EAAA1EA5C7AE4B2C17AE75FCBAECDC6A9",
+                       "bytes":  266
+                   },
+                   {
+                       "path":  "crates/explorer-bridge/src/lib.rs",
+                       "sha256":  "664D3D7B31367DB646520706DFFE04527B2F649BA4F900A17D9CD4C13DCCC6EC",
+                       "bytes":  756
+                   },
+                   {
+                       "path":  "crates/explorer-bridge/src/resolver.rs",
+                       "sha256":  "E59EDFB6DEDB03A670AB835966EB0B600F486E6707E2925788B2CD08EC9FEA72",
+                       "bytes":  5721
+                   },
+                   {
+                       "path":  "crates/explorer-bridge/src/command.rs",
+                       "sha256":  "08957896F0F4AE2D275483EC472ACC37A8A650443C287105F30019DFEF687F8C",
+                       "bytes":  3670
+                   },
+                   {
+                       "path":  "crates/explorer-bridge/src/admission.rs",
+                       "sha256":  "5E833A528CFCE3FEA6F4DB6DEB2ABFE9EE3CADB62BC74C8D0C74ED9DB2EAA3E2",
+                       "bytes":  5806
+                   },
+                   {
+                       "path":  "crates/explorer-bridge/src/launcher.rs",
+                       "sha256":  "C87C5E9B7D2065BB90B79A7C8676DBA975C3D50C6E3267995F3F7BE5C36BFC5F",
+                       "bytes":  3576
+                   },
+                   {
+                       "path":  "crates/explorer-bridge/src/repair.rs",
+                       "sha256":  "58FF4B38DA006CE07D14F86818F6431DC2F0363EBF83609B3036C178072345CA",
+                       "bytes":  4873
+                   },
+                   {
+                       "path":  "crates/explorer-bridge/examples/bridge_integration_contract.rs",
+                       "sha256":  "F5A5A295ACE4A8BD43612D70467AB984F2BCBDD24FF19E37ED7973627F4884FD",
+                       "bytes":  3982
+                   }
+               ],
+    "combined_input_sha256":  "E4085E43FEBF9B8A5F22389D59F91AC62346E4D4075A84D7E6AB721AF0E506E4",
+    "gates":  {
+                  "G-SAFETY":  "passed",
+                  "G-A11Y-I18N":  "passed",
+                  "G-PERF":  "passed",
+                  "G-EXPLORER-BRIDGE":  "passed"
+              }
+}

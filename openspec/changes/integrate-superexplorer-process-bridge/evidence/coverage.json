@@ -1,0 +1,337 @@
+{
+    "schema_version":  "1.0.0",
+    "change":  "integrate-superexplorer-process-bridge",
+    "capabilities":  [
+                         "bridge-admission",
+                         "bridge-integration-gate",
+                         "bridge-launch-contract",
+                         "bridge-process-lifecycle",
+                         "bridge-repair",
+                         "bridge-resolver"
+                     ],
+    "tasks":  [
+                  {
+                      "task_id":  "integrate-superexplorer-process-bridge/1.1.1",
+                      "mandatory":  true,
+                      "capability_id":  "bridge-resolver",
+                      "requirement_id":  "bridge-resolver",
+                      "scenario_id":  "deterministic-safe-resolution",
+                      "gates":  [
+                                    "G-EXPLORER-BRIDGE",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "integrate-superexplorer-process-bridge/1.1.2",
+                      "mandatory":  true,
+                      "capability_id":  "bridge-resolver",
+                      "requirement_id":  "bridge-resolver",
+                      "scenario_id":  "deterministic-safe-resolution",
+                      "gates":  [
+                                    "G-EXPLORER-BRIDGE",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "integrate-superexplorer-process-bridge/1.1.3",
+                      "mandatory":  true,
+                      "capability_id":  "bridge-resolver",
+                      "requirement_id":  "bridge-resolver",
+                      "scenario_id":  "deterministic-safe-resolution",
+                      "gates":  [
+                                    "G-EXPLORER-BRIDGE",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "integrate-superexplorer-process-bridge/1.1.4",
+                      "mandatory":  true,
+                      "capability_id":  "bridge-resolver",
+                      "requirement_id":  "bridge-resolver",
+                      "scenario_id":  "deterministic-safe-resolution",
+                      "gates":  [
+                                    "G-EXPLORER-BRIDGE",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "integrate-superexplorer-process-bridge/1.2.1",
+                      "mandatory":  true,
+                      "capability_id":  "bridge-launch-contract",
+                      "requirement_id":  "bridge-launch-contract",
+                      "scenario_id":  "child-only-environment",
+                      "gates":  [
+                                    "G-EXPLORER-BRIDGE",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "integrate-superexplorer-process-bridge/1.2.2",
+                      "mandatory":  true,
+                      "capability_id":  "bridge-launch-contract",
+                      "requirement_id":  "bridge-launch-contract",
+                      "scenario_id":  "child-only-environment",
+                      "gates":  [
+                                    "G-EXPLORER-BRIDGE",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "integrate-superexplorer-process-bridge/1.2.3",
+                      "mandatory":  true,
+                      "capability_id":  "bridge-launch-contract",
+                      "requirement_id":  "bridge-launch-contract",
+                      "scenario_id":  "child-only-environment",
+                      "gates":  [
+                                    "G-EXPLORER-BRIDGE",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "integrate-superexplorer-process-bridge/1.2.4",
+                      "mandatory":  true,
+                      "capability_id":  "bridge-launch-contract",
+                      "requirement_id":  "bridge-launch-contract",
+                      "scenario_id":  "child-only-environment",
+                      "gates":  [
+                                    "G-EXPLORER-BRIDGE",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "integrate-superexplorer-process-bridge/2.1.1",
+                      "mandatory":  true,
+                      "capability_id":  "bridge-admission",
+                      "requirement_id":  "bridge-admission",
+                      "scenario_id":  "exactly-once-deadline",
+                      "gates":  [
+                                    "G-EXPLORER-BRIDGE"
+                                ]
+                  },
+                  {
+                      "task_id":  "integrate-superexplorer-process-bridge/2.1.2",
+                      "mandatory":  true,
+                      "capability_id":  "bridge-admission",
+                      "requirement_id":  "bridge-admission",
+                      "scenario_id":  "exactly-once-deadline",
+                      "gates":  [
+                                    "G-EXPLORER-BRIDGE"
+                                ]
+                  },
+                  {
+                      "task_id":  "integrate-superexplorer-process-bridge/2.1.3",
+                      "mandatory":  true,
+                      "capability_id":  "bridge-admission",
+                      "requirement_id":  "bridge-admission",
+                      "scenario_id":  "exactly-once-deadline",
+                      "gates":  [
+                                    "G-EXPLORER-BRIDGE"
+                                ]
+                  },
+                  {
+                      "task_id":  "integrate-superexplorer-process-bridge/2.1.4",
+                      "mandatory":  true,
+                      "capability_id":  "bridge-admission",
+                      "requirement_id":  "bridge-admission",
+                      "scenario_id":  "exactly-once-deadline",
+                      "gates":  [
+                                    "G-EXPLORER-BRIDGE"
+                                ]
+                  },
+                  {
+                      "task_id":  "integrate-superexplorer-process-bridge/2.1.5",
+                      "mandatory":  true,
+                      "capability_id":  "bridge-admission",
+                      "requirement_id":  "bridge-admission",
+                      "scenario_id":  "exactly-once-deadline",
+                      "gates":  [
+                                    "G-EXPLORER-BRIDGE"
+                                ]
+                  },
+                  {
+                      "task_id":  "integrate-superexplorer-process-bridge/2.1.6",
+                      "mandatory":  true,
+                      "capability_id":  "bridge-admission",
+                      "requirement_id":  "bridge-admission",
+                      "scenario_id":  "exactly-once-deadline",
+                      "gates":  [
+                                    "G-EXPLORER-BRIDGE"
+                                ]
+                  },
+                  {
+                      "task_id":  "integrate-superexplorer-process-bridge/2.1.7",
+                      "mandatory":  true,
+                      "capability_id":  "bridge-admission",
+                      "requirement_id":  "bridge-admission",
+                      "scenario_id":  "exactly-once-deadline",
+                      "gates":  [
+                                    "G-EXPLORER-BRIDGE"
+                                ]
+                  },
+                  {
+                      "task_id":  "integrate-superexplorer-process-bridge/2.2.1",
+                      "mandatory":  true,
+                      "capability_id":  "bridge-process-lifecycle",
+                      "requirement_id":  "bridge-process-lifecycle",
+                      "scenario_id":  "raii-handle-cleanup",
+                      "gates":  [
+                                    "G-SAFETY",
+                                    "G-PERF"
+                                ]
+                  },
+                  {
+                      "task_id":  "integrate-superexplorer-process-bridge/2.2.2",
+                      "mandatory":  true,
+                      "capability_id":  "bridge-process-lifecycle",
+                      "requirement_id":  "bridge-process-lifecycle",
+                      "scenario_id":  "raii-handle-cleanup",
+                      "gates":  [
+                                    "G-SAFETY",
+                                    "G-PERF"
+                                ]
+                  },
+                  {
+                      "task_id":  "integrate-superexplorer-process-bridge/2.2.3",
+                      "mandatory":  true,
+                      "capability_id":  "bridge-process-lifecycle",
+                      "requirement_id":  "bridge-process-lifecycle",
+                      "scenario_id":  "raii-handle-cleanup",
+                      "gates":  [
+                                    "G-SAFETY",
+                                    "G-PERF"
+                                ]
+                  },
+                  {
+                      "task_id":  "integrate-superexplorer-process-bridge/2.2.4",
+                      "mandatory":  true,
+                      "capability_id":  "bridge-process-lifecycle",
+                      "requirement_id":  "bridge-process-lifecycle",
+                      "scenario_id":  "raii-handle-cleanup",
+                      "gates":  [
+                                    "G-SAFETY",
+                                    "G-PERF"
+                                ]
+                  },
+                  {
+                      "task_id":  "integrate-superexplorer-process-bridge/2.3.1",
+                      "mandatory":  true,
+                      "capability_id":  "bridge-repair",
+                      "requirement_id":  "bridge-repair",
+                      "scenario_id":  "localized-private-repair",
+                      "gates":  [
+                                    "G-EXPLORER-BRIDGE",
+                                    "G-A11Y-I18N"
+                                ]
+                  },
+                  {
+                      "task_id":  "integrate-superexplorer-process-bridge/2.3.2",
+                      "mandatory":  true,
+                      "capability_id":  "bridge-repair",
+                      "requirement_id":  "bridge-repair",
+                      "scenario_id":  "localized-private-repair",
+                      "gates":  [
+                                    "G-EXPLORER-BRIDGE",
+                                    "G-A11Y-I18N"
+                                ]
+                  },
+                  {
+                      "task_id":  "integrate-superexplorer-process-bridge/2.3.3",
+                      "mandatory":  true,
+                      "capability_id":  "bridge-repair",
+                      "requirement_id":  "bridge-repair",
+                      "scenario_id":  "localized-private-repair",
+                      "gates":  [
+                                    "G-EXPLORER-BRIDGE",
+                                    "G-A11Y-I18N"
+                                ]
+                  },
+                  {
+                      "task_id":  "integrate-superexplorer-process-bridge/2.3.4",
+                      "mandatory":  true,
+                      "capability_id":  "bridge-repair",
+                      "requirement_id":  "bridge-repair",
+                      "scenario_id":  "localized-private-repair",
+                      "gates":  [
+                                    "G-EXPLORER-BRIDGE",
+                                    "G-A11Y-I18N"
+                                ]
+                  },
+                  {
+                      "task_id":  "integrate-superexplorer-process-bridge/3.1.1",
+                      "mandatory":  true,
+                      "capability_id":  "bridge-integration-gate",
+                      "requirement_id":  "bridge-integration-gate",
+                      "scenario_id":  "external-repository-unchanged",
+                      "gates":  [
+                                    "G-EXPLORER-BRIDGE",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "integrate-superexplorer-process-bridge/3.1.2",
+                      "mandatory":  true,
+                      "capability_id":  "bridge-integration-gate",
+                      "requirement_id":  "bridge-integration-gate",
+                      "scenario_id":  "external-repository-unchanged",
+                      "gates":  [
+                                    "G-EXPLORER-BRIDGE",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "integrate-superexplorer-process-bridge/3.1.3",
+                      "mandatory":  true,
+                      "capability_id":  "bridge-integration-gate",
+                      "requirement_id":  "bridge-integration-gate",
+                      "scenario_id":  "external-repository-unchanged",
+                      "gates":  [
+                                    "G-EXPLORER-BRIDGE",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "integrate-superexplorer-process-bridge/3.1.4",
+                      "mandatory":  true,
+                      "capability_id":  "bridge-integration-gate",
+                      "requirement_id":  "bridge-integration-gate",
+                      "scenario_id":  "external-repository-unchanged",
+                      "gates":  [
+                                    "G-EXPLORER-BRIDGE",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "integrate-superexplorer-process-bridge/3.1.5",
+                      "mandatory":  true,
+                      "capability_id":  "bridge-integration-gate",
+                      "requirement_id":  "bridge-integration-gate",
+                      "scenario_id":  "external-repository-unchanged",
+                      "gates":  [
+                                    "G-EXPLORER-BRIDGE",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "integrate-superexplorer-process-bridge/3.1.6",
+                      "mandatory":  true,
+                      "capability_id":  "bridge-integration-gate",
+                      "requirement_id":  "bridge-integration-gate",
+                      "scenario_id":  "external-repository-unchanged",
+                      "gates":  [
+                                    "G-EXPLORER-BRIDGE",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "integrate-superexplorer-process-bridge/3.1.7",
+                      "mandatory":  true,
+                      "capability_id":  "bridge-integration-gate",
+                      "requirement_id":  "bridge-integration-gate",
+                      "scenario_id":  "external-repository-unchanged",
+                      "gates":  [
+                                    "G-EXPLORER-BRIDGE",
+                                    "G-SAFETY"
+                                ]
+                  }
+              ]
+}

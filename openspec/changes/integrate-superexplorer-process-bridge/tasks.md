@@ -10,10 +10,10 @@
 **Gate／Evidence：** `G-EXPLORER-BRIDGE`、`G-SAFETY`；`evidence/artifacts/1.1/`。
 **完成門檻：** 優先序 deterministic；missing/non-file/reparse/untrusted target 被 typed validation 拒絕。
 
-- [ ] 1.1.1 實作 settings、bundled、developer fallback 的 resolver 優先序。
-- [ ] 1.1.2 實作 canonical path、regular-file 與 executable identity validation。
-- [ ] 1.1.3 加入 missing、directory、reparse、PATH/CWD substitution negative tests。
-- [ ] 1.1.4 保存 resolver decision trace 且 redact 使用者敏感路徑。
+- [x] 1.1.1 實作 settings、bundled、developer fallback 的 resolver 優先序。
+- [x] 1.1.2 實作 canonical path、regular-file 與 executable identity validation。
+- [x] 1.1.3 加入 missing、directory、reparse、PATH/CWD substitution negative tests。
+- [x] 1.1.4 保存 resolver decision trace 且 redact 使用者敏感路徑。
 
 ### 1.2 定義 Default 與 Folder Launch 語意
 
@@ -25,10 +25,10 @@
 **Gate／Evidence：** `G-EXPLORER-BRIDGE`、`G-SAFETY`；`evidence/artifacts/1.2/`。
 **完成門檻：** Default 不宣稱 This PC；folder path round-trip；parent environment 完全不變。
 
-- [ ] 1.2.1 實作無 `EXPLORER_INITIAL_PATH` 的 default SuperExplorer command。
-- [ ] 1.2.2 實作 folder launch 的 child-only `EXPLORER_INITIAL_PATH` environment block。
-- [ ] 1.2.3 加入 Unicode、空白、長路徑與特殊字元 round-trip tests。
-- [ ] 1.2.4 驗證 parent process environment before/after 完全相同。
+- [x] 1.2.1 實作無 `EXPLORER_INITIAL_PATH` 的 default SuperExplorer command。
+- [x] 1.2.2 實作 folder launch 的 child-only `EXPLORER_INITIAL_PATH` environment block。
+- [x] 1.2.3 加入 Unicode、空白、長路徑與特殊字元 round-trip tests。
+- [x] 1.2.4 驗證 parent process environment before/after 完全相同。
 
 ## 2. Admission、取消與錯誤回復
 
@@ -42,13 +42,13 @@
 **Gate／Evidence：** `G-EXPLORER-BRIDGE`；`evidence/artifacts/2.1/`。
 **完成門檻：** launched/validation-failed/spawn-failed/cancelled/timed-out exactly once；late callback 只成 diagnostic。
 
-- [ ] 2.1.1 實作 correlation ID、generation 與 monotonic admission deadline。
-- [ ] 2.1.2 實作 launched、validation-failed 與 spawn-failed terminal mapping。
-- [ ] 2.1.3 實作 bridge-owned cancellation 與 timed-out terminal mapping。
-- [ ] 2.1.4 加入 cancel-vs-success race test。
-- [ ] 2.1.5 加入 timeout-vs-late-spawn callback test。
-- [ ] 2.1.6 加入 duplicate callback 與 shutdown-rundown test。
-- [ ] 2.1.7 對 Windows process completion callbacks 套用 Wave 2 凍結的 no-unwind wrapper。
+- [x] 2.1.1 實作 correlation ID、generation 與 monotonic admission deadline。
+- [x] 2.1.2 實作 launched、validation-failed 與 spawn-failed terminal mapping。
+- [x] 2.1.3 實作 bridge-owned cancellation 與 timed-out terminal mapping。
+- [x] 2.1.4 加入 cancel-vs-success race test。
+- [x] 2.1.5 加入 timeout-vs-late-spawn callback test。
+- [x] 2.1.6 加入 duplicate callback 與 shutdown-rundown test。
+- [x] 2.1.7 對 Windows process completion callbacks 套用 Wave 2 凍結的 no-unwind wrapper。
 
 ### 2.2 實作 Process/Handle Cleanup
 
@@ -60,10 +60,10 @@
 **Gate／Evidence：** `G-SAFETY`、`G-PERF`；`evidence/artifacts/2.2/`。
 **完成門檻：** 所有 terminal path 無 double-close/leak，取消不誤殺已成功交付的 child。
 
-- [ ] 2.2.1 實作 explicit application name、restricted handle inheritance 與 RAII ownership。
-- [ ] 2.2.2 驗證 success 與 spawn-failure 的 process/thread handle cleanup。
-- [ ] 2.2.3 驗證 cancellation、timeout 與 shutdown rundown cleanup。
-- [ ] 2.2.4 保存各 path 的 handle-count before/after evidence。
+- [x] 2.2.1 實作 explicit application name、restricted handle inheritance 與 RAII ownership。
+- [x] 2.2.2 驗證 success 與 spawn-failure 的 process/thread handle cleanup。
+- [x] 2.2.3 驗證 cancellation、timeout 與 shutdown rundown cleanup。
+- [x] 2.2.4 保存各 path 的 handle-count before/after evidence。
 
 ### 2.3 實作 GPUI Repair Result Contract
 
@@ -75,10 +75,10 @@
 **Gate／Evidence：** `G-EXPLORER-BRIDGE`、`G-A11Y-I18N`；`evidence/artifacts/2.3/`。
 **完成門檻：** 每種 failure 有 truthful message/action；log 不含 credential 或完整敏感 path；不 fallback Explorer。
 
-- [ ] 2.3.1 定義 validation/spawn/cancel/timeout 的 localized repair model。
-- [ ] 2.3.2 實作 retry 與 open-settings commands。
-- [ ] 2.3.3 實作 diagnostic path/environment redaction。
-- [ ] 2.3.4 加入 no-Windows-Explorer-fallback 與 privacy tests。
+- [x] 2.3.1 定義 validation/spawn/cancel/timeout 的 localized repair model。
+- [x] 2.3.2 實作 retry 與 open-settings commands。
+- [x] 2.3.3 實作 diagnostic path/environment redaction。
+- [x] 2.3.4 加入 no-Windows-Explorer-fallback 與 privacy tests。
 
 ## 3. 真實整合 Gate
 
@@ -92,10 +92,10 @@
 **Gate／Evidence：** `G-EXPLORER-BRIDGE`、`G-SAFETY`；`evidence/artifacts/3.1/`。
 **完成門檻：** Default/folder/failure/cancel/timeout scenarios 通過且 SuperExplorer worktree hash 未變。
 
-- [ ] 3.1.1 記錄 SuperExplorer repository status、HEAD 與 target binary hash baseline。
-- [ ] 3.1.2 執行真實 default SuperExplorer launch integration test。
-- [ ] 3.1.3 執行真實 Unicode folder launch integration test。
-- [ ] 3.1.4 執行 invalid path 與 missing binary repair-flow test。
-- [ ] 3.1.5 執行 cancellation/timeout/late-callback headful test。
-- [ ] 3.1.6 驗證 SuperExplorer repository status/HEAD 未變並發布 gate disposition。
-- [ ] 3.1.7 產生 bridge public/effect schema、binary、evidence-index 與 handoff SHA-256 manifest。
+- [x] 3.1.1 記錄 SuperExplorer repository status、HEAD 與 target binary hash baseline。
+- [x] 3.1.2 執行真實 default SuperExplorer launch integration test。
+- [x] 3.1.3 執行真實 Unicode folder launch integration test。
+- [x] 3.1.4 執行 invalid path 與 missing binary repair-flow test。
+- [x] 3.1.5 執行 cancellation/timeout/late-callback headful test。
+- [x] 3.1.6 驗證 SuperExplorer repository status/HEAD 未變並發布 gate disposition。
+- [x] 3.1.7 產生 bridge public/effect schema、binary、evidence-index 與 handoff SHA-256 manifest。

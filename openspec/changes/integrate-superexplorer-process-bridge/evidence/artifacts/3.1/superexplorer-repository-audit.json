@@ -1,0 +1,17 @@
+{
+    "schema":  "superexplorer-repository-audit/v1",
+    "before":  {
+                   "status_sha256":  "8EFB099D22809BFCB2BA73C5D3C0DC34B235DD1AC65FFE13147964959FB317E9",
+                   "status_lines":  12656,
+                   "binary_sha256":  "9A7536CC424AC5EF619AB247629E9DA42060A105F0A6ED46A545343B17B65919",
+                   "head":  "fd66c9e8a759ca903b55b1e9ea156c42d37518e1"
+               },
+    "after":  {
+                  "status_sha256":  "8EFB099D22809BFCB2BA73C5D3C0DC34B235DD1AC65FFE13147964959FB317E9",
+                  "status_lines":  12656,
+                  "binary_sha256":  "9A7536CC424AC5EF619AB247629E9DA42060A105F0A6ED46A545343B17B65919",
+                  "head":  "fd66c9e8a759ca903b55b1e9ea156c42d37518e1"
+              },
+    "source_modified_by_bridge":  false,
+    "path_dependency":  false
+}

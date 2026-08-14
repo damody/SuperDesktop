@@ -1,0 +1,31 @@
+{
+    "$schema":  "https://json-schema.org/draft/2020-12/schema",
+    "title":  "SuperExplorer bridge request",
+    "type":  "object",
+    "required":  [
+                     "request_id",
+                     "correlation_id",
+                     "generation"
+                 ],
+    "properties":  {
+                       "request_id":  {
+                                          "type":  "integer",
+                                          "minimum":  1
+                                      },
+                       "generation":  {
+                                          "type":  "integer",
+                                          "minimum":  0
+                                      },
+                       "initial_path":  {
+                                            "type":  [
+                                                         "string",
+                                                         "null"
+                                                     ]
+                                        },
+                       "correlation_id":  {
+                                              "minLength":  1,
+                                              "type":  "string"
+                                          }
+                   },
+    "additionalProperties":  false
+}

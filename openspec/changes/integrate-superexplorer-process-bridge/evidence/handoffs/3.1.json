@@ -1,0 +1,20 @@
+{
+    "schema":  "bridge-handoff/v1",
+    "change":  "integrate-superexplorer-process-bridge",
+    "producer":  "Bridge owner",
+    "consumers":  [
+                      "add-superdesktop-shell-takeover-recovery",
+                      "verify-superdesktop-m0"
+                  ],
+    "result_revision":  "0abaf8e2",
+    "contract_manifest":  "evidence/artifacts/3.1/bridge-contract-manifest.json",
+    "contract_manifest_sha256":  "2B279E460C89F82CDE6194089F1B0EF9B25FA0E44FF14C3C0429CDF02CA98446",
+    "combined_input_sha256":  "E4085E43FEBF9B8A5F22389D59F91AC62346E4D4075A84D7E6AB721AF0E506E4",
+    "status":  "passed-active-archive-deferred",
+    "gates":  {
+                  "G-SAFETY":  "passed",
+                  "G-A11Y-I18N":  "passed",
+                  "G-PERF":  "passed",
+                  "G-EXPLORER-BRIDGE":  "passed"
+              }
+}

@@ -1,0 +1,23 @@
+{
+    "schema":  "bridge-repair-contract/v1",
+    "locales":  [
+                    "zh-TW",
+                    "en"
+                ],
+    "failures":  [
+                     "validation",
+                     "spawn",
+                     "cancel",
+                     "timeout"
+                 ],
+    "actions":  [
+                    "retry",
+                    "open-settings",
+                    "dismiss"
+                ],
+    "accessible_role":  "alert",
+    "full_path_redacted":  true,
+    "environment_redacted":  true,
+    "windows_explorer_fallback":  false,
+    "tests":  2
+}

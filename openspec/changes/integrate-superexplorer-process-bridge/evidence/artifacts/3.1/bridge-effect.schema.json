@@ -1,0 +1,23 @@
+{
+    "$schema":  "https://json-schema.org/draft/2020-12/schema",
+    "title":  "SuperExplorer bridge terminal",
+    "type":  "object",
+    "required":  [
+                     "terminal"
+                 ],
+    "properties":  {
+                       "terminal":  {
+                                        "enum":  [
+                                                     "launched",
+                                                     "validation-failed",
+                                                     "spawn-failed",
+                                                     "cancelled",
+                                                     "timed-out"
+                                                 ]
+                                    },
+                       "diagnostic":  {
+                                          "type":  "string"
+                                      }
+                   },
+    "additionalProperties":  false
+}

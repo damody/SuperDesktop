@@ -1,0 +1,15 @@
+{
+    "schema":  "bridge-resolver-contract/v1",
+    "priority":  [
+                     "setting",
+                     "developer-release",
+                     "adjacent"
+                 ],
+    "absolute_only":  true,
+    "regular_file_only":  true,
+    "reparse_rejected":  true,
+    "identity_revalidated_before_spawn":  true,
+    "path_or_cwd_substitution":  false,
+    "diagnostics":  "redacted-filename-only",
+    "tests":  2
+}

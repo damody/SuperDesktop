@@ -1,0 +1,33 @@
+{
+    "schema":  "bridge-quality-gates/v1",
+    "change":  "integrate-superexplorer-process-bridge",
+    "result_revision":  "0abaf8e2",
+    "recorded_at":  "2026-08-14T04:54:29.1387119Z",
+    "commands":  [
+                     {
+                         "command":  "cargo fmt/check/test/clippy workspace locked offline",
+                         "exit_status":  0,
+                         "bridge_tests":  13
+                     },
+                     {
+                         "exit_status":  0,
+                         "command":  "scripts/check-dependency-architecture.ps1"
+                     },
+                     {
+                         "pids":  [
+                                      160828,
+                                      327004
+                                  ],
+                         "command":  "real default and Unicode folder SuperExplorer launch",
+                         "exit_status":  0
+                     },
+                     {
+                         "exit_status":  0,
+                         "command":  "SuperExplorer before/after source audit"
+                     },
+                     {
+                         "exit_status":  0,
+                         "command":  "openspec validate integrate-superexplorer-process-bridge --strict"
+                     }
+                 ]
+}

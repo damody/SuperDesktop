@@ -1,0 +1,18 @@
+{
+    "schema":  "bridge-launch-contract/v1",
+    "default":  {
+                    "claims_this_pc":  false,
+                    "display_name":  "SuperExplorer",
+                    "initial_path":  false
+                },
+    "folder":  {
+                   "transport":  "child-only-environment",
+                   "key":  "EXPLORER_INITIAL_PATH",
+                   "unicode_round_trip":  true
+               },
+    "unsupported_cli":  [
+
+                        ],
+    "parent_environment_unchanged":  true,
+    "tests":  3
+}
