@@ -1,7 +1,10 @@
-cargo :     Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.44s
+cargo :     Checking desktop-ui v0.1.0 (D:\SuperDesktop\SuperDesktop\crates\desktop-ui)
 At D:\SuperDesktop\SuperDesktop\scripts\capture-m0-local-evidence.ps1:24 char:156
 + ... @('clippy',{cargo clippy --workspace --all-targets --locked --offline ...
 +                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    + CategoryInfo          : NotSpecified: (    Finished `d...get(s) in 0.44s:String) [], RemoteException
+    + CategoryInfo          : NotSpecified: (    Checking de...tes\desktop-ui):String) [], RemoteException
     + FullyQualifiedErrorId : NativeCommandError
  
+    Checking taskbar-ui v0.1.0 (D:\SuperDesktop\SuperDesktop\crates\taskbar-ui)
+    Checking superdesktop-app v0.1.0 (D:\SuperDesktop\SuperDesktop\crates\superdesktop-app)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.57s
