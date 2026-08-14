@@ -22,7 +22,7 @@
                         "scale_percent":  175,
                         "dpi":  168,
                         "status":  "passed",
-                        "captured_at":  "2026-08-14T10:14:48.8278784Z",
+                        "captured_at":  "2026-08-14T10:40:08.5908758Z",
                         "monitor":  {
                                         "device_name":  "\\\\.\\DISPLAY1",
                                         "primary":  true,
@@ -62,22 +62,22 @@
                                           {
                                               "kind":  "taskbar",
                                               "path":  "evidence/artifacts/2.2/175-percent-taskbar.png",
-                                              "sha256":  "2827D8B416C2099092A9B41FE30E2C39A0F9D27DA323B6E2EE52EE99D5BED7D7"
+                                              "sha256":  "DD15FD26A9A251C18170BE20274FC49B0F1E6BE9CF1DCC197B9737B4912C26AA"
                                           },
                                           {
                                               "kind":  "desktop",
                                               "path":  "evidence/artifacts/2.2/175-percent-desktop.png",
-                                              "sha256":  "D404FC29B31292D2C11B7FAC0E2960B982BC7E00EA9E01B7FACAD0C38D1F6529"
+                                              "sha256":  "C430F1C9BCCAE61D80DC77BFF39FD7FD0C69CAE22C9BB78222AC3029EBC7D2BC"
                                           },
                                           {
                                               "kind":  "inputs",
                                               "path":  "evidence/artifacts/2.2/175-percent-input-routes.json",
-                                              "sha256":  "3875A5ACAE099D59A097C3D4C158120E9422E731EA748ABD47FF9E7D655B5C6D"
+                                              "sha256":  "BBD322ABC3029705C05195D6243BCE76FC16A457353FF56BE6308E195C98A92D"
                                           },
                                           {
                                               "kind":  "states",
                                               "path":  "evidence/artifacts/2.2/175-percent-state-matrix.json",
-                                              "sha256":  "23E3E7D3AD4BF8B01752F09FDB9D0EA8EB83C0F9965DC6831CF5B98C7333DD0D"
+                                              "sha256":  "5765CEA9FA79EF9B41F7A0259E19AE3B1830E483A868F7B6E11E99D37FA2F341"
                                           }
                                       ]
                     }
@@ -94,5 +94,5 @@
     "comparison_task":  "2.2.6 blocked until all five samples pass",
     "model_geometry":  "passed",
     "logical_positions":  "model-passed",
-    "tests":  "cargo :    Compiling superdesktop-test-support v0.1.0 (D:\\SuperDesktop\\SuperDesktop\\crates\\superdesktop-test-support)\r\nAt D:\\SuperDesktop\\SuperDesktop\\scripts\\capture-m0-local-evidence.ps1:43 char:59\r\n+ ... n harness\u0027 {cargo test --release -p superdesktop-test-support verific ...\r\n+                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n    + CategoryInfo          : NotSpecified: (   Compiling su...p-test-support):String) [], RemoteException\r\n    + FullyQualifiedErrorId : NativeCommandError\r\n \r\n    Finished `release` profile [optimized] target(s) in 0.95s\r\n     Running unittests src\\lib.rs (target\\release\\deps\\superdesktop_test_support-32218053a1ed906c.exe)\r\n\r\nrunning 6 tests\r\ntest verification::tests::every_resource_counter_has_an_independent_bound_and_stable_tail ... ok\r\ntest verification::tests::visual_contract_rejects_ssim_geometry_state_and_hit_target_drift ... ok\r\ntest verification::tests::ime_composition_commit_cancel_preserve_focus ... ok\r\ntest verification::tests::zh_tw_english_zh_cn_fallback_and_rtl_are_layout_safe ... ok\r\ntest verification::tests::fixed_performance_thresholds_use_raw_samples ... ok\r\ntest verification::tests::five_dpi_visual_geometry_and_hit_target_matrix_passes ... ok\r\n\r\ntest result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s\r\n\r\n     Running unittests src\\main.rs (target\\release\\deps\\superdesktop_test_support-5d01f5c6a4fcb402.exe)\r\n\r\nrunning 0 tests\r\n\r\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\r\n\r\n     Running tests\\core_consumers.rs (target\\release\\deps\\core_consumers-5ecd62ef647e69fa.exe)\r\n\r\nrunning 0 tests\r\n\r\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 4 filtered out; finished in 0.00s"
+    "tests":  "cargo :    Compiling superdesktop-test-support v0.1.0 (D:\\SuperDesktop\\SuperDesktop\\crates\\superdesktop-test-support)\r\nAt D:\\SuperDesktop\\SuperDesktop\\scripts\\capture-m0-local-evidence.ps1:43 char:59\r\n+ ... n harness\u0027 {cargo test --release -p superdesktop-test-support verific ...\r\n+                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n    + CategoryInfo          : NotSpecified: (   Compiling su...p-test-support):String) [], RemoteException\r\n    + FullyQualifiedErrorId : NativeCommandError\r\n \r\n    Finished `release` profile [optimized] target(s) in 0.88s\r\n     Running unittests src\\lib.rs (target\\release\\deps\\superdesktop_test_support-32218053a1ed906c.exe)\r\n\r\nrunning 6 tests\r\ntest verification::tests::every_resource_counter_has_an_independent_bound_and_stable_tail ... ok\r\ntest verification::tests::five_dpi_visual_geometry_and_hit_target_matrix_passes ... ok\r\ntest verification::tests::ime_composition_commit_cancel_preserve_focus ... ok\r\ntest verification::tests::visual_contract_rejects_ssim_geometry_state_and_hit_target_drift ... ok\r\ntest verification::tests::fixed_performance_thresholds_use_raw_samples ... ok\r\ntest verification::tests::zh_tw_english_zh_cn_fallback_and_rtl_are_layout_safe ... ok\r\n\r\ntest result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s\r\n\r\n     Running unittests src\\main.rs (target\\release\\deps\\superdesktop_test_support-5d01f5c6a4fcb402.exe)\r\n\r\nrunning 0 tests\r\n\r\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\r\n\r\n     Running tests\\core_consumers.rs (target\\release\\deps\\core_consumers-5ecd62ef647e69fa.exe)\r\n\r\nrunning 0 tests\r\n\r\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 4 filtered out; finished in 0.00s"
 }

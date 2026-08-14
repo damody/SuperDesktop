@@ -1,0 +1,41 @@
+{
+  "schema": "m0-independent-review-confirmation/v1",
+  "recorded_at": "2026-08-14T00:00:00+08:00",
+  "reviewed_revision": "REPLACE_WITH_FULL_40_CHARACTER_GIT_REVISION",
+  "reviewer": {
+    "name": "Independent reviewer name",
+    "organization": "Independent organization or team",
+    "role": "Architecture, security, and evidence reviewer"
+  },
+  "independence": {
+    "not_implementation_owner": true,
+    "not_remediation_owner": true
+  },
+  "review_scope": {
+    "gates": [
+      "G-ARCH",
+      "G-SHELL-TAKEOVER",
+      "G-GUARDIAN-RECOVERY",
+      "G-DESKTOP",
+      "G-TASKBAR",
+      "G-EXPLORER-BRIDGE",
+      "G-A11Y-I18N",
+      "G-DPI-MONITOR",
+      "G-PERF",
+      "G-SAFETY",
+      "G-TRACE"
+    ],
+    "architecture": "passed",
+    "security": "passed",
+    "evidence_lineage": "passed"
+  },
+  "findings": [],
+  "primary_integration": {
+    "p0_p1_assignments_complete": true,
+    "affected_gates_rerun": true
+  },
+  "final_review": {
+    "remediation_lineage": "passed",
+    "disposition": "no-unresolved-p0-p1"
+  }
+}
