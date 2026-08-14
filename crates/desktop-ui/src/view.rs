@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use gpui::{
     Context, InteractiveElement, IntoElement, ParentElement, Render, StatefulInteractiveElement,
-    Styled, Window, div, px, rgb,
+    Styled, Window, div, prelude::FluentBuilder as _, px, rgb,
 };
 
 use crate::AccessibleNode;
@@ -33,6 +33,7 @@ impl DesktopView {
 impl Render for DesktopView {
     fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
         let fixed_action = self.fixed_action.clone();
+        let high_contrast = std::env::var("SUPERDESKTOP_THEME").as_deref() == Ok("high-contrast");
         let background = if self.fallback_background {
             rgb(0x20242b)
         } else {
@@ -46,6 +47,7 @@ impl Render for DesktopView {
             .flex()
             .flex_col()
             .bg(background)
+            .when(high_contrast, |element| element.bg(rgb(0x000000)))
             .text_color(rgb(0xf3f7f8))
             .text_size(px(16.))
             .child(self.accessible_root_name.clone())
@@ -59,6 +61,9 @@ impl Render for DesktopView {
                     .tab_index(0)
                     .p_2()
                     .cursor_pointer()
+                    .when(high_contrast, |element| {
+                        element.border_2().border_color(rgb(0xffff00))
+                    })
                     .on_click(move |_, _, _| {
                         if let Some(action) = &action {
                             action();

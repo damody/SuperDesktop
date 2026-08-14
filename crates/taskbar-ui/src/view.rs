@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use gpui::{
     Context, InteractiveElement, IntoElement, ParentElement, Render, StatefulInteractiveElement,
-    Styled, Window, div, px, rgb,
+    Styled, Window, div, linear_color_stop, linear_gradient, prelude::FluentBuilder as _, px, rgb,
 };
 
 use crate::{AccessibleTask, StatusRegion, TaskbarLayout};
@@ -29,6 +29,7 @@ impl Render for TaskbarView {
         let start = self.callbacks.as_ref().map(|value| Rc::clone(&value.start));
         let fixed = self.callbacks.as_ref().map(|value| Rc::clone(&value.fixed));
         let task_callback = self.callbacks.as_ref().map(|value| Rc::clone(&value.task));
+        let high_contrast = std::env::var("SUPERDESKTOP_THEME").as_deref() == Ok("high-contrast");
         if let Some(rendered) = self
             .callbacks
             .as_ref()
@@ -45,8 +46,17 @@ impl Render for TaskbarView {
             .flex_row()
             .flex_wrap()
             .items_center()
-            .bg(rgb(0xe8f5f2))
-            .text_color(rgb(0x182220))
+            .bg(linear_gradient(
+                90.,
+                linear_color_stop(rgb(0xd8eeb8), 0.),
+                linear_color_stop(rgb(0xc3efef), 1.),
+            ))
+            .text_color(if high_contrast {
+                rgb(0xffffff)
+            } else {
+                rgb(0x182220)
+            })
+            .when(high_contrast, |element| element.bg(rgb(0x000000)))
             .text_size(px(14.))
             .child(
                 div()
@@ -61,6 +71,9 @@ impl Render for TaskbarView {
                     .items_center()
                     .justify_center()
                     .cursor_pointer()
+                    .when(high_contrast, |element| {
+                        element.border_2().border_color(rgb(0xffff00))
+                    })
                     .on_click(move |_, _, _| {
                         if let Some(callback) = &start {
                             callback();

@@ -336,6 +336,9 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
             if let Ok(locale) = std::env::var("SUPERDESKTOP_LOCALE") {
                 trace_action(&format!("locale:{locale}"));
             }
+            if let Ok(theme) = std::env::var("SUPERDESKTOP_THEME") {
+                trace_action(&format!("theme:{theme}"));
+            }
 
             let refresh_handles = taskbar_handles.clone();
             let refresh_background = cx.background_executor().clone();
