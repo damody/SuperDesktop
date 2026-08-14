@@ -1,0 +1,39 @@
+{
+    "schema":  "core-quality-gates/v1",
+    "change":  "build-superdesktop-shell-core",
+    "result_revision":  "b5457cbc",
+    "recorded_at":  "2026-08-14T04:09:51.9618101Z",
+    "commands":  [
+                     {
+                         "command":  "cargo fmt --all -- --check",
+                         "exit_status":  0
+                     },
+                     {
+                         "command":  "cargo check --workspace --all-targets --locked --offline",
+                         "exit_status":  0
+                     },
+                     {
+                         "command":  "cargo test --workspace --all-targets --locked --offline",
+                         "exit_status":  0,
+                         "core_tests":  18,
+                         "settings_tests":  12,
+                         "consumer_tests":  4
+                     },
+                     {
+                         "command":  "cargo clippy --workspace --all-targets --locked --offline -- -D warnings",
+                         "exit_status":  0
+                     },
+                     {
+                         "command":  "scripts/check-dependency-architecture.ps1",
+                         "exit_status":  0
+                     },
+                     {
+                         "command":  "scripts/verify-core-architecture.ps1",
+                         "exit_status":  0
+                     },
+                     {
+                         "command":  "openspec validate build-superdesktop-shell-core --strict",
+                         "exit_status":  0
+                     }
+                 ]
+}

@@ -1,0 +1,23 @@
+{
+    "schema":  "core-work-package-evidence/v1",
+    "change":  "build-superdesktop-shell-core",
+    "group":  "3.1",
+    "generated_at":  "2026-08-14T04:09:51.9618101Z",
+    "status":  "passed",
+    "inputs":  [
+                   {
+                       "path":  "crates/settings-store/src/json.rs",
+                       "sha256":  "85BDD9E456A13759C78FFCC17C983008D726E5C74896DF2B93B980A2DE7031EF",
+                       "bytes":  8928
+                   },
+                   {
+                       "path":  "crates/settings-store/src/schema.rs",
+                       "sha256":  "FBF917D3820AEC7596E77E4549FDB3EB47FEB030332CD232F1CC3A13E7CE9EA2",
+                       "bytes":  17216
+                   }
+               ],
+    "assertions":  [
+                       "unit-tests-passed",
+                       "contract-owned-and-deterministic"
+                   ]
+}

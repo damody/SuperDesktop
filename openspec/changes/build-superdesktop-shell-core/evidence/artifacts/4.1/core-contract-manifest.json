@@ -1,0 +1,101 @@
+{
+    "schema":  "shell-core-contract/v1",
+    "change":  "build-superdesktop-shell-core",
+    "result_revision":  "b5457cbc",
+    "generated_at":  "2026-08-14T04:09:51.9618101Z",
+    "public_contract":  "owned platform-neutral state/event/effect/settings DTO",
+    "consumers":  [
+                      "desktop",
+                      "taskbar",
+                      "bridge",
+                      "lifecycle"
+                  ],
+    "inputs":  [
+                   {
+                       "path":  "Cargo.lock",
+                       "sha256":  "6FED3FDE8C247157C0D9C14D8240429EA88CFDB804C2EFD6D9957963B7FC0A10",
+                       "bytes":  123813
+                   },
+                   {
+                       "path":  "crates/settings-store/Cargo.toml",
+                       "sha256":  "0CCECEB7442ABD3C4ADCF7D1C3AF4D201829F20C08F659555145F16CEA4C7FDD",
+                       "bytes":  165
+                   },
+                   {
+                       "path":  "crates/settings-store/src/json.rs",
+                       "sha256":  "85BDD9E456A13759C78FFCC17C983008D726E5C74896DF2B93B980A2DE7031EF",
+                       "bytes":  8928
+                   },
+                   {
+                       "path":  "crates/settings-store/src/lib.rs",
+                       "sha256":  "F19ED928DB6EAD0B19FE0877478FB6A21B4A42756334166F3595C3E802CAE325",
+                       "bytes":  609
+                   },
+                   {
+                       "path":  "crates/settings-store/src/schema.rs",
+                       "sha256":  "FBF917D3820AEC7596E77E4549FDB3EB47FEB030332CD232F1CC3A13E7CE9EA2",
+                       "bytes":  17216
+                   },
+                   {
+                       "path":  "crates/settings-store/src/store.rs",
+                       "sha256":  "611C0EE13B00D84172C04BED8A372BB8F25B9B7224A2C2E74905CC06DAC411A0",
+                       "bytes":  13606
+                   },
+                   {
+                       "path":  "crates/shell-core/Cargo.toml",
+                       "sha256":  "537C148BB6D293FFBC8FDA3C8F9F0DF4E393A89DA8FE4940EB6AB005DAFEB946",
+                       "bytes":  161
+                   },
+                   {
+                       "path":  "crates/shell-core/src/bridge.rs",
+                       "sha256":  "EF9B6F725B9D848725892DC3345420E70FE8AC5BE71B368C44071347EF930FD1",
+                       "bytes":  3067
+                   },
+                   {
+                       "path":  "crates/shell-core/src/identity.rs",
+                       "sha256":  "EA310FBA926CC73E9263688831FCE9A4F656E8B1990C8EDC57B74FAF80FD1E75",
+                       "bytes":  4037
+                   },
+                   {
+                       "path":  "crates/shell-core/src/lib.rs",
+                       "sha256":  "7E5F92A6498096EAB5EF821EC9AE9C708ECB459EBCFCF9C1F8B2788F6D19C4C4",
+                       "bytes":  1027
+                   },
+                   {
+                       "path":  "crates/shell-core/src/model.rs",
+                       "sha256":  "E1F6DEEAEE2295A1374915293ADCA7FD2033B49E87F6B64E4524986A4E9546C3",
+                       "bytes":  5733
+                   },
+                   {
+                       "path":  "crates/shell-core/src/queue.rs",
+                       "sha256":  "5363DF319DF1E356285713EEBE5E7BEBD46E90B28E4EBFE1A38852C988E514F9",
+                       "bytes":  5979
+                   },
+                   {
+                       "path":  "crates/shell-core/src/reducer.rs",
+                       "sha256":  "6F56E1855EE9096D63E15D67BB0E30ACC3D1242933665598D6C9332909710FBB",
+                       "bytes":  23025
+                   },
+                   {
+                       "path":  "crates/superdesktop-test-support/Cargo.toml",
+                       "sha256":  "33F3A73AF3E3F97049408CA0B5490EB68579ED4456D623DBA9C8E01BE5EE3709",
+                       "bytes":  420
+                   },
+                   {
+                       "path":  "crates/superdesktop-test-support/src/shell_fixture.rs",
+                       "sha256":  "B3A19038DDA2F11C21C100C162983676BACACCC6CA7B30FF3BF67291446A834E",
+                       "bytes":  2819
+                   },
+                   {
+                       "path":  "crates/superdesktop-test-support/tests/core_consumers.rs",
+                       "sha256":  "DEB52EB81F28F2C405F3C5F692C59449B5747A3C8CB8C132C36A2CE456095EDD",
+                       "bytes":  2526
+                   }
+               ],
+    "combined_input_sha256":  "626C15588B08882CB523EC5B33512535589C005A9F3A9B2F45FFCE7395C19FEA",
+    "gates":  {
+                  "G-ARCH":  "passed",
+                  "G-TRACE":  "passed",
+                  "G-SAFETY":  "passed"
+              }
+}

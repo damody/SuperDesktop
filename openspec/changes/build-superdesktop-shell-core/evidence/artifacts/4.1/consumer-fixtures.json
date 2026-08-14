@@ -1,0 +1,23 @@
+{
+    "schema":  "core-work-package-evidence/v1",
+    "change":  "build-superdesktop-shell-core",
+    "group":  "4.1-consumers",
+    "generated_at":  "2026-08-14T04:09:51.9618101Z",
+    "status":  "passed",
+    "inputs":  [
+                   {
+                       "path":  "crates/superdesktop-test-support/src/shell_fixture.rs",
+                       "sha256":  "B3A19038DDA2F11C21C100C162983676BACACCC6CA7B30FF3BF67291446A834E",
+                       "bytes":  2819
+                   },
+                   {
+                       "path":  "crates/superdesktop-test-support/tests/core_consumers.rs",
+                       "sha256":  "DEB52EB81F28F2C405F3C5F692C59449B5747A3C8CB8C132C36A2CE456095EDD",
+                       "bytes":  2526
+                   }
+               ],
+    "assertions":  [
+                       "unit-tests-passed",
+                       "contract-owned-and-deterministic"
+                   ]
+}

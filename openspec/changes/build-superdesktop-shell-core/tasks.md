@@ -114,6 +114,6 @@
 
 - [x] 4.1.1 建立 fake platform/effect adapters 與 deterministic fixture builders。
 - [x] 4.1.2 建立 desktop、taskbar、bridge、lifecycle consumer compile fixtures。
-- [ ] 4.1.3 以 SHA-256 雜湊 canonical public API、DTO/effect schema 與 fake-adapter input manifest，產生 shell-core contract hash。
-- [ ] 4.1.4 執行 fmt、check、clippy 與 core tests 並索引 evidence。
-- [ ] 4.1.5 產生 core handoff manifest，記錄 contract hash、base/result revision、consumer 與 gate disposition。
+- [x] 4.1.3 以 SHA-256 雜湊 canonical public API、DTO/effect schema 與 fake-adapter input manifest，產生 shell-core contract hash。
+- [x] 4.1.4 執行 fmt、check、clippy 與 core tests 並索引 evidence。
+- [x] 4.1.5 產生 core handoff manifest，記錄 contract hash、base/result revision、consumer 與 gate disposition。

@@ -1,0 +1,33 @@
+{
+    "schema":  "core-work-package-evidence/v1",
+    "change":  "build-superdesktop-shell-core",
+    "group":  "1.1",
+    "generated_at":  "2026-08-14T04:09:51.9618101Z",
+    "status":  "passed",
+    "inputs":  [
+                   {
+                       "path":  "crates/shell-core/src/identity.rs",
+                       "sha256":  "EA310FBA926CC73E9263688831FCE9A4F656E8B1990C8EDC57B74FAF80FD1E75",
+                       "bytes":  4037
+                   },
+                   {
+                       "path":  "crates/shell-core/src/bridge.rs",
+                       "sha256":  "EF9B6F725B9D848725892DC3345420E70FE8AC5BE71B368C44071347EF930FD1",
+                       "bytes":  3067
+                   },
+                   {
+                       "path":  "crates/shell-core/src/model.rs",
+                       "sha256":  "E1F6DEEAEE2295A1374915293ADCA7FD2033B49E87F6B64E4524986A4E9546C3",
+                       "bytes":  5733
+                   },
+                   {
+                       "path":  "openspec/changes/build-superdesktop-shell-core/scripts/verify-core-architecture.ps1",
+                       "sha256":  "6EFDB6DD48AEF4699A5555E4E44F37E65DAEC5A2DB77F9F9A1DFF06B93E3DF52",
+                       "bytes":  886
+                   }
+               ],
+    "assertions":  [
+                       "unit-tests-passed",
+                       "contract-owned-and-deterministic"
+                   ]
+}

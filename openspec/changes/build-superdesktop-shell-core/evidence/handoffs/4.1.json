@@ -1,0 +1,22 @@
+{
+    "schema":  "shell-core-handoff/v1",
+    "change":  "build-superdesktop-shell-core",
+    "producer":  "Core owner",
+    "consumers":  [
+                      "build-superdesktop-gpui-desktop",
+                      "build-superdesktop-gpui-taskbar",
+                      "integrate-superexplorer-process-bridge",
+                      "add-superdesktop-shell-takeover-recovery"
+                  ],
+    "base_revision":  "8bb994e2",
+    "result_revision":  "b5457cbc",
+    "contract_manifest":  "evidence/artifacts/4.1/core-contract-manifest.json",
+    "contract_manifest_sha256":  "EC7274261C39122474322A398049F8B8FD41B6AAC1AA3927E85C42B74C297C18",
+    "combined_input_sha256":  "626C15588B08882CB523EC5B33512535589C005A9F3A9B2F45FFCE7395C19FEA",
+    "status":  "passed-active-archive-deferred",
+    "gates":  {
+                  "G-ARCH":  "passed",
+                  "G-TRACE":  "passed",
+                  "G-SAFETY":  "passed"
+              }
+}
