@@ -1,6 +1,6 @@
 {
     "schema":  "m0-build-gate/v1",
-    "revision":  "2dfe4a54",
+    "revision":  "c1e6cd09",
     "all_exit_zero":  true,
     "command_log_count":  6,
     "app_sha256":  "",

@@ -8,4 +8,4 @@ At D:\SuperDesktop\SuperDesktop\scripts\capture-m0-local-evidence.ps1:24 char:31
    Compiling taskbar-ui v0.1.0 (D:\SuperDesktop\SuperDesktop\crates\taskbar-ui)
    Compiling superdesktop-app v0.1.0 (D:\SuperDesktop\SuperDesktop\crates\superdesktop-app)
    Compiling superdesktop-test-support v0.1.0 (D:\SuperDesktop\SuperDesktop\crates\superdesktop-test-support)
-    Finished `release` profile [optimized] target(s) in 2.17s
+    Finished `release` profile [optimized] target(s) in 2.24s

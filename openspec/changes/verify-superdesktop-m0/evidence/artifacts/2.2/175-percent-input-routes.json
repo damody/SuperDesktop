@@ -1,0 +1,99 @@
+{
+    "schema":  "m0-real-input-routes/v1",
+    "app_sha256":  "0F1870E89F9453F8EB682D7D17FB85237716EAFF7B7C4832C6A4CB4E91978D67",
+    "superexplorer_sha256":  "132A37AAF9B3144A3B0F564A500035F60BE3ABD32B345CA0D003DEB052859FB7",
+    "route_count":  6,
+    "all_passed":  true,
+    "routes":  [
+                   {
+                       "surface":  "desktop",
+                       "route":  "pointer",
+                       "result":  "passed",
+                       "control_name":  "SuperExplorer",
+                       "control_type":  "ControlType.Button",
+                       "bounds":  {
+                                      "left":  14,
+                                      "top":  8,
+                                      "width":  182,
+                                      "height":  196
+                                  },
+                       "launched_process_count":  1,
+                       "trace_contains_launch":  true
+                   },
+                   {
+                       "surface":  "desktop",
+                       "route":  "keyboard",
+                       "result":  "passed",
+                       "control_name":  "SuperExplorer",
+                       "control_type":  "ControlType.Button",
+                       "bounds":  {
+                                      "left":  14,
+                                      "top":  8,
+                                      "width":  182,
+                                      "height":  196
+                                  },
+                       "launched_process_count":  1,
+                       "trace_contains_launch":  true
+                   },
+                   {
+                       "surface":  "desktop",
+                       "route":  "uia",
+                       "result":  "passed",
+                       "control_name":  "SuperExplorer",
+                       "control_type":  "ControlType.Button",
+                       "bounds":  {
+                                      "left":  14,
+                                      "top":  8,
+                                      "width":  182,
+                                      "height":  196
+                                  },
+                       "launched_process_count":  1,
+                       "trace_contains_launch":  true
+                   },
+                   {
+                       "surface":  "taskbar",
+                       "route":  "pointer",
+                       "result":  "passed",
+                       "control_name":  "SuperExplorer",
+                       "control_type":  "ControlType.Button",
+                       "bounds":  {
+                                      "left":  84,
+                                      "top":  1874,
+                                      "width":  262,
+                                      "height":  70
+                                  },
+                       "launched_process_count":  1,
+                       "trace_contains_launch":  true
+                   },
+                   {
+                       "surface":  "taskbar",
+                       "route":  "keyboard",
+                       "result":  "passed",
+                       "control_name":  "SuperExplorer",
+                       "control_type":  "ControlType.Button",
+                       "bounds":  {
+                                      "left":  84,
+                                      "top":  1874,
+                                      "width":  262,
+                                      "height":  70
+                                  },
+                       "launched_process_count":  1,
+                       "trace_contains_launch":  true
+                   },
+                   {
+                       "surface":  "taskbar",
+                       "route":  "uia",
+                       "result":  "passed",
+                       "control_name":  "SuperExplorer",
+                       "control_type":  "ControlType.Button",
+                       "bounds":  {
+                                      "left":  84,
+                                      "top":  1874,
+                                      "width":  262,
+                                      "height":  70
+                                  },
+                       "launched_process_count":  1,
+                       "trace_contains_launch":  true
+                   }
+               ]
+}

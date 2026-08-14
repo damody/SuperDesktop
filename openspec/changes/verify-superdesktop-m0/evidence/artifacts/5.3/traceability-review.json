@@ -1,10 +1,10 @@
 {
     "schema":  "m0-traceability-review/v1",
-    "revision":  "2dfe4a54",
+    "revision":  "c1e6cd09",
     "total_tasks":  93,
-    "passed":  66,
-    "blocked":  27,
-    "coverage_percent":  70.97,
+    "passed":  67,
+    "blocked":  26,
+    "coverage_percent":  72.04,
     "tasks":  [
                   {
                       "id":  "1.1.1",
@@ -153,7 +153,7 @@
                   {
                       "id":  "2.2.4",
                       "group":  "2.2",
-                      "status":  "blocked",
+                      "status":  "passed",
                       "artifact":  "evidence/artifacts/2.2/dpi-matrix.json"
                   },
                   {

@@ -1,24 +1,98 @@
 {
-    "schema":  "m0-dpi-matrix/v1",
-    "dpi":  [
-                96,
-                120,
-                144,
-                168,
-                192
-            ],
-    "scales":  [
-                   100,
-                   125,
-                   150,
-                   175,
-                   200
-               ],
-    "visual_ssim":  0.98833894279404633,
+    "schema":  "m0-dpi-matrix/v2",
+    "required_dpi":  [
+                         96,
+                         120,
+                         144,
+                         168,
+                         192
+                     ],
+    "required_scales":  [
+                            100,
+                            125,
+                            150,
+                            175,
+                            200
+                        ],
+    "current_host_dpi":  168,
+    "current_host_scale":  175,
+    "samples":  [
+                    {
+                        "task_id":  "2.2.4",
+                        "scale_percent":  175,
+                        "dpi":  168,
+                        "status":  "passed",
+                        "captured_at":  "2026-08-14T09:58:26.8372546Z",
+                        "monitor":  {
+                                        "device_name":  "\\\\.\\DISPLAY1",
+                                        "primary":  true,
+                                        "bounds":  {
+                                                       "left":  0,
+                                                       "top":  0,
+                                                       "right":  3840,
+                                                       "bottom":  2160
+                                                   },
+                                        "work_area":  {
+                                                          "left":  0,
+                                                          "top":  0,
+                                                          "right":  3840,
+                                                          "bottom":  2018
+                                                      },
+                                        "dpi_x":  168,
+                                        "dpi_y":  168
+                                    },
+                        "assertions":  {
+                                           "visual_ssim":  0.98833894279404633,
+                                           "minimum_ssim":  0.95,
+                                           "desktop_reference":  "passed",
+                                           "input_routes":  6,
+                                           "state_count":  5,
+                                           "taskbar_physical_height":  142,
+                                           "expected_taskbar_height":  140,
+                                           "geometry_tolerance":  4,
+                                           "minimum_hit_target_physical":  70,
+                                           "work_area_restored":  true
+                                       },
+                        "artifacts":  [
+                                          {
+                                              "kind":  "monitor",
+                                              "path":  "evidence/artifacts/2.2/175-percent-monitor-profile.json",
+                                              "sha256":  "D0BE6BE5EF384996D59E38688143752DBC822FA2E570E3B106B10A2C39BE2B11"
+                                          },
+                                          {
+                                              "kind":  "taskbar",
+                                              "path":  "evidence/artifacts/2.2/175-percent-taskbar.png",
+                                              "sha256":  "2827D8B416C2099092A9B41FE30E2C39A0F9D27DA323B6E2EE52EE99D5BED7D7"
+                                          },
+                                          {
+                                              "kind":  "desktop",
+                                              "path":  "evidence/artifacts/2.2/175-percent-desktop.png",
+                                              "sha256":  "D0C21E7A0679C6329C523B715DE8AB8321CFAF22ABBF004EBBA4DE5BFC4946A7"
+                                          },
+                                          {
+                                              "kind":  "inputs",
+                                              "path":  "evidence/artifacts/2.2/175-percent-input-routes.json",
+                                              "sha256":  "17916C127CEB74BAF8783843DD6CF53BE783799D4CBDD3E336D09C45FA1205CC"
+                                          },
+                                          {
+                                              "kind":  "states",
+                                              "path":  "evidence/artifacts/2.2/175-percent-state-matrix.json",
+                                              "sha256":  "23E3E7D3AD4BF8B01752F09FDB9D0EA8EB83C0F9965DC6831CF5B98C7333DD0D"
+                                          }
+                                      ]
+                    }
+                ],
+    "passed_task_ids":  [
+                            "2.2.4"
+                        ],
+    "remaining_task_ids":  [
+                               "2.2.1",
+                               "2.2.2",
+                               "2.2.3",
+                               "2.2.5"
+                           ],
+    "comparison_task":  "2.2.6 blocked until all five samples pass",
     "model_geometry":  "passed",
-    "headful_capture":  "failed-reference-ssim",
     "logical_positions":  "model-passed",
-    "hit_targets":  "model \u003e=40 logical px scaled",
-    "work_area":  "model-baseline",
-    "tests":  "cargo :    Compiling superdesktop-test-support v0.1.0 (D:\\SuperDesktop\\SuperDesktop\\crates\\superdesktop-test-support)\r\nAt D:\\SuperDesktop\\SuperDesktop\\scripts\\capture-m0-local-evidence.ps1:43 char:59\r\n+ ... n harness\u0027 {cargo test --release -p superdesktop-test-support verific ...\r\n+                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n    + CategoryInfo          : NotSpecified: (   Compiling su...p-test-support):String) [], RemoteException\r\n    + FullyQualifiedErrorId : NativeCommandError\r\n \r\n    Finished `release` profile [optimized] target(s) in 0.87s\r\n     Running unittests src\\lib.rs (target\\release\\deps\\superdesktop_test_support-32218053a1ed906c.exe)\r\n\r\nrunning 6 tests\r\ntest verification::tests::every_resource_counter_has_an_independent_bound_and_stable_tail ... ok\r\ntest verification::tests::ime_composition_commit_cancel_preserve_focus ... ok\r\ntest verification::tests::fixed_performance_thresholds_use_raw_samples ... ok\r\ntest verification::tests::visual_contract_rejects_ssim_geometry_state_and_hit_target_drift ... ok\r\ntest verification::tests::zh_tw_english_zh_cn_fallback_and_rtl_are_layout_safe ... ok\r\ntest verification::tests::five_dpi_visual_geometry_and_hit_target_matrix_passes ... ok\r\n\r\ntest result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s\r\n\r\n     Running unittests src\\main.rs (target\\release\\deps\\superdesktop_test_support-5d01f5c6a4fcb402.exe)\r\n\r\nrunning 0 tests\r\n\r\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\r\n\r\n     Running tests\\core_consumers.rs (target\\release\\deps\\core_consumers-5ecd62ef647e69fa.exe)\r\n\r\nrunning 0 tests\r\n\r\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 4 filtered out; finished in 0.00s"
+    "tests":  "cargo :    Compiling superdesktop-test-support v0.1.0 (D:\\SuperDesktop\\SuperDesktop\\crates\\superdesktop-test-support)\r\nAt D:\\SuperDesktop\\SuperDesktop\\scripts\\capture-m0-local-evidence.ps1:43 char:59\r\n+ ... n harness\u0027 {cargo test --release -p superdesktop-test-support verific ...\r\n+                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n    + CategoryInfo          : NotSpecified: (   Compiling su...p-test-support):String) [], RemoteException\r\n    + FullyQualifiedErrorId : NativeCommandError\r\n \r\n    Finished `release` profile [optimized] target(s) in 0.91s\r\n     Running unittests src\\lib.rs (target\\release\\deps\\superdesktop_test_support-32218053a1ed906c.exe)\r\n\r\nrunning 6 tests\r\ntest verification::tests::every_resource_counter_has_an_independent_bound_and_stable_tail ... ok\r\ntest verification::tests::fixed_performance_thresholds_use_raw_samples ... ok\r\ntest verification::tests::five_dpi_visual_geometry_and_hit_target_matrix_passes ... ok\r\ntest verification::tests::ime_composition_commit_cancel_preserve_focus ... ok\r\ntest verification::tests::zh_tw_english_zh_cn_fallback_and_rtl_are_layout_safe ... ok\r\ntest verification::tests::visual_contract_rejects_ssim_geometry_state_and_hit_target_drift ... ok\r\n\r\ntest result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s\r\n\r\n     Running unittests src\\main.rs (target\\release\\deps\\superdesktop_test_support-5d01f5c6a4fcb402.exe)\r\n\r\nrunning 0 tests\r\n\r\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\r\n\r\n     Running tests\\core_consumers.rs (target\\release\\deps\\core_consumers-5ecd62ef647e69fa.exe)\r\n\r\nrunning 0 tests\r\n\r\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 4 filtered out; finished in 0.00s"
 }
