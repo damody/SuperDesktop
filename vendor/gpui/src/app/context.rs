@@ -16,6 +16,25 @@ use std::{
 
 use super::{App, AsyncWindowContext, Entity, KeystrokeEvent};
 
+thread_local! {
+    static CALLBACK_PANIC_HANDLER: std::cell::RefCell<Option<Box<dyn FnMut()>>> =
+        std::cell::RefCell::new(None);
+}
+
+/// Registers the platform-thread handler used when a public GPUI callback
+/// panics inside an application update.
+pub fn on_callback_panic(handler: impl FnMut() + 'static) {
+    CALLBACK_PANIC_HANDLER.with(|slot| *slot.borrow_mut() = Some(Box::new(handler)));
+}
+
+fn dispatch_callback_panic() {
+    CALLBACK_PANIC_HANDLER.with(|slot| {
+        if let Some(handler) = slot.borrow_mut().as_mut() {
+            handler();
+        }
+    });
+}
+
 /// The app context, with specialized behavior for the given entity.
 pub struct Context<'a, T> {
     app: &'a mut App,
@@ -432,8 +451,15 @@ impl<'a, T: 'static> Context<'a, T> {
         let (subscription, activate) = window.bounds_observers.insert(
             (),
             Box::new(move |window, cx| {
-                view.update(cx, |view, cx| callback(view, window, cx))
-                    .is_ok()
+                match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    view.update(cx, |view, cx| callback(view, window, cx))
+                })) {
+                    Ok(result) => result.is_ok(),
+                    Err(_) => {
+                        dispatch_callback_panic();
+                        false
+                    }
+                }
             }),
         );
         activate();

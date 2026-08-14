@@ -1,0 +1,1 @@
+{"schema":"guardian-terminal/v3","parent_terminal_observed":true,"unique_success_terminal_count":1,"child_handles_before":68,"child_handles_after":66,"released_inherited_handles":2,"explicit_allowlist_exact":true,"verified_roles":["parent-wait-handle","one-shot-read-channel"]}

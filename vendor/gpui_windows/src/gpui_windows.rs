@@ -44,5 +44,6 @@ pub(crate) use window::*;
 pub(crate) use wrapper::*;
 
 pub use platform::WindowsPlatform;
+pub use window::{WindowsCallbackFatal, on_callback_fatal, take_callback_fatal};
 
 pub(crate) use windows::Win32::Foundation::HWND;

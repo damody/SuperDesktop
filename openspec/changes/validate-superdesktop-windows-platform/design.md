@@ -33,3 +33,8 @@
 ## Open Questions
 
 無；失敗項依 adjustment policy 處理。
+## Corrective decision B-W2-3.5-001
+
+- The pinned upstream revision remains `8945e2981b9fd00ca887e042d8adb9acc241b168`, with an audited local Apache-2.0 patch recorded by the v4 exact-set substrate contract.
+- Public GPUI callback panics are contained inside the application update, delivered as an at-most-once `WindowsCallbackFatal`, and drive both `WM_NCDESTROY` and GPUI `on_window_closed` terminals.
+- Start invocation uses the supported Win32 `SendInput` keyboard contract, verifies the foreground host as `StartMenuExperienceHost.exe` or `SearchHost.exe` under `C:\Windows\SystemApps`, and sends Escape to restore interaction state. No ExplorerPatcher private ABI is called.

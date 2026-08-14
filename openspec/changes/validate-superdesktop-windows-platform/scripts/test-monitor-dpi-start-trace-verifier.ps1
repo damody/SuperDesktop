@@ -20,7 +20,9 @@ function Assert-Rejected { param([string]$Name,$Trace)
 
 $case=Clone-Trace $base;$case.PSObject.Properties.Remove('dpi_awareness');Assert-Rejected 'missing-awareness' $case
 $case=Clone-Trace $base;$case.explorer_mutations=$true;Assert-Rejected 'explorer-mutation-flag' $case
-$case=Clone-Trace $base;$case.start_invocation_attempted=$true;Assert-Rejected 'start-invocation-flag' $case
+$case=Clone-Trace $base;$case.start_invocation_attempted=$false;Assert-Rejected 'start-invocation-flag' $case
+$case=Clone-Trace $base;$case.start_host.host_observation.path='C:\Temp\SearchHost.exe';Assert-Rejected 'untrusted-start-host-path' $case
+$case=Clone-Trace $base;$case.start_host.restored=$false;Assert-Rejected 'start-restore-failed' $case
 $case=Clone-Trace $base;$case.virtual_fixture.events[2].dpi_x=96;Assert-Rejected 'virtual-dpi-transition' $case
 $case=Clone-Trace $base;$case.input_contract.runner_source_sha256=('0' * 64);Assert-Rejected 'hash-substitution' $case
 $case=Clone-Trace $base;$case.external_snapshot.equality_passed=$false;Assert-Rejected 'external-snapshot-false-flag' $case

@@ -186,7 +186,7 @@ fn trace_json(trace: BridgeTrace, bindings: &TraceBindings) -> String {
 fn live_win32_hwnd(window: &Window) -> Result<isize, String> {
     let borrowed = HasWindowHandle::window_handle(window).map_err(|error| error.to_string())?;
     match borrowed.as_raw() {
-        RawWindowHandle::Win32(handle) => Ok(handle.hwnd.get() as isize),
+        RawWindowHandle::Win32(handle) => Ok(handle.hwnd.get()),
         _ => Err("gpui-non-win32-hwnd".to_string()),
     }
 }
@@ -386,14 +386,14 @@ fn run() -> Result<String, String> {
 fn main() -> ExitCode {
     match run() {
         Ok(trace) => {
-            if let Ok(path) = env::var("NATIVE_WINDOW_SPIKE_OUTPUT") {
-                if let Err(error) = fs::write(path, &trace) {
-                    println!(
-                        "{{\"admitted\":false,\"error\":\"trace-write:{}\"}}",
-                        json_escape(&error.to_string())
-                    );
-                    return ExitCode::from(2);
-                }
+            if let Ok(path) = env::var("NATIVE_WINDOW_SPIKE_OUTPUT")
+                && let Err(error) = fs::write(path, &trace)
+            {
+                println!(
+                    "{{\"admitted\":false,\"error\":\"trace-write:{}\"}}",
+                    json_escape(&error.to_string())
+                );
+                return ExitCode::from(2);
             }
             println!("{trace}");
             ExitCode::SUCCESS

@@ -6,7 +6,10 @@ use std::{
     path::PathBuf,
     rc::{Rc, Weak},
     str::FromStr,
-    sync::{Arc, Once, atomic::AtomicBool},
+    sync::{
+        Arc, Mutex, Once, OnceLock,
+        atomic::{AtomicBool, AtomicIsize, Ordering},
+    },
     time::{Duration, Instant},
 };
 
@@ -42,6 +45,71 @@ use gpui::*;
 use gpui_wgpu::{WgpuRenderer, WgpuSurfaceConfig, wgpu};
 
 pub(crate) struct WindowsWindow(pub Rc<WindowsWindowInner>);
+
+/// Typed evidence that a panic was contained by the pinned Windows backend's
+/// outermost window procedure. The event remains available after HWND teardown.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct WindowsCallbackFatal {
+    pub hwnd: isize,
+    pub message: u32,
+    pub wm_ncdestroy_observed: bool,
+}
+
+static CALLBACK_FATALS: OnceLock<Mutex<Vec<WindowsCallbackFatal>>> = OnceLock::new();
+static LAST_DISPATCH_HWND: AtomicIsize = AtomicIsize::new(0);
+thread_local! {
+    static CALLBACK_FATAL_HANDLER: RefCell<Option<Box<dyn FnMut(WindowsCallbackFatal)>>> =
+        RefCell::new(None);
+}
+
+fn callback_fatals() -> &'static Mutex<Vec<WindowsCallbackFatal>> {
+    CALLBACK_FATALS.get_or_init(|| Mutex::new(Vec::new()))
+}
+
+pub(crate) fn record_callback_fatal(hwnd: HWND, message: u32) {
+    let mut events = callback_fatals().lock().unwrap_or_else(|error| error.into_inner());
+    if !events.iter().any(|event| event.hwnd == hwnd.0 as isize) {
+        events.push(WindowsCallbackFatal {
+            hwnd: hwnd.0 as isize,
+            message,
+            wm_ncdestroy_observed: false,
+        });
+    }
+}
+
+pub(crate) fn last_dispatched_window() -> HWND {
+    HWND(LAST_DISPATCH_HWND.load(Ordering::Relaxed) as _)
+}
+
+fn record_callback_terminal(hwnd: HWND) {
+    let mut events = callback_fatals().lock().unwrap_or_else(|error| error.into_inner());
+    if let Some(event) = events.iter_mut().find(|event| event.hwnd == hwnd.0 as isize) {
+        event.wm_ncdestroy_observed = true;
+    }
+}
+
+/// Takes the at-most-once typed fatal event for a retired Windows HWND.
+pub fn take_callback_fatal(hwnd: isize) -> Option<WindowsCallbackFatal> {
+    let mut events = callback_fatals().lock().unwrap_or_else(|error| error.into_inner());
+    let index = events.iter().position(|event| event.hwnd == hwnd)?;
+    Some(events.remove(index))
+}
+
+/// Registers the UI-thread consumer for an at-most-once typed callback fatal.
+pub fn on_callback_fatal(handler: impl FnMut(WindowsCallbackFatal) + 'static) {
+    CALLBACK_FATAL_HANDLER.with(|slot| *slot.borrow_mut() = Some(Box::new(handler)));
+}
+
+pub(crate) fn dispatch_callback_fatal(hwnd: isize) {
+    let Some(event) = take_callback_fatal(hwnd) else {
+        return;
+    };
+    CALLBACK_FATAL_HANDLER.with(|slot| {
+        if let Some(mut handler) = slot.borrow_mut().take() {
+            handler(event);
+        }
+    });
+}
 
 impl std::ops::Deref for WindowsWindow {
     type Target = WindowsWindowInner;
@@ -1630,6 +1698,7 @@ unsafe extern "system" fn window_procedure(
     wparam: WPARAM,
     lparam: LPARAM,
 ) -> LRESULT {
+    LAST_DISPATCH_HWND.store(hwnd.0 as isize, Ordering::Relaxed);
     if msg == WM_NCCREATE {
         let window_params = unsafe { &*(lparam.0 as *const CREATESTRUCTW) };
         let window_creation_context = window_params.lpCreateParams as *mut WindowCreateContext;
@@ -1654,12 +1723,33 @@ unsafe extern "system" fn window_procedure(
     }
     let inner = unsafe { &*ptr };
     let result = if let Some(inner) = inner.upgrade() {
-        inner.handle_msg(hwnd, msg, wparam, lparam)
+        let inner = std::panic::AssertUnwindSafe(inner);
+        match std::panic::catch_unwind(|| inner.handle_msg(hwnd, msg, wparam, lparam)) {
+            Ok(result) => result,
+            Err(_) => {
+                record_callback_fatal(hwnd, msg);
+                if !matches!(msg, WM_DESTROY | WM_NCDESTROY) {
+                    // SAFETY: both handles and the validation nonce belong to
+                    // this backend. Deferred destruction runs after the
+                    // current GPUI update releases its application borrow.
+                    let _ = unsafe {
+                        PostMessageW(
+                            Some(inner.platform_window_handle),
+                            WM_GPUI_FATAL_CLOSE,
+                            WPARAM(inner.validation_number),
+                            LPARAM(hwnd.0 as isize),
+                        )
+                    };
+                }
+                LRESULT(0)
+            }
+        }
     } else {
         unsafe { DefWindowProcW(hwnd, msg, wparam, lparam) }
     };
 
     if msg == WM_NCDESTROY {
+        record_callback_terminal(hwnd);
         unsafe { set_window_long(hwnd, GWLP_USERDATA, 0) };
         unsafe { drop(Box::from_raw(ptr)) };
     }

@@ -5,7 +5,7 @@
 //! display was present. Start probing is read-only and returns unavailable unless a
 //! future, independently verified integration contract authorizes an invocation.
 
-use std::mem::size_of;
+use std::{mem::size_of, thread, time::Duration};
 
 use windows::{
     Win32::{
@@ -259,10 +259,224 @@ pub fn snapshot_real_monitors() -> Result<MonitorSnapshot, &'static str> {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum StartHostProbe {
+    Available {
+        taskbar_class: String,
+        host_class: String,
+        host_pid: u32,
+        host_executable: String,
+        input_events_sent: u32,
+        escape_events_sent: u32,
+        foreground_changed: bool,
+        restored: bool,
+    },
     Unavailable {
         reason: &'static str,
         observed_taskbar_class: Option<String>,
     },
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+struct RawKeybdInput {
+    virtual_key: u16,
+    scan_code: u16,
+    flags: u32,
+    time: u32,
+    extra_info: usize,
+}
+
+#[repr(C)]
+union RawInputData {
+    keyboard: RawKeybdInput,
+    _alignment: [u64; 4],
+}
+
+#[repr(C)]
+struct RawInput {
+    kind: u32,
+    data: RawInputData,
+}
+
+const INPUT_KEYBOARD: u32 = 1;
+const KEYEVENTF_KEYUP: u32 = 2;
+const VK_LWIN: u16 = 0x5b;
+const VK_ESCAPE: u16 = 0x1b;
+const PROCESS_QUERY_LIMITED_INFORMATION: u32 = 0x1000;
+
+#[link(name = "user32")]
+unsafe extern "system" {
+    #[link_name = "SendInput"]
+    fn raw_send_input(count: u32, inputs: *const RawInput, size: i32) -> u32;
+    #[link_name = "GetForegroundWindow"]
+    fn raw_get_foreground_window() -> isize;
+    #[link_name = "GetWindowThreadProcessId"]
+    fn raw_get_window_thread_process_id(hwnd: isize, process_id: *mut u32) -> u32;
+    #[link_name = "GetClassNameW"]
+    fn raw_get_class_name(hwnd: isize, class_name: *mut u16, max_count: i32) -> i32;
+}
+
+#[link(name = "kernel32")]
+unsafe extern "system" {
+    #[link_name = "OpenProcess"]
+    fn raw_open_process(access: u32, inherit: i32, process_id: u32) -> isize;
+    #[link_name = "QueryFullProcessImageNameW"]
+    fn raw_query_process_image(process: isize, flags: u32, name: *mut u16, size: *mut u32) -> i32;
+    #[link_name = "CloseHandle"]
+    fn raw_close_handle(handle: isize) -> i32;
+}
+
+fn send_key(virtual_key: u16) -> u32 {
+    let inputs = [
+        RawInput {
+            kind: INPUT_KEYBOARD,
+            data: RawInputData {
+                keyboard: RawKeybdInput {
+                    virtual_key,
+                    scan_code: 0,
+                    flags: 0,
+                    time: 0,
+                    extra_info: 0,
+                },
+            },
+        },
+        RawInput {
+            kind: INPUT_KEYBOARD,
+            data: RawInputData {
+                keyboard: RawKeybdInput {
+                    virtual_key,
+                    scan_code: 0,
+                    flags: KEYEVENTF_KEYUP,
+                    time: 0,
+                    extra_info: 0,
+                },
+            },
+        },
+    ];
+    // SAFETY: INPUT-compatible C layouts remain live for this synchronous call.
+    unsafe {
+        raw_send_input(
+            inputs.len() as u32,
+            inputs.as_ptr(),
+            size_of::<RawInput>() as i32,
+        )
+    }
+}
+
+fn raw_class_name(hwnd: isize) -> Option<String> {
+    let mut buffer = [0_u16; 256];
+    // SAFETY: bounded writable local UTF-16 buffer and observed HWND only.
+    let length = unsafe { raw_get_class_name(hwnd, buffer.as_mut_ptr(), buffer.len() as i32) };
+    (length > 0).then(|| String::from_utf16_lossy(&buffer[..length as usize]))
+}
+
+fn process_identity(hwnd: isize) -> Option<(u32, String)> {
+    let mut process_id = 0;
+    // SAFETY: process_id is a writable local output and hwnd is observation-only.
+    if unsafe { raw_get_window_thread_process_id(hwnd, &mut process_id) } == 0 || process_id == 0 {
+        return None;
+    }
+    // SAFETY: query-only rights, no inheritance, observed PID.
+    let process = unsafe { raw_open_process(PROCESS_QUERY_LIMITED_INFORMATION, 0, process_id) };
+    if process == 0 {
+        return None;
+    }
+    let mut buffer = [0_u16; 1024];
+    let mut length = buffer.len() as u32;
+    // SAFETY: query-only handle plus bounded writable UTF-16 buffer.
+    let queried =
+        unsafe { raw_query_process_image(process, 0, buffer.as_mut_ptr(), &mut length) != 0 };
+    // SAFETY: this function exclusively owns the process handle.
+    let _ = unsafe { raw_close_handle(process) };
+    queried.then(|| {
+        (
+            process_id,
+            String::from_utf16_lossy(&buffer[..length as usize]),
+        )
+    })
+}
+
+fn trusted_start_host(class_name: &str, executable: &str) -> bool {
+    let normalized = executable.replace('/', "\\").to_ascii_lowercase();
+    let executable_name = normalized.rsplit('\\').next().unwrap_or_default();
+    class_name == "Windows.UI.Core.CoreWindow"
+        && matches!(
+            executable_name,
+            "startmenuexperiencehost.exe" | "searchhost.exe"
+        )
+        && normalized.starts_with("c:\\windows\\systemapps\\")
+}
+
+/// Uses the supported Win32 keyboard-input contract to open Start, verifies the
+/// foreground Windows host identity, and always sends Escape to restore focus.
+pub fn invoke_start_host_controlled() -> StartHostProbe {
+    // SAFETY: name lookup only; the taskbar HWND is not retained after this call.
+    let taskbar = unsafe { FindWindowW(w!("Shell_TrayWnd"), PCWSTR::null()) };
+    let Ok(taskbar) = taskbar else {
+        return start_probe_from_observation(None);
+    };
+    let mut taskbar_buffer = [0_u16; 256];
+    // SAFETY: bounded local output buffer and observed HWND.
+    let taskbar_length = unsafe { GetClassNameW(taskbar, &mut taskbar_buffer) };
+    let taskbar_class = (taskbar_length > 0)
+        .then(|| String::from_utf16_lossy(&taskbar_buffer[..taskbar_length as usize]));
+    let Some(taskbar_class) = taskbar_class else {
+        return start_probe_from_observation(None);
+    };
+    // SAFETY: retrieves a borrowed foreground HWND without mutation.
+    let before = unsafe { raw_get_foreground_window() };
+    let input_events_sent = send_key(VK_LWIN);
+    if input_events_sent != 2 {
+        let _ = send_key(VK_ESCAPE);
+        return StartHostProbe::Unavailable {
+            reason: "supported-start-input-failed",
+            observed_taskbar_class: Some(taskbar_class),
+        };
+    }
+    let mut observed = None;
+    for _ in 0..40 {
+        thread::sleep(Duration::from_millis(50));
+        // SAFETY: retrieves a borrowed foreground HWND without mutation.
+        let hwnd = unsafe { raw_get_foreground_window() };
+        if hwnd == 0 || hwnd == before {
+            continue;
+        }
+        let Some(class_name) = raw_class_name(hwnd) else {
+            continue;
+        };
+        let Some((process_id, executable)) = process_identity(hwnd) else {
+            continue;
+        };
+        if trusted_start_host(&class_name, &executable) {
+            observed = Some((hwnd, class_name, process_id, executable));
+            break;
+        }
+    }
+    let escape_events_sent = send_key(VK_ESCAPE);
+    let Some((host_hwnd, host_class, host_pid, host_executable)) = observed else {
+        return StartHostProbe::Unavailable {
+            reason: "trusted-start-host-not-observed",
+            observed_taskbar_class: Some(taskbar_class),
+        };
+    };
+    let mut restored = false;
+    for _ in 0..20 {
+        thread::sleep(Duration::from_millis(50));
+        // SAFETY: retrieves a borrowed foreground HWND without mutation.
+        if unsafe { raw_get_foreground_window() } != host_hwnd {
+            restored = true;
+            break;
+        }
+    }
+    StartHostProbe::Available {
+        taskbar_class,
+        host_class,
+        host_pid,
+        host_executable,
+        input_events_sent,
+        escape_events_sent,
+        foreground_changed: true,
+        restored,
+    }
 }
 
 /// Converts a read-only taskbar-class observation into the only permitted Start

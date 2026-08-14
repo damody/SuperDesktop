@@ -173,6 +173,23 @@ impl WindowsPlatform {
             .take()
             .context("CreateWindowExW did not run correctly")?;
         let handle = result?;
+        gpui::on_callback_panic(move || {
+            let callback_window = last_dispatched_window();
+            if callback_window.is_invalid() {
+                return;
+            }
+            record_callback_fatal(callback_window, WM_SIZE);
+            // SAFETY: the handler runs on this platform thread and uses the
+            // message-only backend HWND plus its validation nonce.
+            let _ = unsafe {
+                PostMessageW(
+                    Some(handle),
+                    WM_GPUI_FATAL_CLOSE,
+                    WPARAM(validation_number),
+                    LPARAM(callback_window.0 as isize),
+                )
+            };
+        });
 
         #[cfg(feature = "wgpu")]
         let disable_direct_composition = true;
@@ -910,7 +927,8 @@ impl WindowsPlatformInner {
             | WM_GPUI_TASK_DISPATCHED_ON_MAIN_THREAD
             | WM_GPUI_DOCK_MENU_ACTION
             | WM_GPUI_KEYBOARD_LAYOUT_CHANGED
-            | WM_GPUI_GPU_DEVICE_LOST => self.handle_gpui_events(msg, wparam, lparam),
+            | WM_GPUI_GPU_DEVICE_LOST
+            | WM_GPUI_FATAL_CLOSE => self.handle_gpui_events(msg, wparam, lparam),
             _ => None,
         };
         if let Some(result) = handled {
@@ -937,6 +955,13 @@ impl WindowsPlatformInner {
                 #[cfg(not(feature = "wgpu"))]
                 return self.handle_device_lost(lparam);
                 #[cfg(feature = "wgpu")]
+                Some(0)
+            }
+            WM_GPUI_FATAL_CLOSE => {
+                // SAFETY: the source window procedure only posts backend-owned
+                // HWNDs on this platform thread after callback unwinding.
+                let _ = unsafe { DestroyWindow(HWND(lparam.0 as _)) };
+                dispatch_callback_fatal(lparam.0 as isize);
                 Some(0)
             }
             _ => unreachable!(),
@@ -1405,14 +1430,23 @@ unsafe extern "system" fn window_procedure(
     }
     let inner = unsafe { &*ptr };
     let result = if let Some(inner) = inner.upgrade() {
-        if cfg!(debug_assertions) {
-            let inner = std::panic::AssertUnwindSafe(inner);
-            match std::panic::catch_unwind(|| { inner }.handle_msg(hwnd, msg, wparam, lparam)) {
-                Ok(result) => result,
-                Err(_) => std::process::abort(),
+        let inner = std::panic::AssertUnwindSafe(inner);
+        let callback_window = last_dispatched_window();
+        match std::panic::catch_unwind(|| inner.handle_msg(hwnd, msg, wparam, lparam)) {
+            Ok(result) => result,
+            Err(_) => {
+                if !callback_window.is_invalid() {
+                    record_callback_fatal(callback_window, msg);
+                    // SAFETY: the remembered HWND was dispatched by this
+                    // backend on the same platform thread.
+                    // Queueing WM_CLOSE defers teardown until this foreground
+                    // task has released its GPUI application borrows.
+                    let _ = unsafe {
+                        PostMessageW(Some(callback_window), WM_CLOSE, WPARAM(0), LPARAM(0))
+                    };
+                }
+                LRESULT(0)
             }
-        } else {
-            inner.handle_msg(hwnd, msg, wparam, lparam)
         }
     } else {
         unsafe { DefWindowProcW(hwnd, msg, wparam, lparam) }

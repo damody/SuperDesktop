@@ -2,8 +2,8 @@
 param([string]$WorkspaceRoot,[string]$ManifestPath,[string]$OutputPath)
 $ErrorActionPreference='Stop'
 if(-not $WorkspaceRoot){$WorkspaceRoot=(Resolve-Path (Join-Path $PSScriptRoot '../../../..')).Path}
-$manifest=if($ManifestPath){$ManifestPath}else{Join-Path $WorkspaceRoot 'openspec/changes/validate-superdesktop-windows-platform/evidence/artifacts/1.1/current-substrate-inputs-successor-1.2-manifest-v3.sha256'}
-$out=if($OutputPath){$OutputPath}else{Join-Path $WorkspaceRoot 'openspec/changes/validate-superdesktop-windows-platform/evidence/artifacts/1.1/current-substrate-v3-negative-tests.txt'}
+$manifest=if($ManifestPath){$ManifestPath}else{Join-Path $WorkspaceRoot 'openspec/changes/validate-superdesktop-windows-platform/evidence/artifacts/1.1/current-substrate-inputs-successor-3.5-manifest-v4.sha256'}
+$out=if($OutputPath){$OutputPath}else{Join-Path $WorkspaceRoot 'openspec/changes/validate-superdesktop-windows-platform/evidence/artifacts/1.1/current-substrate-v4-negative-tests.txt'}
 $verifier=Join-Path $PSScriptRoot 'verify-current-substrate-contract.ps1'
 if(-not(Test-Path -LiteralPath $manifest -PathType Leaf)){throw 'NEGATIVE_MANIFEST_MISSING'}
 $scratch=Join-Path $WorkspaceRoot ('build/current-substrate-negative-'+[guid]::NewGuid().ToString('N'))

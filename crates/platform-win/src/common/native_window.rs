@@ -7,13 +7,14 @@
 
 use std::{
     marker::PhantomData,
-    panic::{AssertUnwindSafe, catch_unwind},
     rc::Rc,
     sync::{
         Arc,
         atomic::{AtomicBool, AtomicI32, AtomicU8, AtomicU64, AtomicUsize, Ordering},
     },
 };
+
+use super::ffi_boundary::{NoUnwind, catch_no_unwind};
 
 use windows::Win32::{
     Foundation::{HWND, LPARAM, LRESULT, RECT, WPARAM},
@@ -594,17 +595,17 @@ fn guard_callback(
     coordinator: &TerminalCoordinator,
     callback: impl FnOnce() -> Result<CallbackInvocation, &'static str>,
 ) -> CallbackInvocation {
-    let result = catch_unwind(AssertUnwindSafe(callback));
+    let result = catch_no_unwind(callback);
     match result {
-        Ok(Ok(invocation)) => invocation,
-        Ok(Err(_)) => {
+        NoUnwind::Returned(Ok(invocation)) => invocation,
+        NoUnwind::Returned(Err(_)) => {
             coordinator.fail(FATAL_CALLBACK_ERROR);
             CallbackInvocation {
                 forward: false,
                 ncdestroy: false,
             }
         }
-        Err(_) => {
+        NoUnwind::Panicked => {
             coordinator.fail(FATAL_CALLBACK_PANIC);
             CallbackInvocation {
                 forward: false,
@@ -670,7 +671,7 @@ unsafe extern "system" fn subclass_proc(
     unsafe { Arc::increment_strong_count(raw) };
     // SAFETY: balances the temporary increment above, never the registered Arc.
     let coordinator = unsafe { Arc::from_raw(raw) };
-    let outer = catch_unwind(AssertUnwindSafe(|| {
+    let outer = catch_no_unwind(|| {
         let invocation = invoke_callback(&coordinator, message, wparam, lparam, id);
         let result = if invocation.forward {
             // SAFETY: no lock is held and all arguments are supplied by Win32.
@@ -682,16 +683,16 @@ unsafe extern "system" fn subclass_proc(
             coordinator.release_raw_ref(raw);
         }
         result
-    }));
+    });
     match outer {
-        Ok(result) => {
+        NoUnwind::Returned(result) => {
             if coordinator.fatal.load(Ordering::Acquire) != FATAL_NONE && message != WM_NCDESTROY {
                 // SAFETY: non-owning close request; GPUI remains responsible for HWND destruction.
                 let _ = unsafe { PostMessageW(Some(hwnd), WM_CLOSE, WPARAM(0), LPARAM(0)) };
             }
             result
         }
-        Err(_) => {
+        NoUnwind::Panicked => {
             coordinator.fail(FATAL_CALLBACK_PANIC);
             // SAFETY: see the successful path; a failed post remains typed fatal and does not panic.
             let _ = unsafe { PostMessageW(Some(hwnd), WM_CLOSE, WPARAM(0), LPARAM(0)) };

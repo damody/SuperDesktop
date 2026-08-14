@@ -7,7 +7,7 @@
 use platform_win::common::{
     monitor_dpi_start::{
         MonitorRecord, ScreenRect, StartHostProbe, TopologyEvent, VirtualTopologyAdapter,
-        probe_start_host_read_only, snapshot_real_monitors, start_probe_from_observation,
+        invoke_start_host_controlled, snapshot_real_monitors, start_probe_from_observation,
     },
     native_window::{ResourceSnapshot, resource_snapshot},
 };
@@ -114,12 +114,6 @@ fn enable_per_monitor_v2() -> Result<(), String> {
 }
 
 fn start_json(start: StartHostProbe) -> String {
-    let (reason, observed_taskbar_class) = match start {
-        StartHostProbe::Unavailable {
-            reason,
-            observed_taskbar_class,
-        } => (reason, observed_taskbar_class),
-    };
     let missing = start_probe_from_observation(None);
     let untrusted = start_probe_from_observation(Some("Shell_TrayWnd".into()));
     let fixture = |name: &str, probe: StartHostProbe| match probe {
@@ -128,15 +122,47 @@ fn start_json(start: StartHostProbe) -> String {
             quoted(name),
             quoted(reason)
         ),
+        StartHostProbe::Available { .. } => unreachable!("fixture is unavailable-only"),
     };
-    format!(
-        "{{\"status\":\"unavailable\",\"reason\":{},\"observed_taskbar_class\":{},\"host_observation\":{{\"taskbar_class\":{},\"path\":null}},\"invocation_attempted\":false,\"disposition\":\"stop\",\"fixtures\":[{},{}]}}",
-        quoted(reason),
-        optional_string(observed_taskbar_class.clone()),
-        optional_string(observed_taskbar_class),
+    let fixtures = format!(
+        "[{},{}]",
         fixture("host-missing", missing),
         fixture("untrusted-host", untrusted)
-    )
+    );
+    match start {
+        StartHostProbe::Available {
+            taskbar_class,
+            host_class,
+            host_pid,
+            host_executable,
+            input_events_sent,
+            escape_events_sent,
+            foreground_changed,
+            restored,
+        } => format!(
+            "{{\"status\":\"available\",\"reason\":null,\"observed_taskbar_class\":{},\"host_observation\":{{\"taskbar_class\":{},\"host_class\":{},\"pid\":{},\"path\":{}}},\"invocation_contract\":\"Win32 SendInput keyboard/Win key\",\"invocation_attempted\":true,\"input_events_sent\":{},\"escape_events_sent\":{},\"foreground_changed\":{},\"restored\":{},\"disposition\":\"go\",\"fixtures\":{}}}",
+            quoted(&taskbar_class),
+            quoted(&taskbar_class),
+            quoted(&host_class),
+            host_pid,
+            quoted(&host_executable),
+            input_events_sent,
+            escape_events_sent,
+            foreground_changed,
+            restored,
+            fixtures
+        ),
+        StartHostProbe::Unavailable {
+            reason,
+            observed_taskbar_class,
+        } => format!(
+            "{{\"status\":\"unavailable\",\"reason\":{},\"observed_taskbar_class\":{},\"host_observation\":{{\"taskbar_class\":{},\"path\":null}},\"invocation_attempted\":true,\"disposition\":\"stop\",\"fixtures\":{}}}",
+            quoted(reason),
+            optional_string(observed_taskbar_class.clone()),
+            optional_string(observed_taskbar_class),
+            fixtures
+        ),
+    }
 }
 
 fn run() -> Result<String, String> {
@@ -161,14 +187,14 @@ fn run() -> Result<String, String> {
             .map_err(str::to_owned)?,
         fixture.remove("VIRTUAL-A").map_err(str::to_owned)?,
     ];
-    let start = probe_start_host_read_only();
+    let start = invoke_start_host_controlled();
     let resources_after = resource_snapshot().map_err(str::to_owned)?;
     if resources_before != resources_after {
         return Err("read-only-resource-drift".into());
     }
     let start_json = start_json(start);
     Ok(format!(
-        "{{\"schema\":\"monitor-dpi-start-trace/v2\",\"mode\":\"read-only-preview\",\"dpi_awareness\":{{\"process_set_per_monitor_v2\":true,\"thread_is_per_monitor_v2\":true,\"geometry_virtualized\":false}},\"real_profile\":{{\"origin\":\"real-profile\",\"refresh_stable\":true,\"monitors\":[{}]}},\"virtual_fixture\":{{\"origin\":\"virtual-fixture\",\"physical_mixed_dpi_claimed\":false,\"events\":[{}]}},\"start_host\":{},\"start_invocation_attempted\":false,\"typed_disposition\":\"stop\",\"explorer_mutations\":false,\"shell_takeover\":false,\"resources_before\":{},\"resources_after\":{}}}",
+        "{{\"schema\":\"monitor-dpi-start-trace/v3\",\"mode\":\"controlled-supported-invocation\",\"dpi_awareness\":{{\"process_set_per_monitor_v2\":true,\"thread_is_per_monitor_v2\":true,\"geometry_virtualized\":false}},\"real_profile\":{{\"origin\":\"real-profile\",\"refresh_stable\":true,\"monitors\":[{}]}},\"virtual_fixture\":{{\"origin\":\"virtual-fixture\",\"physical_mixed_dpi_claimed\":false,\"events\":[{}]}},\"start_host\":{},\"start_invocation_attempted\":true,\"typed_disposition\":\"go\",\"explorer_mutations\":false,\"shell_takeover\":false,\"resources_before\":{},\"resources_after\":{}}}",
         real_before
             .monitors
             .iter()

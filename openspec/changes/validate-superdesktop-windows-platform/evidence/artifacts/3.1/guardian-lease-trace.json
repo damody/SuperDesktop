@@ -1,0 +1,146 @@
+﻿{
+    "schema":  "guardian-lease-evidence/v1",
+    "before":  {
+                   "sequence":  1,
+                   "captured_at":  "2026-08-14T01:52:05.2943109Z",
+                   "explorer":  [
+                                    {
+                                        "pid":  59672,
+                                        "session_id":  1,
+                                        "creation_time_utc":  "2026-08-13T15:14:55.5048405Z",
+                                        "path":  "C:\\WINDOWS\\explorer.exe"
+                                    }
+                                ],
+                   "appbar_query":  {
+                                        "message":  "ABM_GETTASKBARPOS",
+                                        "result":  1,
+                                        "edge":  3,
+                                        "left":  0,
+                                        "top":  2018,
+                                        "right":  3840,
+                                        "bottom":  2160
+                                    },
+                   "work_area":  {
+                                     "action":  "SPI_GETWORKAREA",
+                                     "left":  0,
+                                     "top":  0,
+                                     "right":  2194,
+                                     "bottom":  1153
+                                 }
+               },
+    "valid":  {
+                  "schema":  "guardian-lease-trace/v3",
+                  "mode":  "controlled-child-preview",
+                  "controller_resources_before":  {
+                                                      "process_handles":  94,
+                                                      "user_objects":  1,
+                                                      "gdi_objects":  0
+                                                  },
+                  "controller_resources_after":  {
+                                                     "process_handles":  94,
+                                                     "user_objects":  1,
+                                                     "gdi_objects":  0
+                                                 },
+                  "parent_exit_success":  true,
+                  "parent_report":  {
+                                        "child_pid":  413232,
+                                        "allowlist_count":  2,
+                                        "ready_claimed":  false,
+                                        "parent_handles_before":  66,
+                                        "parent_handles_after":  72,
+                                        "owned_process_and_thread_handles_closed":  3
+                                    },
+                  "child_terminal":  {
+                                         "schema":  "guardian-terminal/v3",
+                                         "parent_terminal_observed":  true,
+                                         "unique_success_terminal_count":  1,
+                                         "child_handles_before":  68,
+                                         "child_handles_after":  66,
+                                         "released_inherited_handles":  2,
+                                         "explicit_allowlist_exact":  true,
+                                         "verified_roles":  [
+                                                                "parent-wait-handle",
+                                                                "one-shot-read-channel"
+                                                            ]
+                                     },
+                  "negative_fixtures":  [
+                                            {
+                                                "case":  "forged-pid",
+                                                "typed_reject":  "ForgedPid"
+                                            },
+                                            {
+                                                "case":  "stale-creation-time",
+                                                "typed_reject":  "StaleCreationTime"
+                                            },
+                                            {
+                                                "case":  "wrong-session",
+                                                "typed_reject":  "WrongSession"
+                                            },
+                                            {
+                                                "case":  "wrong-executable",
+                                                "typed_reject":  "WrongExecutable"
+                                            },
+                                            {
+                                                "case":  "wrong-file-identity",
+                                                "typed_reject":  "FileIdentityMismatch"
+                                            },
+                                            {
+                                                "case":  "forged-nonce",
+                                                "typed_reject":  "BadNonce"
+                                            },
+                                            {
+                                                "case":  "duplicate-claim",
+                                                "typed_reject":  "DuplicateClaim"
+                                            },
+                                            {
+                                                "case":  "unexpected-handle",
+                                                "typed_reject":  "UnexpectedInheritedHandle"
+                                            },
+                                            {
+                                                "case":  "insufficient-process-rights",
+                                                "typed_reject":  "InsufficientProcessRights"
+                                            }
+                                        ],
+                  "negative_fixture_mutations_attempted":  false,
+                  "explorer_mutations":  false,
+                  "shell_takeover":  false
+              },
+    "after":  {
+                  "sequence":  2,
+                  "captured_at":  "2026-08-14T01:52:05.4819857Z",
+                  "explorer":  [
+                                   {
+                                       "pid":  59672,
+                                       "session_id":  1,
+                                       "creation_time_utc":  "2026-08-13T15:14:55.5048405Z",
+                                       "path":  "C:\\WINDOWS\\explorer.exe"
+                                   }
+                               ],
+                  "appbar_query":  {
+                                       "message":  "ABM_GETTASKBARPOS",
+                                       "result":  1,
+                                       "edge":  3,
+                                       "left":  0,
+                                       "top":  2018,
+                                       "right":  3840,
+                                       "bottom":  2160
+                                   },
+                  "work_area":  {
+                                    "action":  "SPI_GETWORKAREA",
+                                    "left":  0,
+                                    "top":  0,
+                                    "right":  2194,
+                                    "bottom":  1153
+                                }
+              },
+    "equality_assertion":  {
+                               "passed":  true,
+                               "compared_fields":  [
+                                                       "explorer",
+                                                       "appbar_query",
+                                                       "work_area"
+                                                   ]
+                           },
+    "source_sha256":  "9E277569D82D8178BE905BC6BEEC59C2F6A54BE54E7DBF9DC705582917D277E0",
+    "binary_sha256":  "BBE1DCFD695F8319F298D788CC074EC1ECB4001DD8EE9485CFA0032D1C9CE0DF"
+}

@@ -2,19 +2,19 @@
     "schema_version":  "1.0.0",
     "procedure":  "read-only profile admission probe; no AppBar/Hook/Explorer mutation APIs are invoked",
     "inputs":  {
-                   "current_substrate_verifier_sha256":  "9DFDF1819E2B7E76687B53CFEEA735A203785E79587F27A07DE371274C8F06B5",
+                   "current_substrate_verifier_sha256":  "AD921CF763F93A7640285B794D49538E80ABFC26226D09A1BCD1AD78EC7D951B",
                    "program_archive_handoff_sha256":  "6E7A429C54B3DF93019F2A719CD1DCFB00FE932E2DA5E15AF1A8C6F16EAD8A32",
                    "program_archive_handoff_path":  "openspec/changes/build-superdesktop-shell-foundation/evidence/handoffs/2.1.json",
                    "archive_path":  "openspec/changes/archive/2026-08-13-bootstrap-superdesktop-workspace",
                    "archive_revision":  "9f115980af3804829fc156029ae3b22382c7a146",
                    "archive_child_contract_sha256":  "9C7B643D880EF4C7135F08D32222075D43428CBF1A50A53CBBFBA7405ED2622E",
-                   "probe_source_sha256":  "E9E8E53023D18BFF63A9195BC34ABFAF231BA213D209B4230F4A0FC0042A6EB6",
+                   "probe_source_sha256":  "FF9AE15868C5AD8326129EF1770E570CDF89C05FD23324FDC17AC0C4C83FC991",
                    "probe_binary_sha256":  "9A594F8356C01AF324D17E0F1619F45CF0D1B1C38469B338C0F7BFE22D64CC49",
                    "profile_allowlist_sha256":  "A1CD05C09056562B3EF72896E74399164F2819D4B2E55720057DA5188F4BDFFF"
                },
     "before":  {
                    "sequence":  1,
-                   "captured_at":  "2026-08-14T00:09:49.5998915Z",
+                   "captured_at":  "2026-08-14T01:55:26.1949625Z",
                    "explorer":  [
                                     {
                                         "pid":  59672,
@@ -136,7 +136,7 @@
                 },
     "admission":  {
                       "sequence":  2,
-                      "captured_at":  "2026-08-14T00:09:49.7615398Z",
+                      "captured_at":  "2026-08-14T01:55:26.3723463Z",
                       "probe_exit_status":  0,
                       "result":  {
                                      "probe":  "capability-profile-read-only",
@@ -158,7 +158,7 @@
                   },
     "after":  {
                   "sequence":  3,
-                  "captured_at":  "2026-08-14T00:09:49.7781047Z",
+                  "captured_at":  "2026-08-14T01:55:26.3899540Z",
                   "explorer":  [
                                    {
                                        "pid":  59672,

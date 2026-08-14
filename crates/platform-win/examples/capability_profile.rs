@@ -9,6 +9,8 @@ use std::{
     process::ExitCode,
 };
 
+use platform_win::common::admission::{AdmissionInputs as Inputs, classify};
+
 use windows::Win32::{
     Foundation::{CloseHandle, HANDLE},
     Security::{
@@ -25,6 +27,7 @@ use windows::Win32::{
 };
 
 const WTS_CONNECT_STATE: u32 = 8;
+#[cfg(test)]
 const WTS_ACTIVE: i32 = 0;
 const UOI_NAME: i32 = 2;
 const SE_GROUP_LOGON_ID: u32 = 0xc000_0000;
@@ -148,21 +151,6 @@ unsafe extern "system" {
     ) -> i32;
 }
 
-#[derive(Debug)]
-struct Inputs {
-    clean_boot: i32,
-    token_session_id: u32,
-    process_session_id: u32,
-    wts_state: i32,
-    window_station: String,
-    token_user_sid: String,
-    token_logon_sid: String,
-    interactive_group: bool,
-    logon_group: bool,
-    shell_owner_sid: String,
-    shell_owner_logon_sid: String,
-}
-
 #[derive(Clone, Copy, Debug)]
 enum Error {
     OpenToken,
@@ -192,34 +180,9 @@ impl Error {
     }
 }
 
-fn classify(input: &Inputs) -> (&'static str, bool) {
-    if input.clean_boot != 0 {
-        ("safe-mode", false)
-    } else if input.token_session_id != input.process_session_id {
-        ("token-session-mismatch", false)
-    } else if matches!(
-        input.token_user_sid.as_str(),
-        "S-1-5-18" | "S-1-5-6" | "S-1-5-7" | "S-1-5-19" | "S-1-5-20"
-    ) {
-        ("service-system-or-anonymous-token", false)
-    } else if !input.interactive_group || !input.logon_group {
-        ("non-interactive-or-foreign-token", false)
-    } else if input.token_user_sid != input.shell_owner_sid
-        || input.token_logon_sid != input.shell_owner_logon_sid
-    {
-        ("shell-owner-token-mismatch", false)
-    } else if input.wts_state != WTS_ACTIVE {
-        ("session-not-active", false)
-    } else if input.window_station != "WinSta0" {
-        ("non-interactive-window-station", false)
-    } else {
-        ("admitted", true)
-    }
-}
-
 fn sid_text(buffer: &TokenBuffer, sid: PSID) -> Result<String, Error> {
     if sid.0.is_null()
-        || (sid.0 as usize) % align_of::<u32>() != 0
+        || !(sid.0 as usize).is_multiple_of(align_of::<u32>())
         || !buffer.contains(sid.0.cast(), 8)
     {
         return Err(Error::TokenIdentity);
@@ -345,10 +308,11 @@ fn token_details(token: HANDLE) -> Result<(u32, String, bool, String), Error> {
         let enabled_identity_group = group.attributes & SE_GROUP_ENABLED != 0
             && group.attributes & SE_GROUP_USE_FOR_DENY_ONLY == 0;
         interactive |= sid == "S-1-5-4" && enabled_identity_group;
-        if group.attributes & SE_GROUP_LOGON_ID == SE_GROUP_LOGON_ID && enabled_identity_group {
-            if logon_sid.replace(sid).is_some() {
-                return Err(Error::TokenGroups);
-            }
+        if group.attributes & SE_GROUP_LOGON_ID == SE_GROUP_LOGON_ID
+            && enabled_identity_group
+            && logon_sid.replace(sid).is_some()
+        {
+            return Err(Error::TokenGroups);
         }
     }
     Ok((

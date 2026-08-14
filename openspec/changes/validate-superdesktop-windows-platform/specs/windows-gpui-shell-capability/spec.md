@@ -67,6 +67,14 @@
 
 1.2 MUST 先凍結 SuperDesktop-owned subclass 的 no-unwind wrapper，但不得據此宣稱 pinned `gpui_windows` 主 WndProc 已安全。3.2 MUST 對 pinned backend 的真實 public GPUI callback 路徑注入 panic，只有在取得 typed fatal、backend HWND terminal、GPUI window-closed terminal 與資源清理證據後，才可解除 preview-only 限制或供 production/Shell 使用。
 
+#### Scenario: Guardian inherited-handle lease terminal
+- **WHEN** guardian 只透過 `STARTUPINFOEX` explicit handle allowlist 收到 parent process handle 與一次性 nonce channel，且從 handle 重新取得的 PID、creation time、session、絕對 executable/file identity 與封存 claim 全部相符
+- **THEN** guardian 必須只以該 handle 作 authority，在真實 parent process terminal 後產生唯一成功 terminal，並 exactly-once 關閉所有 process、thread 與 channel handles
+
+#### Scenario: Guardian lease forged 或 stale
+- **WHEN** inherited handle/nonce/claim 為 forged、stale、wrong-session、wrong-executable、duplicate、unexpected、權限不足或型別錯誤
+- **THEN** production lease validator 必須在 wait 與任何 Shell mutation 前回傳 typed rejection；timeout 或 `WAIT_FAILED` 不得被視為 parent death
+
 #### Scenario: Callback panic
 - **WHEN** spike callback 注入 Rust panic
 - **THEN** unwind 不穿越任何 SuperDesktop-owned 或 pinned GPUI backend Win32 ABI，轉為 typed fatal result，停止 late user callback，並完整釋放 HWND、userdata、callback state 與資源
@@ -81,3 +89,13 @@
 #### Scenario: 單一 subcheck 失敗
 - **WHEN** 任一 required subcheck 失敗、未執行或證據 stale
 - **THEN** 整體 disposition 為 stop 並阻擋下游 production change
+### Requirement: Corrective Windows callback and Start contracts
+The capability result SHALL accept an audited local patch over the pinned GPUI revision only when patch source hashes, upstream hashes, license, rationale, and the exact-set manifest are verified. Start invocation SHALL use a supported Windows input contract and SHALL NOT call a private ExplorerPatcher ABI.
+
+#### Scenario: Public GPUI callback panic is contained
+- **WHEN** a real `Context::observe_window_bounds` callback panics from the Windows `WM_SIZE` path
+- **THEN** the application update contains the panic, emits one typed fatal event, observes `WM_NCDESTROY`, observes GPUI `on_window_closed`, and exits without ABI unwind or process abort
+
+#### Scenario: Supported Start invocation succeeds
+- **WHEN** the admitted capability probe sends the Win key through `SendInput`
+- **THEN** it verifies foreground host class, PID, canonical SystemApps executable path, sends Escape, confirms the host leaves foreground, and records `go`

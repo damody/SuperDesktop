@@ -1,0 +1,115 @@
+﻿{
+    "schema":  "ffi-capability-evidence/v1",
+    "before":  {
+                   "sequence":  1,
+                   "captured_at":  "2026-08-14T01:52:05.5932240Z",
+                   "explorer":  [
+                                    {
+                                        "pid":  59672,
+                                        "session_id":  1,
+                                        "creation_time_utc":  "2026-08-13T15:14:55.5048405Z",
+                                        "path":  "C:\\WINDOWS\\explorer.exe"
+                                    }
+                                ],
+                   "appbar_query":  {
+                                        "message":  "ABM_GETTASKBARPOS",
+                                        "result":  1,
+                                        "edge":  3,
+                                        "left":  0,
+                                        "top":  2018,
+                                        "right":  3840,
+                                        "bottom":  2160
+                                    },
+                   "work_area":  {
+                                     "action":  "SPI_GETWORKAREA",
+                                     "left":  0,
+                                     "top":  0,
+                                     "right":  2194,
+                                     "bottom":  1153
+                                 }
+               },
+    "superdesktop_boundary":  {
+                                  "schema":  "ffi-boundary-capability/v1",
+                                  "abi_signature":  "unsafe extern system fn(*const CallbackFence, usize) -\u003e isize",
+                                  "panic":  {
+                                                "return_code":  -1,
+                                                "typed_fatal":  "CallbackPanic",
+                                                "entered":  1,
+                                                "completed":  0
+                                            },
+                                  "double_callback":  {
+                                                          "return_code":  -2,
+                                                          "typed_fatal":  "ReentrantCallback",
+                                                          "entered":  1,
+                                                          "completed":  1
+                                                      },
+                                  "shutdown_race":  {
+                                                        "return_code":  -3,
+                                                        "typed_fatal":  "ShutdownRace",
+                                                        "entered":  0,
+                                                        "completed":  0
+                                                    },
+                                  "unwind_crossed_abi":  false
+                              },
+    "pinned_gpui_backend":  {
+                                "schema":  "gpui-callback-panic/v2",
+                                "pinned_revision":  "8945e2981b9fd00ca887e042d8adb9acc241b168",
+                                "backend_patch":  "B-W2-3.5-001-no-unwind-terminal",
+                                "public_callback":  "Context::observe_window_bounds",
+                                "native_dispatch":  "gpui_windows::window_procedure/WM_SIZE",
+                                "child_exit_code":  0,
+                                "child_success":  true,
+                                "callback_entered":  true,
+                                "panic_observed":  true,
+                                "callback_returned":  true,
+                                "typed_fatal_event":  true,
+                                "backend_hwnd_terminal":  true,
+                                "gpui_window_closed_terminal":  true,
+                                "capability_passed":  true,
+                                "disposition":  "go",
+                                "explorer_mutations":  false,
+                                "shell_takeover":  false
+                            },
+    "after":  {
+                  "sequence":  2,
+                  "captured_at":  "2026-08-14T01:52:06.3402136Z",
+                  "explorer":  [
+                                   {
+                                       "pid":  59672,
+                                       "session_id":  1,
+                                       "creation_time_utc":  "2026-08-13T15:14:55.5048405Z",
+                                       "path":  "C:\\WINDOWS\\explorer.exe"
+                                   }
+                               ],
+                  "appbar_query":  {
+                                       "message":  "ABM_GETTASKBARPOS",
+                                       "result":  1,
+                                       "edge":  3,
+                                       "left":  0,
+                                       "top":  2018,
+                                       "right":  3840,
+                                       "bottom":  2160
+                                   },
+                  "work_area":  {
+                                    "action":  "SPI_GETWORKAREA",
+                                    "left":  0,
+                                    "top":  0,
+                                    "right":  2194,
+                                    "bottom":  1153
+                                }
+              },
+    "equality_assertion":  {
+                               "passed":  true,
+                               "compared_fields":  [
+                                                       "explorer",
+                                                       "appbar_query",
+                                                       "work_area"
+                                                   ]
+                           },
+    "abi_source_sha256":  "C104A5A712FAF80175D7ABF15BB53186817947F49083C4B2D33801E7F5457F99",
+    "gpui_wndproc_source_sha256":  "0A1F6B3EFB67424E1C8B21FE171A132E3423676BEF9EB66B2F756F2DF0E99D73",
+    "gpui_platform_source_sha256":  "DD24C81B770CA7BA0482818BACB492928B32642FD1267FAED8CA5E83A34745F9",
+    "gpui_callback_source_sha256":  "35B95074073EC27C2DC8D98793E8281E821B56BA702038EA2CE7B23606954DB1",
+    "ffi_binary_sha256":  "D60995F28767112BF1C52E4F35985C9EA27092A2859D77BF72F8772D3F1BC32F",
+    "gpui_binary_sha256":  "1C97D7A9072E16997C57222F3BB6A30529CD6D89F62753A23EED55749E0BE069"
+}

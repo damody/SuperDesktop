@@ -1,0 +1,406 @@
+{
+    "schema":  "required-capability-matrix/v1",
+    "generated_at":  "2026-08-14T01:55:28.7386939Z",
+    "change":  "validate-superdesktop-windows-platform",
+    "required_rows":  [
+                          {
+                              "task_id":  "validate-superdesktop-windows-platform/1.1.1",
+                              "mandatory":  true,
+                              "evidence_status":  "passed",
+                              "evidence_link":  "evidence/artifacts/1.1/frozen-profile-contract.json",
+                              "gates":  [
+                                            "G-ARCH"
+                                        ]
+                          },
+                          {
+                              "task_id":  "validate-superdesktop-windows-platform/1.1.2",
+                              "mandatory":  true,
+                              "evidence_status":  "passed",
+                              "evidence_link":  "evidence/artifacts/1.1/frozen-profile-contract.json",
+                              "gates":  [
+                                            "G-ARCH"
+                                        ]
+                          },
+                          {
+                              "task_id":  "validate-superdesktop-windows-platform/1.1.3",
+                              "mandatory":  true,
+                              "evidence_status":  "passed",
+                              "evidence_link":  "evidence/artifacts/1.1/reference-taskbar.jpg",
+                              "gates":  [
+                                            "G-ARCH"
+                                        ]
+                          },
+                          {
+                              "task_id":  "validate-superdesktop-windows-platform/1.1.4",
+                              "mandatory":  true,
+                              "evidence_status":  "passed",
+                              "evidence_link":  "evidence/artifacts/1.1/frozen-profile-contract-successor-1.2-manifest-v3.json",
+                              "gates":  [
+                                            "G-ARCH"
+                                        ]
+                          },
+                          {
+                              "task_id":  "validate-superdesktop-windows-platform/1.1.5",
+                              "mandatory":  true,
+                              "evidence_status":  "passed",
+                              "evidence_link":  "evidence/artifacts/1.1/admission-zero-mutation-trace.json",
+                              "gates":  [
+                                            "G-ARCH"
+                                        ]
+                          },
+                          {
+                              "task_id":  "validate-superdesktop-windows-platform/1.1.6",
+                              "mandatory":  true,
+                              "evidence_status":  "passed",
+                              "evidence_link":  "evidence/artifacts/1.1/admission-zero-mutation-trace.json",
+                              "gates":  [
+                                            "G-ARCH"
+                                        ]
+                          },
+                          {
+                              "task_id":  "validate-superdesktop-windows-platform/1.1.7",
+                              "mandatory":  true,
+                              "evidence_status":  "passed",
+                              "evidence_link":  "evidence/artifacts/1.1/bootstrap-archive-positive.txt",
+                              "gates":  [
+                                            "G-ARCH"
+                                        ]
+                          },
+                          {
+                              "task_id":  "validate-superdesktop-windows-platform/1.2.1",
+                              "mandatory":  true,
+                              "evidence_status":  "passed",
+                              "evidence_link":  "evidence/artifacts/1.2/native-window-trace.json",
+                              "gates":  [
+                                            "G-ARCH"
+                                        ]
+                          },
+                          {
+                              "task_id":  "validate-superdesktop-windows-platform/1.2.2",
+                              "mandatory":  true,
+                              "evidence_status":  "passed",
+                              "evidence_link":  "evidence/artifacts/1.2/native-window-trace.json",
+                              "gates":  [
+                                            "G-ARCH"
+                                        ]
+                          },
+                          {
+                              "task_id":  "validate-superdesktop-windows-platform/1.2.3",
+                              "mandatory":  true,
+                              "evidence_status":  "passed",
+                              "evidence_link":  "evidence/artifacts/1.2/native-window-trace.json",
+                              "gates":  [
+                                            "G-ARCH"
+                                        ]
+                          },
+                          {
+                              "task_id":  "validate-superdesktop-windows-platform/1.2.4",
+                              "mandatory":  true,
+                              "evidence_status":  "passed",
+                              "evidence_link":  "evidence/artifacts/1.2/summary.md",
+                              "gates":  [
+                                            "G-ARCH"
+                                        ]
+                          },
+                          {
+                              "task_id":  "validate-superdesktop-windows-platform/2.1.1",
+                              "mandatory":  true,
+                              "evidence_status":  "passed",
+                              "evidence_link":  "evidence/artifacts/2.1/appbar-shell-hook-trace.json",
+                              "gates":  [
+                                            "G-SHELL-TAKEOVER-CAPABILITY"
+                                        ]
+                          },
+                          {
+                              "task_id":  "validate-superdesktop-windows-platform/2.1.2",
+                              "mandatory":  true,
+                              "evidence_status":  "passed",
+                              "evidence_link":  "evidence/artifacts/2.1/appbar-shell-hook-trace.json",
+                              "gates":  [
+                                            "G-SHELL-TAKEOVER-CAPABILITY"
+                                        ]
+                          },
+                          {
+                              "task_id":  "validate-superdesktop-windows-platform/2.1.3",
+                              "mandatory":  true,
+                              "evidence_status":  "passed",
+                              "evidence_link":  "evidence/artifacts/2.1/appbar-shell-hook-trace.json",
+                              "gates":  [
+                                            "G-SHELL-TAKEOVER-CAPABILITY"
+                                        ]
+                          },
+                          {
+                              "task_id":  "validate-superdesktop-windows-platform/2.1.4",
+                              "mandatory":  true,
+                              "evidence_status":  "passed",
+                              "evidence_link":  "evidence/artifacts/2.1/appbar-shell-hook-trace.json",
+                              "gates":  [
+                                            "G-SHELL-TAKEOVER-CAPABILITY"
+                                        ]
+                          },
+                          {
+                              "task_id":  "validate-superdesktop-windows-platform/2.1.5",
+                              "mandatory":  true,
+                              "evidence_status":  "passed",
+                              "evidence_link":  "evidence/artifacts/2.1/appbar-shell-hook-trace.json",
+                              "gates":  [
+                                            "G-SHELL-TAKEOVER-CAPABILITY"
+                                        ]
+                          },
+                          {
+                              "task_id":  "validate-superdesktop-windows-platform/2.2.1",
+                              "mandatory":  true,
+                              "evidence_status":  "passed",
+                              "evidence_link":  "evidence/artifacts/2.2/monitor-dpi-start-trace.json",
+                              "gates":  [
+                                            "G-DPI-MONITOR"
+                                        ]
+                          },
+                          {
+                              "task_id":  "validate-superdesktop-windows-platform/2.2.2",
+                              "mandatory":  true,
+                              "evidence_status":  "passed",
+                              "evidence_link":  "evidence/artifacts/2.2/monitor-dpi-start-trace.json",
+                              "gates":  [
+                                            "G-DPI-MONITOR"
+                                        ]
+                          },
+                          {
+                              "task_id":  "validate-superdesktop-windows-platform/2.2.3",
+                              "mandatory":  true,
+                              "evidence_status":  "passed",
+                              "evidence_link":  "evidence/artifacts/2.2/monitor-dpi-start-trace.json",
+                              "gates":  [
+                                            "G-TASKBAR"
+                                        ]
+                          },
+                          {
+                              "task_id":  "validate-superdesktop-windows-platform/2.2.4",
+                              "mandatory":  true,
+                              "evidence_status":  "passed",
+                              "evidence_link":  "evidence/artifacts/2.2/monitor-dpi-start-trace.json",
+                              "gates":  [
+                                            "G-TASKBAR"
+                                        ]
+                          },
+                          {
+                              "task_id":  "validate-superdesktop-windows-platform/2.2.5",
+                              "mandatory":  true,
+                              "evidence_status":  "passed",
+                              "evidence_link":  "evidence/artifacts/2.2/monitor-dpi-start-trace.json",
+                              "gates":  [
+                                            "G-DPI-MONITOR"
+                                        ]
+                          },
+                          {
+                              "task_id":  "validate-superdesktop-windows-platform/3.1.1",
+                              "mandatory":  true,
+                              "evidence_status":  "passed",
+                              "evidence_link":  "evidence/artifacts/3.1/guardian-lease-trace.json",
+                              "gates":  [
+                                            "G-GUARDIAN-RECOVERY-CAPABILITY",
+                                            "G-SAFETY"
+                                        ]
+                          },
+                          {
+                              "task_id":  "validate-superdesktop-windows-platform/3.1.2",
+                              "mandatory":  true,
+                              "evidence_status":  "passed",
+                              "evidence_link":  "evidence/artifacts/3.1/guardian-lease-trace.json",
+                              "gates":  [
+                                            "G-GUARDIAN-RECOVERY-CAPABILITY",
+                                            "G-SAFETY"
+                                        ]
+                          },
+                          {
+                              "task_id":  "validate-superdesktop-windows-platform/3.1.3",
+                              "mandatory":  true,
+                              "evidence_status":  "passed",
+                              "evidence_link":  "evidence/artifacts/3.1/guardian-lease-trace.json",
+                              "gates":  [
+                                            "G-GUARDIAN-RECOVERY-CAPABILITY",
+                                            "G-SAFETY"
+                                        ]
+                          },
+                          {
+                              "task_id":  "validate-superdesktop-windows-platform/3.1.4",
+                              "mandatory":  true,
+                              "evidence_status":  "passed",
+                              "evidence_link":  "evidence/artifacts/3.1/guardian-lease-trace.json",
+                              "gates":  [
+                                            "G-GUARDIAN-RECOVERY-CAPABILITY",
+                                            "G-SAFETY"
+                                        ]
+                          },
+                          {
+                              "task_id":  "validate-superdesktop-windows-platform/3.2.1",
+                              "mandatory":  true,
+                              "evidence_status":  "passed",
+                              "evidence_link":  "evidence/artifacts/3.2/ffi-panic-evidence.json",
+                              "gates":  [
+                                            "G-SAFETY"
+                                        ]
+                          },
+                          {
+                              "task_id":  "validate-superdesktop-windows-platform/3.2.2",
+                              "mandatory":  true,
+                              "evidence_status":  "passed",
+                              "evidence_link":  "evidence/artifacts/3.2/gpui-callback-panic-trace.json",
+                              "gates":  [
+                                            "G-SAFETY"
+                                        ]
+                          },
+                          {
+                              "task_id":  "validate-superdesktop-windows-platform/3.2.3",
+                              "mandatory":  true,
+                              "evidence_status":  "passed",
+                              "evidence_link":  "evidence/artifacts/3.2/ffi-panic-evidence.json",
+                              "gates":  [
+                                            "G-SAFETY"
+                                        ]
+                          },
+                          {
+                              "task_id":  "validate-superdesktop-windows-platform/3.2.4",
+                              "mandatory":  true,
+                              "evidence_status":  "passed",
+                              "evidence_link":  "evidence/artifacts/3.2/ffi-panic-evidence.json",
+                              "gates":  [
+                                            "G-SAFETY"
+                                        ]
+                          },
+                          {
+                              "task_id":  "validate-superdesktop-windows-platform/3.3.1",
+                              "mandatory":  true,
+                              "evidence_status":  "passed",
+                              "evidence_link":  "evidence/artifacts/3.3/admission-fixtures.json",
+                              "gates":  [
+                                            "G-SHELL-TAKEOVER-CAPABILITY",
+                                            "G-SAFETY"
+                                        ]
+                          },
+                          {
+                              "task_id":  "validate-superdesktop-windows-platform/3.3.2",
+                              "mandatory":  true,
+                              "evidence_status":  "passed",
+                              "evidence_link":  "evidence/artifacts/3.3/admission-fixtures.json",
+                              "gates":  [
+                                            "G-SHELL-TAKEOVER-CAPABILITY",
+                                            "G-SAFETY"
+                                        ]
+                          },
+                          {
+                              "task_id":  "validate-superdesktop-windows-platform/3.3.3",
+                              "mandatory":  true,
+                              "evidence_status":  "passed",
+                              "evidence_link":  "evidence/artifacts/3.3/admission-fixtures.json",
+                              "gates":  [
+                                            "G-SHELL-TAKEOVER-CAPABILITY",
+                                            "G-SAFETY"
+                                        ]
+                          },
+                          {
+                              "task_id":  "validate-superdesktop-windows-platform/3.3.4",
+                              "mandatory":  true,
+                              "evidence_status":  "passed",
+                              "evidence_link":  "evidence/artifacts/3.3/admission-fixtures.json",
+                              "gates":  [
+                                            "G-SHELL-TAKEOVER-CAPABILITY",
+                                            "G-SAFETY"
+                                        ]
+                          },
+                          {
+                              "task_id":  "validate-superdesktop-windows-platform/3.3.5",
+                              "mandatory":  true,
+                              "evidence_status":  "passed",
+                              "evidence_link":  "evidence/artifacts/3.3/admission-fixtures.json",
+                              "gates":  [
+                                            "G-SHELL-TAKEOVER-CAPABILITY",
+                                            "G-SAFETY"
+                                        ]
+                          },
+                          {
+                              "task_id":  "validate-superdesktop-windows-platform/3.5.1",
+                              "mandatory":  true,
+                              "evidence_status":  "passed",
+                              "evidence_link":  "evidence/artifacts/1.1/current-substrate-v4-vendor-provenance.json",
+                              "gates":  [
+                                            "G-ARCH",
+                                            "G-SAFETY"
+                                        ]
+                          },
+                          {
+                              "task_id":  "validate-superdesktop-windows-platform/3.5.2",
+                              "mandatory":  true,
+                              "evidence_status":  "passed",
+                              "evidence_link":  "evidence/artifacts/3.2/gpui-callback-panic-trace.json",
+                              "gates":  [
+                                            "G-SAFETY"
+                                        ]
+                          },
+                          {
+                              "task_id":  "validate-superdesktop-windows-platform/3.5.3",
+                              "mandatory":  true,
+                              "evidence_status":  "passed",
+                              "evidence_link":  "evidence/artifacts/2.2/monitor-dpi-start-trace.json",
+                              "gates":  [
+                                            "G-TASKBAR"
+                                        ]
+                          }
+                      ],
+    "completeness":  {
+                         "total":  37,
+                         "missing":  0,
+                         "stale":  0,
+                         "blocked":  0,
+                         "not_applicable":  0,
+                         "passed_evidence_records":  37
+                     },
+    "gates":  [
+                  {
+                      "gate":  "G-ARCH",
+                      "status":  "passed",
+                      "evidence":  [
+                                       "evidence/artifacts/1.1/bootstrap-contract-verification.md",
+                                       "evidence/artifacts/1.2/summary.md"
+                                   ]
+                  },
+                  {
+                      "gate":  "G-SHELL-TAKEOVER-CAPABILITY",
+                      "status":  "passed",
+                      "evidence":  [
+                                       "evidence/artifacts/2.1/appbar-shell-hook-trace.json",
+                                       "evidence/artifacts/3.3/admission-fixtures.json"
+                                   ]
+                  },
+                  {
+                      "gate":  "G-DPI-MONITOR",
+                      "status":  "passed",
+                      "evidence":  [
+                                       "evidence/artifacts/2.2/monitor-dpi-start-trace.json"
+                                   ]
+                  },
+                  {
+                      "gate":  "G-TASKBAR",
+                      "status":  "passed",
+                      "evidence":  [
+                                       "evidence/artifacts/2.2/monitor-dpi-start-trace.json"
+                                   ]
+                  },
+                  {
+                      "gate":  "G-GUARDIAN-RECOVERY-CAPABILITY",
+                      "status":  "passed",
+                      "evidence":  [
+                                       "evidence/artifacts/3.1/guardian-lease-trace.json"
+                                   ]
+                  },
+                  {
+                      "gate":  "G-SAFETY",
+                      "status":  "passed",
+                      "evidence":  [
+                                       "evidence/artifacts/3.2/ffi-panic-evidence.json",
+                                       "evidence/artifacts/3.2/gpui-callback-panic-trace.json"
+                                   ]
+                  }
+              ],
+    "overall_disposition":  "go"
+}

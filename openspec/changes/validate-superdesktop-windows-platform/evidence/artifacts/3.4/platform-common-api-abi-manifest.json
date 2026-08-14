@@ -1,0 +1,53 @@
+{
+    "schema":  "platform-common-api-abi-manifest/v1",
+    "generated_at":  "2026-08-14T01:55:28.7386939Z",
+    "crate":  "platform-win",
+    "target":  "x86_64-pc-windows-msvc",
+    "pointer_width":  64,
+    "rust_abi":  "Rust APIs are crate-private capability substrate; no stable Rust ABI is claimed.",
+    "system_callback_abi":  "unsafe extern system",
+    "gpui_revision":  "8945e2981b9fd00ca887e042d8adb9acc241b168",
+    "inputs":  [
+                   {
+                       "path":  "crates/platform-win/src/common/admission.rs",
+                       "sha256":  "494C0C1DC8C5BBB630ADEA4846DA6C102658AE49D977F0D9984CCE82C131A7BF",
+                       "bytes":  3327
+                   },
+                   {
+                       "path":  "crates/platform-win/src/common/appbar_shell_hook.rs",
+                       "sha256":  "8CDF7E0110931128503AAD1E64E50A7EF590FF4A39E46B1E5F3BADE6E8039A6C",
+                       "bytes":  8059
+                   },
+                   {
+                       "path":  "crates/platform-win/src/common/ffi_boundary.rs",
+                       "sha256":  "C104A5A712FAF80175D7ABF15BB53186817947F49083C4B2D33801E7F5457F99",
+                       "bytes":  5515
+                   },
+                   {
+                       "path":  "crates/platform-win/src/common/guardian_lease.rs",
+                       "sha256":  "9E277569D82D8178BE905BC6BEEC59C2F6A54BE54E7DBF9DC705582917D277E0",
+                       "bytes":  36204
+                   },
+                   {
+                       "path":  "crates/platform-win/src/common/mod.rs",
+                       "sha256":  "59FBCE2FEA63B7AFC43CC336ABF920764D363935A1DB554D71A462CDEC6CADB7",
+                       "bytes":  231
+                   },
+                   {
+                       "path":  "crates/platform-win/src/common/monitor_dpi_start.rs",
+                       "sha256":  "F6C81E000388FE0832A33996501B7F983EA17782328F1EE8D5D59C10F628204D",
+                       "bytes":  19168
+                   },
+                   {
+                       "path":  "crates/platform-win/src/common/native_window.rs",
+                       "sha256":  "50C535F300CBD129393EE1FC9E563226AB7C6128A097123BB494F502996A8C3F",
+                       "bytes":  41982
+                   },
+                   {
+                       "path":  "crates/platform-win/src/lib.rs",
+                       "sha256":  "D31281FDF7EBF346246C30671EFFD0063D9F735452ECA52E2DAE5DAC3BD0CD23",
+                       "bytes":  391
+                   }
+               ],
+    "combined_input_sha256":  "3A4EF22A82700DCE72484F711BA9E4B16DF878046D6BD502A7B386B2D472D851"
+}

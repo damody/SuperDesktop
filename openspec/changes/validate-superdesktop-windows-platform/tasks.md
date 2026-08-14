@@ -83,10 +83,10 @@
 **Gate／Evidence：** `G-GUARDIAN-RECOVERY-CAPABILITY`、`G-SAFETY`；`evidence/artifacts/3.1/`。
 **完成門檻：** Valid lease 可完成 terminal；forged/stale/wrong-session targets 全被拒絕。
 
-- [ ] 3.1.1 實作 restricted inherited process-handle lease spike。
-- [ ] 3.1.2 驗證 PID、creation time、session、nonce 與 executable identity binding。
-- [ ] 3.1.3 執行 forged、stale、wrong-session 與 unexpected-handle negative tests。
-- [ ] 3.1.4 驗證所有 process/thread handles 在 terminal 後關閉。
+- [x] 3.1.1 實作 restricted inherited process-handle lease spike。
+- [x] 3.1.2 驗證 PID、creation time、session、nonce 與 executable identity binding。
+- [x] 3.1.3 以 production validator 執行 forged、stale、wrong-session、wrong-executable、duplicate、權限不足與 unexpected-handle negative tests。
+- [x] 3.1.4 驗證所有 process/thread handles 在 terminal 後關閉。
 
 ### 3.2 驗證 FFI No-unwind Boundary
 
@@ -98,10 +98,10 @@
 **Gate／Evidence：** `G-SAFETY`；`evidence/artifacts/3.2/`。
 **完成門檻：** SuperDesktop-owned callback與 pinned `gpui_windows` 主 WndProc 的真實 public callback path 均不得讓 panic 穿越 ABI；Panic 轉成 typed fatal event，backend HWND terminal、GPUI window-closed terminal、double callback/shutdown race 無 UB、double-close 或 resource leak。未通過即維持 preview-only並阻擋 production/Shell 使用。
 
-- [ ] 3.2.1 實作共用 `extern system` catch-unwind wrapper spike。
-- [ ] 3.2.2 由真實 public GPUI callback path 對 pinned `gpui_windows` 主 WndProc 注入 callback panic並驗證 typed fatal event；不得以只測外層 subclass 取代。
-- [ ] 3.2.3 執行 double callback 與 shutdown-race 測試。
-- [ ] 3.2.4 保存 ABI signature、handle lifecycle 與 panic evidence。
+- [x] 3.2.1 實作共用 `extern system` catch-unwind wrapper spike。
+- [x] 3.2.2 由真實 public GPUI callback path 對 pinned `gpui_windows` 主 WndProc 注入 callback panic並驗證 typed fatal event；不得以只測外層 subclass 取代。
+- [x] 3.2.3 執行 double callback 與 shutdown-race 測試。
+- [x] 3.2.4 保存 ABI signature、handle lifecycle 與 panic evidence。
 
 ### 3.3 驗證 Safe Mode 與 Unsupported Session Fail-closed
 
@@ -113,11 +113,11 @@
 **Gate／Evidence：** `G-SHELL-TAKEOVER-CAPABILITY`、`G-SAFETY`；`evidence/artifacts/3.3/`。
 **完成門檻：** 三種拒絕情境在 mutation 前 terminal，AppBar、Explorer、work area 全部 unchanged。
 
-- [ ] 3.3.1 建立 Safe Mode、interactive token/session 與 supported-session 的可注入 probe fixture adapter。
-- [ ] 3.3.2 執行 Safe Mode fail-closed zero-mutation fixture。
-- [ ] 3.3.3 執行 non-interactive/wrong-user token fail-closed fixture。
-- [ ] 3.3.4 執行 unsupported-session fail-closed fixture。
-- [ ] 3.3.5 保存每個 fixture 的 probe result 與 AppBar/Explorer/work-area before/after。
+- [x] 3.3.1 建立 Safe Mode、interactive token/session 與 supported-session 的可注入 probe fixture adapter。
+- [x] 3.3.2 執行 Safe Mode fail-closed zero-mutation fixture。
+- [x] 3.3.3 執行 non-interactive/wrong-user token fail-closed fixture。
+- [x] 3.3.4 執行 unsupported-session fail-closed fixture。
+- [x] 3.3.5 保存每個 fixture 的 probe result 與 AppBar/Explorer/work-area before/after。
 
 ### 3.4 發布 Capability Go／Stop Disposition
 
@@ -129,7 +129,13 @@
 **Gate／Evidence：** `G-ARCH`、`G-SHELL-TAKEOVER-CAPABILITY`、`G-DPI-MONITOR`、`G-GUARDIAN-RECOVERY-CAPABILITY`；`evidence/artifacts/3.4/`。
 **完成門檻：** 每個 required subcheck 都有 passed evidence；任一失敗則明確 stop 並建立 B/C disposition。
 
-- [ ] 3.4.1 產生 required capability matrix 與 evidence links。
-- [ ] 3.4.2 產生 platform-common public API/ABI hash input manifest 與 SHA-256。
-- [ ] 3.4.3 驗證不存在缺失、stale、blocked 或 N/A 的 required subcheck。
-- [ ] 3.4.4 由 Primary integrator 簽署 go 或 stop disposition。
+- [x] 3.4.1 產生 required capability matrix 與 evidence links。
+- [x] 3.4.2 產生 platform-common public API/ABI hash input manifest 與 SHA-256。
+- [x] 3.4.3 驗證不存在缺失、stale、blocked 或 N/A 的 required subcheck。
+- [x] 3.4.4 由 Primary integrator 簽署 go 或 stop disposition。
+### 3.5 Corrective GO closure
+
+- [x] 3.5.1 Record and verify the audited GPUI/gpui_windows local patch in the v4 exact-set substrate successor.
+- [x] 3.5.2 Prove a real public GPUI callback panic yields typed fatal, WM_NCDESTROY, GPUI on_window_closed, and successful child exit.
+- [x] 3.5.3 Invoke Start through Win32 SendInput, verify the trusted SystemApps host identity, and restore with Escape.
+- [x] 3.5.4 Re-capture all corrective evidence and sign a final all-gates GO disposition.

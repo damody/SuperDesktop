@@ -1,0 +1,272 @@
+﻿{
+    "schema":  "admission-fixture-evidence/v1",
+    "adapter":  "shared-production-classifier",
+    "fixtures":  [
+                     {
+                         "fixture":  "safe-mode",
+                         "probe_result":  {
+                                              "fixture":  "safe-mode",
+                                              "disposition":  "safe-mode",
+                                              "admitted":  false,
+                                              "mutations_attempted":  false
+                                          },
+                         "before":  {
+                                        "sequence":  1,
+                                        "captured_at":  "2026-08-14T01:52:06.5834898Z",
+                                        "explorer":  [
+                                                         {
+                                                             "pid":  59672,
+                                                             "session_id":  1,
+                                                             "creation_time_utc":  "2026-08-13T15:14:55.5048405Z",
+                                                             "path":  "C:\\WINDOWS\\explorer.exe"
+                                                         }
+                                                     ],
+                                        "appbar_query":  {
+                                                             "message":  "ABM_GETTASKBARPOS",
+                                                             "result":  1,
+                                                             "edge":  3,
+                                                             "left":  0,
+                                                             "top":  2018,
+                                                             "right":  3840,
+                                                             "bottom":  2160
+                                                         },
+                                        "work_area":  {
+                                                          "action":  "SPI_GETWORKAREA",
+                                                          "left":  0,
+                                                          "top":  0,
+                                                          "right":  2194,
+                                                          "bottom":  1153
+                                                      }
+                                    },
+                         "after":  {
+                                       "sequence":  2,
+                                       "captured_at":  "2026-08-14T01:52:06.6733695Z",
+                                       "explorer":  [
+                                                        {
+                                                            "pid":  59672,
+                                                            "session_id":  1,
+                                                            "creation_time_utc":  "2026-08-13T15:14:55.5048405Z",
+                                                            "path":  "C:\\WINDOWS\\explorer.exe"
+                                                        }
+                                                    ],
+                                       "appbar_query":  {
+                                                            "message":  "ABM_GETTASKBARPOS",
+                                                            "result":  1,
+                                                            "edge":  3,
+                                                            "left":  0,
+                                                            "top":  2018,
+                                                            "right":  3840,
+                                                            "bottom":  2160
+                                                        },
+                                       "work_area":  {
+                                                         "action":  "SPI_GETWORKAREA",
+                                                         "left":  0,
+                                                         "top":  0,
+                                                         "right":  2194,
+                                                         "bottom":  1153
+                                                     }
+                                   },
+                         "zero_mutation":  true
+                     },
+                     {
+                         "fixture":  "non-interactive",
+                         "probe_result":  {
+                                              "fixture":  "non-interactive",
+                                              "disposition":  "non-interactive-or-foreign-token",
+                                              "admitted":  false,
+                                              "mutations_attempted":  false
+                                          },
+                         "before":  {
+                                        "sequence":  1,
+                                        "captured_at":  "2026-08-14T01:52:06.5834898Z",
+                                        "explorer":  [
+                                                         {
+                                                             "pid":  59672,
+                                                             "session_id":  1,
+                                                             "creation_time_utc":  "2026-08-13T15:14:55.5048405Z",
+                                                             "path":  "C:\\WINDOWS\\explorer.exe"
+                                                         }
+                                                     ],
+                                        "appbar_query":  {
+                                                             "message":  "ABM_GETTASKBARPOS",
+                                                             "result":  1,
+                                                             "edge":  3,
+                                                             "left":  0,
+                                                             "top":  2018,
+                                                             "right":  3840,
+                                                             "bottom":  2160
+                                                         },
+                                        "work_area":  {
+                                                          "action":  "SPI_GETWORKAREA",
+                                                          "left":  0,
+                                                          "top":  0,
+                                                          "right":  2194,
+                                                          "bottom":  1153
+                                                      }
+                                    },
+                         "after":  {
+                                       "sequence":  2,
+                                       "captured_at":  "2026-08-14T01:52:06.6733695Z",
+                                       "explorer":  [
+                                                        {
+                                                            "pid":  59672,
+                                                            "session_id":  1,
+                                                            "creation_time_utc":  "2026-08-13T15:14:55.5048405Z",
+                                                            "path":  "C:\\WINDOWS\\explorer.exe"
+                                                        }
+                                                    ],
+                                       "appbar_query":  {
+                                                            "message":  "ABM_GETTASKBARPOS",
+                                                            "result":  1,
+                                                            "edge":  3,
+                                                            "left":  0,
+                                                            "top":  2018,
+                                                            "right":  3840,
+                                                            "bottom":  2160
+                                                        },
+                                       "work_area":  {
+                                                         "action":  "SPI_GETWORKAREA",
+                                                         "left":  0,
+                                                         "top":  0,
+                                                         "right":  2194,
+                                                         "bottom":  1153
+                                                     }
+                                   },
+                         "zero_mutation":  true
+                     },
+                     {
+                         "fixture":  "wrong-user",
+                         "probe_result":  {
+                                              "fixture":  "wrong-user",
+                                              "disposition":  "shell-owner-token-mismatch",
+                                              "admitted":  false,
+                                              "mutations_attempted":  false
+                                          },
+                         "before":  {
+                                        "sequence":  1,
+                                        "captured_at":  "2026-08-14T01:52:06.5834898Z",
+                                        "explorer":  [
+                                                         {
+                                                             "pid":  59672,
+                                                             "session_id":  1,
+                                                             "creation_time_utc":  "2026-08-13T15:14:55.5048405Z",
+                                                             "path":  "C:\\WINDOWS\\explorer.exe"
+                                                         }
+                                                     ],
+                                        "appbar_query":  {
+                                                             "message":  "ABM_GETTASKBARPOS",
+                                                             "result":  1,
+                                                             "edge":  3,
+                                                             "left":  0,
+                                                             "top":  2018,
+                                                             "right":  3840,
+                                                             "bottom":  2160
+                                                         },
+                                        "work_area":  {
+                                                          "action":  "SPI_GETWORKAREA",
+                                                          "left":  0,
+                                                          "top":  0,
+                                                          "right":  2194,
+                                                          "bottom":  1153
+                                                      }
+                                    },
+                         "after":  {
+                                       "sequence":  2,
+                                       "captured_at":  "2026-08-14T01:52:06.6733695Z",
+                                       "explorer":  [
+                                                        {
+                                                            "pid":  59672,
+                                                            "session_id":  1,
+                                                            "creation_time_utc":  "2026-08-13T15:14:55.5048405Z",
+                                                            "path":  "C:\\WINDOWS\\explorer.exe"
+                                                        }
+                                                    ],
+                                       "appbar_query":  {
+                                                            "message":  "ABM_GETTASKBARPOS",
+                                                            "result":  1,
+                                                            "edge":  3,
+                                                            "left":  0,
+                                                            "top":  2018,
+                                                            "right":  3840,
+                                                            "bottom":  2160
+                                                        },
+                                       "work_area":  {
+                                                         "action":  "SPI_GETWORKAREA",
+                                                         "left":  0,
+                                                         "top":  0,
+                                                         "right":  2194,
+                                                         "bottom":  1153
+                                                     }
+                                   },
+                         "zero_mutation":  true
+                     },
+                     {
+                         "fixture":  "unsupported-session",
+                         "probe_result":  {
+                                              "fixture":  "unsupported-session",
+                                              "disposition":  "session-not-active",
+                                              "admitted":  false,
+                                              "mutations_attempted":  false
+                                          },
+                         "before":  {
+                                        "sequence":  1,
+                                        "captured_at":  "2026-08-14T01:52:06.5834898Z",
+                                        "explorer":  [
+                                                         {
+                                                             "pid":  59672,
+                                                             "session_id":  1,
+                                                             "creation_time_utc":  "2026-08-13T15:14:55.5048405Z",
+                                                             "path":  "C:\\WINDOWS\\explorer.exe"
+                                                         }
+                                                     ],
+                                        "appbar_query":  {
+                                                             "message":  "ABM_GETTASKBARPOS",
+                                                             "result":  1,
+                                                             "edge":  3,
+                                                             "left":  0,
+                                                             "top":  2018,
+                                                             "right":  3840,
+                                                             "bottom":  2160
+                                                         },
+                                        "work_area":  {
+                                                          "action":  "SPI_GETWORKAREA",
+                                                          "left":  0,
+                                                          "top":  0,
+                                                          "right":  2194,
+                                                          "bottom":  1153
+                                                      }
+                                    },
+                         "after":  {
+                                       "sequence":  2,
+                                       "captured_at":  "2026-08-14T01:52:06.6733695Z",
+                                       "explorer":  [
+                                                        {
+                                                            "pid":  59672,
+                                                            "session_id":  1,
+                                                            "creation_time_utc":  "2026-08-13T15:14:55.5048405Z",
+                                                            "path":  "C:\\WINDOWS\\explorer.exe"
+                                                        }
+                                                    ],
+                                       "appbar_query":  {
+                                                            "message":  "ABM_GETTASKBARPOS",
+                                                            "result":  1,
+                                                            "edge":  3,
+                                                            "left":  0,
+                                                            "top":  2018,
+                                                            "right":  3840,
+                                                            "bottom":  2160
+                                                        },
+                                       "work_area":  {
+                                                         "action":  "SPI_GETWORKAREA",
+                                                         "left":  0,
+                                                         "top":  0,
+                                                         "right":  2194,
+                                                         "bottom":  1153
+                                                     }
+                                   },
+                         "zero_mutation":  true
+                     }
+                 ],
+    "source_sha256":  "494C0C1DC8C5BBB630ADEA4846DA6C102658AE49D977F0D9984CCE82C131A7BF",
+    "binary_sha256":  "DAA966E699A989D124E94F9BA5CDD142E24385604773CB93B987FC61821251B5"
+}
