@@ -1,6 +1,6 @@
 {
     "schema":  "foundation-wave6-local-gates/v1",
-    "recorded_at":  "2026-08-14T10:03:12.9448129Z",
+    "recorded_at":  "2026-08-14T10:11:36.5087474Z",
     "verification_change":  "verify-superdesktop-m0",
     "strict_validation":  {
                               "status":  "passed",
@@ -22,19 +22,19 @@
               },
     "source_artifacts":  [
                              {
-                                 "sha256":  "9060376CC9E14315DEF2075FF3DCBD13F5B11216B5C00787C836C66CF9A3669B",
+                                 "sha256":  "A3D5BFED4F001B64DA98AACC5C96E617848686F604176778CA3CAD840721DFC8",
                                  "path":  "verify-superdesktop-m0/evidence/artifacts/2.1/reference-ui-matrix.json"
                              },
                              {
-                                 "sha256":  "BF9EA75B18D4539F59673E94B176580675BE762258D994DBCC209D30F26F1DF1",
+                                 "sha256":  "56B6EBA4F7C37FD6D8F6755A7CE4AE735D5D191F91CC56ED47FAA39D636FC5AD",
                                  "path":  "verify-superdesktop-m0/evidence/artifacts/4.1/accessibility-input.json"
                              },
                              {
-                                 "sha256":  "C11FC2D4F539A8DCA039B13AABA032E4E9215010F254921A6E8FCFDC92CF3F55",
+                                 "sha256":  "12C4F9B3FA0588F06F01F44D2595E5D0247949408B896F229A577D4C771255AB",
                                  "path":  "verify-superdesktop-m0/evidence/artifacts/4.2/localization-ime.json"
                              },
                              {
-                                 "sha256":  "5B8A2EB42F58E3F522C8CA1D8C71EB39490584967D92E3CA9365C571C0F7B35D",
+                                 "sha256":  "8BF9748B40355E3D5A521C571205A4D0D9D5201DC2D556FA7D0E60DEE67858D0",
                                  "path":  "verify-superdesktop-m0/evidence/artifacts/5.1/performance.json"
                              },
                              {
@@ -42,11 +42,11 @@
                                  "path":  "verify-superdesktop-m0/evidence/artifacts/5.2/safety-license-source.json"
                              },
                              {
-                                 "sha256":  "9EDBB5FDDB75BE116A16F02442B3310B00B58730A26163229261A0DD25114CAE",
+                                 "sha256":  "109BB271F9D11953380C28F6B766E3DDC9AAD9C0C901A33C6BFC3710769976ED",
                                  "path":  "verify-superdesktop-m0/evidence/artifacts/1.2/build-offline-gate.json"
                              },
                              {
-                                 "sha256":  "24A74D0E190F10DDE49A3C8E694CB711628223DB5DA0DBCB10DA5503433BBE97",
+                                 "sha256":  "BA48794E6C26060D91B53F3099B7FB80A7035057B7D3E31B124C8A4821693DDD",
                                  "path":  "verify-superdesktop-m0/evidence/artifacts/5.3/traceability-review.json"
                              },
                              {
@@ -54,7 +54,7 @@
                                  "path":  "verify-superdesktop-m0/evidence/coverage.json"
                              },
                              {
-                                 "sha256":  "8462344CCF65BC00B977CE7081C7CE60AD6ADDE1146185958CBC604652D9D166",
+                                 "sha256":  "BCA844686240045726FD8E271D7E9D30C5E7F70051879D1D351CAB5D79305CC4",
                                  "path":  "verify-superdesktop-m0/evidence/adjustments.jsonl"
                              }
                          ],
