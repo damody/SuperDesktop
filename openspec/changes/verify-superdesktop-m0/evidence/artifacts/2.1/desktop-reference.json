@@ -1,0 +1,18 @@
+{
+    "schema":  "m0-desktop-reference/v1",
+    "result":  "passed",
+    "app_sha256":  "29945C986571B11A2A6FAFBBCBF120649B7813FB4BC9F62A7A177FBD344B7DF1",
+    "screenshot":  "desktop-reference.png",
+    "screenshot_sha256":  "D0C21E7A0679C6329C523B715DE8AB8321CFAF22ABBF004EBBA4DE5BFC4946A7",
+    "wallpaper":  "system-current",
+    "icon_grid":  true,
+    "selected_control":  "SuperExplorer [selected]",
+    "selected_bounds":  {
+                            "left":  14,
+                            "top":  8,
+                            "width":  182,
+                            "height":  196
+                        },
+    "invoke_available":  true,
+    "frame_visible":  true
+}

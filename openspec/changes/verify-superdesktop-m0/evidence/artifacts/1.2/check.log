@@ -1,9 +1,13 @@
-cargo :     Checking desktop-ui v0.1.0 (D:\SuperDesktop\SuperDesktop\crates\desktop-ui)
+cargo :     Checking explorer-bridge v0.1.0 (D:\SuperDesktop\SuperDesktop\crates\explorer-bridge)
 At D:\SuperDesktop\SuperDesktop\scripts\capture-m0-local-evidence.ps1:24 char:85
 + ... ,@('check',{cargo check --workspace --all-targets --locked --offline} ...
 +                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    + CategoryInfo          : NotSpecified: (    Checking de...tes\desktop-ui):String) [], RemoteException
+    + CategoryInfo          : NotSpecified: (    Checking ex...xplorer-bridge):String) [], RemoteException
     + FullyQualifiedErrorId : NativeCommandError
  
+    Checking platform-win v0.1.0 (D:\SuperDesktop\SuperDesktop\crates\platform-win)
+    Checking desktop-ui v0.1.0 (D:\SuperDesktop\SuperDesktop\crates\desktop-ui)
+    Checking taskbar-ui v0.1.0 (D:\SuperDesktop\SuperDesktop\crates\taskbar-ui)
+    Checking superdesktop-guardian v0.1.0 (D:\SuperDesktop\SuperDesktop\crates\superdesktop-guardian)
     Checking superdesktop-app v0.1.0 (D:\SuperDesktop\SuperDesktop\crates\superdesktop-app)
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.43s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.95s

@@ -1,7 +1,7 @@
 {
     "schema":  "m0-real-input-routes/v1",
-    "app_sha256":  "D68FA9E835D2189434F0E37FDEDB3A4EC0A2CA6A4C7E854E43C06D9AA1763007",
-    "superexplorer_sha256":  "5EE54E72B79C03D68C330DE7B06FABA13B65607EE2159FA3D9314AAE4412BCE2",
+    "app_sha256":  "29945C986571B11A2A6FAFBBCBF120649B7813FB4BC9F62A7A177FBD344B7DF1",
+    "superexplorer_sha256":  "132A37AAF9B3144A3B0F564A500035F60BE3ABD32B345CA0D003DEB052859FB7",
     "route_count":  6,
     "all_passed":  true,
     "routes":  [
@@ -12,10 +12,10 @@
                        "control_name":  "SuperExplorer",
                        "control_type":  "ControlType.Button",
                        "bounds":  {
-                                      "left":  0,
-                                      "top":  39,
-                                      "width":  3840,
-                                      "height":  73
+                                      "left":  14,
+                                      "top":  8,
+                                      "width":  182,
+                                      "height":  196
                                   },
                        "launched_process_count":  1,
                        "trace_contains_launch":  true
@@ -27,10 +27,10 @@
                        "control_name":  "SuperExplorer",
                        "control_type":  "ControlType.Button",
                        "bounds":  {
-                                      "left":  0,
-                                      "top":  39,
-                                      "width":  3840,
-                                      "height":  73
+                                      "left":  14,
+                                      "top":  8,
+                                      "width":  182,
+                                      "height":  196
                                   },
                        "launched_process_count":  1,
                        "trace_contains_launch":  true
@@ -42,10 +42,10 @@
                        "control_name":  "SuperExplorer",
                        "control_type":  "ControlType.Button",
                        "bounds":  {
-                                      "left":  0,
-                                      "top":  39,
-                                      "width":  3840,
-                                      "height":  73
+                                      "left":  14,
+                                      "top":  8,
+                                      "width":  182,
+                                      "height":  196
                                   },
                        "launched_process_count":  1,
                        "trace_contains_launch":  true
