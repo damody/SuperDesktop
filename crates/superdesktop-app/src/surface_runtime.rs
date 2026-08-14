@@ -7,7 +7,7 @@ use gpui::{
 };
 use platform_win::common::{
     appbar_shell_hook::{ControlledShellCapability, ScreenRect},
-    desktop::configure_and_show_desktop_window,
+    desktop::{configure_and_show_desktop_window, current_wallpaper_path},
     monitor_dpi_start::{MonitorRecord, enable_per_monitor_v2, snapshot_real_monitors},
     taskbar::{configure_and_show_taskbar_window, snapshot_task_windows},
 };
@@ -171,6 +171,8 @@ fn options(monitor: &MonitorRecord, taskbar: bool, interactive: bool) -> WindowO
     let width = (monitor.bounds.right - monitor.bounds.left) as f32 / scale;
     let height = if taskbar {
         80.0
+    } else if interactive {
+        (monitor.work_area.bottom - monitor.work_area.top) as f32 / scale
     } else {
         (monitor.bounds.bottom - monitor.bounds.top) as f32 / scale
     };
@@ -187,7 +189,12 @@ fn options(monitor: &MonitorRecord, taskbar: bool, interactive: bool) -> WindowO
                         / scale
                         - height
                 } else {
-                    monitor.bounds.top as f32 / scale
+                    (if interactive {
+                        monitor.work_area.top
+                    } else {
+                        monitor.bounds.top
+                    }) as f32
+                        / scale
                 }),
             ),
             size: size(px(width), px(height)),
@@ -234,7 +241,8 @@ fn fixed_label() -> &'static str {
 }
 
 fn fixed_node(monitor: &str) -> AccessibleNode {
-    let mut node = AccessibleNode::fixed_superexplorer(monitor, false, false);
+    let selected = std::env::var_os("SUPERDESKTOP_VERIFICATION_DESKTOP_SELECTED").is_some();
+    let mut node = AccessibleNode::fixed_superexplorer(monitor, selected, selected);
     node.name = fixed_label().into();
     node
 }
@@ -248,6 +256,10 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
     } else {
         visible_tasks()?
     };
+    let wallpaper = std::env::var_os("SUPERDESKTOP_WALLPAPER_PATH")
+        .map(std::path::PathBuf::from)
+        .filter(|path| path.is_file())
+        .or_else(|| current_wallpaper_path().ok());
     let verification_surface = std::env::var("SUPERDESKTOP_VERIFICATION_SURFACE").ok();
     let interactive = verification_surface.is_some();
     let terminal = Rc::new(RefCell::new(None::<Result<(), &'static str>>));
@@ -263,6 +275,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
             for monitor in snapshot.monitors.clone() {
                 if verification_surface.as_deref() != Some("taskbar") {
                     let desktop_monitor = monitor.clone();
+                    let desktop_wallpaper = wallpaper.clone();
                     let desktop_error = Rc::clone(&init_error);
                     let desktop = cx.open_window(options(&monitor, false, interactive), move |window, cx| {
                         if interactive {
@@ -285,12 +298,15 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                             *desktop_error.borrow_mut() = Some(error);
                         }
                         cx.new(|cx| {
-                            let view = DesktopView::new(
+                            let mut view = DesktopView::new(
                                 vec![fixed_node(&desktop_monitor.device_name)],
                                 false,
                             )
                             .with_fixed_action(Rc::new(launch_superexplorer))
                             .with_rendered_action(Rc::new(|| trace_action("frame-visible")));
+                            if let Some(path) = desktop_wallpaper.clone() {
+                                view = view.with_wallpaper(path);
+                            }
                             if interactive {
                                 view.enable_keyboard_focus(window, cx)
                             } else {
@@ -409,6 +425,9 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
             }
             if let Ok(theme) = std::env::var("SUPERDESKTOP_THEME") {
                 trace_action(&format!("theme:{theme}"));
+            }
+            if wallpaper.is_some() {
+                trace_action("wallpaper:loaded");
             }
 
             let refresh_handles = taskbar_handles.clone();

@@ -4,6 +4,7 @@ use std::ffi::c_void;
 use std::fs;
 use std::mem::size_of;
 use std::os::windows::ffi::OsStrExt;
+use std::os::windows::ffi::OsStringExt;
 use std::path::{Path, PathBuf};
 
 use windows::Win32::Foundation::{CloseHandle, HANDLE, HWND};
@@ -19,9 +20,9 @@ use windows::Win32::UI::Shell::{
     SHELLEXECUTEINFOW, SHGetKnownFolderPath, ShellExecuteExW,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
-    GWL_EXSTYLE, GetWindowLongPtrW, GetWindowThreadProcessId, HWND_BOTTOM, IsWindow, SW_HIDE,
-    SWP_NOACTIVATE, SWP_SHOWWINDOW, SetWindowLongPtrW, SetWindowPos, WS_EX_NOACTIVATE,
-    WS_EX_TOOLWINDOW,
+    GWL_EXSTYLE, GetWindowLongPtrW, GetWindowThreadProcessId, HWND_BOTTOM, IsWindow,
+    SPI_GETDESKWALLPAPER, SW_HIDE, SWP_NOACTIVATE, SWP_SHOWWINDOW, SetWindowLongPtrW, SetWindowPos,
+    SystemParametersInfoW, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW,
 };
 use windows::core::{GUID, PCWSTR};
 
@@ -51,6 +52,33 @@ pub enum DesktopPlatformError {
     Identity(String),
     Association(String),
     Window(String),
+    Wallpaper(String),
+}
+
+pub fn current_wallpaper_path() -> Result<PathBuf, DesktopPlatformError> {
+    let mut buffer = vec![0u16; 32_768];
+    // SAFETY: The output buffer is writable for the declared UTF-16 capacity;
+    // SPI_GETDESKWALLPAPER is an observation-only query.
+    unsafe {
+        SystemParametersInfoW(
+            SPI_GETDESKWALLPAPER,
+            buffer.len() as u32,
+            Some(buffer.as_mut_ptr().cast()),
+            Default::default(),
+        )
+    }
+    .map_err(|error| DesktopPlatformError::Wallpaper(error.to_string()))?;
+    let length = buffer
+        .iter()
+        .position(|unit| *unit == 0)
+        .unwrap_or(buffer.len());
+    let path = PathBuf::from(std::ffi::OsString::from_wide(&buffer[..length]));
+    if !path.is_file() {
+        return Err(DesktopPlatformError::Wallpaper(
+            "wallpaper-path-unavailable".into(),
+        ));
+    }
+    Ok(path)
 }
 
 /// Applies the native portion of the desktop-surface contract to a GPUI-owned
