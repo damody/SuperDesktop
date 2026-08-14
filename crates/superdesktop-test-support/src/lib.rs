@@ -7,5 +7,10 @@ compile_error!("SuperDesktop is supported only on Windows targets.");
 pub const CRATE_ROLE: &str = "test support boundary";
 
 mod shell_fixture;
+mod verification;
 
 pub use shell_fixture::{FakeEffectAdapter, ShellFixtureBuilder};
+pub use verification::{
+    CandidateGeometry, ImeFixture, LocaleFixture, PerformanceSamples, ResourceSeries,
+    VisualContract,
+};
