@@ -1,0 +1,24 @@
+{
+    "schema":  "desktop-layout-contract/v1",
+    "coordinate_space":  "logical",
+    "dpi_matrix":  [
+                       96,
+                       120,
+                       144,
+                       168,
+                       192
+                   ],
+    "selection":  [
+                      "single",
+                      "ctrl-toggle",
+                      "shift-range",
+                      "rubber-band"
+                  ],
+    "persistence":  [
+                        "drag-position",
+                        "collision-resolution",
+                        "monitor-remap",
+                        "work-area-clamp"
+                    ],
+    "tests":  4
+}

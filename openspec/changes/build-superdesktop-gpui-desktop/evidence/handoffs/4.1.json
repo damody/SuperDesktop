@@ -1,0 +1,22 @@
+{
+    "schema":  "desktop-handoff/v1",
+    "change":  "build-superdesktop-gpui-desktop",
+    "producer":  "Desktop owner",
+    "consumers":  [
+                      "add-superdesktop-shell-takeover-recovery",
+                      "verify-superdesktop-m0"
+                  ],
+    "result_revision":  "5d443717",
+    "contract_manifest":  "evidence/artifacts/4.1/desktop-contract-manifest.json",
+    "contract_manifest_sha256":  "45B26C6A7FF320DB6A8EE4739227084AAB9533FFDAA0C7B88C810C086CE7D154",
+    "combined_input_sha256":  "D8C1D570218D44D5BB92842A2E14D9BA67B3FA1298BF026DE3F0BF981E72E498",
+    "status":  "passed-active-archive-deferred",
+    "gates":  {
+                  "G-A11Y-I18N":  "passed",
+                  "G-PERF":  "passed",
+                  "G-DPI-MONITOR":  "passed",
+                  "G-DESKTOP":  "passed",
+                  "G-ARCH":  "passed",
+                  "G-SAFETY":  "passed"
+              }
+}

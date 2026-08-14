@@ -33,13 +33,13 @@ $coverage = Get-Content -Raw $coveragePath | ConvertFrom-Json
 $tasksPath = Join-Path $root 'tasks.md'
 Need (Test-Path -LiteralPath $tasksPath -PathType Leaf) 'TASKS_FILE_MISSING' $tasksPath
 $checkedTaskIds = @{}
-foreach ($line in Get-Content -LiteralPath $tasksPath) {
+foreach ($line in Get-Content -LiteralPath $tasksPath -Encoding UTF8) {
   if ($line -match '^\s*- \[[xX]\]\s+([0-9]+\.[0-9]+\.[0-9]+)\b') {
     $checkedTaskIds["$Change/$($matches[1])"] = $true
   }
 }
-$records = @(Get-Content $indexPath | Where-Object { $_ } | ForEach-Object { $_ | ConvertFrom-Json })
-$adjustments = @(Get-Content $adjustmentPath | Where-Object { $_ } | ForEach-Object { $_ | ConvertFrom-Json })
+$records = @(Get-Content -Encoding UTF8 $indexPath | Where-Object { $_ } | ForEach-Object { $_ | ConvertFrom-Json })
+$adjustments = @(Get-Content -Encoding UTF8 $adjustmentPath | Where-Object { $_ } | ForEach-Object { $_ | ConvertFrom-Json })
 $effectiveStale = @{}
  $allEffectiveMappings=@()
 foreach($adjustment in $adjustments){$allEffectiveMappings+=@($adjustment.effective_stale_mappings)}

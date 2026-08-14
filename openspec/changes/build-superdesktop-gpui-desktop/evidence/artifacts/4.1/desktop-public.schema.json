@@ -1,0 +1,51 @@
+{
+    "$schema":  "https://json-schema.org/draft/2020-12/schema",
+    "title":  "SuperDesktop public item",
+    "type":  "object",
+    "required":  [
+                     "identity",
+                     "display_name",
+                     "activation_token",
+                     "capabilities"
+                 ],
+    "properties":  {
+                       "activation_token":  {
+                                                "minLength":  1,
+                                                "type":  "string"
+                                            },
+                       "capabilities":  {
+                                            "additionalProperties":  false,
+                                            "properties":  {
+                                                               "hidden":  {
+                                                                              "type":  "boolean"
+                                                                          },
+                                                               "association":  {
+                                                                                   "type":  "boolean"
+                                                                               },
+                                                               "folder":  {
+                                                                              "type":  "boolean"
+                                                                          },
+                                                               "system":  {
+                                                                              "type":  "boolean"
+                                                                          }
+                                                           },
+                                            "type":  "object",
+                                            "required":  [
+                                                             "folder",
+                                                             "association",
+                                                             "hidden",
+                                                             "system"
+                                                         ]
+                                        },
+                       "display_name":  {
+                                            "maxLength":  1024,
+                                            "type":  "string"
+                                        },
+                       "identity":  {
+                                        "maxLength":  1024,
+                                        "minLength":  1,
+                                        "type":  "string"
+                                    }
+                   },
+    "additionalProperties":  false
+}

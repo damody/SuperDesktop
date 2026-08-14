@@ -1,0 +1,18 @@
+{
+    "schema":  "desktop-interaction-contract/v1",
+    "m0":  [
+               "selection",
+               "folder-activation",
+               "association-activation",
+               "position-only-drag"
+           ],
+    "deferred_unavailable":  [
+                                 "rename",
+                                 "context-menu",
+                                 "delete-or-recycle",
+                                 "explicit-refresh",
+                                 "file-transfer-drag"
+                             ],
+    "mutation_for_deferred":  false,
+    "tests":  3
+}

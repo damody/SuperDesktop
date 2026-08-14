@@ -1,0 +1,81 @@
+{
+    "schema":  "desktop-contract-manifest/v1",
+    "change":  "build-superdesktop-gpui-desktop",
+    "result_revision":  "5d443717",
+    "generated_at":  "2026-08-14T04:31:30.3946364Z",
+    "public_schema":  "evidence/artifacts/4.1/desktop-public.schema.json",
+    "effect_schema":  "evidence/artifacts/4.1/desktop-effect.schema.json",
+    "binary":  "evidence/artifacts/4.1/desktop_headful_contract.exe",
+    "binary_sha256":  "08933EA6AB14D5E9392D414469D3D97746CF04C13D9C19A9AE46FE5D959977FE",
+    "inputs":  [
+                   {
+                       "path":  "Cargo.lock",
+                       "sha256":  "C3C3594D5C6097983010F89A71EFC08C7720244FFF9C2C40BCAB267962BCB510",
+                       "bytes":  123828
+                   },
+                   {
+                       "path":  "crates/desktop-ui/Cargo.toml",
+                       "sha256":  "0AA1F28D227FCA79FD6B93D6BDBEE7099D90CC151EB25105A0F4D5EAFBE4293F",
+                       "bytes":  368
+                   },
+                   {
+                       "path":  "crates/desktop-ui/src/lib.rs",
+                       "sha256":  "A2D9C972BC3A1279CDA8D36602635C8D8E3D346309880AC138F72B2189BD7837",
+                       "bytes":  1093
+                   },
+                   {
+                       "path":  "crates/desktop-ui/src/geometry.rs",
+                       "sha256":  "402178B316A64499C43BC51D49CA65F925D9A8A3E8415B633EC020E9ADD83D2F",
+                       "bytes":  6848
+                   },
+                   {
+                       "path":  "crates/desktop-ui/src/interaction.rs",
+                       "sha256":  "FE78A838AE4C703879D15A6EF7BD2D47BBDF1CBD3C95B6CFAB07D2372ABD2FF0",
+                       "bytes":  10977
+                   },
+                   {
+                       "path":  "crates/desktop-ui/src/layout.rs",
+                       "sha256":  "698CB4A58B791C356DC3CB9D75509F7670C8AA4CFE97F43149DFA4CECC9F26C2",
+                       "bytes":  10205
+                   },
+                   {
+                       "path":  "crates/desktop-ui/src/namespace.rs",
+                       "sha256":  "E921F13EEF843F62817DC2F6DA2020AA58A62AAEA58A4131C02A0AF53735B6CA",
+                       "bytes":  4278
+                   },
+                   {
+                       "path":  "crates/desktop-ui/src/view.rs",
+                       "sha256":  "BC2F494735C142155FE13255A528F0ABE5EB599EDA7B95AF57F3333A9B196141",
+                       "bytes":  1480
+                   },
+                   {
+                       "path":  "crates/desktop-ui/src/wallpaper.rs",
+                       "sha256":  "1896A625AEC84B19F08A8AB59254EB09D7F4C5E7FC51A869D56BC9E569909854",
+                       "bytes":  6504
+                   },
+                   {
+                       "path":  "crates/desktop-ui/src/watcher.rs",
+                       "sha256":  "D51C2C490BF5D8D813E105896B9C83A450008D3F795FC4D0158E689D9A63274C",
+                       "bytes":  3342
+                   },
+                   {
+                       "path":  "crates/desktop-ui/examples/desktop_headful_contract.rs",
+                       "sha256":  "B5D359968FDF2B68403F13573E1738DF0815ACF76430F77AFF51220737BB7812",
+                       "bytes":  7944
+                   },
+                   {
+                       "path":  "crates/platform-win/src/common/desktop.rs",
+                       "sha256":  "23F5AD1F933074103EABD1CE91E7817AEBB03EC3D814837BDF19FF043C473DBD",
+                       "bytes":  11386
+                   }
+               ],
+    "combined_input_sha256":  "D8C1D570218D44D5BB92842A2E14D9BA67B3FA1298BF026DE3F0BF981E72E498",
+    "gates":  {
+                  "G-A11Y-I18N":  "passed",
+                  "G-PERF":  "passed",
+                  "G-DPI-MONITOR":  "passed",
+                  "G-DESKTOP":  "passed",
+                  "G-ARCH":  "passed",
+                  "G-SAFETY":  "passed"
+              }
+}

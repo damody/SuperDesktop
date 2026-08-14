@@ -1,0 +1,20 @@
+{
+    "schema":  "desktop-folder-routing-contract/v1",
+    "request":  "BridgeLaunchRequest",
+    "sources":  [
+                    "enter",
+                    "double-click",
+                    "uia"
+                ],
+    "terminals":  [
+                      "launched",
+                      "resolver-unavailable",
+                      "spawn-rejected",
+                      "admission-failed",
+                      "cancelled",
+                      "timed-out"
+                  ],
+    "terminal_policy":  "first-terminal-wins",
+    "late_terminal":  "suppressed",
+    "tests":  2
+}

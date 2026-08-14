@@ -1,0 +1,40 @@
+{
+    "schema":  "desktop-quality-gates/v1",
+    "change":  "build-superdesktop-gpui-desktop",
+    "result_revision":  "5d443717",
+    "recorded_at":  "2026-08-14T04:31:30.3946364Z",
+    "commands":  [
+                     {
+                         "exit_status":  0,
+                         "command":  "cargo fmt --all -- --check"
+                     },
+                     {
+                         "exit_status":  0,
+                         "command":  "cargo check --workspace --all-targets --locked --offline"
+                     },
+                     {
+                         "platform_tests":  27,
+                         "command":  "cargo test --workspace --all-targets --locked --offline",
+                         "exit_status":  0,
+                         "desktop_tests":  16
+                     },
+                     {
+                         "exit_status":  0,
+                         "command":  "cargo clippy --workspace --all-targets --locked --offline -- -D warnings"
+                     },
+                     {
+                         "exit_status":  0,
+                         "command":  "scripts/check-dependency-architecture.ps1"
+                     },
+                     {
+                         "non_activating":  true,
+                         "command":  "target/release/examples/desktop_headful_contract.exe",
+                         "exit_status":  0,
+                         "gpui_windows":  2
+                     },
+                     {
+                         "exit_status":  0,
+                         "command":  "openspec validate build-superdesktop-gpui-desktop --strict"
+                     }
+                 ]
+}

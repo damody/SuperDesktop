@@ -1,0 +1,26 @@
+{
+    "schema":  "desktop-wallpaper-contract/v1",
+    "modes":  [
+                  "solid",
+                  "fill",
+                  "fit",
+                  "stretch",
+                  "tile",
+                  "center",
+                  "span"
+              ],
+    "dpi_matrix":  [
+                       96,
+                       120,
+                       144,
+                       168,
+                       192
+                   ],
+    "decode_failure":  "semantic-solid-color-fallback",
+    "cache":  {
+                  "capacity_tested":  2,
+                  "invalidation":  "source-generation",
+                  "bounded":  true
+              },
+    "tests":  2
+}

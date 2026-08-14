@@ -1,0 +1,11 @@
+{
+    "schema":  "desktop-watcher-contract/v1",
+    "callback":  "no-unwind-owned-event",
+    "bounded_capacity":  2,
+    "overflow":  "single-flight-full-refresh",
+    "coalescing":  "identity",
+    "stale_completion":  "suppressed-by-generation",
+    "selection_and_position_restore":  "stable-identity",
+    "max_observed_depth":  2,
+    "tests":  3
+}

@@ -1,0 +1,19 @@
+{
+    "schema":  "desktop-fixed-entry-contract/v1",
+    "stable_identity":  "desktop:{monitor}:superexplorer",
+    "label":  "SuperExplorer",
+    "role":  "button",
+    "actions":  [
+                    "focus",
+                    "select",
+                    "invoke"
+                ],
+    "equivalent_sources":  [
+                               "pointer",
+                               "keyboard",
+                               "uia"
+                           ],
+    "command":  "bridge-default-location",
+    "local_path_claim":  false,
+    "tests":  3
+}

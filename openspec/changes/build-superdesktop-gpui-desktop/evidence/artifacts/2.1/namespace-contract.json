@@ -1,0 +1,18 @@
+{
+    "schema":  "desktop-namespace-contract/v1",
+    "sources":  [
+                    "FOLDERID_Desktop",
+                    "FOLDERID_PublicDesktop"
+                ],
+    "identity":  "volume-serial-and-file-index",
+    "merge_key":  "stable-shell-identity",
+    "owned_values":  true,
+    "ui_holds_com_or_pidl":  false,
+    "fixtures":  [
+                     "same-name-distinct-identity",
+                     "unicode",
+                     "hidden",
+                     "system"
+                 ],
+    "tests":  6
+}

@@ -1,0 +1,20 @@
+{
+    "schema":  "desktop-association-contract/v1",
+    "adapter":  "ShellExecuteExW",
+    "input":  "owned-canonical-path",
+    "admission_deadline_ms":  5000,
+    "terminals":  [
+                      "launched",
+                      "validation-failed",
+                      "launch-failed",
+                      "cancelled",
+                      "timed-out"
+                  ],
+    "terminal_policy":  "first-terminal-wins",
+    "explorer_fallback":  false,
+    "real_fixture":  {
+                         "kind":  "cmd-file-association",
+                         "marker_observed":  true
+                     },
+    "tests":  3
+}

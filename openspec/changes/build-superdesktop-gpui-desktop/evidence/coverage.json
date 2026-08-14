@@ -1,0 +1,595 @@
+{
+    "schema_version":  "1.0.0",
+    "change":  "build-superdesktop-gpui-desktop",
+    "capabilities":  [
+                         "desktop-contract-gate",
+                         "desktop-interaction",
+                         "desktop-layout",
+                         "desktop-namespace",
+                         "desktop-surface-lifecycle",
+                         "fixed-superexplorer-entry",
+                         "folder-command-routing",
+                         "wallpaper-pipeline",
+                         "watcher-recovery",
+                         "windows-association"
+                     ],
+    "tasks":  [
+                  {
+                      "task_id":  "build-superdesktop-gpui-desktop/1.1.1",
+                      "mandatory":  true,
+                      "capability_id":  "desktop-surface-lifecycle",
+                      "requirement_id":  "desktop-surface-lifecycle",
+                      "scenario_id":  "per-monitor-window",
+                      "gates":  [
+                                    "G-DESKTOP",
+                                    "G-DPI-MONITOR"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-desktop/1.1.2",
+                      "mandatory":  true,
+                      "capability_id":  "desktop-surface-lifecycle",
+                      "requirement_id":  "desktop-surface-lifecycle",
+                      "scenario_id":  "per-monitor-window",
+                      "gates":  [
+                                    "G-DESKTOP",
+                                    "G-DPI-MONITOR"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-desktop/1.1.3",
+                      "mandatory":  true,
+                      "capability_id":  "desktop-surface-lifecycle",
+                      "requirement_id":  "desktop-surface-lifecycle",
+                      "scenario_id":  "per-monitor-window",
+                      "gates":  [
+                                    "G-DESKTOP",
+                                    "G-DPI-MONITOR"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-desktop/1.1.4",
+                      "mandatory":  true,
+                      "capability_id":  "desktop-surface-lifecycle",
+                      "requirement_id":  "desktop-surface-lifecycle",
+                      "scenario_id":  "per-monitor-window",
+                      "gates":  [
+                                    "G-DESKTOP",
+                                    "G-DPI-MONITOR"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-desktop/1.1.5",
+                      "mandatory":  true,
+                      "capability_id":  "desktop-surface-lifecycle",
+                      "requirement_id":  "desktop-surface-lifecycle",
+                      "scenario_id":  "per-monitor-window",
+                      "gates":  [
+                                    "G-DESKTOP",
+                                    "G-DPI-MONITOR"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-desktop/1.2.1",
+                      "mandatory":  true,
+                      "capability_id":  "wallpaper-pipeline",
+                      "requirement_id":  "wallpaper-pipeline",
+                      "scenario_id":  "render-modes",
+                      "gates":  [
+                                    "G-DESKTOP",
+                                    "G-PERF"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-desktop/1.2.2",
+                      "mandatory":  true,
+                      "capability_id":  "wallpaper-pipeline",
+                      "requirement_id":  "wallpaper-pipeline",
+                      "scenario_id":  "render-modes",
+                      "gates":  [
+                                    "G-DESKTOP",
+                                    "G-PERF"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-desktop/1.2.3",
+                      "mandatory":  true,
+                      "capability_id":  "wallpaper-pipeline",
+                      "requirement_id":  "wallpaper-pipeline",
+                      "scenario_id":  "render-modes",
+                      "gates":  [
+                                    "G-DESKTOP",
+                                    "G-PERF"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-desktop/1.2.4",
+                      "mandatory":  true,
+                      "capability_id":  "wallpaper-pipeline",
+                      "requirement_id":  "wallpaper-pipeline",
+                      "scenario_id":  "render-modes",
+                      "gates":  [
+                                    "G-DESKTOP",
+                                    "G-PERF"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-desktop/1.2.5",
+                      "mandatory":  true,
+                      "capability_id":  "wallpaper-pipeline",
+                      "requirement_id":  "wallpaper-pipeline",
+                      "scenario_id":  "render-modes",
+                      "gates":  [
+                                    "G-DESKTOP",
+                                    "G-PERF"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-desktop/2.1.1",
+                      "mandatory":  true,
+                      "capability_id":  "desktop-namespace",
+                      "requirement_id":  "desktop-namespace",
+                      "scenario_id":  "owned-shell-items",
+                      "gates":  [
+                                    "G-DESKTOP",
+                                    "G-ARCH"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-desktop/2.1.2",
+                      "mandatory":  true,
+                      "capability_id":  "desktop-namespace",
+                      "requirement_id":  "desktop-namespace",
+                      "scenario_id":  "owned-shell-items",
+                      "gates":  [
+                                    "G-DESKTOP",
+                                    "G-ARCH"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-desktop/2.1.3",
+                      "mandatory":  true,
+                      "capability_id":  "desktop-namespace",
+                      "requirement_id":  "desktop-namespace",
+                      "scenario_id":  "owned-shell-items",
+                      "gates":  [
+                                    "G-DESKTOP",
+                                    "G-ARCH"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-desktop/2.1.4",
+                      "mandatory":  true,
+                      "capability_id":  "desktop-namespace",
+                      "requirement_id":  "desktop-namespace",
+                      "scenario_id":  "owned-shell-items",
+                      "gates":  [
+                                    "G-DESKTOP",
+                                    "G-ARCH"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-desktop/2.1.5",
+                      "mandatory":  true,
+                      "capability_id":  "desktop-namespace",
+                      "requirement_id":  "desktop-namespace",
+                      "scenario_id":  "owned-shell-items",
+                      "gates":  [
+                                    "G-DESKTOP",
+                                    "G-ARCH"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-desktop/2.2.1",
+                      "mandatory":  true,
+                      "capability_id":  "desktop-layout",
+                      "requirement_id":  "desktop-layout",
+                      "scenario_id":  "logical-grid",
+                      "gates":  [
+                                    "G-DESKTOP",
+                                    "G-DPI-MONITOR"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-desktop/2.2.2",
+                      "mandatory":  true,
+                      "capability_id":  "desktop-layout",
+                      "requirement_id":  "desktop-layout",
+                      "scenario_id":  "logical-grid",
+                      "gates":  [
+                                    "G-DESKTOP",
+                                    "G-DPI-MONITOR"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-desktop/2.2.3",
+                      "mandatory":  true,
+                      "capability_id":  "desktop-layout",
+                      "requirement_id":  "desktop-layout",
+                      "scenario_id":  "logical-grid",
+                      "gates":  [
+                                    "G-DESKTOP",
+                                    "G-DPI-MONITOR"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-desktop/2.2.4",
+                      "mandatory":  true,
+                      "capability_id":  "desktop-layout",
+                      "requirement_id":  "desktop-layout",
+                      "scenario_id":  "logical-grid",
+                      "gates":  [
+                                    "G-DESKTOP",
+                                    "G-DPI-MONITOR"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-desktop/2.2.5",
+                      "mandatory":  true,
+                      "capability_id":  "desktop-layout",
+                      "requirement_id":  "desktop-layout",
+                      "scenario_id":  "logical-grid",
+                      "gates":  [
+                                    "G-DESKTOP",
+                                    "G-DPI-MONITOR"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-desktop/2.2.6",
+                      "mandatory":  true,
+                      "capability_id":  "desktop-layout",
+                      "requirement_id":  "desktop-layout",
+                      "scenario_id":  "logical-grid",
+                      "gates":  [
+                                    "G-DESKTOP",
+                                    "G-DPI-MONITOR"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-desktop/2.3.1",
+                      "mandatory":  true,
+                      "capability_id":  "fixed-superexplorer-entry",
+                      "requirement_id":  "fixed-superexplorer-entry",
+                      "scenario_id":  "equivalent-activation",
+                      "gates":  [
+                                    "G-DESKTOP",
+                                    "G-EXPLORER-BRIDGE",
+                                    "G-A11Y-I18N"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-desktop/2.3.2",
+                      "mandatory":  true,
+                      "capability_id":  "fixed-superexplorer-entry",
+                      "requirement_id":  "fixed-superexplorer-entry",
+                      "scenario_id":  "equivalent-activation",
+                      "gates":  [
+                                    "G-DESKTOP",
+                                    "G-EXPLORER-BRIDGE",
+                                    "G-A11Y-I18N"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-desktop/2.3.3",
+                      "mandatory":  true,
+                      "capability_id":  "fixed-superexplorer-entry",
+                      "requirement_id":  "fixed-superexplorer-entry",
+                      "scenario_id":  "equivalent-activation",
+                      "gates":  [
+                                    "G-DESKTOP",
+                                    "G-EXPLORER-BRIDGE",
+                                    "G-A11Y-I18N"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-desktop/2.3.4",
+                      "mandatory":  true,
+                      "capability_id":  "fixed-superexplorer-entry",
+                      "requirement_id":  "fixed-superexplorer-entry",
+                      "scenario_id":  "equivalent-activation",
+                      "gates":  [
+                                    "G-DESKTOP",
+                                    "G-EXPLORER-BRIDGE",
+                                    "G-A11Y-I18N"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-desktop/3.1.1",
+                      "mandatory":  true,
+                      "capability_id":  "desktop-interaction",
+                      "requirement_id":  "desktop-interaction",
+                      "scenario_id":  "deferred-unavailable",
+                      "gates":  [
+                                    "G-DESKTOP",
+                                    "G-A11Y-I18N",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-desktop/3.1.2",
+                      "mandatory":  true,
+                      "capability_id":  "desktop-interaction",
+                      "requirement_id":  "desktop-interaction",
+                      "scenario_id":  "deferred-unavailable",
+                      "gates":  [
+                                    "G-DESKTOP",
+                                    "G-A11Y-I18N",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-desktop/3.1.3",
+                      "mandatory":  true,
+                      "capability_id":  "desktop-interaction",
+                      "requirement_id":  "desktop-interaction",
+                      "scenario_id":  "deferred-unavailable",
+                      "gates":  [
+                                    "G-DESKTOP",
+                                    "G-A11Y-I18N",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-desktop/3.1.4",
+                      "mandatory":  true,
+                      "capability_id":  "desktop-interaction",
+                      "requirement_id":  "desktop-interaction",
+                      "scenario_id":  "deferred-unavailable",
+                      "gates":  [
+                                    "G-DESKTOP",
+                                    "G-A11Y-I18N",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-desktop/3.1.5",
+                      "mandatory":  true,
+                      "capability_id":  "desktop-interaction",
+                      "requirement_id":  "desktop-interaction",
+                      "scenario_id":  "deferred-unavailable",
+                      "gates":  [
+                                    "G-DESKTOP",
+                                    "G-A11Y-I18N",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-desktop/3.1.6",
+                      "mandatory":  true,
+                      "capability_id":  "desktop-interaction",
+                      "requirement_id":  "desktop-interaction",
+                      "scenario_id":  "deferred-unavailable",
+                      "gates":  [
+                                    "G-DESKTOP",
+                                    "G-A11Y-I18N",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-desktop/3.2.1",
+                      "mandatory":  true,
+                      "capability_id":  "folder-command-routing",
+                      "requirement_id":  "folder-command-routing",
+                      "scenario_id":  "exactly-once-terminal",
+                      "gates":  [
+                                    "G-DESKTOP",
+                                    "G-EXPLORER-BRIDGE"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-desktop/3.2.2",
+                      "mandatory":  true,
+                      "capability_id":  "folder-command-routing",
+                      "requirement_id":  "folder-command-routing",
+                      "scenario_id":  "exactly-once-terminal",
+                      "gates":  [
+                                    "G-DESKTOP",
+                                    "G-EXPLORER-BRIDGE"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-desktop/3.2.3",
+                      "mandatory":  true,
+                      "capability_id":  "folder-command-routing",
+                      "requirement_id":  "folder-command-routing",
+                      "scenario_id":  "exactly-once-terminal",
+                      "gates":  [
+                                    "G-DESKTOP",
+                                    "G-EXPLORER-BRIDGE"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-desktop/3.2.4",
+                      "mandatory":  true,
+                      "capability_id":  "folder-command-routing",
+                      "requirement_id":  "folder-command-routing",
+                      "scenario_id":  "exactly-once-terminal",
+                      "gates":  [
+                                    "G-DESKTOP",
+                                    "G-EXPLORER-BRIDGE"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-desktop/3.3.1",
+                      "mandatory":  true,
+                      "capability_id":  "windows-association",
+                      "requirement_id":  "windows-association",
+                      "scenario_id":  "exactly-once-terminal",
+                      "gates":  [
+                                    "G-DESKTOP",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-desktop/3.3.2",
+                      "mandatory":  true,
+                      "capability_id":  "windows-association",
+                      "requirement_id":  "windows-association",
+                      "scenario_id":  "exactly-once-terminal",
+                      "gates":  [
+                                    "G-DESKTOP",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-desktop/3.3.3",
+                      "mandatory":  true,
+                      "capability_id":  "windows-association",
+                      "requirement_id":  "windows-association",
+                      "scenario_id":  "exactly-once-terminal",
+                      "gates":  [
+                                    "G-DESKTOP",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-desktop/3.3.4",
+                      "mandatory":  true,
+                      "capability_id":  "windows-association",
+                      "requirement_id":  "windows-association",
+                      "scenario_id":  "exactly-once-terminal",
+                      "gates":  [
+                                    "G-DESKTOP",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-desktop/3.3.5",
+                      "mandatory":  true,
+                      "capability_id":  "windows-association",
+                      "requirement_id":  "windows-association",
+                      "scenario_id":  "exactly-once-terminal",
+                      "gates":  [
+                                    "G-DESKTOP",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-desktop/3.4.1",
+                      "mandatory":  true,
+                      "capability_id":  "watcher-recovery",
+                      "requirement_id":  "watcher-recovery",
+                      "scenario_id":  "bounded-refresh",
+                      "gates":  [
+                                    "G-DESKTOP",
+                                    "G-PERF"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-desktop/3.4.2",
+                      "mandatory":  true,
+                      "capability_id":  "watcher-recovery",
+                      "requirement_id":  "watcher-recovery",
+                      "scenario_id":  "bounded-refresh",
+                      "gates":  [
+                                    "G-DESKTOP",
+                                    "G-PERF"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-desktop/3.4.3",
+                      "mandatory":  true,
+                      "capability_id":  "watcher-recovery",
+                      "requirement_id":  "watcher-recovery",
+                      "scenario_id":  "bounded-refresh",
+                      "gates":  [
+                                    "G-DESKTOP",
+                                    "G-PERF"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-desktop/3.4.4",
+                      "mandatory":  true,
+                      "capability_id":  "watcher-recovery",
+                      "requirement_id":  "watcher-recovery",
+                      "scenario_id":  "bounded-refresh",
+                      "gates":  [
+                                    "G-DESKTOP",
+                                    "G-PERF"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-desktop/3.4.5",
+                      "mandatory":  true,
+                      "capability_id":  "watcher-recovery",
+                      "requirement_id":  "watcher-recovery",
+                      "scenario_id":  "bounded-refresh",
+                      "gates":  [
+                                    "G-DESKTOP",
+                                    "G-PERF"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-desktop/4.1.1",
+                      "mandatory":  true,
+                      "capability_id":  "desktop-contract-gate",
+                      "requirement_id":  "desktop-contract-gate",
+                      "scenario_id":  "headful-publication",
+                      "gates":  [
+                                    "G-DESKTOP",
+                                    "G-A11Y-I18N",
+                                    "G-DPI-MONITOR"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-desktop/4.1.2",
+                      "mandatory":  true,
+                      "capability_id":  "desktop-contract-gate",
+                      "requirement_id":  "desktop-contract-gate",
+                      "scenario_id":  "headful-publication",
+                      "gates":  [
+                                    "G-DESKTOP",
+                                    "G-A11Y-I18N",
+                                    "G-DPI-MONITOR"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-desktop/4.1.3",
+                      "mandatory":  true,
+                      "capability_id":  "desktop-contract-gate",
+                      "requirement_id":  "desktop-contract-gate",
+                      "scenario_id":  "headful-publication",
+                      "gates":  [
+                                    "G-DESKTOP",
+                                    "G-A11Y-I18N",
+                                    "G-DPI-MONITOR"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-desktop/4.1.4",
+                      "mandatory":  true,
+                      "capability_id":  "desktop-contract-gate",
+                      "requirement_id":  "desktop-contract-gate",
+                      "scenario_id":  "headful-publication",
+                      "gates":  [
+                                    "G-DESKTOP",
+                                    "G-A11Y-I18N",
+                                    "G-DPI-MONITOR"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-desktop/4.1.5",
+                      "mandatory":  true,
+                      "capability_id":  "desktop-contract-gate",
+                      "requirement_id":  "desktop-contract-gate",
+                      "scenario_id":  "headful-publication",
+                      "gates":  [
+                                    "G-DESKTOP",
+                                    "G-A11Y-I18N",
+                                    "G-DPI-MONITOR"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-desktop/4.1.6",
+                      "mandatory":  true,
+                      "capability_id":  "desktop-contract-gate",
+                      "requirement_id":  "desktop-contract-gate",
+                      "scenario_id":  "headful-publication",
+                      "gates":  [
+                                    "G-DESKTOP",
+                                    "G-A11Y-I18N",
+                                    "G-DPI-MONITOR"
+                                ]
+                  }
+              ]
+}

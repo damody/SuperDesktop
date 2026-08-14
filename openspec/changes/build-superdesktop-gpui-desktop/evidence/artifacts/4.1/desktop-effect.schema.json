@@ -1,0 +1,28 @@
+{
+    "$schema":  "https://json-schema.org/draft/2020-12/schema",
+    "title":  "SuperDesktop activation effect",
+    "type":  "object",
+    "required":  [
+                     "kind"
+                 ],
+    "properties":  {
+                       "request_id":  {
+                                          "type":  "integer",
+                                          "minimum":  1
+                                      },
+                       "correlation_id":  {
+                                              "type":  "string"
+                                          },
+                       "action":  {
+                                      "type":  "string"
+                                  },
+                       "kind":  {
+                                    "enum":  [
+                                                 "bridge",
+                                                 "association",
+                                                 "deferred-unavailable"
+                                             ]
+                                }
+                   },
+    "additionalProperties":  false
+}
