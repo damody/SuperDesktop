@@ -3871,6 +3871,11 @@ name = "taskbar-ui"
 version = "0.1.0"
 dependencies = [
  "gpui",
+ "gpui_windows",
+ "platform-win",
+ "raw-window-handle",
+ "settings-store",
+ "shell-core",
 ]
 
 [[package]]

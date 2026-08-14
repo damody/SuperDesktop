@@ -10,3 +10,10 @@ workspace = true
 
 [dependencies]
 gpui.workspace = true
+platform-win = { path = "../platform-win" }
+settings-store = { path = "../settings-store" }
+shell-core = { path = "../shell-core" }
+
+[dev-dependencies]
+gpui_windows.workspace = true
+raw-window-handle.workspace = true

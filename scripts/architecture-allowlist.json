@@ -29,7 +29,7 @@
     ],
     "superdesktop-guardian": [],
     "superdesktop-test-support": ["settings-store", "shell-core", "jsonschema", "serde_json"],
-    "taskbar-ui": ["gpui", "shell-core"]
+    "taskbar-ui": ["gpui", "gpui_windows", "platform-win", "raw-window-handle", "settings-store", "shell-core"]
   },
   "forbidden_dependency_substrings": {
     "shell-core": ["gpui", "windows", "winapi", "win32", "com"]
