@@ -14,8 +14,80 @@ use platform_win::common::{
 use raw_window_handle::{HasWindowHandle, RawWindowHandle};
 use taskbar_ui::{
     AccessibleTask, ClockLocale, CoreStatus, ProviderState, StatusRegion, TaskAction,
-    TaskbarLayout, TaskbarView, TestClock,
+    TaskbarCallbacks, TaskbarLayout, TaskbarView, TestClock,
 };
+
+fn trace_action(action: &str) {
+    let Some(path) = std::env::var_os("SUPERDESKTOP_ACTION_TRACE") else {
+        return;
+    };
+    if let Ok(mut file) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(path)
+    {
+        use std::io::Write;
+        let _ = writeln!(file, "{action}");
+    }
+}
+
+fn launch_superexplorer() {
+    let developer_release =
+        std::path::PathBuf::from(r"D:\SuperExplorer\target\release\SuperExplorer.exe");
+    let adjacent = std::env::current_exe()
+        .ok()
+        .and_then(|path| path.parent().map(|parent| parent.join("SuperExplorer.exe")))
+        .unwrap_or_else(|| std::path::PathBuf::from(r"C:\missing\SuperExplorer.exe"));
+    let resolver = explorer_bridge::ExecutableResolver {
+        setting: std::env::var_os("SUPEREXPLORER_PATH").map(std::path::PathBuf::from),
+        developer_release,
+        adjacent,
+    };
+    match resolver.resolve() {
+        Ok((resolved, _)) => {
+            let spec = explorer_bridge::build_default_launch(&resolved);
+            match explorer_bridge::ProcessLauncher.launch(&spec) {
+                explorer_bridge::LaunchOutcome::Launched { .. } => {
+                    trace_action("superexplorer:launched")
+                }
+                explorer_bridge::LaunchOutcome::ValidationFailed(_) => {
+                    trace_action("superexplorer:validation-failed")
+                }
+                explorer_bridge::LaunchOutcome::SpawnFailed(_) => {
+                    trace_action("superexplorer:spawn-failed")
+                }
+            }
+        }
+        Err(_) => trace_action("superexplorer:resolver-unavailable"),
+    }
+}
+
+fn activate_task(stable_id: &str) {
+    trace_action("task");
+    let Some(hex) = stable_id.rsplit(':').next() else {
+        return;
+    };
+    let Ok(hwnd) = usize::from_str_radix(hex, 16) else {
+        return;
+    };
+    let Ok(windows) = snapshot_task_windows() else {
+        return;
+    };
+    let Some(window) = windows
+        .into_iter()
+        .find(|window| window.hwnd_identity == hwnd as isize)
+    else {
+        return;
+    };
+    let action = if window.foreground {
+        platform_win::common::taskbar::WindowAction::Minimize
+    } else if window.minimized {
+        platform_win::common::taskbar::WindowAction::RestoreAndActivate
+    } else {
+        platform_win::common::taskbar::WindowAction::Activate
+    };
+    let _ = platform_win::common::taskbar::apply_window_action(window.hwnd_identity, action);
+}
 
 fn hwnd(window: &gpui::Window) -> Result<isize, &'static str> {
     let handle = HasWindowHandle::window_handle(window).map_err(|_| "gpui-window-handle")?;
@@ -144,6 +216,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                             )],
                             false,
                         )
+                        .with_fixed_action(Rc::new(launch_superexplorer))
                     })
                 });
                 let Ok(desktop) = desktop else {
@@ -161,11 +234,16 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                     let scale = taskbar_monitor.dpi_x as f32 / 96.0;
                     let width = taskbar_monitor.bounds.right - taskbar_monitor.bounds.left;
                     let height = (80.0 * scale).round() as i32;
+                    let bottom = if shell {
+                        taskbar_monitor.bounds.bottom
+                    } else {
+                        taskbar_monitor.work_area.bottom
+                    };
                     let configured = hwnd(window).and_then(|value| {
                         configure_and_show_taskbar_window(
                             value,
                             taskbar_monitor.bounds.left,
-                            taskbar_monitor.bounds.bottom - height,
+                            bottom - height,
                             width,
                             height,
                         )
@@ -210,6 +288,14 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                         tasks: taskbar_tasks,
                         fixed_name: "SuperExplorer".into(),
                         status: status(),
+                        callbacks: Some(TaskbarCallbacks {
+                            start: Rc::new(|| {
+                                trace_action("start");
+                                let _ = platform_win::common::monitor_dpi_start::invoke_start_host_controlled();
+                            }),
+                            fixed: Rc::new(launch_superexplorer),
+                            task: Rc::new(activate_task),
+                        }),
                     })
                 });
                 let Ok(taskbar) = taskbar else {

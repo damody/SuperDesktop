@@ -26,6 +26,6 @@ pub use surface::{
 pub use tracker::{
     Eligibility, OwnedWindowEvent, TaskWindow, TrackerPush, WindowObservation, WindowTracker,
 };
-pub use view::TaskbarView;
+pub use view::{TaskbarCallbacks, TaskbarView};
 
 pub const CRATE_ROLE: &str = "taskbar GPUI surface and window-management boundary";
