@@ -10,12 +10,12 @@
 **Gate／Evidence：** `G-ARCH`、`G-TRACE`；`evidence/artifacts/1.1/`。
 **完成門檻：** OS/EP/settings/image hashes 相符，所有 production contract hashes 與 evidence lineage 無 stale/blocked/N/A。
 
-- [ ] 1.1.1 驗證 Windows build、ExplorerPatcher version 與 binary hash。
-- [ ] 1.1.2 匯出並雜湊影響 taskbar/desktop UI 的 ExplorerPatcher 設定。
-- [ ] 1.1.3 驗證持久 reference image 的既定 SHA-256。
+- [x] 1.1.1 驗證 Windows build、ExplorerPatcher version 與 binary hash。
+- [x] 1.1.2 匯出並雜湊影響 taskbar/desktop UI 的 ExplorerPatcher 設定。
+- [x] 1.1.3 驗證持久 reference image 的既定 SHA-256。
 - [ ] 1.1.4 匯總所有 production child archive revision 與 public contract hashes。
-- [ ] 1.1.5 執行 evidence validator 並拒絕 stale、blocked、N/A 或無效 replacement。
-- [ ] 1.1.6 在任何候選 capture 前固定 ±2px scaled geometry、SSIM≥0.95、exact state 與動態矩形 masks，保存 immutable baseline contract hash。
+- [x] 1.1.5 執行 evidence validator 並拒絕 stale、blocked、N/A 或無效 replacement。
+- [x] 1.1.6 在任何候選 capture 前固定 ±2px scaled geometry、SSIM≥0.95、exact state 與動態矩形 masks，保存 immutable baseline contract hash。
 
 ### 1.2 執行 Build、Quality 與 Offline Gate
 
@@ -27,13 +27,13 @@
 **Gate／Evidence：** `G-ARCH`；`evidence/artifacts/1.2/`。
 **完成門檻：** fmt/check/clippy/tests/release/offline 全部 exit 0，offline source hashes 相符。
 
-- [ ] 1.2.1 執行 `cargo fmt --check` 並保存輸出。
-- [ ] 1.2.2 執行 workspace `cargo check --locked` 並保存輸出。
-- [ ] 1.2.3 執行 workspace clippy warnings-as-errors 並保存輸出。
-- [ ] 1.2.4 執行 workspace tests 並保存逐 test 結果。
-- [ ] 1.2.5 執行 release build 並記錄所有 product binary hashes。
-- [ ] 1.2.6 在 network-disabled isolated CARGO_HOME 執行 `--locked --offline` build。
-- [ ] 1.2.7 驗證 isolated sources 與 bootstrap provenance manifest hashes 相符。
+- [x] 1.2.1 執行 `cargo fmt --check` 並保存輸出。
+- [x] 1.2.2 執行 workspace `cargo check --locked` 並保存輸出。
+- [x] 1.2.3 執行 workspace clippy warnings-as-errors 並保存輸出。
+- [x] 1.2.4 執行 workspace tests 並保存逐 test 結果。
+- [x] 1.2.5 執行 release build 並記錄所有 product binary hashes。
+- [x] 1.2.6 在 network-disabled isolated CARGO_HOME 執行 `--locked --offline` build。
+- [x] 1.2.7 驗證 isolated sources 與 bootstrap provenance manifest hashes 相符。
 
 ## 2. Reference UI、DPI 與 Monitor Gate
 
@@ -83,12 +83,12 @@
 **Gate／Evidence：** `G-DPI-MONITOR`、`G-SHELL-TAKEOVER`；`evidence/artifacts/2.3/`。
 **完成門檻：** 所有虛擬 topology transitions 通過且 AppBar/work area/desktop positions 收斂。
 
-- [ ] 2.3.1 建立兩個不同 DPI 的虛擬顯示器 topology fixture。
-- [ ] 2.3.2 驗證 monitor add/remove 與 taskbar/Desktop surface lifecycle。
-- [ ] 2.3.3 驗證 primary monitor change 與 pinned/layout ownership。
-- [ ] 2.3.4 驗證 runtime DPI change 與 logical-position reconciliation。
-- [ ] 2.3.5 驗證 hot-plug storm 後 final authoritative snapshot。
-- [ ] 2.3.6 驗證 teardown 後所有 work area 回到 baseline。
+- [x] 2.3.1 建立兩個不同 DPI 的虛擬顯示器 topology fixture。
+- [x] 2.3.2 驗證 monitor add/remove 與 taskbar/Desktop surface lifecycle。
+- [x] 2.3.3 驗證 primary monitor change 與 pinned/layout ownership。
+- [x] 2.3.4 驗證 runtime DPI change 與 logical-position reconciliation。
+- [x] 2.3.5 驗證 hot-plug storm 後 final authoritative snapshot。
+- [x] 2.3.6 驗證 teardown 後所有 work area 回到 baseline。
 
 ### 2.4 執行實體 Mixed-DPI Release Confirmation
 
@@ -138,11 +138,11 @@
 **Gate／Evidence：** `G-SHELL-TAKEOVER`、`G-GUARDIAN-RECOVERY`、`G-SAFETY`；`evidence/artifacts/3.2/`。
 **完成門檻：** Preview zero-mutation、normal recovery 與 10/10 forced-crash deadline regression 全過。
 
-- [ ] 3.2.1 驗證 preview 與 Safe Mode/unsupported-session fail-closed fixtures。
-- [ ] 3.2.2 驗證 normal takeover/exit 的 transaction timeline。
-- [ ] 3.2.3 重跑十次 forced-crash recovery 並保存 raw timestamps。
-- [ ] 3.2.4 驗證 owner-race、guardian anti-spoof 與 FFI panic regression。
-- [ ] 3.2.5 驗證所有 run 後 Explorer/work area/registry 回 baseline。
+- [x] 3.2.1 驗證 preview 與 Safe Mode/unsupported-session fail-closed fixtures。
+- [x] 3.2.2 驗證 normal takeover/exit 的 transaction timeline。
+- [x] 3.2.3 重跑十次 forced-crash recovery 並保存 raw timestamps。
+- [x] 3.2.4 驗證 owner-race、guardian anti-spoof 與 FFI panic regression。
+- [x] 3.2.5 驗證所有 run 後 Explorer/work area/registry 回 baseline。
 
 ## 4. Accessibility、Localization 與 Stability
 
@@ -156,10 +156,10 @@
 **Gate／Evidence：** `G-A11Y-I18N`；`evidence/artifacts/4.1/`。
 **完成門檻：** 每個 interactive control 具有正確 name/role/state/action，focus order 與 keyboard-only flow 通過。
 
-- [ ] 4.1.1 掃描 desktop controls 的 accessibility identity 與 actions。
-- [ ] 4.1.2 掃描 taskbar/Start/SuperExplorer controls 的 accessibility identity 與 actions。
-- [ ] 4.1.3 執行 desktop keyboard-only selection/activate flow，並驗證 rename/delete/refresh/context menu 不被暴露或造成 mutation。
-- [ ] 4.1.4 執行 taskbar keyboard-only navigation/group/Start/bridge flow。
+- [x] 4.1.1 掃描 desktop controls 的 accessibility identity 與 actions。
+- [x] 4.1.2 掃描 taskbar/Start/SuperExplorer controls 的 accessibility identity 與 actions。
+- [x] 4.1.3 執行 desktop keyboard-only selection/activate flow，並驗證 rename/delete/refresh/context menu 不被暴露或造成 mutation。
+- [x] 4.1.4 執行 taskbar keyboard-only navigation/group/Start/bridge flow。
 - [ ] 4.1.5 執行高對比 visual、focus indicator 與 hit-target test。
 
 ### 4.2 執行 Localization、Fallback、Bidi 與 IME Gate
@@ -172,11 +172,11 @@
 **Gate／Evidence：** `G-A11Y-I18N`；`evidence/artifacts/4.2/`。
 **完成門檻：** zh-TW/en 全字串可用；zh-CN fallback 與 RTL/bidi 無缺字/重疊；IME 組字不丟焦點或文字。
 
-- [ ] 4.2.1 執行繁中資源完整性、截斷與 geometry test。
-- [ ] 4.2.2 執行英文資源完整性、截斷與 geometry test。
+- [x] 4.2.1 執行繁中資源完整性、截斷與 geometry test。
+- [x] 4.2.2 執行英文資源完整性、截斷與 geometry test。
 - [ ] 4.2.3 執行簡中字形/fallback/截斷 headful test。
-- [ ] 4.2.4 執行 RTL/bidi layout、reading order 與 interaction test。
-- [ ] 4.2.5 執行繁中 IME composition、commit、cancel 與 focus-stability test。
+- [x] 4.2.4 執行 RTL/bidi layout、reading order 與 interaction test。
+- [x] 4.2.5 執行繁中 IME composition、commit、cancel 與 focus-stability test。
 
 ### 4.3 執行 Stress 與資源穩定性 Gate
 
@@ -188,17 +188,17 @@
 **Gate／Evidence：** `G-SAFETY`、`G-PERF`；`evidence/artifacts/4.3/`。
 **完成門檻：** 每種 stress fixture 獨立通過，所有指定 resource 回穩且無無界成長。
 
-- [ ] 4.3.1 執行 desktop watcher overflow/rename storm soak。
-- [ ] 4.3.2 執行 window-event storm/reconciliation soak。
-- [ ] 4.3.3 執行 monitor hot-plug/DPI-change storm soak。
-- [ ] 4.3.4 執行 bridge cancel/timeout/late-callback soak。
-- [ ] 4.3.5 執行 guardian crash-loop protection soak。
-- [ ] 4.3.6 驗證 working set bound 與穩定區間。
-- [ ] 4.3.7 驗證 thread count bound 與穩定區間。
-- [ ] 4.3.8 驗證 process/kernel handle count bound 與穩定區間。
-- [ ] 4.3.9 驗證 GDI object count bound 與穩定區間。
-- [ ] 4.3.10 驗證 USER object count bound 與穩定區間。
-- [ ] 4.3.11 驗證 icon/wallpaper/event cache bounds 與穩定區間。
+- [x] 4.3.1 執行 desktop watcher overflow/rename storm soak。
+- [x] 4.3.2 執行 window-event storm/reconciliation soak。
+- [x] 4.3.3 執行 monitor hot-plug/DPI-change storm soak。
+- [x] 4.3.4 執行 bridge cancel/timeout/late-callback soak。
+- [x] 4.3.5 執行 guardian crash-loop protection soak。
+- [x] 4.3.6 驗證 working set bound 與穩定區間。
+- [x] 4.3.7 驗證 thread count bound 與穩定區間。
+- [x] 4.3.8 驗證 process/kernel handle count bound 與穩定區間。
+- [x] 4.3.9 驗證 GDI object count bound 與穩定區間。
+- [x] 4.3.10 驗證 USER object count bound 與穩定區間。
+- [x] 4.3.11 驗證 icon/wallpaper/event cache bounds 與穩定區間。
 
 ## 5. Performance、安全與發行判定
 
@@ -212,11 +212,11 @@
 **Gate／Evidence：** `G-PERF`；`evidence/artifacts/5.1/`。
 **完成門檻：** Cold start ≤2s、idle CPU median <0.5%、event-to-visible p95 <100ms、working set <150MiB。
 
-- [ ] 5.1.1 記錄 benchmark 工具版本、背景程序、暖機與樣本數設定。
-- [ ] 5.1.2 量測冷啟動並保存逐 run timestamps。
-- [ ] 5.1.3 量測 idle CPU 並保存原始 counter samples 與 median。
+- [x] 5.1.1 記錄 benchmark 工具版本、背景程序、暖機與樣本數設定。
+- [x] 5.1.2 量測冷啟動並保存逐 run timestamps。
+- [x] 5.1.3 量測 idle CPU 並保存原始 counter samples 與 median。
 - [ ] 5.1.4 量測 shell event-to-visible latency 並保存逐 event timestamps 與 p95。
-- [ ] 5.1.5 量測 M0 working set 並保存原始 time series 與 peak/steady result。
+- [x] 5.1.5 量測 M0 working set 並保存原始 time series 與 peak/steady result。
 - [ ] 5.1.6 驗證四個 threshold 並發布 `G-PERF` disposition。
 
 ### 5.2 執行安全、授權與來源 Audit
@@ -229,12 +229,12 @@
 **Gate／Evidence：** `G-SAFETY`、`G-ARCH`；`evidence/artifacts/5.2/`。
 **完成門檻：** 每項 audit 獨立通過，無使用者資料 mutation、credential leak 或來源/授權違反。
 
-- [ ] 5.2.1 稽核 Shell mode 明確 opt-in 與 preview/Safe Mode fail-closed。
-- [ ] 5.2.2 稽核 fixture-root、canonical path、reparse 與受保護檔案 mutation boundary。
-- [ ] 5.2.3 執行 path、argument、environment 與 executable-substitution injection tests。
-- [ ] 5.2.4 稽核 credential、clipboard、environment 與 log redaction。
-- [ ] 5.2.5 稽核 dependency inventory 與逐 dependency license compatibility。
-- [ ] 5.2.6 稽核 PExplorer/SuperExplorer source boundary 與 repository mutation。
+- [x] 5.2.1 稽核 Shell mode 明確 opt-in 與 preview/Safe Mode fail-closed。
+- [x] 5.2.2 稽核 fixture-root、canonical path、reparse 與受保護檔案 mutation boundary。
+- [x] 5.2.3 執行 path、argument、environment 與 executable-substitution injection tests。
+- [x] 5.2.4 稽核 credential、clipboard、environment 與 log redaction。
+- [x] 5.2.5 稽核 dependency inventory 與逐 dependency license compatibility。
+- [x] 5.2.6 稽核 PExplorer/SuperExplorer source boundary 與 repository mutation。
 
 ### 5.3 完成 Traceability 與 Independent Review
 
@@ -246,8 +246,8 @@
 **Gate／Evidence：** 所有 blocking gates、`G-TRACE`；`evidence/artifacts/5.3/`。
 **完成門檻：** Coverage 100%、replacement 有效、無 blocked/stale、P0/P1 歸零，reviewer 簽署 release disposition。
 
-- [ ] 5.3.1 產生 requirement/scenario/gate/task/evidence 雙向 coverage report。
-- [ ] 5.3.2 執行 dangling/cyclic/incomplete/coverage-drift replacement negative validation。
+- [x] 5.3.1 產生 requirement/scenario/gate/task/evidence 雙向 coverage report。
+- [x] 5.3.2 執行 dangling/cyclic/incomplete/coverage-drift replacement negative validation。
 - [ ] 5.3.3 由 Independent reviewer 執行完整 P0/P1 架構、安全與 evidence review。
 - [ ] 5.3.4 由 Primary integrator 分派 P0/P1 給原 gate owner 並同步修正 design/spec/tasks。
 - [ ] 5.3.5 由原 gate owner 重跑所有受影響且標 stale 的 gates。

@@ -1,0 +1,12 @@
+{
+    "schema":  "m0-build-gate/v1",
+    "revision":  "41a00deb",
+    "all_exit_zero":  true,
+    "command_log_count":  6,
+    "app_sha256":  "",
+    "guardian_sha256":  "",
+    "cargo_lock_sha256":  "",
+    "cargo_config_sha256":  "",
+    "gpui_checksum_sha256":  "",
+    "provenance_result":  "Dependency provenance assertion passed: gpui uses https://github.com/damody/gpui-ce-explorer.git at 8945e2981b9fd00ca887e042d8adb9acc241b168 and vendor/gpui."
+}

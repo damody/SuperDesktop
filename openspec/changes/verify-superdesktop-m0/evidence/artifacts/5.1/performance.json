@@ -1,0 +1,100 @@
+{
+    "schema":  "m0-performance/v1",
+    "tool":  "System.Diagnostics.Stopwatch + Process counters",
+    "warmup":  "release build and lifecycle probe",
+    "background_process_count":  370,
+    "sample_counts":  {
+                          "latency":  30,
+                          "working_set":  10,
+                          "idle":  10,
+                          "cold":  15
+                      },
+    "raw":  {
+                "working_set_bytes":  [
+                                          7168000,
+                                          7168000,
+                                          7168000,
+                                          7168000,
+                                          7168000,
+                                          7168000,
+                                          7168000,
+                                          7168000,
+                                          7168000,
+                                          7168000
+                                      ],
+                "idle_cpu_percent":  [
+                                         0,
+                                         0,
+                                         0,
+                                         0,
+                                         0,
+                                         0,
+                                         0,
+                                         0,
+                                         0,
+                                         0
+                                     ],
+                "cold_start_ms":  [
+                                      15.748,
+                                      12.861,
+                                      12.341,
+                                      12.176,
+                                      11.858,
+                                      11.731,
+                                      12.292,
+                                      12.034,
+                                      11.387,
+                                      11.698,
+                                      11.527,
+                                      11.533,
+                                      11.854,
+                                      11.14,
+                                      11.665
+                                  ],
+                "event_to_terminal_ms":  [
+                                             11.977,
+                                             9.946,
+                                             10.384,
+                                             9.489,
+                                             9.579,
+                                             10.965,
+                                             11.359,
+                                             10.653,
+                                             11.331,
+                                             10.202,
+                                             11.537,
+                                             13.658,
+                                             14.192,
+                                             10.256,
+                                             8.338,
+                                             10.748,
+                                             11.949,
+                                             10.996,
+                                             11.682,
+                                             11.009,
+                                             11.482,
+                                             12.461,
+                                             15.025,
+                                             13.194,
+                                             12.292,
+                                             11.906,
+                                             11.011,
+                                             10.306,
+                                             14.043,
+                                             11.539
+                                         ]
+            },
+    "results":  {
+                    "working_set_peak_bytes":  7168000,
+                    "cold_start_max_ms":  15.748,
+                    "event_to_terminal_p95_ms":  14.192,
+                    "idle_cpu_median_percent":  0
+                },
+    "thresholds":  {
+                       "event_to_visible_p95_ms":  100,
+                       "idle_cpu_percent":  0.5,
+                       "working_set_bytes":  157286400,
+                       "cold_start_ms":  2000
+                   },
+    "gate":  "blocked-event-to-visible-not-measured"
+}

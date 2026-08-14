@@ -1,0 +1,92 @@
+{
+    "schema":  "m0-reference-baseline/v1",
+    "frozen_before_candidates":  true,
+    "windows_build":  "26200.8875",
+    "explorerpatcher_version":  "26100.8457.70.3",
+    "profile_sha256":  "8D4855CAB9549EFB9687EBCC7B6AEFA9394A86EAE379C70F76034FEE27040974",
+    "settings_export_sha256":  "020E3E000A3A91B837923722A1081FADA78AF8518F1FBDF3F451878A3665BD6D",
+    "reference_image_sha256":  "48B5F990B9E155C5C2719D8F8B41D88ED4420A46C3B6018278511F9C349B387E",
+    "tolerance":  {
+                      "minimum_ssim":  0.95,
+                      "masks":  [
+                                    {
+                                        "name":  "fixture-window-titles",
+                                        "rect":  [
+                                                     150,
+                                                     0,
+                                                     2500,
+                                                     140
+                                                 ]
+                                    },
+                                    {
+                                        "name":  "time-date-notifications",
+                                        "rect":  [
+                                                     3400,
+                                                     0,
+                                                     437,
+                                                     140
+                                                 ]
+                                    }
+                                ],
+                      "exact_control_state":  true,
+                      "base_physical_px":  2,
+                      "scaled":  "round(2*dpi/96)"
+                  },
+    "production_lineage":  [
+                               {
+                                   "change":  "validate-superdesktop-windows-platform",
+                                   "state":  "active-complete-archive-deferred-by-user",
+                                   "manifest":  "openspec/changes/validate-superdesktop-windows-platform/evidence/artifacts/3.4/platform-common-api-abi-manifest.json",
+                                   "manifest_sha256":  "A7CF3DDDF723DA157675A246B6B226E0B17BC1F7060C1A34A1AB338C02733A2D",
+                                   "handoff_sha256":  "100A6B0B5D34233510CCD9FACDC49149F38349897B20CE91D0846CBE5DA9D6DC",
+                                   "strict":  "passed",
+                                   "evidence_validator":  "passed"
+                               },
+                               {
+                                   "change":  "build-superdesktop-shell-core",
+                                   "state":  "active-complete-archive-deferred-by-user",
+                                   "manifest":  "openspec/changes/build-superdesktop-shell-core/evidence/artifacts/4.1/core-contract-manifest.json",
+                                   "manifest_sha256":  "EC7274261C39122474322A398049F8B8FD41B6AAC1AA3927E85C42B74C297C18",
+                                   "handoff_sha256":  "E37E1AE2D0FD6FE16A71C75769C195100262CE0A2BD76A1F21E720D57DC2F565",
+                                   "strict":  "passed",
+                                   "evidence_validator":  "passed"
+                               },
+                               {
+                                   "change":  "build-superdesktop-gpui-desktop",
+                                   "state":  "active-complete-archive-deferred-by-user",
+                                   "manifest":  "openspec/changes/build-superdesktop-gpui-desktop/evidence/artifacts/4.1/desktop-contract-manifest.json",
+                                   "manifest_sha256":  "45B26C6A7FF320DB6A8EE4739227084AAB9533FFDAA0C7B88C810C086CE7D154",
+                                   "handoff_sha256":  "DAF7538B7E091985D30E8C7B7CD5E30054B88EE7D58DC3B1F609559FFC4F1A1C",
+                                   "strict":  "passed",
+                                   "evidence_validator":  "passed"
+                               },
+                               {
+                                   "change":  "build-superdesktop-gpui-taskbar",
+                                   "state":  "active-complete-archive-deferred-by-user",
+                                   "manifest":  "openspec/changes/build-superdesktop-gpui-taskbar/evidence/artifacts/4.1/taskbar-contract-manifest.json",
+                                   "manifest_sha256":  "AA3BCC48A9E088E570DC929961299C2E8AE79A9C68583E25EF9EB71624445D1A",
+                                   "handoff_sha256":  "0B66C79C7D9441BA05A5C4BCC13D4F765F48308F673DD8BB6EE74557F34CD43A",
+                                   "strict":  "passed",
+                                   "evidence_validator":  "passed"
+                               },
+                               {
+                                   "change":  "integrate-superexplorer-process-bridge",
+                                   "state":  "active-complete-archive-deferred-by-user",
+                                   "manifest":  "openspec/changes/integrate-superexplorer-process-bridge/evidence/artifacts/3.1/bridge-contract-manifest.json",
+                                   "manifest_sha256":  "2B279E460C89F82CDE6194089F1B0EF9B25FA0E44FF14C3C0429CDF02CA98446",
+                                   "handoff_sha256":  "0D101BC30692C6066B3727EFBFB09BF600256E5DBD174C48AF6D6EBF404DDB76",
+                                   "strict":  "passed",
+                                   "evidence_validator":  "passed"
+                               },
+                               {
+                                   "change":  "add-superdesktop-shell-takeover-recovery",
+                                   "state":  "active-complete-archive-deferred-by-user",
+                                   "manifest":  "openspec/changes/add-superdesktop-shell-takeover-recovery/evidence/artifacts/4.2/lifecycle-contract-manifest.json",
+                                   "manifest_sha256":  "4A3F16E334AA3C9A60FCC93DFB3EB45C3F9ABF612903B5FE2701C58278AEE640",
+                                   "handoff_sha256":  "6676F45DBDE5770E0CA367D46574CC075E28E53856D843303037E87C00A66A27",
+                                   "strict":  "passed",
+                                   "evidence_validator":  "passed"
+                               }
+                           ],
+    "archive_precondition":  "blocked-by-explicit-user-no-archive"
+}

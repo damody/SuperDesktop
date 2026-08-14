@@ -1,0 +1,7 @@
+cargo :     Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.37s
+At D:\SuperDesktop\SuperDesktop\scripts\capture-m0-local-evidence.ps1:24 char:85
++ ... ,@('check',{cargo check --workspace --all-targets --locked --offline} ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (    Finished `d...get(s) in 0.37s:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 

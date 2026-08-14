@@ -1,0 +1,25 @@
+{
+    "schema":  "m0-external-blockers/v1",
+    "host_os":  "Microsoft Windows 11 專業版 26200.8875",
+    "active_physical_monitors":  1,
+    "candidate_ui":  {
+                         "status":  "blocked",
+                         "reason":  "The production entry point does not expose a persistent visible desktop/taskbar candidate; masked SSIM was 0.0551325804246171."
+                     },
+    "windows_10_22h2":  {
+                            "status":  "blocked",
+                            "reason":  "No Windows 10 22H2 physical host or formal VM is available."
+                        },
+    "physical_mixed_dpi":  {
+                               "status":  "blocked",
+                               "reason":  "Only one active physical display is attached; virtual topology cannot substitute."
+                           },
+    "archive_lineage":  {
+                            "status":  "blocked",
+                            "reason":  "User explicitly deferred all OpenSpec archives until implementation work is complete."
+                        },
+    "independent_review":  {
+                               "status":  "blocked",
+                               "reason":  "No independent reviewer execution has been supplied in this task."
+                           }
+}
