@@ -134,7 +134,7 @@ fn hwnd(window: &gpui::Window) -> Result<isize, &'static str> {
     Ok(handle.hwnd.get())
 }
 
-fn options(monitor: &MonitorRecord, taskbar: bool) -> WindowOptions {
+fn options(monitor: &MonitorRecord, taskbar: bool, interactive: bool) -> WindowOptions {
     let scale = monitor.dpi_x as f32 / 96.0;
     let width = (monitor.bounds.right - monitor.bounds.left) as f32 / scale;
     let height = if taskbar {
@@ -147,7 +147,13 @@ fn options(monitor: &MonitorRecord, taskbar: bool) -> WindowOptions {
             origin: point(
                 px(monitor.bounds.left as f32 / scale),
                 px(if taskbar {
-                    monitor.bounds.bottom as f32 / scale - height
+                    (if interactive {
+                        monitor.work_area.bottom
+                    } else {
+                        monitor.bounds.bottom
+                    }) as f32
+                        / scale
+                        - height
                 } else {
                     monitor.bounds.top as f32 / scale
                 }),
@@ -155,7 +161,7 @@ fn options(monitor: &MonitorRecord, taskbar: bool) -> WindowOptions {
             size: size(px(width), px(height)),
         })),
         titlebar: None,
-        focus: false,
+        focus: interactive,
         show: true,
         kind: WindowKind::PopUp,
         is_movable: false,
@@ -205,6 +211,8 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
     enable_per_monitor_v2()?;
     let snapshot = snapshot_real_monitors()?;
     let initial_tasks = visible_tasks()?;
+    let verification_surface = std::env::var("SUPERDESKTOP_VERIFICATION_SURFACE").ok();
+    let interactive = verification_surface.is_some();
     let terminal = Rc::new(RefCell::new(None::<Result<(), &'static str>>));
     let terminal_for_app = Rc::clone(&terminal);
     let platform = gpui_windows::WindowsPlatform::new(false).map_err(|_| "gpui-platform")?;
@@ -216,43 +224,61 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
             let leases = Rc::new(RefCell::new(Vec::<ControlledShellCapability>::new()));
             let init_error = Rc::new(RefCell::new(None::<&'static str>));
             for monitor in snapshot.monitors.clone() {
-                let desktop_monitor = monitor.clone();
-                let desktop_error = Rc::clone(&init_error);
-                let desktop = cx.open_window(options(&monitor, false), move |window, cx| {
-                    let width = desktop_monitor.bounds.right - desktop_monitor.bounds.left;
-                    let height = desktop_monitor.bounds.bottom - desktop_monitor.bounds.top;
-                    if let Err(error) = hwnd(window).and_then(|value| {
-                        configure_and_show_desktop_window(
-                            value,
-                            desktop_monitor.bounds.left,
-                            desktop_monitor.bounds.top,
-                            width,
-                            height,
-                        )
-                        .map_err(|_| "desktop-window-configure")
-                    }) {
-                        *desktop_error.borrow_mut() = Some(error);
-                    }
-                    cx.new(|_| {
-                        DesktopView::new(
-                            vec![fixed_node(&desktop_monitor.device_name)],
-                            false,
-                        )
-                        .with_fixed_action(Rc::new(launch_superexplorer))
-                    })
-                });
-                let Ok(desktop) = desktop else {
-                    *terminal_for_app.borrow_mut() = Some(Err("desktop-window-open"));
-                    cx.quit();
-                    return;
-                };
-                desktop_handles.push(desktop);
+                if verification_surface.as_deref() != Some("taskbar") {
+                    let desktop_monitor = monitor.clone();
+                    let desktop_error = Rc::clone(&init_error);
+                    let desktop = cx.open_window(options(&monitor, false, interactive), move |window, cx| {
+                        if interactive {
+                            window.activate_window();
+                        }
+                        let width = desktop_monitor.bounds.right - desktop_monitor.bounds.left;
+                        let height = desktop_monitor.bounds.bottom - desktop_monitor.bounds.top;
+                        if !interactive
+                            && let Err(error) = hwnd(window).and_then(|value| {
+                                configure_and_show_desktop_window(
+                                    value,
+                                    desktop_monitor.bounds.left,
+                                    desktop_monitor.bounds.top,
+                                    width,
+                                    height,
+                                )
+                                .map_err(|_| "desktop-window-configure")
+                            })
+                        {
+                            *desktop_error.borrow_mut() = Some(error);
+                        }
+                        cx.new(|cx| {
+                            let view = DesktopView::new(
+                                vec![fixed_node(&desktop_monitor.device_name)],
+                                false,
+                            )
+                            .with_fixed_action(Rc::new(launch_superexplorer));
+                            if interactive {
+                                view.enable_keyboard_focus(window, cx)
+                            } else {
+                                view
+                            }
+                        })
+                    });
+                    let Ok(desktop) = desktop else {
+                        *terminal_for_app.borrow_mut() = Some(Err("desktop-window-open"));
+                        cx.quit();
+                        return;
+                    };
+                    desktop_handles.push(desktop);
+                }
 
+                if verification_surface.as_deref() == Some("desktop") {
+                    continue;
+                }
                 let taskbar_monitor = monitor.clone();
                 let taskbar_tasks = initial_tasks.clone();
                 let taskbar_error = Rc::clone(&init_error);
                 let taskbar_leases = Rc::clone(&leases);
-                let taskbar = cx.open_window(options(&monitor, true), move |window, cx| {
+                let taskbar = cx.open_window(options(&monitor, true, interactive), move |window, cx| {
+                    if interactive {
+                        window.activate_window();
+                    }
                     let scale = taskbar_monitor.dpi_x as f32 / 96.0;
                     let width = taskbar_monitor.bounds.right - taskbar_monitor.bounds.left;
                     let height = (80.0 * scale).round() as i32;
@@ -261,7 +287,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                     } else {
                         taskbar_monitor.work_area.bottom
                     };
-                    let configured = hwnd(window).and_then(|value| {
+                    let configured = if interactive { Ok(()) } else { hwnd(window).and_then(|value| {
                         configure_and_show_taskbar_window(
                             value,
                             taskbar_monitor.bounds.left,
@@ -294,11 +320,16 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                             taskbar_leases.borrow_mut().push(lease);
                         }
                         Ok(())
-                    });
+                    }) };
                     if let Err(error) = configured {
                         *taskbar_error.borrow_mut() = Some(error);
                     }
-                    cx.new(|_| TaskbarView {
+                    cx.new(|cx| {
+                        let focus_handle = interactive.then(|| cx.focus_handle());
+                        if let Some(handle) = &focus_handle {
+                            window.focus(handle, cx);
+                        }
+                        TaskbarView {
                         accessible_root_name: "SuperTaskbar".into(),
                         layout: TaskbarLayout::calculate(
                             2,
@@ -319,6 +350,8 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                             task: Rc::new(activate_task),
                             rendered: Rc::new(|| trace_action("frame-visible")),
                         }),
+                        keyboard_focus: focus_handle,
+                    }
                     })
                 });
                 let Ok(taskbar) = taskbar else {
@@ -341,40 +374,42 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
             }
 
             let refresh_handles = taskbar_handles.clone();
-            let refresh_background = cx.background_executor().clone();
-            let refresh_foreground = cx.foreground_executor().clone();
-            let refresh_app = cx.to_async();
-            refresh_foreground
-                .spawn(async move {
-                    loop {
-                        refresh_background.timer(Duration::from_millis(50)).await;
-                        let Ok(tasks) = visible_tasks() else {
-                            continue;
-                        };
-                        refresh_app.update(|app| {
-                            let mut alive = false;
-                            for handle in &refresh_handles {
-                                if handle
-                                    .update(app, |view, _, cx| {
-                                        alive = true;
-                                        if view.tasks != tasks {
-                                            view.tasks = tasks.clone();
-                                            trace_action("shell-event");
-                                            cx.notify();
-                                        }
-                                    })
-                                    .is_err()
-                                {
-                                    continue;
+            if !refresh_handles.is_empty() {
+                let refresh_background = cx.background_executor().clone();
+                let refresh_foreground = cx.foreground_executor().clone();
+                let refresh_app = cx.to_async();
+                refresh_foreground
+                    .spawn(async move {
+                        loop {
+                            refresh_background.timer(Duration::from_millis(50)).await;
+                            let Ok(tasks) = visible_tasks() else {
+                                continue;
+                            };
+                            refresh_app.update(|app| {
+                                let mut alive = false;
+                                for handle in &refresh_handles {
+                                    if handle
+                                        .update(app, |view, _, cx| {
+                                            alive = true;
+                                            if view.tasks != tasks {
+                                                view.tasks = tasks.clone();
+                                                trace_action("shell-event");
+                                                cx.notify();
+                                            }
+                                        })
+                                        .is_err()
+                                    {
+                                        continue;
+                                    }
                                 }
-                            }
-                            if !alive {
-                                app.quit();
-                            }
-                        });
-                    }
-                })
-                .detach();
+                                if !alive {
+                                    app.quit();
+                                }
+                            });
+                        }
+                    })
+                    .detach();
+            }
 
             if let Some(duration) = duration {
                 let background = cx.background_executor().clone();

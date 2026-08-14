@@ -1,8 +1,9 @@
 use std::rc::Rc;
 
 use gpui::{
-    Context, InteractiveElement, IntoElement, ParentElement, Render, StatefulInteractiveElement,
-    Styled, Window, div, linear_color_stop, linear_gradient, prelude::FluentBuilder as _, px, rgb,
+    Context, FocusHandle, InteractiveElement, IntoElement, ParentElement, Render,
+    StatefulInteractiveElement, Styled, Window, div, linear_color_stop, linear_gradient,
+    prelude::FluentBuilder as _, px, rgb,
 };
 
 use crate::{AccessibleTask, StatusRegion, TaskbarLayout};
@@ -14,6 +15,7 @@ pub struct TaskbarView {
     pub fixed_name: String,
     pub status: StatusRegion,
     pub callbacks: Option<TaskbarCallbacks>,
+    pub keyboard_focus: Option<FocusHandle>,
 }
 
 #[derive(Clone)]
@@ -29,6 +31,10 @@ impl Render for TaskbarView {
         let start = self.callbacks.as_ref().map(|value| Rc::clone(&value.start));
         let fixed = self.callbacks.as_ref().map(|value| Rc::clone(&value.fixed));
         let task_callback = self.callbacks.as_ref().map(|value| Rc::clone(&value.task));
+        let start_key = start.clone();
+        let fixed_key = fixed.clone();
+        let root_fixed_key = fixed.clone();
+        let keyboard_focus = self.keyboard_focus.clone();
         let high_contrast = std::env::var("SUPERDESKTOP_THEME").as_deref() == Ok("high-contrast");
         if let Some(rendered) = self
             .callbacks
@@ -41,6 +47,15 @@ impl Render for TaskbarView {
             .id("supertaskbar-root")
             .role(gpui::Role::List)
             .aria_label(self.accessible_root_name.clone())
+            .tab_index(0)
+            .when_some(keyboard_focus, |element, focus| element.track_focus(&focus))
+            .on_key_down(move |event, _, _| {
+                if matches!(event.keystroke.key.as_str(), "enter" | "space")
+                    && let Some(callback) = &root_fixed_key
+                {
+                    callback();
+                }
+            })
             .size_full()
             .flex()
             .flex_row()
@@ -79,6 +94,13 @@ impl Render for TaskbarView {
                             callback();
                         }
                     })
+                    .on_key_down(move |event, _, _| {
+                        if matches!(event.keystroke.key.as_str(), "enter" | "space")
+                            && let Some(callback) = &start_key
+                        {
+                            callback();
+                        }
+                    })
                     .child("⊞"),
             )
             .child(
@@ -99,11 +121,20 @@ impl Render for TaskbarView {
                             callback();
                         }
                     })
+                    .on_key_down(move |event, _, _| {
+                        if matches!(event.keystroke.key.as_str(), "enter" | "space")
+                            && let Some(callback) = &fixed_key
+                        {
+                            callback();
+                        }
+                    })
                     .child(self.fixed_name.clone()),
             )
             .children(self.tasks.iter().map(move |task| {
                 let callback = task_callback.clone();
+                let key_callback = callback.clone();
                 let stable_id = task.stable_id.clone();
+                let key_stable_id = stable_id.clone();
                 let underline = if task.active {
                     rgb(0x0067c0)
                 } else if task.minimized {
@@ -131,6 +162,13 @@ impl Render for TaskbarView {
                     .on_click(move |_, _, _| {
                         if let Some(callback) = &callback {
                             callback(&stable_id);
+                        }
+                    })
+                    .on_key_down(move |event, _, _| {
+                        if matches!(event.keystroke.key.as_str(), "enter" | "space")
+                            && let Some(callback) = &key_callback
+                        {
+                            callback(&key_stable_id);
                         }
                     })
                     .child(task.name.clone())
