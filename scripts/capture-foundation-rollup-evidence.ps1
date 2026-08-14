@@ -40,17 +40,25 @@ $evidenceOutput = Invoke-Captured 'verification evidence validation' {
     powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $workspace 'scripts/validate-evidence.ps1') -Change verify-superdesktop-m0
 }
 
+$visualPath = Join-Path $verificationRoot 'evidence/artifacts/2.1/reference-ui-matrix.json'
 $accessibilityPath = Join-Path $verificationRoot 'evidence/artifacts/4.1/accessibility-input.json'
 $localizationPath = Join-Path $verificationRoot 'evidence/artifacts/4.2/localization-ime.json'
 $performancePath = Join-Path $verificationRoot 'evidence/artifacts/5.1/performance.json'
 $safetyPath = Join-Path $verificationRoot 'evidence/artifacts/5.2/safety-license-source.json'
 $architecturePath = Join-Path $verificationRoot 'evidence/artifacts/1.2/build-offline-gate.json'
+$visual = Get-Content -Raw -Encoding UTF8 $visualPath | ConvertFrom-Json
 $accessibility = Get-Content -Raw -Encoding UTF8 $accessibilityPath | ConvertFrom-Json
 $localization = Get-Content -Raw -Encoding UTF8 $localizationPath | ConvertFrom-Json
 $performance = Get-Content -Raw -Encoding UTF8 $performancePath | ConvertFrom-Json
 $safety = Get-Content -Raw -Encoding UTF8 $safetyPath | ConvertFrom-Json
 $architecture = Get-Content -Raw -Encoding UTF8 $architecturePath | ConvertFrom-Json
 
+if ($visual.visual_gate -ne 'passed' -or
+    $visual.masked_global_ssim -lt $visual.minimum_ssim -or
+    -not $visual.preview_and_shell_start -or
+    $visual.actual_input_route_count -ne 6) {
+    throw 'G-DESKTOP/G-TASKBAR/G-EXPLORER-BRIDGE visual roll-up is not passed'
+}
 if ($accessibility.high_contrast_visual -ne 'passed' -or
     $accessibility.focus_indicator -ne 'passed' -or
     $localization.glyph_fallback -ne 'passed' -or
@@ -87,12 +95,16 @@ $wave6 = [ordered]@{
     strict_validation = @{ status = 'passed'; output = $strictOutput }
     detailed_tasks_validator = @{ status = 'passed'; output = $evidenceOutput }
     gates = [ordered]@{
+        'G-DESKTOP' = 'passed'
+        'G-TASKBAR' = 'passed'
+        'G-EXPLORER-BRIDGE' = 'passed'
         'G-A11Y-I18N' = 'passed'
         'G-PERF' = 'passed'
         'G-SAFETY' = 'passed'
         'G-ARCH' = 'passed'
     }
     source_artifacts = @(
+        @{ path = 'verify-superdesktop-m0/evidence/artifacts/2.1/reference-ui-matrix.json'; sha256 = (Get-FileHash $visualPath -Algorithm SHA256).Hash },
         @{ path = 'verify-superdesktop-m0/evidence/artifacts/4.1/accessibility-input.json'; sha256 = (Get-FileHash $accessibilityPath -Algorithm SHA256).Hash },
         @{ path = 'verify-superdesktop-m0/evidence/artifacts/4.2/localization-ime.json'; sha256 = (Get-FileHash $localizationPath -Algorithm SHA256).Hash },
         @{ path = 'verify-superdesktop-m0/evidence/artifacts/5.1/performance.json'; sha256 = (Get-FileHash $performancePath -Algorithm SHA256).Hash },
@@ -100,7 +112,6 @@ $wave6 = [ordered]@{
         @{ path = 'verify-superdesktop-m0/evidence/artifacts/1.2/build-offline-gate.json'; sha256 = (Get-FileHash $architecturePath -Algorithm SHA256).Hash }
     )
     unresolved = @(
-        'reference-taskbar-ssim',
         'physical-five-dpi-matrix',
         'physical-mixed-dpi-dual-monitor',
         'windows-10-22h2',

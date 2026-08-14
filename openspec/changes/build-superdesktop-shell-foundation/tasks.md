@@ -169,7 +169,7 @@
 - [x] 4.2.1 記錄 child `openspec validate --strict` 成功輸出。
 - [x] 4.2.2 記錄 child 詳細 tasks validator 成功輸出。
 - [ ] 4.2.3 驗證 child mandatory evidence index 無 failed/blocked/stale/N/A/invalid replacement。
-- [ ] 4.2.4 驗證 reference visual、`G-DESKTOP`、`G-TASKBAR` 與 `G-EXPLORER-BRIDGE` passed。
+- [x] 4.2.4 驗證 reference visual、`G-DESKTOP`、`G-TASKBAR` 與 `G-EXPLORER-BRIDGE` passed。
 - [ ] 4.2.5 驗證 Windows 10 `G-SHELL-TAKEOVER` 與 `G-GUARDIAN-RECOVERY` final dispositions passed。
 - [ ] 4.2.6 驗證虛擬與實體 `G-DPI-MONITOR` passed。
 - [x] 4.2.7 驗證 `G-A11Y-I18N` passed。
