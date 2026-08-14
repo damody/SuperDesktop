@@ -24,6 +24,29 @@ fn main() {
         }
         return;
     }
+    if args
+        .first()
+        .is_some_and(|arg| arg == "--verification-hold-ms")
+    {
+        let Some(milliseconds) = args
+            .get(1)
+            .and_then(|value| value.to_str())
+            .and_then(|value| value.parse::<u64>().ok())
+        else {
+            eprintln!("invalid verification hold duration");
+            std::process::exit(2);
+        };
+        if milliseconds > 60_000 {
+            eprintln!("verification hold duration exceeds bound");
+            std::process::exit(2);
+        }
+        if let Err(reason) = run_product(ExecutionRequest::default()) {
+            eprintln!("verification preview failed: {reason}");
+            std::process::exit(3);
+        }
+        std::thread::sleep(std::time::Duration::from_millis(milliseconds));
+        return;
+    }
     let request = ExecutionRequest::from_args(args);
     if let Err(reason) = run_product(request) {
         eprintln!("SuperDesktop admission failed: {reason}");
