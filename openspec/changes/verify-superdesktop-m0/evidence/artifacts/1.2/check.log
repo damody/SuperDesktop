@@ -5,6 +5,5 @@ At D:\SuperDesktop\SuperDesktop\scripts\capture-m0-local-evidence.ps1:24 char:85
     + CategoryInfo          : NotSpecified: (    Checking de...tes\desktop-ui):String) [], RemoteException
     + FullyQualifiedErrorId : NativeCommandError
  
-    Checking taskbar-ui v0.1.0 (D:\SuperDesktop\SuperDesktop\crates\taskbar-ui)
     Checking superdesktop-app v0.1.0 (D:\SuperDesktop\SuperDesktop\crates\superdesktop-app)
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.33s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.43s

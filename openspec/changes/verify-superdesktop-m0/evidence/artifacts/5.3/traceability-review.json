@@ -1,10 +1,10 @@
 {
     "schema":  "m0-traceability-review/v1",
-    "revision":  "7321f17b",
+    "revision":  "b9208777",
     "total_tasks":  93,
-    "passed":  63,
-    "blocked":  30,
-    "coverage_percent":  67.74,
+    "passed":  64,
+    "blocked":  29,
+    "coverage_percent":  68.82,
     "tasks":  [
                   {
                       "id":  "1.1.1",
@@ -105,7 +105,7 @@
                   {
                       "id":  "2.1.4",
                       "group":  "2.1",
-                      "status":  "blocked",
+                      "status":  "passed",
                       "artifact":  "evidence/artifacts/2.1/reference-ui-matrix.json"
                   },
                   {

@@ -50,7 +50,7 @@
 - [ ] 2.1.1 執行 desktop wallpaper/icon-grid/selection reference capture。
 - [ ] 2.1.2 執行預設雙列 taskbar geometry/reference capture。
 - [x] 2.1.3 驗證 Start、SuperExplorer fixed entry、task buttons 與 status region ordering。
-- [ ] 2.1.4 驗證 active、minimized、attention、group 與 unavailable states。
+- [x] 2.1.4 驗證 active、minimized、attention、group 與 unavailable states。
 - [x] 2.1.5 執行 pointer、keyboard 與 UIA reference interaction paths。
 - [x] 2.1.6 索引 screenshots、geometry data、容差與 artifact hashes。
 - [x] 2.1.7 從 desktop 與 taskbar 固定入口以 pointer、keyboard 與 UIA 分別執行真實 SuperExplorer end-to-end launch。

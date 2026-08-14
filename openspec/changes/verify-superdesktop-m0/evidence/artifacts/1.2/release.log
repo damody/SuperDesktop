@@ -6,6 +6,5 @@ At D:\SuperDesktop\SuperDesktop\scripts\capture-m0-local-evidence.ps1:24 char:31
     + FullyQualifiedErrorId : NativeCommandError
  
    Compiling taskbar-ui v0.1.0 (D:\SuperDesktop\SuperDesktop\crates\taskbar-ui)
-   Compiling superdesktop-test-support v0.1.0 (D:\SuperDesktop\SuperDesktop\crates\superdesktop-test-support)
    Compiling superdesktop-app v0.1.0 (D:\SuperDesktop\SuperDesktop\crates\superdesktop-app)
-    Finished `release` profile [optimized] target(s) in 4.25s
+    Finished `release` profile [optimized] target(s) in 4.37s

@@ -4,7 +4,7 @@
     "active_physical_monitors":  1,
     "candidate_ui":  {
                          "status":  "blocked",
-                         "reason":  "The production desktop/taskbar is visible, but masked SSIM 0.12241604474075 remains below 0.95."
+                         "reason":  "The production desktop/taskbar is visible, but masked SSIM 0.121770661403614 remains below 0.95."
                      },
     "windows_10_22h2":  {
                             "status":  "blocked",
