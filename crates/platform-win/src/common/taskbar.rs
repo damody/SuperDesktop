@@ -3,17 +3,18 @@
 use std::{ffi::c_void, mem::size_of};
 
 use windows::Win32::{
-    Foundation::{CloseHandle, HWND, LPARAM},
+    Foundation::{CloseHandle, HWND, LPARAM, POINT, RECT},
+    Graphics::Gdi::ClientToScreen,
     System::Threading::{
         GetCurrentProcessId, OpenProcess, PROCESS_NAME_FORMAT, PROCESS_QUERY_LIMITED_INFORMATION,
         QueryFullProcessImageNameW,
     },
     UI::WindowsAndMessaging::{
-        EnumWindows, GW_OWNER, GWL_EXSTYLE, GetForegroundWindow, GetWindow, GetWindowLongPtrW,
-        GetWindowTextLengthW, GetWindowTextW, GetWindowThreadProcessId, HWND_TOPMOST, IsIconic,
-        IsWindow, IsWindowVisible, SW_MINIMIZE, SW_RESTORE, SWP_NOACTIVATE, SWP_SHOWWINDOW,
-        SetForegroundWindow, SetWindowLongPtrW, SetWindowPos, ShowWindow, WS_EX_NOACTIVATE,
-        WS_EX_TOOLWINDOW,
+        EnumWindows, GW_OWNER, GWL_EXSTYLE, GetClientRect, GetForegroundWindow, GetWindow,
+        GetWindowLongPtrW, GetWindowRect, GetWindowTextLengthW, GetWindowTextW,
+        GetWindowThreadProcessId, HWND_TOPMOST, IsIconic, IsWindow, IsWindowVisible, SW_MINIMIZE,
+        SW_RESTORE, SWP_NOACTIVATE, SWP_SHOWWINDOW, SetForegroundWindow, SetWindowLongPtrW,
+        SetWindowPos, ShowWindow, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW,
     },
 };
 use windows::core::{BOOL, PWSTR};
@@ -21,9 +22,14 @@ use windows::core::{BOOL, PWSTR};
 use super::ffi_boundary::{CallbackFence, CallbackResult};
 
 const DWMWA_CLOAKED: u32 = 14;
+const DWMWA_WINDOW_CORNER_PREFERENCE: u32 = 33;
+const DWMWA_BORDER_COLOR: u32 = 34;
+const DWMWCP_DONOTROUND: u32 = 1;
+const DWMWA_COLOR_NONE: u32 = 0xffff_fffe;
 #[link(name = "dwmapi")]
 unsafe extern "system" {
     fn DwmGetWindowAttribute(hwnd: HWND, attribute: u32, value: *mut c_void, size: u32) -> i32;
+    fn DwmSetWindowAttribute(hwnd: HWND, attribute: u32, value: *const c_void, size: u32) -> i32;
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -176,6 +182,20 @@ pub fn configure_and_show_taskbar_window(
             GWL_EXSTYLE,
             existing | (WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW).0 as isize,
         );
+        let corner_preference = DWMWCP_DONOTROUND;
+        let _ = DwmSetWindowAttribute(
+            hwnd,
+            DWMWA_WINDOW_CORNER_PREFERENCE,
+            (&corner_preference as *const u32).cast(),
+            size_of::<u32>() as u32,
+        );
+        let border_color = DWMWA_COLOR_NONE;
+        let _ = DwmSetWindowAttribute(
+            hwnd,
+            DWMWA_BORDER_COLOR,
+            (&border_color as *const u32).cast(),
+            size_of::<u32>() as u32,
+        );
         SetWindowPos(
             hwnd,
             Some(HWND_TOPMOST),
@@ -183,6 +203,36 @@ pub fn configure_and_show_taskbar_window(
             top,
             width,
             height,
+            SWP_NOACTIVATE | SWP_SHOWWINDOW,
+        )
+        .map_err(|error| error.to_string())?;
+
+        // SetWindowPos consumes outer-window bounds. GPUI's popup still has
+        // DPI-dependent non-client frame insets, while the shell contract is
+        // expressed in client coordinates. Measure the live frame and make a
+        // second placement so the rendered taskbar exactly owns the requested
+        // monitor edge without clipping the status region.
+        let mut window_rect = RECT::default();
+        let mut client_rect = RECT::default();
+        GetWindowRect(hwnd, &mut window_rect).map_err(|error| error.to_string())?;
+        GetClientRect(hwnd, &mut client_rect).map_err(|error| error.to_string())?;
+        let mut client_origin = POINT::default();
+        if !ClientToScreen(hwnd, &mut client_origin).as_bool() {
+            return Err("taskbar-client-origin-unavailable".into());
+        }
+        let frame_left = client_origin.x - window_rect.left;
+        let frame_top = client_origin.y - window_rect.top;
+        let client_width = client_rect.right - client_rect.left;
+        let client_height = client_rect.bottom - client_rect.top;
+        let frame_width = (window_rect.right - window_rect.left) - client_width;
+        let frame_height = (window_rect.bottom - window_rect.top) - client_height;
+        SetWindowPos(
+            hwnd,
+            Some(HWND_TOPMOST),
+            left - frame_left,
+            top - frame_top,
+            width + frame_width,
+            height + frame_height,
             SWP_NOACTIVATE | SWP_SHOWWINDOW,
         )
         .map_err(|error| error.to_string())?;

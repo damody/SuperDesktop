@@ -48,7 +48,7 @@
 **完成門檻：** Desktop grid、雙列 taskbar、Start、SuperExplorer entry、tasks、status/time 符合容差且互動全過。
 
 - [x] 2.1.1 執行 desktop wallpaper/icon-grid/selection reference capture。
-- [ ] 2.1.2 執行預設雙列 taskbar geometry/reference capture。
+- [x] 2.1.2 執行預設雙列 taskbar geometry/reference capture。
 - [x] 2.1.3 驗證 Start、SuperExplorer fixed entry、task buttons 與 status region ordering。
 - [x] 2.1.4 驗證 active、minimized、attention、group 與 unavailable states。
 - [x] 2.1.5 執行 pointer、keyboard 與 UIA reference interaction paths。

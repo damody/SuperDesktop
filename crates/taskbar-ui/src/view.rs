@@ -3,7 +3,7 @@ use std::rc::Rc;
 use gpui::{
     Context, FocusHandle, InteractiveElement, IntoElement, ParentElement, Render,
     StatefulInteractiveElement, Styled, Window, div, linear_color_stop, linear_gradient,
-    prelude::FluentBuilder as _, px, rgb,
+    prelude::FluentBuilder as _, px, rgb, svg,
 };
 
 use crate::{AccessibleTask, StatusRegion, TaskbarLayout};
@@ -36,6 +36,11 @@ impl Render for TaskbarView {
         let root_fixed_key = fixed.clone();
         let keyboard_focus = self.keyboard_focus.clone();
         let high_contrast = std::env::var("SUPERDESKTOP_THEME").as_deref() == Ok("high-contrast");
+        let start_color = if high_contrast {
+            rgb(0xffff00)
+        } else {
+            rgb(0x000000)
+        };
         if let Some(rendered) = self
             .callbacks
             .as_ref()
@@ -62,9 +67,11 @@ impl Render for TaskbarView {
             .items_stretch()
             .bg(linear_gradient(
                 90.,
-                linear_color_stop(rgb(0xd8eeb8), 0.),
+                linear_color_stop(rgb(0xd8edc0), 0.),
                 linear_color_stop(rgb(0xc3efef), 1.),
             ))
+            .border_t_1()
+            .border_color(rgb(0xe4f4d0))
             .text_color(if high_contrast {
                 rgb(0xffffff)
             } else {
@@ -81,12 +88,36 @@ impl Render for TaskbarView {
                     .w(px(48.))
                     .h(px(80.))
                     .flex_none()
+                    .relative()
                     .flex()
                     .items_center()
                     .justify_center()
                     .cursor_pointer()
                     .when(high_contrast, |element| {
                         element.border_2().border_color(rgb(0xffff00))
+                    })
+                    .when(!high_contrast, |element| {
+                        element
+                            .child(div().absolute().top_0().left_0().w_full().h(px(40.)).bg(
+                                linear_gradient(
+                                    90.,
+                                    linear_color_stop(rgb(0xd9efbd), 0.),
+                                    linear_color_stop(rgb(0xd7edc1), 1.),
+                                ),
+                            ))
+                            .child(
+                                div()
+                                    .absolute()
+                                    .top(px(40.))
+                                    .left_0()
+                                    .w_full()
+                                    .h(px(40.))
+                                    .bg(linear_gradient(
+                                        90.,
+                                        linear_color_stop(rgb(0xd8ecb6), 0.),
+                                        linear_color_stop(rgb(0xd8edb8), 1.),
+                                    )),
+                            )
                     })
                     .on_click(move |_, _, _| {
                         if let Some(callback) = &start {
@@ -100,7 +131,16 @@ impl Render for TaskbarView {
                             callback();
                         }
                     })
-                    .child("⊞"),
+                    .child(
+                        svg()
+                            .external_path(concat!(
+                                env!("CARGO_MANIFEST_DIR"),
+                                "/assets/windows-start.svg"
+                            ))
+                            .w(px(14.))
+                            .h(px(14.))
+                            .text_color(start_color),
+                    ),
             )
             .child(
                 div()
@@ -126,6 +166,8 @@ impl Render for TaskbarView {
                             .flex()
                             .items_center()
                             .cursor_pointer()
+                            .border_b_1()
+                            .border_color(rgb(0x0078d4))
                             .on_click(move |_, _, _| {
                                 if let Some(callback) = &fixed {
                                     callback();

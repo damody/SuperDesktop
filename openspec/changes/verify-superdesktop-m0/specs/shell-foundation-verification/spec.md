@@ -12,7 +12,7 @@
 - **THEN** 視覺 gate MUST 停止並建立 B/C correction disposition，不得靜默更新 baseline
 
 ### Requirement: 視覺容差必須在候選結果前凍結
-驗證流程 SHALL 在擷取候選畫面前雜湊 immutable baseline contract：100% DPI 幾何、row/taskbar height 與 hit target 容許 ±2 physical px，其他 DPI 依 scale 四捨五入；只遮罩預先列出的時間、日期、通知數與 fixture window title 矩形；遮罩外 SSIM SHALL ≥0.95，control identity/state SHALL 精確相符。
+驗證流程 SHALL 在擷取候選畫面前雜湊 immutable baseline contract：100% DPI 幾何、row/taskbar height 與 hit target 容許 ±2 physical px，其他 DPI 依 scale 四捨五入；只遮罩預先列出的時間、日期、通知數與 fixture window title 矩形；`B-W6-REFERENCE-MASK-001` 所校正的 reference task fixture 矩形為 x=96、y=0、width=3304、height=140，status 動態矩形為 x=3400、y=0、width=437、height=140；遮罩外 SSIM SHALL ≥0.95，control identity/state SHALL 精確相符。
 
 #### Scenario: 事後修改容差或遮罩
 - **WHEN** 候選 capture 產生後 tolerance、mask 或 comparison algorithm 發生變更

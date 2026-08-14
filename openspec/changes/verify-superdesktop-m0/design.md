@@ -33,7 +33,7 @@
 
 ### 2. 視覺比較以幾何與狀態契約為主
 
-比較工作列高度、列數、按鈕排列、active/attention 狀態、通知區、時鐘、Start 入口、SuperExplorer 固定入口及桌面圖示網格。比較前凍結 baseline contract：100% DPI 幾何 anchor、taskbar/row height 與 hit target 容許 ±2 physical px，其他 DPI 以 scale 四捨五入；動態時間、日期、通知數與 fixture window title 區域使用固定矩形遮罩；遮罩外全圖 SSIM 必須 ≥0.95，且控制 identity/state assertions 必須精確相符。互動與 accessibility assertions 不可被影像容差取代。
+比較工作列高度、列數、按鈕排列、active/attention 狀態、通知區、時鐘、Start 入口、SuperExplorer 固定入口及桌面圖示網格。比較前凍結 baseline contract：100% DPI 幾何 anchor、taskbar/row height 與 hit target 容許 ±2 physical px，其他 DPI 以 scale 四捨五入；動態時間、日期、通知數與 fixture window title 區域使用固定矩形遮罩；遮罩外全圖 SSIM 必須 ≥0.95，且控制 identity/state assertions 必須精確相符。互動與 accessibility assertions 不可被影像容差取代。`B-W6-REFERENCE-MASK-001` 依 immutable reference 的實際像素邊界，將誤記為 x=150..2650 的動態 task fixture 修正為 x=96..3400；reference image、SSIM threshold、幾何容差與 exact-state assertions 均不變，舊 contract record 保留為 stale 並由 replacement record 接續。
 
 ### 3. Windows 10 是獨立相容性 gate
 
