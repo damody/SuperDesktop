@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0.0",
+  "work_package": "validate-superdesktop-windows-platform/2.2",
+  "status": "implementation-complete-independent-review-passed-primary-acceptance-pending",
+  "completed_global_task_ids": [
+    "validate-superdesktop-windows-platform/2.2.1",
+    "validate-superdesktop-windows-platform/2.2.2",
+    "validate-superdesktop-windows-platform/2.2.3",
+    "validate-superdesktop-windows-platform/2.2.4",
+    "validate-superdesktop-windows-platform/2.2.5"
+  ],
+  "input_contract": {
+    "substrate_manifest_sha256": "92D682BF8418B71B4C9807DB5C7D5C09C3767D0A380A23E5E1297CE1AED8004B",
+    "pre_mutation_admission_trace_sha256": "8220730749687A54250BE3D41AF0670C99A1380001BA66CF9A98699A805FA1C6",
+    "predecessors": ["1.2", "2.1"]
+  },
+  "output_contract": {
+    "trace": "evidence/artifacts/2.2/monitor-dpi-start-trace.json",
+    "trace_sha256": "1A0BFA8ABF2D0849CFF4916213A17E30AE4E1543CEEB5D96FFA295CBC2EBFF04",
+    "binary": "evidence/artifacts/2.2/bin/monitor_dpi_start_capability.exe",
+    "binary_sha256": "5E7979402B8E1DAA85B3DE1469BC728C170C63930B017A562887003863CD4B94"
+  },
+  "gates": [
+    {"gate": "G-DPI-MONITOR", "status": "passed", "scope": "PerMonitorV2 real read-only monitor/DPI snapshot, physical coordinate consistency, and explicit virtual topology fixture"},
+    {"gate": "G-TASKBAR", "status": "stop", "reason": "ExplorerPatcher Start host invocation ABI is untrusted; typed unavailable was returned without an invocation"}
+  ],
+  "review": {
+    "independent_disposition": "no-p0-p1",
+    "headful_repeated_by_reviewer": false,
+    "corrective_decision": "B-W2-2.2-001 added explicit monitor-profile and virtual-topology scenarios without changing scope"
+  },
+  "safety": {
+    "mode": "read-only-preview",
+    "explorer_mutations": false,
+    "shell_takeover": false,
+    "physical_mixed_dpi_claimed": false,
+    "start_invocation_attempted": false,
+    "capture_external_snapshot_before_after_equal": true,
+    "capture_process_per_monitor_v2": true,
+    "capture_thread_per_monitor_v2": true
+  }
+}

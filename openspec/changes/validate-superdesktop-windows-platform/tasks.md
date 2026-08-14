@@ -65,11 +65,11 @@
 **Gate／Evidence：** `G-DPI-MONITOR`、`G-TASKBAR`；`evidence/artifacts/2.2/`。
 **完成門檻：** Identity 跨 refresh 穩定，虛擬 topology event 可見，Start probe truthful 且不假成功。
 
-- [ ] 2.2.1 實作 monitor identity、bounds、work area 與 DPI probe。
-- [ ] 2.2.2 在虛擬顯示器上驗證 add/remove、primary 與 DPI change event。
-- [ ] 2.2.3 探測 ExplorerPatcher reference profile 的 Start host 與 invocation path。
-- [ ] 2.2.4 驗證 Start host 缺失或拒絕時回傳 typed unavailable result。
-- [ ] 2.2.5 保存 topology traces、Start result 與 resource snapshot。
+- [x] 2.2.1 實作 monitor identity、bounds、work area 與 DPI probe。
+- [x] 2.2.2 在虛擬顯示器上驗證 add/remove、primary 與 DPI change event。
+- [x] 2.2.3 探測 ExplorerPatcher reference profile 的 Start host 與 invocation path。
+- [x] 2.2.4 驗證 Start host 缺失或拒絕時回傳 typed unavailable result。
+- [x] 2.2.5 保存 topology traces、Start result 與 resource snapshot。
 
 ## 3. Guardian 與 ABI 安全 Gate
 

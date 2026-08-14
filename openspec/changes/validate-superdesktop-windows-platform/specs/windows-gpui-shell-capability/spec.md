@@ -46,6 +46,14 @@
 ### Requirement: DPI、Topology 與 Start host 必須可探測
 系統 SHALL 驗證 per-monitor DPI geometry、monitor identity/topology event，以及目前 ExplorerPatcher Start host probe/invocation。
 
+#### Scenario: Monitor profile 穩定
+- **WHEN** PerMonitorV2 read-only probe 連續刷新目前實體顯示器
+- **THEN** monitor identity、未虛擬化 bounds、work area 與 DPI 必須穩定，且 probe 前後 Explorer、AppBar、work area 與程序資源不得改變
+
+#### Scenario: 虛擬 topology transition
+- **WHEN** 隔離的虛擬 topology fixture 模擬 monitor add/remove、primary 與 DPI change
+- **THEN** adapter 必須輸出帶有 device identity 與轉換 payload 的 owned events，並明確標示不得當作實體 mixed-DPI 證據
+
 #### Scenario: Start host 可用
 - **WHEN** probe 與受控 invocation 在 reference profile 執行
 - **THEN** 系統取得可判定成功結果且 Explorer 保持可操作

@@ -164,6 +164,46 @@
                       "gates":  [
                                     "G-SHELL-TAKEOVER-CAPABILITY"
                                 ]
+                  },
+                  {
+                      "task_id":  "validate-superdesktop-windows-platform/2.2.1",
+                      "mandatory":  true,
+                      "capability_id":  "windows-gpui-shell-capability",
+                      "requirement_id":  "dpi-topology-start-host",
+                      "scenario_id":  "monitor-profile-stable",
+                      "gates":  ["G-DPI-MONITOR"]
+                  },
+                  {
+                      "task_id":  "validate-superdesktop-windows-platform/2.2.2",
+                      "mandatory":  true,
+                      "capability_id":  "windows-gpui-shell-capability",
+                      "requirement_id":  "dpi-topology-start-host",
+                      "scenario_id":  "virtual-topology-transition",
+                      "gates":  ["G-DPI-MONITOR"]
+                  },
+                  {
+                      "task_id":  "validate-superdesktop-windows-platform/2.2.3",
+                      "mandatory":  true,
+                      "capability_id":  "windows-gpui-shell-capability",
+                      "requirement_id":  "dpi-topology-start-host",
+                      "scenario_id":  "start-host-unavailable",
+                      "gates":  ["G-TASKBAR"]
+                  },
+                  {
+                      "task_id":  "validate-superdesktop-windows-platform/2.2.4",
+                      "mandatory":  true,
+                      "capability_id":  "windows-gpui-shell-capability",
+                      "requirement_id":  "dpi-topology-start-host",
+                      "scenario_id":  "start-host-unavailable",
+                      "gates":  ["G-TASKBAR"]
+                  },
+                  {
+                      "task_id":  "validate-superdesktop-windows-platform/2.2.5",
+                      "mandatory":  true,
+                      "capability_id":  "windows-gpui-shell-capability",
+                      "requirement_id":  "dpi-topology-start-host",
+                      "scenario_id":  "monitor-profile-stable",
+                      "gates":  ["G-DPI-MONITOR"]
                   }
               ]
 }
