@@ -1,7 +1,10 @@
 {
   "schema_version": "1.0.0",
   "work_package": "validate-superdesktop-windows-platform/2.2",
-  "status": "implementation-complete-independent-review-passed-primary-acceptance-pending",
+  "status": "primary-accepted",
+  "base_revision": "2e49c9be",
+  "result_revision": "bea86043",
+  "accepted_revision": "bea86043",
   "completed_global_task_ids": [
     "validate-superdesktop-windows-platform/2.2.1",
     "validate-superdesktop-windows-platform/2.2.2",
