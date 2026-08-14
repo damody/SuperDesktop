@@ -1,0 +1,49 @@
+{
+    "schema":  "foundation-wave6-local-gates/v1",
+    "recorded_at":  "2026-08-14T08:46:31.5444597Z",
+    "verification_change":  "verify-superdesktop-m0",
+    "strict_validation":  {
+                              "status":  "passed",
+                              "output":  "Change \u0027verify-superdesktop-m0\u0027 is valid"
+                          },
+    "detailed_tasks_validator":  {
+                                     "status":  "passed",
+                                     "output":  "Evidence validation passed: 65 records, 93 task coverage mappings."
+                                 },
+    "gates":  {
+                  "G-A11Y-I18N":  "passed",
+                  "G-PERF":  "passed",
+                  "G-SAFETY":  "passed",
+                  "G-ARCH":  "passed"
+              },
+    "source_artifacts":  [
+                             {
+                                 "sha256":  "A41091DE6F0CC408CA9117DB869B4747458AE2709F79122BCBA0A1946B92D9C1",
+                                 "path":  "verify-superdesktop-m0/evidence/artifacts/4.1/accessibility-input.json"
+                             },
+                             {
+                                 "sha256":  "4B0CAFEC689EA62BF5B3B48948337A607384DBD046EB48FAD35510D2B9853D41",
+                                 "path":  "verify-superdesktop-m0/evidence/artifacts/4.2/localization-ime.json"
+                             },
+                             {
+                                 "sha256":  "EEDF70296182178D6F076FDD09AAEB930284D2EAC0CA3C93564420B971D8A6EE",
+                                 "path":  "verify-superdesktop-m0/evidence/artifacts/5.1/performance.json"
+                             },
+                             {
+                                 "sha256":  "BE8D243C6A0F4E2AF8C9486555CE77249E0D42D7261B8576E2B8666FF2703411",
+                                 "path":  "verify-superdesktop-m0/evidence/artifacts/5.2/safety-license-source.json"
+                             },
+                             {
+                                 "sha256":  "1FAA8B4A4DC8C119746B6F482AFBDC2822F299DDB520040EEB4F58D07FC9CC19",
+                                 "path":  "verify-superdesktop-m0/evidence/artifacts/1.2/build-offline-gate.json"
+                             }
+                         ],
+    "unresolved":  [
+                       "reference-taskbar-ssim",
+                       "physical-five-dpi-matrix",
+                       "physical-mixed-dpi-dual-monitor",
+                       "windows-10-22h2",
+                       "independent-final-review",
+                       "archive-deferred-by-user"
+                   ]
+}

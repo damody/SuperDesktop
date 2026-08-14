@@ -166,15 +166,15 @@
 **Gate／Evidence：** `G-ARCH`、`G-DESKTOP`、`G-TASKBAR`、`G-EXPLORER-BRIDGE`、`G-SHELL-TAKEOVER`、`G-GUARDIAN-RECOVERY`、`G-DPI-MONITOR`、`G-A11Y-I18N`、`G-PERF`、`G-SAFETY`、`G-TRACE`；program `evidence/artifacts/4.2/`。
 **完成門檻：** Strict/tasks validation與每個列名 gate 分項通過；Windows 10、實體 mixed-DPI、P0/P1、handoff、archive 皆具有效終態。
 
-- [ ] 4.2.1 記錄 child `openspec validate --strict` 成功輸出。
-- [ ] 4.2.2 記錄 child 詳細 tasks validator 成功輸出。
+- [x] 4.2.1 記錄 child `openspec validate --strict` 成功輸出。
+- [x] 4.2.2 記錄 child 詳細 tasks validator 成功輸出。
 - [ ] 4.2.3 驗證 child mandatory evidence index 無 failed/blocked/stale/N/A/invalid replacement。
 - [ ] 4.2.4 驗證 reference visual、`G-DESKTOP`、`G-TASKBAR` 與 `G-EXPLORER-BRIDGE` passed。
 - [ ] 4.2.5 驗證 Windows 10 `G-SHELL-TAKEOVER` 與 `G-GUARDIAN-RECOVERY` final dispositions passed。
 - [ ] 4.2.6 驗證虛擬與實體 `G-DPI-MONITOR` passed。
-- [ ] 4.2.7 驗證 `G-A11Y-I18N` passed。
-- [ ] 4.2.8 驗證 `G-PERF` passed。
-- [ ] 4.2.9 驗證 `G-SAFETY` 與 `G-ARCH` passed。
+- [x] 4.2.7 驗證 `G-A11Y-I18N` passed。
+- [x] 4.2.8 驗證 `G-PERF` passed。
+- [x] 4.2.9 驗證 `G-SAFETY` 與 `G-ARCH` passed。
 - [ ] 4.2.10 驗證 `G-TRACE`、coverage、replacement 與 corrective lineage passed。
 - [ ] 4.2.11 驗證 Independent reviewer 報告無未解 P0/P1。
 - [ ] 4.2.12 封存 verification child 並記錄 immutable archive revision。
