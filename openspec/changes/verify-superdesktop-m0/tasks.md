@@ -69,7 +69,7 @@
 - [ ] 2.2.1 執行 100% DPI visual/geometry/interaction subcheck。
 - [ ] 2.2.2 執行 125% DPI visual/geometry/interaction subcheck。
 - [ ] 2.2.3 執行 150% DPI visual/geometry/interaction subcheck。
-- [ ] 2.2.4 執行 175% DPI visual/geometry/interaction subcheck。
+- [x] 2.2.4 執行 175% DPI visual/geometry/interaction subcheck。
 - [ ] 2.2.5 執行 200% DPI visual/geometry/interaction subcheck。
 - [ ] 2.2.6 比較五組 work area、logical positions 與 hit-target bounds。
 
