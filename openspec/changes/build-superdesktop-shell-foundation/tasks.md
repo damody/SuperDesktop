@@ -91,12 +91,12 @@
 **Gate／Evidence：** `G-DESKTOP`、`G-A11Y-I18N`、`G-DPI-MONITOR`、`G-EXPLORER-BRIDGE` contract；program `evidence/artifacts/3.2/`。
 **完成門檻：** Strict/tasks validation、mandatory evidence、明列 gates、handoff hash 與 archive 分項通過。
 
-- [ ] 3.2.1 記錄 child `openspec validate --strict` 成功輸出。
-- [ ] 3.2.2 記錄 child 詳細 tasks validator 成功輸出。
-- [ ] 3.2.3 驗證 child mandatory evidence index 無 failed/blocked/stale/N/A/invalid replacement。
-- [ ] 3.2.4 驗證 `G-DESKTOP`、desktop `G-A11Y-I18N` 與 `G-DPI-MONITOR` dispositions passed。
-- [ ] 3.2.5 驗證 desktop fixed-entry/folder bridge contract disposition passed。
-- [ ] 3.2.6 驗證 desktop public/effect/binary/evidence SHA-256 handoff manifest。
+- [x] 3.2.1 記錄 child `openspec validate --strict` 成功輸出。
+- [x] 3.2.2 記錄 child 詳細 tasks validator 成功輸出。
+- [x] 3.2.3 驗證 child mandatory evidence index 無 failed/blocked/stale/N/A/invalid replacement。
+- [x] 3.2.4 驗證 `G-DESKTOP`、desktop `G-A11Y-I18N` 與 `G-DPI-MONITOR` dispositions passed。
+- [x] 3.2.5 驗證 desktop fixed-entry/folder bridge contract disposition passed。
+- [x] 3.2.6 驗證 desktop public/effect/binary/evidence SHA-256 handoff manifest。
 - [ ] 3.2.7 封存 child 並記錄 immutable archive revision。
 
 ### 3.3 驗證並封存 GPUI Taskbar
@@ -109,12 +109,12 @@
 **Gate／Evidence：** `G-TASKBAR`、`G-A11Y-I18N`、`G-DPI-MONITOR`、`G-EXPLORER-BRIDGE` contract；program `evidence/artifacts/3.3/`。
 **完成門檻：** Strict/tasks validation、mandatory evidence、明列 gates、handoff hash 與 archive 分項通過。
 
-- [ ] 3.3.1 記錄 child `openspec validate --strict` 成功輸出。
-- [ ] 3.3.2 記錄 child 詳細 tasks validator 成功輸出。
-- [ ] 3.3.3 驗證 child mandatory evidence index 無 failed/blocked/stale/N/A/invalid replacement。
-- [ ] 3.3.4 驗證 `G-TASKBAR`、taskbar `G-A11Y-I18N` 與 `G-DPI-MONITOR` dispositions passed。
-- [ ] 3.3.5 驗證 Start 與 fixed SuperExplorer entry contract dispositions passed。
-- [ ] 3.3.6 驗證 taskbar public/effect/binary/evidence SHA-256 handoff manifest。
+- [x] 3.3.1 記錄 child `openspec validate --strict` 成功輸出。
+- [x] 3.3.2 記錄 child 詳細 tasks validator 成功輸出。
+- [x] 3.3.3 驗證 child mandatory evidence index 無 failed/blocked/stale/N/A/invalid replacement。
+- [x] 3.3.4 驗證 `G-TASKBAR`、taskbar `G-A11Y-I18N` 與 `G-DPI-MONITOR` dispositions passed。
+- [x] 3.3.5 驗證 Start 與 fixed SuperExplorer entry contract dispositions passed。
+- [x] 3.3.6 驗證 taskbar public/effect/binary/evidence SHA-256 handoff manifest。
 - [ ] 3.3.7 封存 child 並記錄 immutable archive revision。
 
 ### 3.4 驗證並封存 SuperExplorer Bridge
@@ -127,12 +127,12 @@
 **Gate／Evidence：** `G-EXPLORER-BRIDGE`、`G-SAFETY`；program `evidence/artifacts/3.4/`。
 **完成門檻：** Strict/tasks validation、mandatory evidence、兩個 gates、handoff hash 與 archive 分項通過。
 
-- [ ] 3.4.1 記錄 child `openspec validate --strict` 成功輸出。
-- [ ] 3.4.2 記錄 child 詳細 tasks validator 成功輸出。
-- [ ] 3.4.3 驗證 child mandatory evidence index 無 failed/blocked/stale/N/A/invalid replacement。
-- [ ] 3.4.4 驗證 `G-EXPLORER-BRIDGE` disposition passed。
-- [ ] 3.4.5 驗證 bridge `G-SAFETY` 與 SuperExplorer repository-integrity dispositions passed。
-- [ ] 3.4.6 驗證 bridge public/effect/binary/evidence SHA-256 handoff manifest。
+- [x] 3.4.1 記錄 child `openspec validate --strict` 成功輸出。
+- [x] 3.4.2 記錄 child 詳細 tasks validator 成功輸出。
+- [x] 3.4.3 驗證 child mandatory evidence index 無 failed/blocked/stale/N/A/invalid replacement。
+- [x] 3.4.4 驗證 `G-EXPLORER-BRIDGE` disposition passed。
+- [x] 3.4.5 驗證 bridge `G-SAFETY` 與 SuperExplorer repository-integrity dispositions passed。
+- [x] 3.4.6 驗證 bridge public/effect/binary/evidence SHA-256 handoff manifest。
 - [ ] 3.4.7 封存 child 並記錄 immutable archive revision。
 
 ## 4. Lifecycle 與 Release Roll-up
