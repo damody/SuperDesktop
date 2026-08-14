@@ -1,7 +1,7 @@
 {
     "schema":  "m0-desktop-reference/v1",
     "result":  "passed",
-    "app_sha256":  "9975AEB5396208699F70035BB81F32B674D075D8EEC908DC84632C387CF118FF",
+    "app_sha256":  "0F1870E89F9453F8EB682D7D17FB85237716EAFF7B7C4832C6A4CB4E91978D67",
     "screenshot":  "desktop-reference.png",
     "screenshot_sha256":  "D0C21E7A0679C6329C523B715DE8AB8321CFAF22ABBF004EBBA4DE5BFC4946A7",
     "wallpaper":  "system-current",

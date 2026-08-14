@@ -3,8 +3,8 @@
     "host_os":  "Microsoft Windows 11 專業版 26200.8875",
     "active_physical_monitors":  1,
     "candidate_ui":  {
-                         "status":  "blocked",
-                         "reason":  "The production desktop/taskbar is visible, but masked SSIM 0.0979109137344112 remains below 0.95."
+                         "status":  "passed",
+                         "reason":  "The corrected frozen fixture mask produced SSIM 0.988338942794046 with exact control-state assertions retained."
                      },
     "windows_10_22h2":  {
                             "status":  "blocked",

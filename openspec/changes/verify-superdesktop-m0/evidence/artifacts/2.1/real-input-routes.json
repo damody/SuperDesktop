@@ -1,6 +1,6 @@
 {
     "schema":  "m0-real-input-routes/v1",
-    "app_sha256":  "9975AEB5396208699F70035BB81F32B674D075D8EEC908DC84632C387CF118FF",
+    "app_sha256":  "0F1870E89F9453F8EB682D7D17FB85237716EAFF7B7C4832C6A4CB4E91978D67",
     "superexplorer_sha256":  "132A37AAF9B3144A3B0F564A500035F60BE3ABD32B345CA0D003DEB052859FB7",
     "route_count":  6,
     "all_passed":  true,
@@ -58,7 +58,7 @@
                        "control_type":  "ControlType.Button",
                        "bounds":  {
                                       "left":  84,
-                                      "top":  1872,
+                                      "top":  1874,
                                       "width":  262,
                                       "height":  70
                                   },
@@ -73,7 +73,7 @@
                        "control_type":  "ControlType.Button",
                        "bounds":  {
                                       "left":  84,
-                                      "top":  1872,
+                                      "top":  1874,
                                       "width":  262,
                                       "height":  70
                                   },
@@ -88,7 +88,7 @@
                        "control_type":  "ControlType.Button",
                        "bounds":  {
                                       "left":  84,
-                                      "top":  1872,
+                                      "top":  1874,
                                       "width":  262,
                                       "height":  70
                                   },

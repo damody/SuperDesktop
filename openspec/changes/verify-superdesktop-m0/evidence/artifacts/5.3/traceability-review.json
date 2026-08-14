@@ -1,10 +1,10 @@
 {
     "schema":  "m0-traceability-review/v1",
-    "revision":  "347bd23c",
+    "revision":  "2dfe4a54",
     "total_tasks":  93,
-    "passed":  65,
-    "blocked":  28,
-    "coverage_percent":  69.89,
+    "passed":  66,
+    "blocked":  27,
+    "coverage_percent":  70.97,
     "tasks":  [
                   {
                       "id":  "1.1.1",
@@ -93,7 +93,7 @@
                   {
                       "id":  "2.1.2",
                       "group":  "2.1",
-                      "status":  "blocked",
+                      "status":  "passed",
                       "artifact":  "evidence/artifacts/2.1/reference-ui-matrix.json"
                   },
                   {
@@ -589,7 +589,6 @@
                                       ],
     "independent_review":  "blocked-not-performed",
     "unresolved_external_blockers":  [
-                                         "production candidate UI does not meet frozen reference SSIM",
                                          "production archives deferred by user",
                                          "Windows 10 22H2 environment unavailable",
                                          "physical mixed-DPI dual-monitor unavailable",

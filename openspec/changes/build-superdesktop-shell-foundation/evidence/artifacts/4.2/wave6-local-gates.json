@@ -1,6 +1,6 @@
 {
     "schema":  "foundation-wave6-local-gates/v1",
-    "recorded_at":  "2026-08-14T08:46:31.5444597Z",
+    "recorded_at":  "2026-08-14T09:49:54.4525948Z",
     "verification_change":  "verify-superdesktop-m0",
     "strict_validation":  {
                               "status":  "passed",
@@ -8,9 +8,12 @@
                           },
     "detailed_tasks_validator":  {
                                      "status":  "passed",
-                                     "output":  "Evidence validation passed: 65 records, 93 task coverage mappings."
+                                     "output":  "Evidence validation passed: 67 records, 93 task coverage mappings."
                                  },
     "gates":  {
+                  "G-DESKTOP":  "passed",
+                  "G-TASKBAR":  "passed",
+                  "G-EXPLORER-BRIDGE":  "passed",
                   "G-A11Y-I18N":  "passed",
                   "G-PERF":  "passed",
                   "G-SAFETY":  "passed",
@@ -18,15 +21,19 @@
               },
     "source_artifacts":  [
                              {
-                                 "sha256":  "A41091DE6F0CC408CA9117DB869B4747458AE2709F79122BCBA0A1946B92D9C1",
+                                 "sha256":  "0F18AFCA2E09E8DE06D910BDA52EABC3B54273A986BAE9EFFF593E1391FD4587",
+                                 "path":  "verify-superdesktop-m0/evidence/artifacts/2.1/reference-ui-matrix.json"
+                             },
+                             {
+                                 "sha256":  "2D29A1E7DB36D374A3B5EFF13F971E39F602A44FF5CBAC7C411D4D5BEA972159",
                                  "path":  "verify-superdesktop-m0/evidence/artifacts/4.1/accessibility-input.json"
                              },
                              {
-                                 "sha256":  "4B0CAFEC689EA62BF5B3B48948337A607384DBD046EB48FAD35510D2B9853D41",
+                                 "sha256":  "01AE4AD164457072E1947DEB0696ADF357545854D33EA3B4E6F4A1BE6134485E",
                                  "path":  "verify-superdesktop-m0/evidence/artifacts/4.2/localization-ime.json"
                              },
                              {
-                                 "sha256":  "EEDF70296182178D6F076FDD09AAEB930284D2EAC0CA3C93564420B971D8A6EE",
+                                 "sha256":  "CA8C033661EEE861F244B3F423CC8FBBD07884D2C8C04F5E3BEEE57F96B2D0C2",
                                  "path":  "verify-superdesktop-m0/evidence/artifacts/5.1/performance.json"
                              },
                              {
@@ -34,12 +41,11 @@
                                  "path":  "verify-superdesktop-m0/evidence/artifacts/5.2/safety-license-source.json"
                              },
                              {
-                                 "sha256":  "1FAA8B4A4DC8C119746B6F482AFBDC2822F299DDB520040EEB4F58D07FC9CC19",
+                                 "sha256":  "974646AF5AFE8EB8BD1A8905635B5A2CEB37D902C2F249AFE55F4FDF2B6202D9",
                                  "path":  "verify-superdesktop-m0/evidence/artifacts/1.2/build-offline-gate.json"
                              }
                          ],
     "unresolved":  [
-                       "reference-taskbar-ssim",
                        "physical-five-dpi-matrix",
                        "physical-mixed-dpi-dual-monitor",
                        "windows-10-22h2",

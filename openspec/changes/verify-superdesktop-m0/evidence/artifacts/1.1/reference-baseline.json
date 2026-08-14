@@ -12,9 +12,9 @@
                                     {
                                         "name":  "fixture-window-titles",
                                         "rect":  [
-                                                     150,
+                                                     96,
                                                      0,
-                                                     2500,
+                                                     3304,
                                                      140
                                                  ]
                                     },
@@ -32,6 +32,14 @@
                       "base_physical_px":  2,
                       "scaled":  "round(2*dpi/96)"
                   },
+    "correction_disposition":  {
+                                   "adjustment_id":  "B-W6-REFERENCE-MASK-001",
+                                   "exact_control_state_unchanged":  true,
+                                   "classification":  "B",
+                                   "threshold_unchanged":  0.95,
+                                   "reason":  "The frozen screenshot task fixture begins at x=96 and extends to the x=3400 status boundary; the v1 x=150..2650 rectangle retained live task titles and excluded part of the declared fixture region.",
+                                   "reference_image_unchanged":  true
+                               },
     "production_lineage":  [
                                {
                                    "change":  "validate-superdesktop-windows-platform",

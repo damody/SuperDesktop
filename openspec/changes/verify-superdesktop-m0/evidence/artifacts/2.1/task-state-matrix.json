@@ -1,9 +1,9 @@
 {
     "schema":  "m0-task-state-matrix/v1",
     "result":  "passed",
-    "app_sha256":  "9975AEB5396208699F70035BB81F32B674D075D8EEC908DC84632C387CF118FF",
+    "app_sha256":  "0F1870E89F9453F8EB682D7D17FB85237716EAFF7B7C4832C6A4CB4E91978D67",
     "screenshot":  "task-state-matrix.png",
-    "screenshot_sha256":  "E83B3683744BB779860BA17D531551B871092CF770C46F205AF8CF8B609E63D1",
+    "screenshot_sha256":  "67A7B5DB02928B8A8FE4A9B4E993C830D76285D6780B736DED49E0CD7544AE9C",
     "state_count":  5,
     "controls":  [
                      {
@@ -11,7 +11,7 @@
                          "invoke_available":  true,
                          "bounds":  {
                                         "left":  346,
-                                        "top":  1872,
+                                        "top":  1874,
                                         "width":  332,
                                         "height":  70
                                     }
@@ -21,7 +21,7 @@
                          "invoke_available":  true,
                          "bounds":  {
                                         "left":  678,
-                                        "top":  1872,
+                                        "top":  1874,
                                         "width":  331,
                                         "height":  70
                                     }
@@ -31,7 +31,7 @@
                          "invoke_available":  true,
                          "bounds":  {
                                         "left":  1010,
-                                        "top":  1872,
+                                        "top":  1874,
                                         "width":  331,
                                         "height":  70
                                     }
@@ -41,7 +41,7 @@
                          "invoke_available":  true,
                          "bounds":  {
                                         "left":  1342,
-                                        "top":  1872,
+                                        "top":  1874,
                                         "width":  332,
                                         "height":  70
                                     }
@@ -51,7 +51,7 @@
                          "invoke_available":  false,
                          "bounds":  {
                                         "left":  1674,
-                                        "top":  1872,
+                                        "top":  1874,
                                         "width":  331,
                                         "height":  70
                                     }
