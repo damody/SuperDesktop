@@ -3709,10 +3709,22 @@ dependencies = [
 [[package]]
 name = "superdesktop-app"
 version = "0.1.0"
+dependencies = [
+ "desktop-ui",
+ "explorer-bridge",
+ "platform-win",
+ "serde_json",
+ "settings-store",
+ "shell-core",
+ "taskbar-ui",
+]
 
 [[package]]
 name = "superdesktop-guardian"
 version = "0.1.0"
+dependencies = [
+ "platform-win",
+]
 
 [[package]]
 name = "superdesktop-test-support"

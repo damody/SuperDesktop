@@ -3,8 +3,10 @@
 pub mod admission;
 pub mod appbar_shell_hook;
 pub mod desktop;
+pub mod explorer_recovery;
 pub mod ffi_boundary;
 pub mod guardian_lease;
 pub mod monitor_dpi_start;
 pub mod native_window;
+pub mod owner_lease;
 pub mod taskbar;

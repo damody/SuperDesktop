@@ -182,7 +182,6 @@ unsafe extern "system" {
         out: *mut u16,
         file_part: *mut *mut u16,
     ) -> u32;
-    fn GetModuleFileNameW(module: RawHandle, path: *mut u16, size: u32) -> u32;
     fn GetProcessHandleCount(process: RawHandle, count: *mut u32) -> i32;
 }
 #[link(name = "bcrypt")]
@@ -363,6 +362,10 @@ fn canonical_file(path: &str) -> Result<(String, FileIdentity), LeaseReject> {
         },
     ))
 }
+
+pub fn canonical_file_identity(path: &str) -> Result<(String, FileIdentity), LeaseReject> {
+    canonical_file(path)
+}
 fn process_identity(handle: RawHandle, nonce: String) -> Result<LeaseIdentity, LeaseReject> {
     // SAFETY: caller supplies the candidate process handle; failure is converted to typed reject.
     let pid = unsafe { GetProcessId(handle) };
@@ -490,15 +493,6 @@ pub fn production_negative_fixtures() -> Result<Vec<NegativeFixtureResult>, &'st
     Ok(results)
 }
 
-fn frozen_capability_identity() -> Result<(String, FileIdentity), LeaseReject> {
-    let mut path = vec![0u16; 32_768];
-    // SAFETY: NULL denotes the calling process image; path is writable and bounded.
-    let length = unsafe { GetModuleFileNameW(0, path.as_mut_ptr(), path.len() as u32) };
-    if length == 0 || length as usize >= path.len() {
-        return Err(LeaseReject::WrongExecutable);
-    }
-    canonical_file(&String::from_utf16_lossy(&path[..length as usize]))
-}
 fn nonce() -> Result<String, &'static str> {
     let mut bytes = [0u8; 16];
     // SAFETY: system-preferred RNG accepts a null algorithm and writes exactly 16 bytes.
@@ -842,6 +836,23 @@ pub fn child_accept_and_wait(
     terminal_path: &str,
     deadline_ms: u32,
 ) -> Result<HandleCounts, LeaseReject> {
+    let expected = std::env::current_exe().map_err(|_| LeaseReject::WrongExecutable)?;
+    child_accept_and_wait_expected(
+        parent_raw,
+        channel_raw,
+        terminal_path,
+        deadline_ms,
+        &expected.to_string_lossy(),
+    )
+}
+
+pub fn child_accept_and_wait_expected(
+    parent_raw: RawHandle,
+    channel_raw: RawHandle,
+    terminal_path: &str,
+    deadline_ms: u32,
+    expected_parent_executable: &str,
+) -> Result<HandleCounts, LeaseReject> {
     let before = handle_count().map_err(|_| LeaseReject::UnexpectedInheritedHandle)?;
     if parent_raw == 0 || parent_raw == INVALID_HANDLE {
         return Err(LeaseReject::InvalidParentProcessHandle);
@@ -864,11 +875,11 @@ pub fn child_accept_and_wait(
     // No nonce is accepted from argv; it is sealed and single-read from the pipe.
     let actual = process_identity(parent.raw(), claim.nonce.clone())?;
     LeaseValidator::default().validate_once(&actual, &claim)?;
-    let (frozen_executable, frozen_file) = frozen_capability_identity()?;
-    if actual.executable != frozen_executable {
+    let (expected_executable, expected_file) = canonical_file(expected_parent_executable)?;
+    if actual.executable != expected_executable {
         return Err(LeaseReject::WrongExecutable);
     }
-    if actual.file != frozen_file {
+    if actual.file != expected_file {
         return Err(LeaseReject::FileIdentityMismatch);
     }
     std::fs::write(

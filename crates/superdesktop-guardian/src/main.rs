@@ -1,11 +1,21 @@
-//! Guardian placeholder. Recovery behavior is intentionally deferred to Wave 5.
+//! Restricted SuperDesktop recovery guardian.
 
 #[cfg(not(windows))]
 compile_error!("SuperDesktop is supported only on Windows targets.");
 
-mod identity;
+use superdesktop_guardian::{GuardianInvocation, run_guardian};
 
 fn main() {
-    // Wave 1 establishes only a buildable binary boundary.
-    let _ = (identity::APP_USER_MODEL_ID, identity::ORIGINAL_FILENAME);
+    match GuardianInvocation::from_args(std::env::args().skip(1)) {
+        Ok(invocation) => {
+            if let Err(reason) = run_guardian(invocation) {
+                eprintln!("guardian rejected: {reason}");
+                std::process::exit(3);
+            }
+        }
+        Err(reason) => {
+            eprintln!("guardian invocation rejected: {reason}");
+            std::process::exit(2);
+        }
+    }
 }

@@ -12,3 +12,12 @@ path = "src/main.rs"
 
 [lints]
 workspace = true
+
+[dependencies]
+desktop-ui = { path = "../desktop-ui" }
+explorer-bridge = { path = "../explorer-bridge" }
+platform-win = { path = "../platform-win" }
+settings-store = { path = "../settings-store" }
+shell-core = { path = "../shell-core" }
+taskbar-ui = { path = "../taskbar-ui" }
+serde_json.workspace = true

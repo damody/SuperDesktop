@@ -23,11 +23,12 @@
       "platform-win",
       "settings-store",
       "shell-core",
+      "serde_json",
       "superdesktop-guardian",
       "superdesktop-test-support",
       "taskbar-ui"
     ],
-    "superdesktop-guardian": [],
+    "superdesktop-guardian": ["platform-win"],
     "superdesktop-test-support": ["settings-store", "shell-core", "jsonschema", "serde_json"],
     "taskbar-ui": ["gpui", "gpui_windows", "platform-win", "raw-window-handle", "settings-store", "shell-core"]
   },
