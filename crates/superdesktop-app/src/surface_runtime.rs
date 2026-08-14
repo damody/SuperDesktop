@@ -27,20 +27,22 @@ fn trace_action(action: &str) {
         .open(path)
     {
         use std::io::Write;
-        let _ = writeln!(file, "{action}");
+        let millis = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|duration| duration.as_millis())
+            .unwrap_or_default();
+        let _ = writeln!(file, "{millis} {action}");
     }
 }
 
 fn launch_superexplorer() {
-    let developer_release =
-        std::path::PathBuf::from(r"D:\SuperExplorer\target\release\SuperExplorer.exe");
     let adjacent = std::env::current_exe()
         .ok()
         .and_then(|path| path.parent().map(|parent| parent.join("SuperExplorer.exe")))
         .unwrap_or_else(|| std::path::PathBuf::from(r"C:\missing\SuperExplorer.exe"));
     let resolver = explorer_bridge::ExecutableResolver {
         setting: std::env::var_os("SUPEREXPLORER_PATH").map(std::path::PathBuf::from),
-        developer_release,
+        developer_release: adjacent.clone(),
         adjacent,
     };
     match resolver.resolve() {
@@ -87,6 +89,41 @@ fn activate_task(stable_id: &str) {
         platform_win::common::taskbar::WindowAction::Activate
     };
     let _ = platform_win::common::taskbar::apply_window_action(window.hwnd_identity, action);
+}
+
+fn visible_tasks() -> Result<Vec<AccessibleTask>, &'static str> {
+    snapshot_task_windows()
+        .map_err(|_| "task-window-snapshot")
+        .map(|windows| {
+            windows
+                .into_iter()
+                .filter(|window| {
+                    window.visible
+                        && !window.tool_window
+                        && !window.cloaked
+                        && !window.owned_transient
+                })
+                .take(16)
+                .map(|window| AccessibleTask {
+                    stable_id: window.window_identity,
+                    name: if window.title.is_empty() {
+                        window.application_identity
+                    } else {
+                        window.title
+                    },
+                    role: "button",
+                    active: window.foreground,
+                    minimized: window.minimized,
+                    actions: vec![
+                        TaskAction::Focus,
+                        TaskAction::Select,
+                        TaskAction::Invoke,
+                        TaskAction::Minimize,
+                        TaskAction::Restore,
+                    ],
+                })
+                .collect()
+        })
 }
 
 fn hwnd(window: &gpui::Window) -> Result<isize, &'static str> {
@@ -153,32 +190,7 @@ fn status() -> StatusRegion {
 pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> {
     enable_per_monitor_v2()?;
     let snapshot = snapshot_real_monitors()?;
-    let visible_tasks = snapshot_task_windows()
-        .map_err(|_| "task-window-snapshot")?
-        .into_iter()
-        .filter(|window| {
-            window.visible && !window.tool_window && !window.cloaked && !window.owned_transient
-        })
-        .take(16)
-        .map(|window| AccessibleTask {
-            stable_id: window.window_identity,
-            name: if window.title.is_empty() {
-                window.application_identity
-            } else {
-                window.title
-            },
-            role: "button",
-            active: window.foreground,
-            minimized: window.minimized,
-            actions: vec![
-                TaskAction::Focus,
-                TaskAction::Select,
-                TaskAction::Invoke,
-                TaskAction::Minimize,
-                TaskAction::Restore,
-            ],
-        })
-        .collect::<Vec<_>>();
+    let initial_tasks = visible_tasks()?;
     let terminal = Rc::new(RefCell::new(None::<Result<(), &'static str>>));
     let terminal_for_app = Rc::clone(&terminal);
     let platform = gpui_windows::WindowsPlatform::new(false).map_err(|_| "gpui-platform")?;
@@ -227,7 +239,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                 desktop_handles.push(desktop);
 
                 let taskbar_monitor = monitor.clone();
-                let taskbar_tasks = visible_tasks.clone();
+                let taskbar_tasks = initial_tasks.clone();
                 let taskbar_error = Rc::clone(&init_error);
                 let taskbar_leases = Rc::clone(&leases);
                 let taskbar = cx.open_window(options(&monitor, true), move |window, cx| {
@@ -295,6 +307,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                             }),
                             fixed: Rc::new(launch_superexplorer),
                             task: Rc::new(activate_task),
+                            rendered: Rc::new(|| trace_action("frame-visible")),
                         }),
                     })
                 });
@@ -310,6 +323,42 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                 cx.quit();
                 return;
             }
+
+            let refresh_handles = taskbar_handles.clone();
+            let refresh_background = cx.background_executor().clone();
+            let refresh_foreground = cx.foreground_executor().clone();
+            let refresh_app = cx.to_async();
+            refresh_foreground
+                .spawn(async move {
+                    loop {
+                        refresh_background.timer(Duration::from_millis(50)).await;
+                        let Ok(tasks) = visible_tasks() else {
+                            continue;
+                        };
+                        refresh_app.update(|app| {
+                            let mut alive = false;
+                            for handle in &refresh_handles {
+                                if handle
+                                    .update(app, |view, _, cx| {
+                                        alive = true;
+                                        if view.tasks != tasks {
+                                            view.tasks = tasks.clone();
+                                            trace_action("shell-event");
+                                            cx.notify();
+                                        }
+                                    })
+                                    .is_err()
+                                {
+                                    continue;
+                                }
+                            }
+                            if !alive {
+                                app.quit();
+                            }
+                        });
+                    }
+                })
+                .detach();
 
             if let Some(duration) = duration {
                 let background = cx.background_executor().clone();

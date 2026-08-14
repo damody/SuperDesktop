@@ -21,6 +21,7 @@ pub struct TaskbarCallbacks {
     pub start: Rc<dyn Fn()>,
     pub fixed: Rc<dyn Fn()>,
     pub task: Rc<dyn Fn(&str)>,
+    pub rendered: Rc<dyn Fn()>,
 }
 
 impl Render for TaskbarView {
@@ -28,6 +29,13 @@ impl Render for TaskbarView {
         let start = self.callbacks.as_ref().map(|value| Rc::clone(&value.start));
         let fixed = self.callbacks.as_ref().map(|value| Rc::clone(&value.fixed));
         let task_callback = self.callbacks.as_ref().map(|value| Rc::clone(&value.task));
+        if let Some(rendered) = self
+            .callbacks
+            .as_ref()
+            .map(|value| Rc::clone(&value.rendered))
+        {
+            rendered();
+        }
         div()
             .id("supertaskbar-root")
             .role(gpui::Role::List)
