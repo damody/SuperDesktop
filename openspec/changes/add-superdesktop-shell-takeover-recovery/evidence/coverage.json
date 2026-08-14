@@ -1,0 +1,808 @@
+{
+    "schema_version":  "1.0.0",
+    "change":  "add-superdesktop-shell-takeover-recovery",
+    "capabilities":  [
+                         "guardian-authority",
+                         "guardian-deadline",
+                         "guardian-explorer",
+                         "guardian-recovery",
+                         "lifecycle-composition",
+                         "lifecycle-ffi",
+                         "lifecycle-owner",
+                         "lifecycle-preview",
+                         "lifecycle-safety",
+                         "lifecycle-shutdown",
+                         "lifecycle-takeover"
+                     ],
+    "tasks":  [
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/1.1.1",
+                      "mandatory":  true,
+                      "capability_id":  "lifecycle-preview",
+                      "requirement_id":  "lifecycle-preview",
+                      "scenario_id":  "zero-mutation-admission",
+                      "gates":  [
+                                    "G-SAFETY",
+                                    "G-SHELL-TAKEOVER-PROVISIONAL"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/1.1.2",
+                      "mandatory":  true,
+                      "capability_id":  "lifecycle-preview",
+                      "requirement_id":  "lifecycle-preview",
+                      "scenario_id":  "zero-mutation-admission",
+                      "gates":  [
+                                    "G-SAFETY",
+                                    "G-SHELL-TAKEOVER-PROVISIONAL"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/1.1.3",
+                      "mandatory":  true,
+                      "capability_id":  "lifecycle-preview",
+                      "requirement_id":  "lifecycle-preview",
+                      "scenario_id":  "zero-mutation-admission",
+                      "gates":  [
+                                    "G-SAFETY",
+                                    "G-SHELL-TAKEOVER-PROVISIONAL"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/1.1.4",
+                      "mandatory":  true,
+                      "capability_id":  "lifecycle-preview",
+                      "requirement_id":  "lifecycle-preview",
+                      "scenario_id":  "zero-mutation-admission",
+                      "gates":  [
+                                    "G-SAFETY",
+                                    "G-SHELL-TAKEOVER-PROVISIONAL"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/1.2.1",
+                      "mandatory":  true,
+                      "capability_id":  "lifecycle-owner",
+                      "requirement_id":  "lifecycle-owner",
+                      "scenario_id":  "identity-fenced-single-owner",
+                      "gates":  [
+                                    "G-SAFETY",
+                                    "G-SHELL-TAKEOVER-PROVISIONAL"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/1.2.2",
+                      "mandatory":  true,
+                      "capability_id":  "lifecycle-owner",
+                      "requirement_id":  "lifecycle-owner",
+                      "scenario_id":  "identity-fenced-single-owner",
+                      "gates":  [
+                                    "G-SAFETY",
+                                    "G-SHELL-TAKEOVER-PROVISIONAL"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/1.2.3",
+                      "mandatory":  true,
+                      "capability_id":  "lifecycle-owner",
+                      "requirement_id":  "lifecycle-owner",
+                      "scenario_id":  "identity-fenced-single-owner",
+                      "gates":  [
+                                    "G-SAFETY",
+                                    "G-SHELL-TAKEOVER-PROVISIONAL"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/1.2.4",
+                      "mandatory":  true,
+                      "capability_id":  "lifecycle-owner",
+                      "requirement_id":  "lifecycle-owner",
+                      "scenario_id":  "identity-fenced-single-owner",
+                      "gates":  [
+                                    "G-SAFETY",
+                                    "G-SHELL-TAKEOVER-PROVISIONAL"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/1.2.5",
+                      "mandatory":  true,
+                      "capability_id":  "lifecycle-owner",
+                      "requirement_id":  "lifecycle-owner",
+                      "scenario_id":  "identity-fenced-single-owner",
+                      "gates":  [
+                                    "G-SAFETY",
+                                    "G-SHELL-TAKEOVER-PROVISIONAL"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/1.2.6",
+                      "mandatory":  true,
+                      "capability_id":  "lifecycle-owner",
+                      "requirement_id":  "lifecycle-owner",
+                      "scenario_id":  "identity-fenced-single-owner",
+                      "gates":  [
+                                    "G-SAFETY",
+                                    "G-SHELL-TAKEOVER-PROVISIONAL"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/1.3.1",
+                      "mandatory":  true,
+                      "capability_id":  "lifecycle-composition",
+                      "requirement_id":  "lifecycle-composition",
+                      "scenario_id":  "typed-preview-routing",
+                      "gates":  [
+                                    "G-ARCH",
+                                    "G-EXPLORER-BRIDGE"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/1.3.2",
+                      "mandatory":  true,
+                      "capability_id":  "lifecycle-composition",
+                      "requirement_id":  "lifecycle-composition",
+                      "scenario_id":  "typed-preview-routing",
+                      "gates":  [
+                                    "G-ARCH",
+                                    "G-EXPLORER-BRIDGE"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/1.3.3",
+                      "mandatory":  true,
+                      "capability_id":  "lifecycle-composition",
+                      "requirement_id":  "lifecycle-composition",
+                      "scenario_id":  "typed-preview-routing",
+                      "gates":  [
+                                    "G-ARCH",
+                                    "G-EXPLORER-BRIDGE"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/1.3.4",
+                      "mandatory":  true,
+                      "capability_id":  "lifecycle-composition",
+                      "requirement_id":  "lifecycle-composition",
+                      "scenario_id":  "typed-preview-routing",
+                      "gates":  [
+                                    "G-ARCH",
+                                    "G-EXPLORER-BRIDGE"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/1.3.5",
+                      "mandatory":  true,
+                      "capability_id":  "lifecycle-composition",
+                      "requirement_id":  "lifecycle-composition",
+                      "scenario_id":  "typed-preview-routing",
+                      "gates":  [
+                                    "G-ARCH",
+                                    "G-EXPLORER-BRIDGE"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/1.3.6",
+                      "mandatory":  true,
+                      "capability_id":  "lifecycle-composition",
+                      "requirement_id":  "lifecycle-composition",
+                      "scenario_id":  "typed-preview-routing",
+                      "gates":  [
+                                    "G-ARCH",
+                                    "G-EXPLORER-BRIDGE"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/1.3.7",
+                      "mandatory":  true,
+                      "capability_id":  "lifecycle-composition",
+                      "requirement_id":  "lifecycle-composition",
+                      "scenario_id":  "typed-preview-routing",
+                      "gates":  [
+                                    "G-ARCH",
+                                    "G-EXPLORER-BRIDGE"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/2.1.1",
+                      "mandatory":  true,
+                      "capability_id":  "lifecycle-takeover",
+                      "requirement_id":  "lifecycle-takeover",
+                      "scenario_id":  "six-phase-transaction",
+                      "gates":  [
+                                    "G-SHELL-TAKEOVER-PROVISIONAL"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/2.1.2",
+                      "mandatory":  true,
+                      "capability_id":  "lifecycle-takeover",
+                      "requirement_id":  "lifecycle-takeover",
+                      "scenario_id":  "six-phase-transaction",
+                      "gates":  [
+                                    "G-SHELL-TAKEOVER-PROVISIONAL"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/2.1.3",
+                      "mandatory":  true,
+                      "capability_id":  "lifecycle-takeover",
+                      "requirement_id":  "lifecycle-takeover",
+                      "scenario_id":  "six-phase-transaction",
+                      "gates":  [
+                                    "G-SHELL-TAKEOVER-PROVISIONAL"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/2.1.4",
+                      "mandatory":  true,
+                      "capability_id":  "lifecycle-takeover",
+                      "requirement_id":  "lifecycle-takeover",
+                      "scenario_id":  "six-phase-transaction",
+                      "gates":  [
+                                    "G-SHELL-TAKEOVER-PROVISIONAL"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/2.1.5",
+                      "mandatory":  true,
+                      "capability_id":  "lifecycle-takeover",
+                      "requirement_id":  "lifecycle-takeover",
+                      "scenario_id":  "six-phase-transaction",
+                      "gates":  [
+                                    "G-SHELL-TAKEOVER-PROVISIONAL"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/2.1.6",
+                      "mandatory":  true,
+                      "capability_id":  "lifecycle-takeover",
+                      "requirement_id":  "lifecycle-takeover",
+                      "scenario_id":  "six-phase-transaction",
+                      "gates":  [
+                                    "G-SHELL-TAKEOVER-PROVISIONAL"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/2.1.7",
+                      "mandatory":  true,
+                      "capability_id":  "lifecycle-takeover",
+                      "requirement_id":  "lifecycle-takeover",
+                      "scenario_id":  "six-phase-transaction",
+                      "gates":  [
+                                    "G-SHELL-TAKEOVER-PROVISIONAL"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/2.1.8",
+                      "mandatory":  true,
+                      "capability_id":  "lifecycle-takeover",
+                      "requirement_id":  "lifecycle-takeover",
+                      "scenario_id":  "six-phase-transaction",
+                      "gates":  [
+                                    "G-SHELL-TAKEOVER-PROVISIONAL"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/2.1.9",
+                      "mandatory":  true,
+                      "capability_id":  "lifecycle-takeover",
+                      "requirement_id":  "lifecycle-takeover",
+                      "scenario_id":  "six-phase-transaction",
+                      "gates":  [
+                                    "G-SHELL-TAKEOVER-PROVISIONAL"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/2.2.1",
+                      "mandatory":  true,
+                      "capability_id":  "lifecycle-shutdown",
+                      "requirement_id":  "lifecycle-shutdown",
+                      "scenario_id":  "ordered-idempotent-rundown",
+                      "gates":  [
+                                    "G-SHELL-TAKEOVER-PROVISIONAL",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/2.2.2",
+                      "mandatory":  true,
+                      "capability_id":  "lifecycle-shutdown",
+                      "requirement_id":  "lifecycle-shutdown",
+                      "scenario_id":  "ordered-idempotent-rundown",
+                      "gates":  [
+                                    "G-SHELL-TAKEOVER-PROVISIONAL",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/2.2.3",
+                      "mandatory":  true,
+                      "capability_id":  "lifecycle-shutdown",
+                      "requirement_id":  "lifecycle-shutdown",
+                      "scenario_id":  "ordered-idempotent-rundown",
+                      "gates":  [
+                                    "G-SHELL-TAKEOVER-PROVISIONAL",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/2.2.4",
+                      "mandatory":  true,
+                      "capability_id":  "lifecycle-shutdown",
+                      "requirement_id":  "lifecycle-shutdown",
+                      "scenario_id":  "ordered-idempotent-rundown",
+                      "gates":  [
+                                    "G-SHELL-TAKEOVER-PROVISIONAL",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/2.2.5",
+                      "mandatory":  true,
+                      "capability_id":  "lifecycle-shutdown",
+                      "requirement_id":  "lifecycle-shutdown",
+                      "scenario_id":  "ordered-idempotent-rundown",
+                      "gates":  [
+                                    "G-SHELL-TAKEOVER-PROVISIONAL",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/2.2.6",
+                      "mandatory":  true,
+                      "capability_id":  "lifecycle-shutdown",
+                      "requirement_id":  "lifecycle-shutdown",
+                      "scenario_id":  "ordered-idempotent-rundown",
+                      "gates":  [
+                                    "G-SHELL-TAKEOVER-PROVISIONAL",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/2.2.7",
+                      "mandatory":  true,
+                      "capability_id":  "lifecycle-shutdown",
+                      "requirement_id":  "lifecycle-shutdown",
+                      "scenario_id":  "ordered-idempotent-rundown",
+                      "gates":  [
+                                    "G-SHELL-TAKEOVER-PROVISIONAL",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/2.2.8",
+                      "mandatory":  true,
+                      "capability_id":  "lifecycle-shutdown",
+                      "requirement_id":  "lifecycle-shutdown",
+                      "scenario_id":  "ordered-idempotent-rundown",
+                      "gates":  [
+                                    "G-SHELL-TAKEOVER-PROVISIONAL",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/2.2.9",
+                      "mandatory":  true,
+                      "capability_id":  "lifecycle-shutdown",
+                      "requirement_id":  "lifecycle-shutdown",
+                      "scenario_id":  "ordered-idempotent-rundown",
+                      "gates":  [
+                                    "G-SHELL-TAKEOVER-PROVISIONAL",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/2.2.10",
+                      "mandatory":  true,
+                      "capability_id":  "lifecycle-shutdown",
+                      "requirement_id":  "lifecycle-shutdown",
+                      "scenario_id":  "ordered-idempotent-rundown",
+                      "gates":  [
+                                    "G-SHELL-TAKEOVER-PROVISIONAL",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/2.2.11",
+                      "mandatory":  true,
+                      "capability_id":  "lifecycle-shutdown",
+                      "requirement_id":  "lifecycle-shutdown",
+                      "scenario_id":  "ordered-idempotent-rundown",
+                      "gates":  [
+                                    "G-SHELL-TAKEOVER-PROVISIONAL",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/2.2.12",
+                      "mandatory":  true,
+                      "capability_id":  "lifecycle-shutdown",
+                      "requirement_id":  "lifecycle-shutdown",
+                      "scenario_id":  "ordered-idempotent-rundown",
+                      "gates":  [
+                                    "G-SHELL-TAKEOVER-PROVISIONAL",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/3.1.1",
+                      "mandatory":  true,
+                      "capability_id":  "guardian-authority",
+                      "requirement_id":  "guardian-authority",
+                      "scenario_id":  "anti-spoof-lease",
+                      "gates":  [
+                                    "G-GUARDIAN-RECOVERY-PROVISIONAL",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/3.1.2",
+                      "mandatory":  true,
+                      "capability_id":  "guardian-authority",
+                      "requirement_id":  "guardian-authority",
+                      "scenario_id":  "anti-spoof-lease",
+                      "gates":  [
+                                    "G-GUARDIAN-RECOVERY-PROVISIONAL",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/3.1.3",
+                      "mandatory":  true,
+                      "capability_id":  "guardian-authority",
+                      "requirement_id":  "guardian-authority",
+                      "scenario_id":  "anti-spoof-lease",
+                      "gates":  [
+                                    "G-GUARDIAN-RECOVERY-PROVISIONAL",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/3.1.4",
+                      "mandatory":  true,
+                      "capability_id":  "guardian-authority",
+                      "requirement_id":  "guardian-authority",
+                      "scenario_id":  "anti-spoof-lease",
+                      "gates":  [
+                                    "G-GUARDIAN-RECOVERY-PROVISIONAL",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/3.1.5",
+                      "mandatory":  true,
+                      "capability_id":  "guardian-authority",
+                      "requirement_id":  "guardian-authority",
+                      "scenario_id":  "anti-spoof-lease",
+                      "gates":  [
+                                    "G-GUARDIAN-RECOVERY-PROVISIONAL",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/3.2.1",
+                      "mandatory":  true,
+                      "capability_id":  "guardian-explorer",
+                      "requirement_id":  "guardian-explorer",
+                      "scenario_id":  "trusted-system-launch",
+                      "gates":  [
+                                    "G-GUARDIAN-RECOVERY-PROVISIONAL",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/3.2.2",
+                      "mandatory":  true,
+                      "capability_id":  "guardian-explorer",
+                      "requirement_id":  "guardian-explorer",
+                      "scenario_id":  "trusted-system-launch",
+                      "gates":  [
+                                    "G-GUARDIAN-RECOVERY-PROVISIONAL",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/3.2.3",
+                      "mandatory":  true,
+                      "capability_id":  "guardian-explorer",
+                      "requirement_id":  "guardian-explorer",
+                      "scenario_id":  "trusted-system-launch",
+                      "gates":  [
+                                    "G-GUARDIAN-RECOVERY-PROVISIONAL",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/3.2.4",
+                      "mandatory":  true,
+                      "capability_id":  "guardian-explorer",
+                      "requirement_id":  "guardian-explorer",
+                      "scenario_id":  "trusted-system-launch",
+                      "gates":  [
+                                    "G-GUARDIAN-RECOVERY-PROVISIONAL",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/3.2.5",
+                      "mandatory":  true,
+                      "capability_id":  "guardian-explorer",
+                      "requirement_id":  "guardian-explorer",
+                      "scenario_id":  "trusted-system-launch",
+                      "gates":  [
+                                    "G-GUARDIAN-RECOVERY-PROVISIONAL",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/3.3.1",
+                      "mandatory":  true,
+                      "capability_id":  "guardian-recovery",
+                      "requirement_id":  "guardian-recovery",
+                      "scenario_id":  "exactly-once-shell-restore",
+                      "gates":  [
+                                    "G-GUARDIAN-RECOVERY-PROVISIONAL",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/3.3.2",
+                      "mandatory":  true,
+                      "capability_id":  "guardian-recovery",
+                      "requirement_id":  "guardian-recovery",
+                      "scenario_id":  "exactly-once-shell-restore",
+                      "gates":  [
+                                    "G-GUARDIAN-RECOVERY-PROVISIONAL",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/3.3.3",
+                      "mandatory":  true,
+                      "capability_id":  "guardian-recovery",
+                      "requirement_id":  "guardian-recovery",
+                      "scenario_id":  "exactly-once-shell-restore",
+                      "gates":  [
+                                    "G-GUARDIAN-RECOVERY-PROVISIONAL",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/3.3.4",
+                      "mandatory":  true,
+                      "capability_id":  "guardian-recovery",
+                      "requirement_id":  "guardian-recovery",
+                      "scenario_id":  "exactly-once-shell-restore",
+                      "gates":  [
+                                    "G-GUARDIAN-RECOVERY-PROVISIONAL",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/3.3.5",
+                      "mandatory":  true,
+                      "capability_id":  "guardian-recovery",
+                      "requirement_id":  "guardian-recovery",
+                      "scenario_id":  "exactly-once-shell-restore",
+                      "gates":  [
+                                    "G-GUARDIAN-RECOVERY-PROVISIONAL",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/3.3.6",
+                      "mandatory":  true,
+                      "capability_id":  "guardian-recovery",
+                      "requirement_id":  "guardian-recovery",
+                      "scenario_id":  "exactly-once-shell-restore",
+                      "gates":  [
+                                    "G-GUARDIAN-RECOVERY-PROVISIONAL",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/3.3.7",
+                      "mandatory":  true,
+                      "capability_id":  "guardian-recovery",
+                      "requirement_id":  "guardian-recovery",
+                      "scenario_id":  "exactly-once-shell-restore",
+                      "gates":  [
+                                    "G-GUARDIAN-RECOVERY-PROVISIONAL",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/3.3.8",
+                      "mandatory":  true,
+                      "capability_id":  "guardian-recovery",
+                      "requirement_id":  "guardian-recovery",
+                      "scenario_id":  "exactly-once-shell-restore",
+                      "gates":  [
+                                    "G-GUARDIAN-RECOVERY-PROVISIONAL",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/3.4.1",
+                      "mandatory":  true,
+                      "capability_id":  "guardian-deadline",
+                      "requirement_id":  "guardian-deadline",
+                      "scenario_id":  "ten-run-ten-second",
+                      "gates":  [
+                                    "G-GUARDIAN-RECOVERY-PROVISIONAL"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/3.4.2",
+                      "mandatory":  true,
+                      "capability_id":  "guardian-deadline",
+                      "requirement_id":  "guardian-deadline",
+                      "scenario_id":  "ten-run-ten-second",
+                      "gates":  [
+                                    "G-GUARDIAN-RECOVERY-PROVISIONAL"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/3.4.3",
+                      "mandatory":  true,
+                      "capability_id":  "guardian-deadline",
+                      "requirement_id":  "guardian-deadline",
+                      "scenario_id":  "ten-run-ten-second",
+                      "gates":  [
+                                    "G-GUARDIAN-RECOVERY-PROVISIONAL"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/3.4.4",
+                      "mandatory":  true,
+                      "capability_id":  "guardian-deadline",
+                      "requirement_id":  "guardian-deadline",
+                      "scenario_id":  "ten-run-ten-second",
+                      "gates":  [
+                                    "G-GUARDIAN-RECOVERY-PROVISIONAL"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/3.4.5",
+                      "mandatory":  true,
+                      "capability_id":  "guardian-deadline",
+                      "requirement_id":  "guardian-deadline",
+                      "scenario_id":  "ten-run-ten-second",
+                      "gates":  [
+                                    "G-GUARDIAN-RECOVERY-PROVISIONAL"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/4.1.1",
+                      "mandatory":  true,
+                      "capability_id":  "lifecycle-ffi",
+                      "requirement_id":  "lifecycle-ffi",
+                      "scenario_id":  "no-unwind-fatal-routing",
+                      "gates":  [
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/4.1.2",
+                      "mandatory":  true,
+                      "capability_id":  "lifecycle-ffi",
+                      "requirement_id":  "lifecycle-ffi",
+                      "scenario_id":  "no-unwind-fatal-routing",
+                      "gates":  [
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/4.1.3",
+                      "mandatory":  true,
+                      "capability_id":  "lifecycle-ffi",
+                      "requirement_id":  "lifecycle-ffi",
+                      "scenario_id":  "no-unwind-fatal-routing",
+                      "gates":  [
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/4.1.4",
+                      "mandatory":  true,
+                      "capability_id":  "lifecycle-ffi",
+                      "requirement_id":  "lifecycle-ffi",
+                      "scenario_id":  "no-unwind-fatal-routing",
+                      "gates":  [
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/4.1.5",
+                      "mandatory":  true,
+                      "capability_id":  "lifecycle-ffi",
+                      "requirement_id":  "lifecycle-ffi",
+                      "scenario_id":  "no-unwind-fatal-routing",
+                      "gates":  [
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/4.1.6",
+                      "mandatory":  true,
+                      "capability_id":  "lifecycle-ffi",
+                      "requirement_id":  "lifecycle-ffi",
+                      "scenario_id":  "no-unwind-fatal-routing",
+                      "gates":  [
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/4.2.1",
+                      "mandatory":  true,
+                      "capability_id":  "lifecycle-safety",
+                      "requirement_id":  "lifecycle-safety",
+                      "scenario_id":  "zero-permanent-mutation",
+                      "gates":  [
+                                    "G-SAFETY",
+                                    "G-SHELL-TAKEOVER-PROVISIONAL",
+                                    "G-GUARDIAN-RECOVERY-PROVISIONAL"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/4.2.2",
+                      "mandatory":  true,
+                      "capability_id":  "lifecycle-safety",
+                      "requirement_id":  "lifecycle-safety",
+                      "scenario_id":  "zero-permanent-mutation",
+                      "gates":  [
+                                    "G-SAFETY",
+                                    "G-SHELL-TAKEOVER-PROVISIONAL",
+                                    "G-GUARDIAN-RECOVERY-PROVISIONAL"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/4.2.3",
+                      "mandatory":  true,
+                      "capability_id":  "lifecycle-safety",
+                      "requirement_id":  "lifecycle-safety",
+                      "scenario_id":  "zero-permanent-mutation",
+                      "gates":  [
+                                    "G-SAFETY",
+                                    "G-SHELL-TAKEOVER-PROVISIONAL",
+                                    "G-GUARDIAN-RECOVERY-PROVISIONAL"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/4.2.4",
+                      "mandatory":  true,
+                      "capability_id":  "lifecycle-safety",
+                      "requirement_id":  "lifecycle-safety",
+                      "scenario_id":  "zero-permanent-mutation",
+                      "gates":  [
+                                    "G-SAFETY",
+                                    "G-SHELL-TAKEOVER-PROVISIONAL",
+                                    "G-GUARDIAN-RECOVERY-PROVISIONAL"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/4.2.5",
+                      "mandatory":  true,
+                      "capability_id":  "lifecycle-safety",
+                      "requirement_id":  "lifecycle-safety",
+                      "scenario_id":  "zero-permanent-mutation",
+                      "gates":  [
+                                    "G-SAFETY",
+                                    "G-SHELL-TAKEOVER-PROVISIONAL",
+                                    "G-GUARDIAN-RECOVERY-PROVISIONAL"
+                                ]
+                  },
+                  {
+                      "task_id":  "add-superdesktop-shell-takeover-recovery/4.2.6",
+                      "mandatory":  true,
+                      "capability_id":  "lifecycle-safety",
+                      "requirement_id":  "lifecycle-safety",
+                      "scenario_id":  "zero-permanent-mutation",
+                      "gates":  [
+                                    "G-SAFETY",
+                                    "G-SHELL-TAKEOVER-PROVISIONAL",
+                                    "G-GUARDIAN-RECOVERY-PROVISIONAL"
+                                ]
+                  }
+              ]
+}

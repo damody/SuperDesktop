@@ -1,0 +1,67 @@
+{
+    "schema":  "superdesktop-lifecycle-live-probe/v1",
+    "admission":  {
+                      "safe_mode":  false,
+                      "interactive":  true,
+                      "session_id":  1,
+                      "window_station":  "WinSta0"
+                  },
+    "owner":  {
+                  "pid":  405420,
+                  "creation_time":  134311580978756486,
+                  "session_id":  1,
+                  "user_sid_bound":  true,
+                  "authentication_id":  241244,
+                  "executable":  "D:\\SuperDesktop\\SuperDesktop\\target\\release\\examples\\lifecycle_probe.exe",
+                  "file_index":  562949956059037,
+                  "revalidated":  true,
+                  "released_last":  true
+              },
+    "explorer":  {
+                     "application":  "\\\\?\\C:\\Windows\\explorer.exe",
+                     "authenticode_verified":  true,
+                     "file_index":  281474978215132,
+                     "recovery":  {
+                                      "kind":  "shown-existing",
+                                      "process_id":  59672
+                                  },
+                     "process_count_before":  1,
+                     "process_count_after":  1
+                 },
+    "monitors":  [
+                     {
+                         "device":  "\\\\.\\DISPLAY1",
+                         "dpi_x":  96,
+                         "dpi_y":  96,
+                         "work_area":  [
+                                           0,
+                                           0,
+                                           2194,
+                                           1153
+                                       ]
+                     }
+                 ],
+    "start_available":  true,
+    "ffi":  {
+                "panic_code":  -1,
+                "panic_fatal":  "CallbackPanic",
+                "shutdown_code":  -3,
+                "shutdown_fatal":  "ShutdownRace",
+                "expected":  [
+                                 -1,
+                                 -3
+                             ]
+            },
+    "resources":  {
+                      "before":  {
+                                     "handles":  283,
+                                     "user":  1,
+                                     "gdi":  0
+                                 },
+                      "after":  {
+                                    "handles":  282,
+                                    "user":  1,
+                                    "gdi":  0
+                                }
+                  }
+}

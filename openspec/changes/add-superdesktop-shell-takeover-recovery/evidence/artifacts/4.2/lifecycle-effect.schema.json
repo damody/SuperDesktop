@@ -1,0 +1,31 @@
+{
+    "$schema":  "https://json-schema.org/draft/2020-12/schema",
+    "title":  "SuperDesktop lifecycle effect",
+    "type":  "object",
+    "required":  [
+                     "kind",
+                     "owner_fence"
+                 ],
+    "properties":  {
+                       "rollback_token":  {
+                                              "type":  "string"
+                                          },
+                       "owner_fence":  {
+                                           "minLength":  1,
+                                           "type":  "string"
+                                       },
+                       "kind":  {
+                                    "enum":  [
+                                                 "guardian-start",
+                                                 "surface-create",
+                                                 "appbar-register",
+                                                 "hook-register",
+                                                 "explorer-switch",
+                                                 "appbar-remove",
+                                                 "work-area-restore",
+                                                 "explorer-restore"
+                                             ]
+                                }
+                   },
+    "additionalProperties":  false
+}

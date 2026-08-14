@@ -1,0 +1,21 @@
+{
+    "schema":  "lifecycle-handoff/v1",
+    "change":  "add-superdesktop-shell-takeover-recovery",
+    "producer":  "Lifecycle owner",
+    "consumers":  [
+                      "implement-superdesktop-foundation",
+                      "verify-superdesktop-m0"
+                  ],
+    "result_revision":  "b40eabb8",
+    "contract_manifest":  "evidence/artifacts/4.2/lifecycle-contract-manifest.json",
+    "contract_manifest_sha256":  "4A3F16E334AA3C9A60FCC93DFB3EB45C3F9ABF612903B5FE2701C58278AEE640",
+    "status":  "passed-active-archive-deferred",
+    "gates":  {
+                  "G-SHELL-TAKEOVER-PROVISIONAL":  "passed",
+                  "G-SHELL-TAKEOVER":  "not-determined",
+                  "G-SAFETY":  "passed",
+                  "G-GUARDIAN-RECOVERY":  "not-determined",
+                  "G-ARCH":  "passed",
+                  "G-GUARDIAN-RECOVERY-PROVISIONAL":  "passed"
+              }
+}

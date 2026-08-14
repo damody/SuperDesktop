@@ -1,0 +1,15 @@
+{
+    "schema":  "lifecycle-trusted-explorer/v1",
+    "application":  "\\\\?\\C:\\Windows\\explorer.exe",
+    "authenticode_verified":  true,
+    "file_index":  281474978215132,
+    "explicit_application":  true,
+    "canonical_windows_directory":  true,
+    "restricted_inheritance":  true,
+    "sanitized_environment":  true,
+    "path_and_cwd_ignored":  true,
+    "existing_recovery":  {
+                              "kind":  "shown-existing",
+                              "process_id":  59672
+                          }
+}

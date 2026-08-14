@@ -1,0 +1,108 @@
+{
+    "schema":  "lifecycle-permanent-mutation-audit/v1",
+    "baseline":  {
+                     "HKCU:\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon":  {
+                                                                                              "BuildNumber":  "26200",
+                                                                                              "ExcludeProfileDirs":  "AppData\\Local;AppData\\LocalLow;$Recycle.Bin;OneDrive;Work Folders",
+                                                                                              "FirstLogon":  "0",
+                                                                                              "ParseAutoexec":  "1"
+                                                                                          },
+                     "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer":  {
+
+                                                                                                 },
+                     "HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon":  {
+                                                                                              "AutoLogonSID":  "S-1-5-21-1104540712-4044710088-2693871734-1001",
+                                                                                              "AutoRestartShell":  "1",
+                                                                                              "Background":  "0 0 0",
+                                                                                              "CachedLogonsCount":  "10",
+                                                                                              "DebugServerCommand":  "no",
+                                                                                              "DisableBackButton":  "1",
+                                                                                              "DisableCAD":  "1",
+                                                                                              "DisableLockWorkstation":  "0",
+                                                                                              "EnableFirstLogonAnimation":  "1",
+                                                                                              "EnableSIHostIntegration":  "1",
+                                                                                              "ForceUnlockLogon":  "0",
+                                                                                              "LastLogOffEndTimePerfCounter":  "5691721373467",
+                                                                                              "LastUsedUsername":  "Damody",
+                                                                                              "LegalNoticeCaption":  "",
+                                                                                              "LegalNoticeText":  "",
+                                                                                              "PasswordExpiryWarning":  "5",
+                                                                                              "PowerdownAfterShutdown":  "0",
+                                                                                              "PreCreateKnownFolders":  "{A520A1A4-1780-4FF6-BD18-167343C5AF16}",
+                                                                                              "ReportBootOk":  "1",
+                                                                                              "scremoveoption":  "0",
+                                                                                              "Shell":  "explorer.exe",
+                                                                                              "ShellAppRuntime":  "ShellAppRuntime.exe",
+                                                                                              "ShellCritical":  "0",
+                                                                                              "ShellInfrastructure":  "sihost.exe",
+                                                                                              "ShutdownFlags":  "2147483687",
+                                                                                              "SiHostCritical":  "0",
+                                                                                              "SiHostReadyTimeOut":  "0",
+                                                                                              "SiHostRestartCountLimit":  "0",
+                                                                                              "SiHostRestartTimeGap":  "0",
+                                                                                              "Userinit":  "C:\\WINDOWS\\system32\\userinit.exe,",
+                                                                                              "VMApplet":  "SystemPropertiesPerformance.exe /pagefile",
+                                                                                              "WinStationsDisabled":  "0"
+                                                                                          }
+                 },
+    "after":  {
+                  "HKCU:\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon":  {
+                                                                                           "BuildNumber":  "26200",
+                                                                                           "ExcludeProfileDirs":  "AppData\\Local;AppData\\LocalLow;$Recycle.Bin;OneDrive;Work Folders",
+                                                                                           "FirstLogon":  "0",
+                                                                                           "ParseAutoexec":  "1"
+                                                                                       },
+                  "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer":  {
+
+                                                                                              },
+                  "HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon":  {
+                                                                                           "AutoLogonSID":  "S-1-5-21-1104540712-4044710088-2693871734-1001",
+                                                                                           "AutoRestartShell":  "1",
+                                                                                           "Background":  "0 0 0",
+                                                                                           "CachedLogonsCount":  "10",
+                                                                                           "DebugServerCommand":  "no",
+                                                                                           "DisableBackButton":  "1",
+                                                                                           "DisableCAD":  "1",
+                                                                                           "DisableLockWorkstation":  "0",
+                                                                                           "EnableFirstLogonAnimation":  "1",
+                                                                                           "EnableSIHostIntegration":  "1",
+                                                                                           "ForceUnlockLogon":  "0",
+                                                                                           "LastLogOffEndTimePerfCounter":  "5691721373467",
+                                                                                           "LastUsedUsername":  "Damody",
+                                                                                           "LegalNoticeCaption":  "",
+                                                                                           "LegalNoticeText":  "",
+                                                                                           "PasswordExpiryWarning":  "5",
+                                                                                           "PowerdownAfterShutdown":  "0",
+                                                                                           "PreCreateKnownFolders":  "{A520A1A4-1780-4FF6-BD18-167343C5AF16}",
+                                                                                           "ReportBootOk":  "1",
+                                                                                           "scremoveoption":  "0",
+                                                                                           "Shell":  "explorer.exe",
+                                                                                           "ShellAppRuntime":  "ShellAppRuntime.exe",
+                                                                                           "ShellCritical":  "0",
+                                                                                           "ShellInfrastructure":  "sihost.exe",
+                                                                                           "ShutdownFlags":  "2147483687",
+                                                                                           "SiHostCritical":  "0",
+                                                                                           "SiHostReadyTimeOut":  "0",
+                                                                                           "SiHostRestartCountLimit":  "0",
+                                                                                           "SiHostRestartTimeGap":  "0",
+                                                                                           "Userinit":  "C:\\WINDOWS\\system32\\userinit.exe,",
+                                                                                           "VMApplet":  "SystemPropertiesPerformance.exe /pagefile",
+                                                                                           "WinStationsDisabled":  "0"
+                                                                                       }
+              },
+    "registry_equal":  true,
+    "explorer_before":  1,
+    "explorer_after":  1,
+    "preview_cycle":  "passed",
+    "normal_shell_cycle":  "passed",
+    "forced_crash_cycles":  10,
+    "installer_mutation":  false,
+    "autostart_mutation":  false,
+    "dispositions":  {
+                         "G-SAFETY":  "passed",
+                         "G-GUARDIAN-RECOVERY":  "not-determined",
+                         "G-GUARDIAN-RECOVERY-PROVISIONAL":  "passed",
+                         "G-SHELL-TAKEOVER":  "not-determined",
+                         "G-SHELL-TAKEOVER-PROVISIONAL":  "passed"
+                     }
+}

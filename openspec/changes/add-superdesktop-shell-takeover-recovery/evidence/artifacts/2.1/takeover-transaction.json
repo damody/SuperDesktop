@@ -1,0 +1,91 @@
+{
+    "schema":  "lifecycle-takeover-transaction/v1",
+    "phases":  [
+                   "prerequisites",
+                   "guardian",
+                   "surfaces",
+                   "appbars-hooks",
+                   "input-health",
+                   "explorer-switch",
+                   "commit"
+               ],
+    "health_deadline_ms":  5000,
+    "input":  [
+                  "desktop-pointer",
+                  "desktop-keyboard",
+                  "taskbar-pointer",
+                  "taskbar-keyboard",
+                  "focus",
+                  "start"
+              ],
+    "failpoints":  "all-six-passed",
+    "explorer_switch_only_after_health":  true,
+    "reference_start_available":  true,
+    "headful_taskbar":  {
+                            "schema":  "taskbar-headful-contract/v1",
+                            "gpui_windows_opened":  1,
+                            "window_active":  false,
+                            "appbar_registered":  true,
+                            "shell_hook_registered":  true,
+                            "teardown":  {
+                                             "appbar_removed":  true,
+                                             "shell_hook_unregistered":  true,
+                                             "second_idempotent":  true
+                                         },
+                            "work_area_before":  2018,
+                            "work_area_after":  2018,
+                            "work_area_restored":  true,
+                            "rows":  [
+                                         1,
+                                         2,
+                                         3
+                                     ],
+                            "dpi_matrix":  [
+                                               96,
+                                               120,
+                                               144,
+                                               168,
+                                               192
+                                           ],
+                            "accessible_root":  "SuperTaskbar",
+                            "fixed_entry":  "SuperExplorer",
+                            "start_probe_truthful":  true,
+                            "start_available":  true,
+                            "windows_closed":  1
+                        },
+    "headful_desktop":  {
+                            "schema":  "desktop-headful-contract/v1",
+                            "gpui_windows_opened":  2,
+                            "requested_focus":  false,
+                            "window_active":  [
+                                                  false,
+                                                  false
+                                              ],
+                            "virtual_dpi_matrix":  [
+                                                       96,
+                                                       144
+                                                   ],
+                            "bounds":  [
+                                           {
+                                               "width":  306.2857,
+                                               "height":  173.14285
+                                           },
+                                           {
+                                               "width":  306.2857,
+                                               "height":  173.14285
+                                           }
+                                       ],
+                            "accessible_root":  "SuperDesktop",
+                            "accessible_item":  {
+                                                    "name":  "SuperExplorer",
+                                                    "role":  "button",
+                                                    "actions":  [
+                                                                    "focus",
+                                                                    "select",
+                                                                    "invoke"
+                                                                ]
+                                                },
+                            "windows_closed":  2
+                        },
+    "test_output":  "cargo :     Finished `release` profile [optimized] target(s) in 0.35s\r\nAt D:\\SuperDesktop\\SuperDesktop\\scripts\\capture-lifecycle-evidence.ps1:44 char:55\r\n+ ... ion tests\u0027 {cargo test --release -p superdesktop-app all_phase_failpo ...\r\n+                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n    + CategoryInfo          : NotSpecified: (    Finished `r...get(s) in 0.35s:String) [], RemoteException\r\n    + FullyQualifiedErrorId : NativeCommandError\r\n \r\n     Running unittests src\\lib.rs (target\\release\\deps\\superdesktop_app-5138f9a36818aa7d.exe)\r\n\r\nrunning 1 test\r\ntest lifecycle::tests::all_phase_failpoints_rollback_and_health_never_switches_explorer ... ok\r\n\r\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 6 filtered out; finished in 0.00s\r\n\r\n     Running unittests src\\main.rs (target\\release\\deps\\superdesktop_app-15d5678698a3b2b3.exe)\r\n\r\nrunning 0 tests\r\n\r\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+}

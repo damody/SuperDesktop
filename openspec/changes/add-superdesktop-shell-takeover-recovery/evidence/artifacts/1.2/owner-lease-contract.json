@@ -1,0 +1,38 @@
+{
+    "schema":  "lifecycle-owner-lease/v1",
+    "session_mutex":  "Local\\SuperDesktop.Owner.Session.{session}",
+    "identity_fields":  [
+                            "pid",
+                            "creation_time",
+                            "session_id",
+                            "user_sid",
+                            "authentication_id",
+                            "executable",
+                            "file_identity",
+                            "nonce"
+                        ],
+    "revalidate_before_every_mutation":  true,
+    "race_tests":  "passed",
+    "negative_tests":  [
+                           "wrong-pid",
+                           "wrong-creation",
+                           "wrong-session",
+                           "wrong-user-token",
+                           "replaced-binary",
+                           "wrong-nonce",
+                           "non-owner-cleanup"
+                       ],
+    "owner_crash_transfer":  "passed",
+    "live_owner":  {
+                       "pid":  405420,
+                       "creation_time":  134311580978756486,
+                       "session_id":  1,
+                       "user_sid_bound":  true,
+                       "authentication_id":  241244,
+                       "executable":  "D:\\SuperDesktop\\SuperDesktop\\target\\release\\examples\\lifecycle_probe.exe",
+                       "file_index":  562949956059037,
+                       "revalidated":  true,
+                       "released_last":  true
+                   },
+    "test_output":  "cargo :     Finished `release` profile [optimized] target(s) in 0.34s\r\nAt D:\\SuperDesktop\\SuperDesktop\\scripts\\capture-lifecycle-evidence.ps1:34 char:57\r\n+ ... ion tests\u0027 {cargo test --release -p superdesktop-app lifecycle::tests ...\r\n+                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n    + CategoryInfo          : NotSpecified: (    Finished `r...get(s) in 0.34s:String) [], RemoteException\r\n    + FullyQualifiedErrorId : NativeCommandError\r\n \r\n     Running unittests src\\lib.rs (target\\release\\deps\\superdesktop_app-5138f9a36818aa7d.exe)\r\n\r\nrunning 5 tests\r\ntest lifecycle::tests::all_phase_failpoints_rollback_and_health_never_switches_explorer ... ok\r\ntest lifecycle::tests::commit_and_shutdown_are_strictly_ordered_and_idempotent ... ok\r\ntest lifecycle::tests::every_identity_field_and_non_owner_cleanup_is_fenced ... ok\r\ntest lifecycle::tests::preview_is_default_and_rejections_are_zero_mutation ... ok\r\ntest lifecycle::tests::simultaneous_owner_race_has_one_winner_and_crash_drop_transfers ... ok\r\n\r\ntest result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.00s\r\n\r\n     Running unittests src\\main.rs (target\\release\\deps\\superdesktop_app-15d5678698a3b2b3.exe)\r\n\r\nrunning 0 tests\r\n\r\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+}

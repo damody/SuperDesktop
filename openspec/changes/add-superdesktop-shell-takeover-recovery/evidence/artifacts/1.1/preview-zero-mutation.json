@@ -1,0 +1,10 @@
+{
+    "schema":  "lifecycle-preview-cycle/v1",
+    "default_mode":  "preview",
+    "explicit_shell_opt_in":  false,
+    "explorer_before":  1,
+    "explorer_after":  1,
+    "registry_equal":  true,
+    "work_area_mutation":  false,
+    "appbar_mutation":  false
+}

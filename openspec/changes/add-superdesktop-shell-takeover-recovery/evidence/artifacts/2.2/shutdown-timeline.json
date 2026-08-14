@@ -1,0 +1,31 @@
+{
+    "schema":  "lifecycle-shutdown/v1",
+    "order":  [
+                  "stop-commands",
+                  "cancel-requests",
+                  "unregister-hooks",
+                  "remove-appbars",
+                  "teardown-surfaces",
+                  "restore-explorer",
+                  "release-com",
+                  "flush-durable-state",
+                  "guardian-terminal",
+                  "release-lease"
+              ],
+    "idempotent":  true,
+    "work_area_restored":  true,
+    "callback_rundown":  true,
+    "test_output":  "cargo :     Finished `release` profile [optimized] target(s) in 0.34s\r\nAt D:\\SuperDesktop\\SuperDesktop\\scripts\\capture-lifecycle-evidence.ps1:46 char:49\r\n+ ... own tests\u0027 {cargo test --release -p superdesktop-app commit_and_shutd ...\r\n+                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n    + CategoryInfo          : NotSpecified: (    Finished `r...get(s) in 0.34s:String) [], RemoteException\r\n    + FullyQualifiedErrorId : NativeCommandError\r\n \r\n     Running unittests src\\lib.rs (target\\release\\deps\\superdesktop_app-5138f9a36818aa7d.exe)\r\n\r\nrunning 1 test\r\ntest lifecycle::tests::commit_and_shutdown_are_strictly_ordered_and_idempotent ... ok\r\n\r\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 6 filtered out; finished in 0.00s\r\n\r\n     Running unittests src\\main.rs (target\\release\\deps\\superdesktop_app-15d5678698a3b2b3.exe)\r\n\r\nrunning 0 tests\r\n\r\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+    "resources":  {
+                      "before":  {
+                                     "handles":  283,
+                                     "user":  1,
+                                     "gdi":  0
+                                 },
+                      "after":  {
+                                    "handles":  282,
+                                    "user":  1,
+                                    "gdi":  0
+                                }
+                  }
+}

@@ -1,0 +1,132 @@
+{
+    "schema":  "lifecycle-ten-run-recovery/v1",
+    "profile":  "windows-11-explorerpatcher-reference",
+    "run_count":  10,
+    "deadline_ms":  10000,
+    "passed_count":  10,
+    "max_elapsed_ms":  59.868,
+    "runs":  [
+                 {
+                     "run":  1,
+                     "t0_counter":  5624628370617,
+                     "ready_elapsed_ms":  59.868,
+                     "work_area_elapsed_ms":  59.868,
+                     "explorer_before":  1,
+                     "explorer_after":  1,
+                     "parent_terminal_observed":  true,
+                     "unique_terminal_count":  1,
+                     "input_ready":  true,
+                     "work_area_baseline":  true
+                 },
+                 {
+                     "run":  2,
+                     "t0_counter":  5624629274293,
+                     "ready_elapsed_ms":  55.143,
+                     "work_area_elapsed_ms":  55.143,
+                     "explorer_before":  1,
+                     "explorer_after":  1,
+                     "parent_terminal_observed":  true,
+                     "unique_terminal_count":  1,
+                     "input_ready":  true,
+                     "work_area_baseline":  true
+                 },
+                 {
+                     "run":  3,
+                     "t0_counter":  5624630047203,
+                     "ready_elapsed_ms":  56.115,
+                     "work_area_elapsed_ms":  56.115,
+                     "explorer_before":  1,
+                     "explorer_after":  1,
+                     "parent_terminal_observed":  true,
+                     "unique_terminal_count":  1,
+                     "input_ready":  true,
+                     "work_area_baseline":  true
+                 },
+                 {
+                     "run":  4,
+                     "t0_counter":  5624630817033,
+                     "ready_elapsed_ms":  53.329,
+                     "work_area_elapsed_ms":  53.329,
+                     "explorer_before":  1,
+                     "explorer_after":  1,
+                     "parent_terminal_observed":  true,
+                     "unique_terminal_count":  1,
+                     "input_ready":  true,
+                     "work_area_baseline":  true
+                 },
+                 {
+                     "run":  5,
+                     "t0_counter":  5624631557029,
+                     "ready_elapsed_ms":  57.087,
+                     "work_area_elapsed_ms":  57.087,
+                     "explorer_before":  1,
+                     "explorer_after":  1,
+                     "parent_terminal_observed":  true,
+                     "unique_terminal_count":  1,
+                     "input_ready":  true,
+                     "work_area_baseline":  true
+                 },
+                 {
+                     "run":  6,
+                     "t0_counter":  5624632332788,
+                     "ready_elapsed_ms":  53.947,
+                     "work_area_elapsed_ms":  53.947,
+                     "explorer_before":  1,
+                     "explorer_after":  1,
+                     "parent_terminal_observed":  true,
+                     "unique_terminal_count":  1,
+                     "input_ready":  true,
+                     "work_area_baseline":  true
+                 },
+                 {
+                     "run":  7,
+                     "t0_counter":  5624633087323,
+                     "ready_elapsed_ms":  54.519,
+                     "work_area_elapsed_ms":  54.519,
+                     "explorer_before":  1,
+                     "explorer_after":  1,
+                     "parent_terminal_observed":  true,
+                     "unique_terminal_count":  1,
+                     "input_ready":  true,
+                     "work_area_baseline":  true
+                 },
+                 {
+                     "run":  8,
+                     "t0_counter":  5624633858217,
+                     "ready_elapsed_ms":  55.085,
+                     "work_area_elapsed_ms":  55.085,
+                     "explorer_before":  1,
+                     "explorer_after":  1,
+                     "parent_terminal_observed":  true,
+                     "unique_terminal_count":  1,
+                     "input_ready":  true,
+                     "work_area_baseline":  true
+                 },
+                 {
+                     "run":  9,
+                     "t0_counter":  5624634921651,
+                     "ready_elapsed_ms":  55.307,
+                     "work_area_elapsed_ms":  55.307,
+                     "explorer_before":  1,
+                     "explorer_after":  1,
+                     "parent_terminal_observed":  true,
+                     "unique_terminal_count":  1,
+                     "input_ready":  true,
+                     "work_area_baseline":  true
+                 },
+                 {
+                     "run":  10,
+                     "t0_counter":  5624635687328,
+                     "ready_elapsed_ms":  53.494,
+                     "work_area_elapsed_ms":  53.494,
+                     "explorer_before":  1,
+                     "explorer_after":  1,
+                     "parent_terminal_observed":  true,
+                     "unique_terminal_count":  1,
+                     "input_ready":  true,
+                     "work_area_baseline":  true
+                 }
+             ],
+    "disposition":  "G-GUARDIAN-RECOVERY-PROVISIONAL",
+    "windows_10_final_gate":  "not-determined"
+}

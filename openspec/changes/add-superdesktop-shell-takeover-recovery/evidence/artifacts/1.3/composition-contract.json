@@ -1,0 +1,27 @@
+{
+    "schema":  "lifecycle-composition/v1",
+    "composition_root":  "superdesktop-app",
+    "typed_contract":  "shell-core",
+    "domains":  [
+                    "settings-store",
+                    "desktop-ui",
+                    "taskbar-ui",
+                    "explorer-bridge",
+                    "platform-win"
+                ],
+    "fixed_entry_sources":  [
+                                "desktop-pointer",
+                                "desktop-keyboard",
+                                "desktop-uia",
+                                "taskbar-pointer",
+                                "taskbar-keyboard",
+                                "taskbar-uia"
+                            ],
+    "terminal":  "exactly-once",
+    "preview_zero_mutation":  true,
+    "upstream":  {
+                     "taskbar_sha256":  "AA3BCC48A9E088E570DC929961299C2E8AE79A9C68583E25EF9EB71624445D1A",
+                     "bridge_sha256":  "2B279E460C89F82CDE6194089F1B0EF9B25FA0E44FF14C3C0429CDF02CA98446",
+                     "desktop_sha256":  "45B26C6A7FF320DB6A8EE4739227084AAB9533FFDAA0C7B88C810C086CE7D154"
+                 }
+}

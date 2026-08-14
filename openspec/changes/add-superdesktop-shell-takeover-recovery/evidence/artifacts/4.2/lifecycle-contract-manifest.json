@@ -1,0 +1,82 @@
+{
+    "schema":  "lifecycle-contract-manifest/v1",
+    "change":  "add-superdesktop-shell-takeover-recovery",
+    "result_revision":  "b40eabb8",
+    "generated_at":  "2026-08-14T05:14:55.6909485Z",
+    "public_schema":  "evidence/artifacts/4.2/lifecycle-public.schema.json",
+    "effect_schema":  "evidence/artifacts/4.2/lifecycle-effect.schema.json",
+    "app_binary":  "evidence/artifacts/4.2/superdesktop-app.exe",
+    "app_sha256":  "5CC5FD00AB8C9B7FE4D35E437D20872C4BEFB0885DC91700D6658743553A8F22",
+    "guardian_binary":  "evidence/artifacts/4.2/superdesktop-guardian.exe",
+    "guardian_sha256":  "E28807DE1FDC78DDD20B504F8EA9386F91A5A26AB39A64284C75AE33FABF5928",
+    "inputs":  [
+                   {
+                       "path":  "Cargo.lock",
+                       "sha256":  "D4BC6A745B32765259287D268BA5C1555972B3D3A324AD9E5080A79AAC97FF40",
+                       "bytes":  124140
+                   },
+                   {
+                       "path":  "crates/superdesktop-app/Cargo.toml",
+                       "sha256":  "90322FBA1F8B36432535210CBC6FDDF2E0F3EEFA395841AA4087A88E6E3497D3",
+                       "bytes":  548
+                   },
+                   {
+                       "path":  "crates/superdesktop-app/src/lib.rs",
+                       "sha256":  "8551D1BACA4F8EEF0EE8A6564F42F2FEA56155C13F2BD04F025D4ACCB2DA59D4",
+                       "bytes":  2877
+                   },
+                   {
+                       "path":  "crates/superdesktop-app/src/composition.rs",
+                       "sha256":  "1130086AE91E0C6E5ADAA7B31FCFEE51C162EC247C0DF6E7B69FD99481F61598",
+                       "bytes":  5523
+                   },
+                   {
+                       "path":  "crates/superdesktop-app/src/lifecycle.rs",
+                       "sha256":  "9323135723E3CBD322CB448CA77FAC6C4E75AF1BCAEAA6391B5F7943DD2A9B22",
+                       "bytes":  14323
+                   },
+                   {
+                       "path":  "crates/superdesktop-guardian/src/lib.rs",
+                       "sha256":  "F7DD98DF5C82269813CACDEDFE0441F69F19EB240F2132B5AC1691D56BA6BA62",
+                       "bytes":  1232
+                   },
+                   {
+                       "path":  "crates/superdesktop-guardian/src/recovery.rs",
+                       "sha256":  "C4B39B906E1AE6DC09C1001B6964DD6209160192D066E88DFD8EB3F55AA94AF5",
+                       "bytes":  10815
+                   },
+                   {
+                       "path":  "crates/platform-win/src/common/admission.rs",
+                       "sha256":  "CF09CE77694C97130F53D7FCC37CB4049FC6DA5F07B5461738FF86847BFC4394",
+                       "bytes":  5944
+                   },
+                   {
+                       "path":  "crates/platform-win/src/common/owner_lease.rs",
+                       "sha256":  "05F115D6F4B2F122C70CC7A8C4E3967A9552600942B0447519062698FF646450",
+                       "bytes":  9837
+                   },
+                   {
+                       "path":  "crates/platform-win/src/common/guardian_lease.rs",
+                       "sha256":  "5F7120AF63BDC5FC4F091DD8DDEE78BA5C1167E7892F38C7FACB9C2351CF3417",
+                       "bytes":  36262
+                   },
+                   {
+                       "path":  "crates/platform-win/src/common/explorer_recovery.rs",
+                       "sha256":  "E462CACBA5D23E5A94749E51567604A11C59DBA0AB784B9735FEE5521550E807",
+                       "bytes":  11354
+                   },
+                   {
+                       "path":  "crates/platform-win/src/common/ffi_boundary.rs",
+                       "sha256":  "C104A5A712FAF80175D7ABF15BB53186817947F49083C4B2D33801E7F5457F99",
+                       "bytes":  5515
+                   }
+               ],
+    "gates":  {
+                  "G-SHELL-TAKEOVER-PROVISIONAL":  "passed",
+                  "G-SHELL-TAKEOVER":  "not-determined",
+                  "G-SAFETY":  "passed",
+                  "G-GUARDIAN-RECOVERY":  "not-determined",
+                  "G-ARCH":  "passed",
+                  "G-GUARDIAN-RECOVERY-PROVISIONAL":  "passed"
+              }
+}
