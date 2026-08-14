@@ -52,13 +52,13 @@
 **Gate／Evidence：** `G-ARCH`、`G-SHELL-TAKEOVER-CAPABILITY`、`G-DPI-MONITOR` capability、`G-GUARDIAN-RECOVERY-CAPABILITY`；program `evidence/artifacts/2.2/`。
 **完成門檻：** Strict/tasks validation、mandatory evidence、每個 capability gate、common hash 與 GO 分項通過。
 
-- [ ] 2.2.1 記錄 child `openspec validate --strict` 成功輸出。
-- [ ] 2.2.2 記錄 child 詳細 tasks validator 成功輸出。
-- [ ] 2.2.3 驗證 child mandatory evidence index 無 failed/blocked/stale/N/A/invalid replacement。
-- [ ] 2.2.4 驗證 HWND/AppBar/Shell Hook/Start/DPI capability dispositions passed。
-- [ ] 2.2.5 驗證 guardian lease、FFI wrapper與 Safe Mode/unsupported-session dispositions passed。
-- [ ] 2.2.6 驗證 platform-common API/ABI SHA-256 handoff manifest。
-- [ ] 2.2.7 驗證 signed capability GO disposition。
+- [x] 2.2.1 記錄 child `openspec validate --strict` 成功輸出。
+- [x] 2.2.2 記錄 child 詳細 tasks validator 成功輸出。
+- [x] 2.2.3 驗證 child mandatory evidence index 無 failed/blocked/stale/N/A/invalid replacement。
+- [x] 2.2.4 驗證 HWND/AppBar/Shell Hook/Start/DPI capability dispositions passed。
+- [x] 2.2.5 驗證 guardian lease、FFI wrapper與 Safe Mode/unsupported-session dispositions passed。
+- [x] 2.2.6 驗證 platform-common API/ABI SHA-256 handoff manifest。
+- [x] 2.2.7 驗證 signed capability GO disposition。
 - [ ] 2.2.8 封存 child 並記錄 immutable archive revision。
 
 ## 3. Product Contract Roll-up

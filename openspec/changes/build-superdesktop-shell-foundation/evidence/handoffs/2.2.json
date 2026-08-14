@@ -1,0 +1,23 @@
+{
+  "change": "build-superdesktop-shell-foundation",
+  "l2": "2.2",
+  "status": "passed-active-archive-deferred",
+  "producer": "Primary integrator",
+  "consumer": "Wave 3 shell core",
+  "child_change": "validate-superdesktop-windows-platform",
+  "child_progress": "42/42",
+  "child_state": "all_done",
+  "rollup_artifact": "evidence/artifacts/2.2/wave2-capability-rollup.md",
+  "capability_matrix_sha256": "BCE7990FE557C167F2F3B0DE104C6E2BBC4E5876F5FF085712BC8B39613306D6",
+  "platform_common_api_abi_manifest_sha256": "A7CF3DDDF723DA157675A246B6B226E0B17BC1F7060C1A34A1AB338C02733A2D",
+  "signed_go_disposition_sha256": "76393690CB75174E8F4B7EDC8354A4CE3220C4FFAEFD961B45EFDDFFFADD123B",
+  "gates": {
+    "G-ARCH": "passed",
+    "G-SHELL-TAKEOVER-CAPABILITY": "passed",
+    "G-DPI-MONITOR": "passed",
+    "G-TASKBAR": "passed",
+    "G-GUARDIAN-RECOVERY-CAPABILITY": "passed",
+    "G-SAFETY": "passed"
+  },
+  "archive": "deferred-by-user"
+}
