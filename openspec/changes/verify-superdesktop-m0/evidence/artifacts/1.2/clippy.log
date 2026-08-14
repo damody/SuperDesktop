@@ -1,7 +1,8 @@
-cargo :     Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.48s
+cargo :     Checking superdesktop-app v0.1.0 (D:\SuperDesktop\SuperDesktop\crates\superdesktop-app)
 At D:\SuperDesktop\SuperDesktop\scripts\capture-m0-local-evidence.ps1:24 char:156
 + ... @('clippy',{cargo clippy --workspace --all-targets --locked --offline ...
 +                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    + CategoryInfo          : NotSpecified: (    Finished `d...get(s) in 0.48s:String) [], RemoteException
+    + CategoryInfo          : NotSpecified: (    Checking su...perdesktop-app):String) [], RemoteException
     + FullyQualifiedErrorId : NativeCommandError
  
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.03s

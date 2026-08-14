@@ -1,28 +1,29 @@
-cargo :     Finished `test` profile [unoptimized + debuginfo] target(s) in 0.43s
+cargo :    Compiling superdesktop-app v0.1.0 (D:\SuperDesktop\SuperDesktop\crates\superdesktop-app)
 At D:\SuperDesktop\SuperDesktop\scripts\capture-m0-local-evidence.ps1:24 char:242
 + ... ,@('tests',{cargo test --workspace --all-targets --locked --offline}) ...
 +                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    + CategoryInfo          : NotSpecified: (    Finished `t...get(s) in 0.43s:String) [], RemoteException
+    + CategoryInfo          : NotSpecified: (   Compiling su...perdesktop-app):String) [], RemoteException
     + FullyQualifiedErrorId : NativeCommandError
  
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.40s
      Running unittests src\lib.rs (target\debug\deps\desktop_ui-7c8355538e33c975.exe)
 
 running 16 tests
 test geometry::tests::dpi_and_work_area_use_logical_units ... ok
-test interaction::tests::first_terminal_wins_for_bridge_and_association ... ok
-test interaction::tests::fixed_entry_is_truthful_accessible_and_has_no_local_claim ... ok
-test layout::tests::grid_selection_and_collision_are_deterministic ... ok
-test interaction::tests::pointer_keyboard_and_uia_emit_equivalent_folder_commands ... ok
-test geometry::tests::one_surface_per_monitor_and_no_orphans_after_hotplug ... ok
-test layout::tests::dpi_and_monitor_remap_keep_logical_positions_visible ... ok
-test namespace::tests::same_identity_deduplicates_without_using_display_name ... ok
-test namespace::tests::same_name_different_identity_stays_distinct ... ok
-test namespace::tests::unicode_hidden_and_system_rules_are_independent ... ok
-test wallpaper::tests::all_six_modes_have_deterministic_geometry ... ok
-test wallpaper::tests::invalid_source_uses_semantic_fallback_and_cache_is_bounded ... ok
-test watcher::tests::overflow_is_single_flight_and_stale_deltas_are_suppressed ... ok
 test layout::tests::ctrl_shift_and_rubber_band_match_expected_items ... ok
+test wallpaper::tests::all_six_modes_have_deterministic_geometry ... ok
+test namespace::tests::same_name_different_identity_stays_distinct ... ok
+test layout::tests::grid_selection_and_collision_are_deterministic ... ok
+test geometry::tests::one_surface_per_monitor_and_no_orphans_after_hotplug ... ok
+test watcher::tests::overflow_is_single_flight_and_stale_deltas_are_suppressed ... ok
+test layout::tests::dpi_and_monitor_remap_keep_logical_positions_visible ... ok
+test interaction::tests::first_terminal_wins_for_bridge_and_association ... ok
+test namespace::tests::same_identity_deduplicates_without_using_display_name ... ok
+test interaction::tests::fixed_entry_is_truthful_accessible_and_has_no_local_claim ... ok
+test namespace::tests::unicode_hidden_and_system_rules_are_independent ... ok
+test interaction::tests::pointer_keyboard_and_uia_emit_equivalent_folder_commands ... ok
 test interaction::tests::deferred_actions_never_emit_mutating_effect ... ok
+test wallpaper::tests::invalid_source_uses_semantic_fallback_and_cache_is_bounded ... ok
 test watcher::tests::rename_storm_coalesces_and_stays_bounded ... ok
 
 test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
@@ -51,17 +52,17 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 
 running 13 tests
 test admission::tests::cancel_beats_success_and_duplicate_callback_is_diagnostic ... ok
-test admission::tests::deadline_is_five_seconds_and_timeout_beats_late_success ... ok
-test command::tests::default_is_truthful_and_has_no_initial_path ... ok
-test repair::tests::diagnostics_redact_profile_path_and_environment_value ... ok
 test repair::tests::every_failure_has_localized_keyboard_repair_without_explorer_fallback ... ok
-test launcher::tests::removed_or_changed_executable_fails_before_spawn ... ok
-test admission::tests::duplicate_correlation_and_shutdown_rundown_are_bounded ... ok
 test launcher::tests::completion_callback_uses_frozen_no_unwind_fence ... ok
-test command::tests::unicode_space_and_special_folder_round_trip_without_parent_mutation ... ok
+test admission::tests::duplicate_correlation_and_shutdown_rundown_are_bounded ... ok
+test launcher::tests::removed_or_changed_executable_fails_before_spawn ... ok
+test repair::tests::diagnostics_redact_profile_path_and_environment_value ... ok
+test command::tests::default_is_truthful_and_has_no_initial_path ... ok
+test admission::tests::deadline_is_five_seconds_and_timeout_beats_late_success ... ok
 test resolver::tests::missing_directory_relative_and_path_substitution_fail_closed ... ok
-test command::tests::relative_missing_and_regular_file_are_rejected_before_spawn ... ok
+test command::tests::unicode_space_and_special_folder_round_trip_without_parent_mutation ... ok
 test resolver::tests::priority_is_setting_then_developer_then_adjacent ... ok
+test command::tests::relative_missing_and_regular_file_are_rejected_before_spawn ... ok
 test launcher::tests::explicit_application_spawn_and_raii_handle_cleanup ... ok
 
 test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
@@ -76,43 +77,43 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
      Running unittests src\lib.rs (target\debug\deps\platform_win-046a594f4ae356dc.exe)
 
 running 35 tests
-test common::appbar_shell_hook::tests::screen_rect_is_owned_and_has_no_native_handle ... ok
-test common::desktop::tests::association_rejects_non_file_without_spawning ... ok
 test common::desktop::tests::watcher_callback_is_owned_and_no_unwind ... ok
-test common::monitor_dpi_start::tests::virtual_topology_has_explicit_origin_and_events ... ok
+test common::guardian_lease::tests::binding_rejects_identity_and_file_changes ... ok
 test common::admission::tests::negative_fixtures_are_fail_closed_and_mutation_incapable ... ok
 test common::ffi_boundary::tests::catches_panic_and_allows_later_callback ... ok
+test common::native_window::tests::caught_callback_panic_becomes_typed_fatal_without_poisoning_state ... ok
+test common::native_window::tests::terminal_coordinator_requires_two_terminal_signals_and_order ... ok
 test common::ffi_boundary::tests::double_callback_and_shutdown_race_are_fenced ... ok
-test common::desktop::tests::stable_file_identity_survives_rename ... ok
-test common::guardian_lease::tests::binding_rejects_identity_and_file_changes ... ok
+test common::ffi_boundary::tests::extern_system_callback_types_panic_without_unwind ... ok
 test common::guardian_lease::tests::claim_round_trip_is_not_argv ... ok
 test common::guardian_lease::tests::duplicate_roles_are_rejected ... ok
 test common::guardian_lease::tests::production_validator_rejects_duplicate_and_unexpected_claims ... ok
-test common::monitor_dpi_start::tests::start_probe_fixtures_are_typed_and_never_invoke ... ok
+test common::desktop::tests::stable_file_identity_survives_rename ... ok
 test common::admission::tests::live_probe_reports_this_interactive_test_session ... ok
+test common::monitor_dpi_start::tests::start_probe_fixtures_are_typed_and_never_invoke ... ok
 test common::native_window::tests::adapter_uses_fixed_event_bits_without_claiming_native_messages ... ok
-test common::native_window::tests::caught_callback_panic_becomes_typed_fatal_without_poisoning_state ... ok
-test common::native_window::tests::close_notification_and_native_destroy_can_arrive_in_either_order ... ok
+test common::native_window::tests::callback_generation_mismatch_is_fenced_without_forwarding ... ok
+test common::appbar_shell_hook::tests::screen_rect_is_owned_and_has_no_native_handle ... ok
 test common::native_window::tests::closing_fence_rejects_late_adapter_event ... ok
 test common::native_window::tests::dpi_payload_is_copied_before_forwarding_and_never_borrows_rect_memory ... ok
-test common::native_window::tests::raw_arc_release_claim_is_exactly_once_even_after_remove_failure_path ... ok
-test common::native_window::tests::resource_snapshot_is_copyable_for_trace_handoff ... ok
-test common::native_window::tests::terminal_coordinator_requires_two_terminal_signals_and_order ... ok
-test common::native_window::tests::terminal_status_is_read_only_and_reports_independent_terminal_signals ... ok
-test common::ffi_boundary::tests::extern_system_callback_types_panic_without_unwind ... ok
-test common::owner_lease::tests::session_mutex_fences_second_owner_and_revalidates_all_identity_fields ... ok
-test common::taskbar::tests::retired_window_action_fails_closed ... ok
-test common::native_window::tests::callback_generation_mismatch_is_fenced_without_forwarding ... ok
-test common::taskbar::tests::shell_hook_callback_is_owned_and_no_unwind ... ok
 test common::native_window::tests::raw_messages_are_observed_before_they_are_forwarded_and_stay_separate_from_adapter ... ok
+test common::native_window::tests::resource_snapshot_is_copyable_for_trace_handoff ... ok
+test common::desktop::tests::association_rejects_non_file_without_spawning ... ok
+test common::native_window::tests::terminal_status_is_read_only_and_reports_independent_terminal_signals ... ok
+test common::owner_lease::tests::session_mutex_fences_second_owner_and_revalidates_all_identity_fields ... ok
+test common::monitor_dpi_start::tests::virtual_topology_has_explicit_origin_and_events ... ok
+test common::native_window::tests::close_notification_and_native_destroy_can_arrive_in_either_order ... ok
+test common::taskbar::tests::retired_window_action_fails_closed ... ok
+test common::native_window::tests::raw_arc_release_claim_is_exactly_once_even_after_remove_failure_path ... ok
+test common::taskbar::tests::shell_hook_callback_is_owned_and_no_unwind ... ok
 test common::desktop::tests::known_desktop_enumeration_returns_owned_stable_values ... ok
 test common::taskbar::tests::real_snapshot_has_owned_stable_fields ... ok
-test common::explorer_recovery::tests::real_explorer_is_absolute_canonical_non_reparse_and_signed ... ok
 test common::explorer_recovery::tests::path_and_cwd_substitutes_are_not_inputs_to_resolution ... ok
+test common::explorer_recovery::tests::real_explorer_is_absolute_canonical_non_reparse_and_signed ... ok
 test common::desktop::tests::real_fixture_file_association_reaches_admission_and_executes_hidden ... ok
 test common::explorer_recovery::tests::live_recovery_prefers_existing_verified_explorer_without_process_spawn ... ok
 
-test result: ok. 35 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.32s
+test result: ok. 35 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.33s
 
      Running unittests examples\admission_fixture_capability.rs (target\debug\examples\admission_fixture_capability-1b7
 150ba00b65938.exe)
@@ -161,15 +162,15 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
      Running unittests src\lib.rs (target\debug\deps\settings_store-10adde3d909c6fbb.exe)
 
 running 12 tests
-test json::tests::rejects_duplicate_keys_and_partial_documents ... ok
 test json::tests::round_trip_nested_json_deterministically ... ok
-test schema::tests::shell_preference_never_bypasses_per_launch_opt_in ... ok
+test json::tests::rejects_duplicate_keys_and_partial_documents ... ok
 test schema::tests::invalid_independent_fields_fall_back_without_losing_others ... ok
-test schema::tests::full_v1_round_trip_preserves_every_field_and_unknown_top_level ... ok
 test schema::tests::migrates_v0_and_refuses_future_version ... ok
-test store::tests::post_replace_directory_flush_failure_leaves_complete_new_file ... ok
+test schema::tests::full_v1_round_trip_preserves_every_field_and_unknown_top_level ... ok
+test schema::tests::shell_preference_never_bypasses_per_launch_opt_in ... ok
 test store::tests::fixture_guard_rejects_parent_escape_and_root_target ... ok
 test store::tests::save_increments_revision_and_round_trips_complete_document ... ok
+test store::tests::post_replace_directory_flush_failure_leaves_complete_new_file ... ok
 test store::tests::fixture_guard_rejects_reparse_escape_when_supported ... ok
 test store::tests::malformed_and_future_files_are_uniquely_quarantined ... ok
 test store::tests::every_pre_replace_crash_preserves_old_complete_file ... ok
@@ -180,22 +181,22 @@ test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fin
 
 running 18 tests
 test bridge::tests::default_launch_is_truthful_and_has_no_fake_local_path ... ok
-test bridge::tests::message_keys_are_accessibility_safe_stable_tokens ... ok
-test identity::tests::identities_reject_ambiguous_or_unbounded_values ... ok
 test model::tests::default_state_is_safe_preview_authority ... ok
-test model::tests::state_contract_is_owned_and_cloneable ... ok
-test queue::tests::coalescing_is_deterministic_and_identity_domain_specific ... ok
-test reducer::tests::shell_requires_explicit_opt_in_and_rejection_preserves_authority ... ok
-test reducer::tests::stale_success_after_refresh_cannot_modify_state ... ok
-test queue::tests::terminal_is_never_dropped_when_queue_is_full ... ok
-test reducer::tests::window_overflow_preserves_existing_group_order ... ok
-test reducer::tests::cancel_wins_over_late_success ... ok
-test reducer::tests::only_first_terminal_changes_state ... ok
+test identity::tests::identities_reject_ambiguous_or_unbounded_values ... ok
+test bridge::tests::message_keys_are_accessibility_safe_stable_tokens ... ok
 test reducer::tests::repeated_overflow_has_only_one_active_refresh ... ok
 test identity::tests::identities_round_trip_and_sort_stably ... ok
-test queue::tests::full_protected_queue_turns_dropped_delta_into_overflow_event ... ok
-test reducer::tests::watcher_overflow_restores_selection_by_stable_identity ... ok
 test reducer::tests::replay_is_deterministic_and_hash_stable ... ok
+test queue::tests::terminal_is_never_dropped_when_queue_is_full ... ok
+test model::tests::state_contract_is_owned_and_cloneable ... ok
+test reducer::tests::only_first_terminal_changes_state ... ok
+test queue::tests::coalescing_is_deterministic_and_identity_domain_specific ... ok
+test reducer::tests::cancel_wins_over_late_success ... ok
+test queue::tests::full_protected_queue_turns_dropped_delta_into_overflow_event ... ok
+test reducer::tests::stale_success_after_refresh_cannot_modify_state ... ok
+test reducer::tests::watcher_overflow_restores_selection_by_stable_identity ... ok
+test reducer::tests::shell_requires_explicit_opt_in_and_rejection_preserves_authority ... ok
+test reducer::tests::window_overflow_preserves_existing_group_order ... ok
 test queue::tests::storm_never_exceeds_bound_and_emits_explicit_overflow ... ok
 
 test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
@@ -203,12 +204,12 @@ test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fin
      Running unittests src\lib.rs (target\debug\deps\superdesktop_app-e4e719c07d459a65.exe)
 
 running 7 tests
-test composition::tests::all_fixed_entry_inputs_share_typed_exactly_once_bridge_route ... ok
-test lifecycle::tests::all_phase_failpoints_rollback_and_health_never_switches_explorer ... ok
-test lifecycle::tests::commit_and_shutdown_are_strictly_ordered_and_idempotent ... ok
 test lifecycle::tests::every_identity_field_and_non_owner_cleanup_is_fenced ... ok
-test composition::tests::preview_composes_every_domain_without_shell_mutation ... ok
+test lifecycle::tests::commit_and_shutdown_are_strictly_ordered_and_idempotent ... ok
+test composition::tests::all_fixed_entry_inputs_share_typed_exactly_once_bridge_route ... ok
 test lifecycle::tests::preview_is_default_and_rejections_are_zero_mutation ... ok
+test lifecycle::tests::all_phase_failpoints_rollback_and_health_never_switches_explorer ... ok
+test composition::tests::preview_composes_every_domain_without_shell_mutation ... ok
 test lifecycle::tests::simultaneous_owner_race_has_one_winner_and_crash_drop_transfers ... ok
 
 test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
@@ -228,9 +229,9 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
      Running unittests src\lib.rs (target\debug\deps\superdesktop_guardian-a49af87fa8fb3fe2.exe)
 
 running 5 tests
+test recovery::tests::existing_explorer_is_shown_without_spawn_and_order_is_safe ... ok
 test recovery::tests::absent_explorer_spawns_once_and_repeated_concurrent_identity_shares_terminal ... ok
 test recovery::tests::forged_wrong_session_token_and_ambiguous_timing_are_zero_effect ... ok
-test recovery::tests::existing_explorer_is_shown_without_spawn_and_order_is_safe ... ok
 test recovery::tests::invocation_accepts_only_explicit_inherited_roles_and_absolute_terminal ... ok
 test recovery::tests::ten_forced_crash_timings_meet_deadline ... ok
 
@@ -245,12 +246,12 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
      Running unittests src\lib.rs (target\debug\deps\superdesktop_test_support-87b005668f425028.exe)
 
 running 7 tests
-test verification::tests::fixed_performance_thresholds_use_raw_samples ... ok
-test verification::tests::five_dpi_visual_geometry_and_hit_target_matrix_passes ... ok
 test verification::tests::every_resource_counter_has_an_independent_bound_and_stable_tail ... ok
 test shell_fixture::tests::builder_is_deterministic ... ok
 test verification::tests::zh_tw_english_zh_cn_fallback_and_rtl_are_layout_safe ... ok
+test verification::tests::fixed_performance_thresholds_use_raw_samples ... ok
 test verification::tests::ime_composition_commit_cancel_preserve_focus ... ok
+test verification::tests::five_dpi_visual_geometry_and_hit_target_matrix_passes ... ok
 test verification::tests::visual_contract_rejects_ssim_geometry_state_and_hit_target_drift ... ok
 
 test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
@@ -264,8 +265,8 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
      Running tests\core_consumers.rs (target\debug\deps\core_consumers-c49bbcf464213d09.exe)
 
 running 4 tests
-test bridge_consumer_contract_compiles ... ok
 test lifecycle_consumer_contract_compiles ... ok
+test bridge_consumer_contract_compiles ... ok
 test desktop_consumer_contract_compiles ... ok
 test taskbar_consumer_contract_compiles ... ok
 
@@ -274,24 +275,24 @@ test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
      Running unittests src\lib.rs (target\debug\deps\taskbar_ui-0fb242f50d6b9faf.exe)
 
 running 18 tests
+test interaction::tests::multi_window_selection_escapes_and_returns_focus ... ok
 test layout::tests::invalid_rows_fall_back_only_to_two_and_scale_with_dpi ... ok
-test grouping::tests::pin_order_round_trips_and_rejects_membership_drift ... ok
-test interaction::tests::fixed_entry_sources_emit_equivalent_truthful_bridge_request ... ok
 test grouping::tests::identity_collision_and_snapshot_reorder_do_not_merge_or_reorder ... ok
-test status::tests::unavailable_provider_is_independent_and_no_fake_tray_is_rendered ... ok
-test tracker::tests::filters_all_excluded_window_classes ... ok
+test grouping::tests::pin_order_round_trips_and_rejects_membership_drift ... ok
+test surface::tests::preview_maps_one_bar_per_monitor_without_work_area_effects ... ok
+test tracker::tests::storm_is_bounded_overflow_single_flight_and_stale_snapshot_rejected ... ok
 test layout::tests::one_two_three_row_geometry_has_no_overlap ... ok
 test layout::tests::slot_order_rows_hit_targets_and_overflow_are_deterministic ... ok
 test start::tests::missing_refused_and_stale_are_truthful ... ok
-test interaction::tests::multi_window_selection_escapes_and_returns_focus ... ok
-test surface::tests::preview_maps_one_bar_per_monitor_without_work_area_effects ... ok
-test surface::tests::shell_reconciles_dpi_remove_and_idempotent_teardown ... ok
-test tracker::tests::authoritative_snapshot_preserves_membership_order_across_content_churn ... ok
-test interaction::tests::pinned_without_windows_launches_and_fixed_failure_is_first_terminal ... ok
-test interaction::tests::active_minimizes_inactive_activates_and_minimized_restores ... ok
 test status::tests::locale_clock_is_deterministic ... ok
+test interaction::tests::fixed_entry_sources_emit_equivalent_truthful_bridge_request ... ok
+test status::tests::unavailable_provider_is_independent_and_no_fake_tray_is_rendered ... ok
 test surface::tests::registration_failure_returns_to_unreserved_state ... ok
-test tracker::tests::storm_is_bounded_overflow_single_flight_and_stale_snapshot_rejected ... ok
+test surface::tests::shell_reconciles_dpi_remove_and_idempotent_teardown ... ok
+test interaction::tests::pinned_without_windows_launches_and_fixed_failure_is_first_terminal ... ok
+test tracker::tests::authoritative_snapshot_preserves_membership_order_across_content_churn ... ok
+test tracker::tests::filters_all_excluded_window_classes ... ok
+test interaction::tests::active_minimizes_inactive_activates_and_minimized_restores ... ok
 
 test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 

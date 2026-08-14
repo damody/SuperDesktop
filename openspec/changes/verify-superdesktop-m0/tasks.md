@@ -174,7 +174,7 @@
 
 - [x] 4.2.1 執行繁中資源完整性、截斷與 geometry test。
 - [x] 4.2.2 執行英文資源完整性、截斷與 geometry test。
-- [ ] 4.2.3 執行簡中字形/fallback/截斷 headful test。
+- [x] 4.2.3 執行簡中字形/fallback/截斷 headful test。
 - [x] 4.2.4 執行 RTL/bidi layout、reading order 與 interaction test。
 - [x] 4.2.5 執行繁中 IME composition、commit、cancel 與 focus-stability test。
 

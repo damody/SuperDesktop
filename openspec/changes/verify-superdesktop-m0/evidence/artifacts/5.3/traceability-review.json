@@ -1,10 +1,10 @@
 {
     "schema":  "m0-traceability-review/v1",
-    "revision":  "7f1f5aee",
+    "revision":  "58bbdb9e",
     "total_tasks":  93,
-    "passed":  56,
-    "blocked":  37,
-    "coverage_percent":  60.22,
+    "passed":  57,
+    "blocked":  36,
+    "coverage_percent":  61.29,
     "tasks":  [
                   {
                       "id":  "1.1.1",
@@ -363,7 +363,7 @@
                   {
                       "id":  "4.2.3",
                       "group":  "4.2",
-                      "status":  "blocked",
+                      "status":  "passed",
                       "artifact":  "evidence/artifacts/4.2/localization-ime.json"
                   },
                   {

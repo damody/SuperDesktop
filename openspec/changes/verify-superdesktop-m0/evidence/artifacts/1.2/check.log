@@ -1,9 +1,8 @@
-cargo :     Checking taskbar-ui v0.1.0 (D:\SuperDesktop\SuperDesktop\crates\taskbar-ui)
+cargo :     Checking superdesktop-app v0.1.0 (D:\SuperDesktop\SuperDesktop\crates\superdesktop-app)
 At D:\SuperDesktop\SuperDesktop\scripts\capture-m0-local-evidence.ps1:24 char:85
 + ... ,@('check',{cargo check --workspace --all-targets --locked --offline} ...
 +                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    + CategoryInfo          : NotSpecified: (    Checking ta...tes\taskbar-ui):String) [], RemoteException
+    + CategoryInfo          : NotSpecified: (    Checking su...perdesktop-app):String) [], RemoteException
     + FullyQualifiedErrorId : NativeCommandError
  
-    Checking superdesktop-app v0.1.0 (D:\SuperDesktop\SuperDesktop\crates\superdesktop-app)
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.39s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.93s
