@@ -57,7 +57,7 @@ function Wait-ForFixedControl([IntPtr]$WindowHandle) {
         [System.Windows.Automation.AutomationElement]::NameProperty,
         'SuperExplorer'
     )
-    $deadline = [DateTime]::UtcNow.AddSeconds(3)
+    $deadline = [DateTime]::UtcNow.AddSeconds(8)
     do {
         $control = $root.FindFirst(
             [System.Windows.Automation.TreeScope]::Descendants,
@@ -82,7 +82,23 @@ function Invoke-InputRoute([string]$Surface, [string]$Route) {
     $newIds = @()
     try {
         $windowHandle = Wait-ForWindowHandle $process
-        $control = Wait-ForFixedControl $windowHandle
+        $frameDeadline = [DateTime]::UtcNow.AddSeconds(5)
+        do {
+            Start-Sleep -Milliseconds 50
+            $frameTrace = if (Test-Path -LiteralPath $tracePath) {
+                Get-Content -Raw -Encoding UTF8 $tracePath
+            } else {
+                ''
+            }
+        } while ($frameTrace -notmatch 'frame-visible' -and [DateTime]::UtcNow -lt $frameDeadline)
+        if ($frameTrace -notmatch 'frame-visible') {
+            throw "$Surface/$Route did not render a visible frame."
+        }
+        try {
+            $control = Wait-ForFixedControl $windowHandle
+        } catch {
+            throw "$Surface/$Route failed to expose the SuperExplorer fixed entry: $_"
+        }
         $name = $control.Current.Name
         $controlType = $control.Current.ControlType.ProgrammaticName
         $bounds = $control.Current.BoundingRectangle

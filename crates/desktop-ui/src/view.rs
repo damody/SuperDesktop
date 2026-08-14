@@ -12,6 +12,7 @@ pub struct DesktopView {
     pub items: Vec<AccessibleNode>,
     pub fallback_background: bool,
     fixed_action: Option<Rc<dyn Fn()>>,
+    rendered_action: Option<Rc<dyn Fn()>>,
     keyboard_focus: Option<FocusHandle>,
 }
 
@@ -22,12 +23,18 @@ impl DesktopView {
             items,
             fallback_background,
             fixed_action: None,
+            rendered_action: None,
             keyboard_focus: None,
         }
     }
 
     pub fn with_fixed_action(mut self, action: Rc<dyn Fn()>) -> Self {
         self.fixed_action = Some(action);
+        self
+    }
+
+    pub fn with_rendered_action(mut self, action: Rc<dyn Fn()>) -> Self {
+        self.rendered_action = Some(action);
         self
     }
 
@@ -44,6 +51,9 @@ impl Render for DesktopView {
         let fixed_action = self.fixed_action.clone();
         let root_action = fixed_action.clone();
         let keyboard_focus = self.keyboard_focus.clone();
+        if let Some(action) = &self.rendered_action {
+            action();
+        }
         let high_contrast = std::env::var("SUPERDESKTOP_THEME").as_deref() == Ok("high-contrast");
         let background = if self.fallback_background {
             rgb(0x20242b)

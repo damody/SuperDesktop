@@ -289,7 +289,8 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                 vec![fixed_node(&desktop_monitor.device_name)],
                                 false,
                             )
-                            .with_fixed_action(Rc::new(launch_superexplorer));
+                            .with_fixed_action(Rc::new(launch_superexplorer))
+                            .with_rendered_action(Rc::new(|| trace_action("frame-visible")));
                             if interactive {
                                 view.enable_keyboard_focus(window, cx)
                             } else {
