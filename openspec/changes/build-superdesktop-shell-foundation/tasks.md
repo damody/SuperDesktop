@@ -147,13 +147,13 @@
 **Gate／Evidence：** `G-SHELL-TAKEOVER-PROVISIONAL`、`G-GUARDIAN-RECOVERY-PROVISIONAL`、`G-SAFETY`；program `evidence/artifacts/4.1/`。
 **完成門檻：** Strict/tasks validation、mandatory evidence、三個 dispositions、handoff hash 與 archive 分項通過；final Windows 10 gates仍未判定。
 
-- [ ] 4.1.1 記錄 child `openspec validate --strict` 成功輸出。
-- [ ] 4.1.2 記錄 child 詳細 tasks validator 成功輸出。
-- [ ] 4.1.3 驗證 child mandatory evidence index 無 failed/blocked/stale/N/A/invalid replacement。
-- [ ] 4.1.4 驗證 reference `G-SHELL-TAKEOVER-PROVISIONAL` disposition passed。
-- [ ] 4.1.5 驗證 reference `G-GUARDIAN-RECOVERY-PROVISIONAL` disposition passed。
-- [ ] 4.1.6 驗證 lifecycle `G-SAFETY` disposition passed。
-- [ ] 4.1.7 驗證 lifecycle public/effect/binary/evidence SHA-256 handoff manifest。
+- [x] 4.1.1 記錄 child `openspec validate --strict` 成功輸出。
+- [x] 4.1.2 記錄 child 詳細 tasks validator 成功輸出。
+- [x] 4.1.3 驗證 child mandatory evidence index 無 failed/blocked/stale/N/A/invalid replacement。
+- [x] 4.1.4 驗證 reference `G-SHELL-TAKEOVER-PROVISIONAL` disposition passed。
+- [x] 4.1.5 驗證 reference `G-GUARDIAN-RECOVERY-PROVISIONAL` disposition passed。
+- [x] 4.1.6 驗證 lifecycle `G-SAFETY` disposition passed。
+- [x] 4.1.7 驗證 lifecycle public/effect/binary/evidence SHA-256 handoff manifest。
 - [ ] 4.1.8 封存 child 並記錄 immutable archive revision。
 
 ### 4.2 驗證並封存 M0 Release Verification
