@@ -7,3 +7,7 @@ license.workspace = true
 
 [lints]
 workspace = true
+
+[dependencies]
+platform-win = { path = "../platform-win" }
+shell-core = { path = "../shell-core" }

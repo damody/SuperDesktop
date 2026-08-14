@@ -13,7 +13,7 @@
   ],
   "allowed_direct_dependencies": {
     "desktop-ui": ["gpui", "gpui_windows", "platform-win", "raw-window-handle", "shell-core"],
-    "explorer-bridge": ["shell-core"],
+    "explorer-bridge": ["platform-win", "shell-core"],
     "platform-win": ["shell-core", "windows"],
     "settings-store": [],
     "shell-core": [],

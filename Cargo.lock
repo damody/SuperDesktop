@@ -1105,6 +1105,10 @@ dependencies = [
 [[package]]
 name = "explorer-bridge"
 version = "0.1.0"
+dependencies = [
+ "platform-win",
+ "shell-core",
+]
 
 [[package]]
 name = "exr"
