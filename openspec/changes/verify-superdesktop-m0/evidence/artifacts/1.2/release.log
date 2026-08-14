@@ -1,12 +1,11 @@
-cargo :    Compiling platform-win v0.1.0 (D:\SuperDesktop\SuperDesktop\crates\platform-win)
+cargo :    Compiling desktop-ui v0.1.0 (D:\SuperDesktop\SuperDesktop\crates\desktop-ui)
 At D:\SuperDesktop\SuperDesktop\scripts\capture-m0-local-evidence.ps1:24 char:313
 + ... ('release',{cargo build --workspace --all-targets --release --locked  ...
 +                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    + CategoryInfo          : NotSpecified: (   Compiling pl...s\platform-win):String) [], RemoteException
+    + CategoryInfo          : NotSpecified: (   Compiling de...tes\desktop-ui):String) [], RemoteException
     + FullyQualifiedErrorId : NativeCommandError
  
-   Compiling superdesktop-test-support v0.1.0 (D:\SuperDesktop\SuperDesktop\crates\superdesktop-test-support)
-   Compiling superdesktop-app v0.1.0 (D:\SuperDesktop\SuperDesktop\crates\superdesktop-app)
    Compiling taskbar-ui v0.1.0 (D:\SuperDesktop\SuperDesktop\crates\taskbar-ui)
-   Compiling desktop-ui v0.1.0 (D:\SuperDesktop\SuperDesktop\crates\desktop-ui)
-    Finished `release` profile [optimized] target(s) in 2.46s
+   Compiling superdesktop-app v0.1.0 (D:\SuperDesktop\SuperDesktop\crates\superdesktop-app)
+   Compiling superdesktop-test-support v0.1.0 (D:\SuperDesktop\SuperDesktop\crates\superdesktop-test-support)
+    Finished `release` profile [optimized] target(s) in 2.22s

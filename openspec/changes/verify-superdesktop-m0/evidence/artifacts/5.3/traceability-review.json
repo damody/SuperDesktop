@@ -1,6 +1,6 @@
 {
     "schema":  "m0-traceability-review/v1",
-    "revision":  "41a00deb",
+    "revision":  "2dc3624f",
     "total_tasks":  93,
     "passed":  54,
     "blocked":  39,
@@ -589,7 +589,7 @@
                                       ],
     "independent_review":  "blocked-not-performed",
     "unresolved_external_blockers":  [
-                                         "production candidate UI is not persistently visible",
+                                         "production candidate UI does not meet frozen reference SSIM",
                                          "production archives deferred by user",
                                          "Windows 10 22H2 environment unavailable",
                                          "physical mixed-DPI dual-monitor unavailable",
