@@ -1,0 +1,22 @@
+{
+    "schema":  "taskbar-start-contract/v1",
+    "preview":  {
+                    "probe_invoked":  true,
+                    "truthful":  true,
+                    "available":  true
+                },
+    "sources":  [
+                    "pointer",
+                    "keyboard",
+                    "uia"
+                ],
+    "failures":  [
+                     "missing",
+                     "refused",
+                     "stale-host",
+                     "untrusted-host"
+                 ],
+    "shell_mode":  "typed-deferred-to-wave-5",
+    "system_settings_mutated":  false,
+    "tests":  1
+}

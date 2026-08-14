@@ -1,0 +1,21 @@
+{
+    "schema":  "taskbar-handoff/v1",
+    "change":  "build-superdesktop-gpui-taskbar",
+    "producer":  "Taskbar owner",
+    "consumers":  [
+                      "add-superdesktop-shell-takeover-recovery",
+                      "verify-superdesktop-m0"
+                  ],
+    "result_revision":  "54edbb0c",
+    "contract_manifest":  "evidence/artifacts/4.1/taskbar-contract-manifest.json",
+    "contract_manifest_sha256":  "AA3BCC48A9E088E570DC929961299C2E8AE79A9C68583E25EF9EB71624445D1A",
+    "combined_input_sha256":  "5092D4C998B338886928EF596A70AA1249C35D9DF6CEADAEE1D4E1390AA3FAA5",
+    "status":  "passed-active-archive-deferred",
+    "gates":  {
+                  "G-TASKBAR":  "passed",
+                  "G-A11Y-I18N":  "passed",
+                  "G-SAFETY":  "passed",
+                  "G-EXPLORER-BRIDGE":  "passed",
+                  "G-DPI-MONITOR":  "passed"
+              }
+}

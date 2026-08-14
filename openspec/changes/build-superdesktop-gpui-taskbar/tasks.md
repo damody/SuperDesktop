@@ -10,11 +10,11 @@
 **Gate／Evidence：** `G-TASKBAR`、`G-DPI-MONITOR`；`evidence/artifacts/1.1/`。
 **完成門檻：** 每個 monitor 恰一 AppBar，topology/DPI 變更正確 reserve，teardown 恢復 baseline。
 
-- [ ] 1.1.1 實作 monitor identity 到 GPUI taskbar HWND 的 lifecycle mapping。
-- [ ] 1.1.2 實作 AppBar register/query/position/remove effect adapter。
-- [ ] 1.1.3 實作 monitor add/remove、primary change 與 DPI change reconciliation。
-- [ ] 1.1.4 加入 register failure 與重複 teardown recovery tests。
-- [ ] 1.1.5 保存各 monitor work-area before/after 與 HWND evidence。
+- [x] 1.1.1 實作 monitor identity 到 GPUI taskbar HWND 的 lifecycle mapping。
+- [x] 1.1.2 實作 AppBar register/query/position/remove effect adapter。
+- [x] 1.1.3 實作 monitor add/remove、primary change 與 DPI change reconciliation。
+- [x] 1.1.4 加入 register failure 與重複 teardown recovery tests。
+- [x] 1.1.5 保存各 monitor work-area before/after 與 HWND evidence。
 
 ### 1.2 實作一至三列 Win10 參考 Layout
 
@@ -26,11 +26,11 @@
 **Gate／Evidence：** `G-TASKBAR`、`G-A11Y-I18N`；`evidence/artifacts/1.2/`。
 **完成門檻：** 1/2/3 列皆無重疊，預設雙列，窄寬度有 deterministic overflow。
 
-- [ ] 1.2.1 實作一、二、三列高度與 row allocation。
-- [ ] 1.2.2 實作 Start、task groups、pinned entry 與 status region slot ordering。
-- [ ] 1.2.3 實作 DPI scaling、text truncation 與 hit-target geometry。
-- [ ] 1.2.4 實作窄寬度 overflow 與 priority policy。
-- [ ] 1.2.5 產生 reference-size visual fixtures 與 geometry assertions。
+- [x] 1.2.1 實作一、二、三列高度與 row allocation。
+- [x] 1.2.2 實作 Start、task groups、pinned entry 與 status region slot ordering。
+- [x] 1.2.3 實作 DPI scaling、text truncation 與 hit-target geometry。
+- [x] 1.2.4 實作窄寬度 overflow 與 priority policy。
+- [x] 1.2.5 產生 reference-size visual fixtures 與 geometry assertions。
 
 ## 2. Window Tracking 與 Task Semantics
 
@@ -44,12 +44,12 @@
 **Gate／Evidence：** `G-TASKBAR`、`G-SAFETY`；`evidence/artifacts/2.1/`。
 **完成門檻：** Normal windows 正確呈現；invisible/tool/cloaked/owned transient 排除；overflow 可收斂。
 
-- [ ] 2.1.1 對 Shell Hook callback 套用 Wave 2 凍結的 no-unwind wrapper 並轉成 owned event。
-- [ ] 2.1.2 實作 EnumWindows authoritative snapshot 與 stable WindowId/ApplicationId mapping。
-- [ ] 2.1.3 實作 invisible、tool、cloaked 與 owned transient filters。
-- [ ] 2.1.4 實作 overflow refresh 與 stale event suppression。
-- [ ] 2.1.5 執行 create/destroy/title/icon/attention event-storm tests。
-- [ ] 2.1.6 保存 raw hook trace、snapshot diff 與 max queue depth。
+- [x] 2.1.1 對 Shell Hook callback 套用 Wave 2 凍結的 no-unwind wrapper 並轉成 owned event。
+- [x] 2.1.2 實作 EnumWindows authoritative snapshot 與 stable WindowId/ApplicationId mapping。
+- [x] 2.1.3 實作 invisible、tool、cloaked 與 owned transient filters。
+- [x] 2.1.4 實作 overflow refresh 與 stale event suppression。
+- [x] 2.1.5 執行 create/destroy/title/icon/attention event-storm tests。
+- [x] 2.1.6 保存 raw hook trace、snapshot diff 與 max queue depth。
 
 ### 2.2 實作 Grouping、Order 與 Pinning
 
@@ -61,11 +61,11 @@
 **Gate／Evidence：** `G-TASKBAR`；`evidence/artifacts/2.2/`。
 **完成門檻：** Identity 相同正確 group，identity 不同不誤合併，pin order round-trip 穩定。
 
-- [ ] 2.2.1 實作 ApplicationId grouping 與 fallback identity policy。
-- [ ] 2.2.2 實作 stable group/window ordering 與 attention placement。
-- [ ] 2.2.3 實作 pin/unpin/reorder commands 與 settings persistence。
-- [ ] 2.2.4 加入 identity collision、process restart 與 snapshot reorder tests。
-- [ ] 2.2.5 加入 pin order restart round-trip test。
+- [x] 2.2.1 實作 ApplicationId grouping 與 fallback identity policy。
+- [x] 2.2.2 實作 stable group/window ordering 與 attention placement。
+- [x] 2.2.3 實作 pin/unpin/reorder commands 與 settings persistence。
+- [x] 2.2.4 加入 identity collision、process restart 與 snapshot reorder tests。
+- [x] 2.2.5 加入 pin order restart round-trip test。
 
 ### 2.3 實作 Task Click 與 Keyboard/UIA Semantics
 
@@ -77,11 +77,11 @@
 **Gate／Evidence：** `G-TASKBAR`、`G-A11Y-I18N`；`evidence/artifacts/2.3/`。
 **完成門檻：** Inactive/active/minimized/group cases 符合 spec，pointer/keyboard/UIA 等價。
 
-- [ ] 2.3.1 實作 inactive window activate 與 foreground request。
-- [ ] 2.3.2 實作 active window minimize 與 minimized window restore。
-- [ ] 2.3.3 實作 multi-window group selection surface 與 escape/focus return。
-- [ ] 2.3.4 實作 task accessible name/role/state/action 與 keyboard navigation。
-- [ ] 2.3.5 執行 pointer、keyboard 與 UIA action matrix。
+- [x] 2.3.1 實作 inactive window activate 與 foreground request。
+- [x] 2.3.2 實作 active window minimize 與 minimized window restore。
+- [x] 2.3.3 實作 multi-window group selection surface 與 escape/focus return。
+- [x] 2.3.4 實作 task accessible name/role/state/action 與 keyboard navigation。
+- [x] 2.3.5 執行 pointer、keyboard 與 UIA action matrix。
 
 ## 3. 固定入口與狀態區
 
@@ -95,11 +95,11 @@
 **Gate／Evidence：** `G-TASKBAR`、`G-EXPLORER-BRIDGE`、`G-A11Y-I18N`；`evidence/artifacts/3.1/`。
 **完成門檻：** Entry 在所有列數/DPI 存在；pointer/keyboard/UIA 可啟動；failure 顯示 repair UI。
 
-- [ ] 3.1.1 實作固定 SuperExplorer entry 的 icon、label 與 stable identity。
-- [ ] 3.1.2 綁定 pointer activation 到 core bridge command。
-- [ ] 3.1.3 綁定 keyboard 與 UIA invoke 到相同 command。
-- [ ] 3.1.4 實作 validation/spawn/timeout failure 的 GPUI repair prompt。
-- [ ] 3.1.5 建立所有 row-count/DPI 的 existence 與 activation tests。
+- [x] 3.1.1 實作固定 SuperExplorer entry 的 icon、label 與 stable identity。
+- [x] 3.1.2 綁定 pointer activation 到 core bridge command。
+- [x] 3.1.3 綁定 keyboard 與 UIA invoke 到相同 command。
+- [x] 3.1.4 實作 validation/spawn/timeout failure 的 GPUI repair prompt。
+- [x] 3.1.5 建立所有 row-count/DPI 的 existence 與 activation tests。
 
 ### 3.2 實作 Start Host 與 Truthful Failure
 
@@ -111,11 +111,11 @@
 **Gate／Evidence：** `G-TASKBAR`、`G-SAFETY`；`evidence/artifacts/3.2/`。
 **完成門檻：** Available host 可呼叫；missing/refused host 顯示 truthful unavailable 且不 mutation 系統設定。
 
-- [ ] 3.2.1 實作 Start host identity revalidation 與 invocation adapter。
-- [ ] 3.2.2 實作 Start control pointer、keyboard 與 UIA activation。
-- [ ] 3.2.3 實作 missing/refused/stale-host typed failure UI。
-- [ ] 3.2.4 執行 reference profile preview mode 的 Start probe/invocation headful test。
-- [ ] 3.2.5 建立 Shell-mode Start invocation fixture；真實執行由 Wave 5 接管健康/整合 gate 完成。
+- [x] 3.2.1 實作 Start host identity revalidation 與 invocation adapter。
+- [x] 3.2.2 實作 Start control pointer、keyboard 與 UIA activation。
+- [x] 3.2.3 實作 missing/refused/stale-host typed failure UI。
+- [x] 3.2.4 執行 reference profile preview mode 的 Start probe/invocation headful test。
+- [x] 3.2.5 建立 Shell-mode Start invocation fixture；真實執行由 Wave 5 接管健康/整合 gate 完成。
 
 ### 3.3 實作時鐘與核心狀態區
 
@@ -127,10 +127,10 @@
 **Gate／Evidence：** `G-TASKBAR`、`G-A11Y-I18N`；`evidence/artifacts/3.3/`。
 **完成門檻：** 時鐘/日期更新正確，狀態 available/unavailable truthful，未支援 tray 不顯示假 icon。
 
-- [ ] 3.3.1 實作時鐘與日期 tick/update scheduling。
-- [ ] 3.3.2 實作 locale-aware zh-TW/en formatting 與 deterministic test clock。
-- [ ] 3.3.3 實作 volume/network 等核准核心狀態的 availability mapping。
-- [ ] 3.3.4 加入 provider unavailable 與 no-fake-tray tests。
+- [x] 3.3.1 實作時鐘與日期 tick/update scheduling。
+- [x] 3.3.2 實作 locale-aware zh-TW/en formatting 與 deterministic test clock。
+- [x] 3.3.3 實作 volume/network 等核准核心狀態的 availability mapping。
+- [x] 3.3.4 加入 provider unavailable 與 no-fake-tray tests。
 
 ## 4. Taskbar Gate
 
@@ -144,10 +144,10 @@
 **Gate／Evidence：** `G-TASKBAR`、`G-DPI-MONITOR`、`G-A11Y-I18N`；`evidence/artifacts/4.1/`。
 **完成門檻：** 所有 taskbar scenarios 通過，work area 可恢復，無 stale/blocked/N/A leaf。
 
-- [ ] 4.1.1 執行 1/2/3 列與 100% 至 200% DPI visual geometry matrix。
-- [ ] 4.1.2 執行 window lifecycle、grouping 與 task-click interaction matrix。
-- [ ] 4.1.3 執行 SuperExplorer fixed entry 與 Start host headful matrix。
-- [ ] 4.1.4 執行 accessibility focus、identity 與 action scan。
-- [ ] 4.1.5 執行 AppBar teardown、handle 與 cache-bound verification。
-- [ ] 4.1.6 索引全部 artifact hashes 並發布 `G-TASKBAR` disposition。
-- [ ] 4.1.7 產生 taskbar public/effect schema、binary、evidence-index 與 handoff SHA-256 manifest。
+- [x] 4.1.1 執行 1/2/3 列與 100% 至 200% DPI visual geometry matrix。
+- [x] 4.1.2 執行 window lifecycle、grouping 與 task-click interaction matrix。
+- [x] 4.1.3 執行 SuperExplorer fixed entry 與 Start host headful matrix。
+- [x] 4.1.4 執行 accessibility focus、identity 與 action scan。
+- [x] 4.1.5 執行 AppBar teardown、handle 與 cache-bound verification。
+- [x] 4.1.6 索引全部 artifact hashes 並發布 `G-TASKBAR` disposition。
+- [x] 4.1.7 產生 taskbar public/effect schema、binary、evidence-index 與 handoff SHA-256 manifest。

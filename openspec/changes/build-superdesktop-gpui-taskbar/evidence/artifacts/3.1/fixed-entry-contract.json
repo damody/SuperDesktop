@@ -1,0 +1,19 @@
+{
+    "schema":  "taskbar-fixed-entry-contract/v1",
+    "identity":  "taskbar:superexplorer",
+    "label":  "SuperExplorer",
+    "initial_path":  null,
+    "sources":  [
+                    "pointer",
+                    "keyboard",
+                    "uia"
+                ],
+    "repair":  [
+                   "locate-executable",
+                   "retry-spawn",
+                   "timed-out",
+                   "cancelled"
+               ],
+    "terminal":  "first-wins",
+    "tests":  2
+}

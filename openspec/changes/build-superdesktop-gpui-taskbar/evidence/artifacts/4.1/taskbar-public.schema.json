@@ -1,0 +1,32 @@
+{
+    "$schema":  "https://json-schema.org/draft/2020-12/schema",
+    "title":  "SuperTaskbar public window",
+    "type":  "object",
+    "required":  [
+                     "window_id",
+                     "application_id",
+                     "title",
+                     "minimized",
+                     "foreground"
+                 ],
+    "properties":  {
+                       "window_id":  {
+                                         "minLength":  1,
+                                         "type":  "string"
+                                     },
+                       "title":  {
+                                     "type":  "string"
+                                 },
+                       "application_id":  {
+                                              "minLength":  1,
+                                              "type":  "string"
+                                          },
+                       "minimized":  {
+                                         "type":  "boolean"
+                                     },
+                       "foreground":  {
+                                          "type":  "boolean"
+                                      }
+                   },
+    "additionalProperties":  false
+}

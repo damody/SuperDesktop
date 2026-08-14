@@ -1,0 +1,39 @@
+{
+    "schema":  "taskbar-quality-gates/v1",
+    "change":  "build-superdesktop-gpui-taskbar",
+    "result_revision":  "54edbb0c",
+    "recorded_at":  "2026-08-14T04:45:09.2879333Z",
+    "commands":  [
+                     {
+                         "exit_status":  0,
+                         "command":  "cargo fmt --all -- --check"
+                     },
+                     {
+                         "exit_status":  0,
+                         "command":  "cargo check --workspace --all-targets --locked --offline"
+                     },
+                     {
+                         "taskbar_tests":  18,
+                         "command":  "cargo test --workspace --all-targets --locked --offline",
+                         "exit_status":  0,
+                         "platform_tests":  30
+                     },
+                     {
+                         "exit_status":  0,
+                         "command":  "cargo clippy --workspace --all-targets --locked --offline -- -D warnings"
+                     },
+                     {
+                         "exit_status":  0,
+                         "command":  "scripts/check-dependency-architecture.ps1"
+                     },
+                     {
+                         "command":  "target/release/examples/taskbar_headful_contract.exe",
+                         "exit_status":  0,
+                         "work_area_restored":  true
+                     },
+                     {
+                         "exit_status":  0,
+                         "command":  "openspec validate build-superdesktop-gpui-taskbar --strict"
+                     }
+                 ]
+}

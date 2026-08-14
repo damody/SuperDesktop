@@ -1,0 +1,22 @@
+{
+    "schema":  "taskbar-status-contract/v1",
+    "clock":  {
+                  "locales":  [
+                                  "zh-TW",
+                                  "en"
+                              ],
+                  "minute_tick":  true,
+                  "deterministic":  true
+              },
+    "providers":  [
+                      "network",
+                      "volume",
+                      "mute",
+                      "input-language",
+                      "battery",
+                      "notifications"
+                  ],
+    "independent_unavailable":  true,
+    "fake_tray_icons":  0,
+    "tests":  2
+}

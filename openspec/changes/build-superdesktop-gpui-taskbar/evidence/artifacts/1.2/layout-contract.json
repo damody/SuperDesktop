@@ -1,0 +1,25 @@
+{
+    "schema":  "taskbar-layout-contract/v1",
+    "rows":  [
+                 1,
+                 2,
+                 3
+             ],
+    "default_rows":  2,
+    "dpi_matrix":  [
+                       96,
+                       120,
+                       144,
+                       168,
+                       192
+                   ],
+    "slots":  [
+                  "start",
+                  "pinned",
+                  "running",
+                  "status"
+              ],
+    "minimum_hit_target":  40,
+    "overflow":  "pinned-first-deterministic",
+    "tests":  3
+}

@@ -1,0 +1,90 @@
+{
+    "schema":  "taskbar-contract-manifest/v1",
+    "change":  "build-superdesktop-gpui-taskbar",
+    "result_revision":  "54edbb0c",
+    "generated_at":  "2026-08-14T04:45:09.2879333Z",
+    "public_schema":  "evidence/artifacts/4.1/taskbar-public.schema.json",
+    "effect_schema":  "evidence/artifacts/4.1/taskbar-effect.schema.json",
+    "binary":  "evidence/artifacts/4.1/taskbar_headful_contract.exe",
+    "binary_sha256":  "744B0517A5CD3C1B2EC149590F1F708D57C90A417FCF86511EFD9C5CBFEA7363",
+    "inputs":  [
+                   {
+                       "path":  "Cargo.lock",
+                       "sha256":  "04183B5B157B05F736DD6ED80D2E326FDE1FE8412E513976A2E6BBE1DE244586",
+                       "bytes":  123918
+                   },
+                   {
+                       "path":  "crates/taskbar-ui/Cargo.toml",
+                       "sha256":  "974CDBE0BB38B00BB837217613E07FC2AE001A1FA746DDD8CB00502E1C418476",
+                       "bytes":  416
+                   },
+                   {
+                       "path":  "crates/taskbar-ui/src/lib.rs",
+                       "sha256":  "F47F6996B50274043D0A26C8653FBD981AD318FC48668AE6CD1998885A01017D",
+                       "bytes":  1067
+                   },
+                   {
+                       "path":  "crates/taskbar-ui/src/surface.rs",
+                       "sha256":  "F36BC6CE6D9369F78D191DE9F776FB2FFB52C61BE533245417043BA3572FC112",
+                       "bytes":  8064
+                   },
+                   {
+                       "path":  "crates/taskbar-ui/src/layout.rs",
+                       "sha256":  "4BA4C672715B6318970D4250B7ACDA9A9BCDFD866A0D29304EB5F9E4CA1280C7",
+                       "bytes":  4758
+                   },
+                   {
+                       "path":  "crates/taskbar-ui/src/tracker.rs",
+                       "sha256":  "D6FAC3E7C52D90ABDE97F69D9F107303C29BF6DDA612209E64B749D0D9ACB6FE",
+                       "bytes":  8982
+                   },
+                   {
+                       "path":  "crates/taskbar-ui/src/grouping.rs",
+                       "sha256":  "BB26059948C8522FD2500BF30833F261C743D77B7E1E12AD1D61ED241337E9C0",
+                       "bytes":  5855
+                   },
+                   {
+                       "path":  "crates/taskbar-ui/src/interaction.rs",
+                       "sha256":  "D1C48C507D0151E7142774CDF09D4A149D7E2ADFE48095BD14E85BED756ED163",
+                       "bytes":  8367
+                   },
+                   {
+                       "path":  "crates/taskbar-ui/src/start.rs",
+                       "sha256":  "9EE2B7031C382018206E7B998887C0C033E6D15C4AB0E732C68967B1C3817A1C",
+                       "bytes":  4152
+                   },
+                   {
+                       "path":  "crates/taskbar-ui/src/status.rs",
+                       "sha256":  "DAFB0DD3462D9F96D44F44A1FC8883EBF70808F03CE0543F15E73B6A24B6D429",
+                       "bytes":  3368
+                   },
+                   {
+                       "path":  "crates/taskbar-ui/src/view.rs",
+                       "sha256":  "A803C506E81CAD254CC5766B535114920628FAD5A6AAB1F0D9FE86D2BD954FA8",
+                       "bytes":  1850
+                   },
+                   {
+                       "path":  "crates/taskbar-ui/examples/taskbar_headful_contract.rs",
+                       "sha256":  "DD1C61E5DB083BCB5AFF6D8F1ECC16E7B7BAE177466856C802ED386C9901A910",
+                       "bytes":  7623
+                   },
+                   {
+                       "path":  "crates/platform-win/src/common/appbar_shell_hook.rs",
+                       "sha256":  "8CDF7E0110931128503AAD1E64E50A7EF590FF4A39E46B1E5F3BADE6E8039A6C",
+                       "bytes":  8059
+                   },
+                   {
+                       "path":  "crates/platform-win/src/common/taskbar.rs",
+                       "sha256":  "CDFD14B8D1CD435D939199C74650389CDB5D8FB8CA247A8A4351904F018A00C4",
+                       "bytes":  8212
+                   }
+               ],
+    "combined_input_sha256":  "5092D4C998B338886928EF596A70AA1249C35D9DF6CEADAEE1D4E1390AA3FAA5",
+    "gates":  {
+                  "G-TASKBAR":  "passed",
+                  "G-A11Y-I18N":  "passed",
+                  "G-SAFETY":  "passed",
+                  "G-EXPLORER-BRIDGE":  "passed",
+                  "G-DPI-MONITOR":  "passed"
+              }
+}

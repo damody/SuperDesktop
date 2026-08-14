@@ -1,0 +1,19 @@
+{
+    "schema":  "taskbar-grouping-contract/v1",
+    "group_key":  "ApplicationId",
+    "window_order":  "membership-stable",
+    "attention_reorders":  false,
+    "pin_commands":  [
+                         "pin",
+                         "unpin",
+                         "reorder"
+                     ],
+    "persistence":  "TaskbarSettings.pins",
+    "fixtures":  [
+                     "identity-collision",
+                     "process-restart",
+                     "snapshot-reorder",
+                     "restart-round-trip"
+                 ],
+    "tests":  2
+}

@@ -1,0 +1,25 @@
+{
+    "schema":  "taskbar-interaction-contract/v1",
+    "single_window":  [
+                          "activate",
+                          "minimize-active",
+                          "restore-minimized"
+                      ],
+    "multi_window":  "selection-surface-with-escape-focus-return",
+    "sources":  [
+                    "pointer",
+                    "keyboard",
+                    "uia"
+                ],
+    "accessibility":  {
+                          "actions":  [
+                                          "focus",
+                                          "select",
+                                          "invoke",
+                                          "minimize",
+                                          "restore"
+                                      ],
+                          "role":  "button"
+                      },
+    "tests":  3
+}

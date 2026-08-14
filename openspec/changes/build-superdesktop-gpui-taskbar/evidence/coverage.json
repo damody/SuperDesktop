@@ -1,0 +1,541 @@
+{
+    "schema_version":  "1.0.0",
+    "change":  "build-superdesktop-gpui-taskbar",
+    "capabilities":  [
+                         "taskbar-appbar-lifecycle",
+                         "taskbar-contract-gate",
+                         "taskbar-fixed-entry",
+                         "taskbar-grouping",
+                         "taskbar-interaction",
+                         "taskbar-layout",
+                         "taskbar-start-host",
+                         "taskbar-status",
+                         "taskbar-window-tracker"
+                     ],
+    "tasks":  [
+                  {
+                      "task_id":  "build-superdesktop-gpui-taskbar/1.1.1",
+                      "mandatory":  true,
+                      "capability_id":  "taskbar-appbar-lifecycle",
+                      "requirement_id":  "taskbar-appbar-lifecycle",
+                      "scenario_id":  "reversible-work-area",
+                      "gates":  [
+                                    "G-TASKBAR",
+                                    "G-DPI-MONITOR"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-taskbar/1.1.2",
+                      "mandatory":  true,
+                      "capability_id":  "taskbar-appbar-lifecycle",
+                      "requirement_id":  "taskbar-appbar-lifecycle",
+                      "scenario_id":  "reversible-work-area",
+                      "gates":  [
+                                    "G-TASKBAR",
+                                    "G-DPI-MONITOR"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-taskbar/1.1.3",
+                      "mandatory":  true,
+                      "capability_id":  "taskbar-appbar-lifecycle",
+                      "requirement_id":  "taskbar-appbar-lifecycle",
+                      "scenario_id":  "reversible-work-area",
+                      "gates":  [
+                                    "G-TASKBAR",
+                                    "G-DPI-MONITOR"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-taskbar/1.1.4",
+                      "mandatory":  true,
+                      "capability_id":  "taskbar-appbar-lifecycle",
+                      "requirement_id":  "taskbar-appbar-lifecycle",
+                      "scenario_id":  "reversible-work-area",
+                      "gates":  [
+                                    "G-TASKBAR",
+                                    "G-DPI-MONITOR"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-taskbar/1.1.5",
+                      "mandatory":  true,
+                      "capability_id":  "taskbar-appbar-lifecycle",
+                      "requirement_id":  "taskbar-appbar-lifecycle",
+                      "scenario_id":  "reversible-work-area",
+                      "gates":  [
+                                    "G-TASKBAR",
+                                    "G-DPI-MONITOR"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-taskbar/1.2.1",
+                      "mandatory":  true,
+                      "capability_id":  "taskbar-layout",
+                      "requirement_id":  "taskbar-layout",
+                      "scenario_id":  "row-and-dpi-matrix",
+                      "gates":  [
+                                    "G-TASKBAR",
+                                    "G-A11Y-I18N"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-taskbar/1.2.2",
+                      "mandatory":  true,
+                      "capability_id":  "taskbar-layout",
+                      "requirement_id":  "taskbar-layout",
+                      "scenario_id":  "row-and-dpi-matrix",
+                      "gates":  [
+                                    "G-TASKBAR",
+                                    "G-A11Y-I18N"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-taskbar/1.2.3",
+                      "mandatory":  true,
+                      "capability_id":  "taskbar-layout",
+                      "requirement_id":  "taskbar-layout",
+                      "scenario_id":  "row-and-dpi-matrix",
+                      "gates":  [
+                                    "G-TASKBAR",
+                                    "G-A11Y-I18N"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-taskbar/1.2.4",
+                      "mandatory":  true,
+                      "capability_id":  "taskbar-layout",
+                      "requirement_id":  "taskbar-layout",
+                      "scenario_id":  "row-and-dpi-matrix",
+                      "gates":  [
+                                    "G-TASKBAR",
+                                    "G-A11Y-I18N"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-taskbar/1.2.5",
+                      "mandatory":  true,
+                      "capability_id":  "taskbar-layout",
+                      "requirement_id":  "taskbar-layout",
+                      "scenario_id":  "row-and-dpi-matrix",
+                      "gates":  [
+                                    "G-TASKBAR",
+                                    "G-A11Y-I18N"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-taskbar/2.1.1",
+                      "mandatory":  true,
+                      "capability_id":  "taskbar-window-tracker",
+                      "requirement_id":  "taskbar-window-tracker",
+                      "scenario_id":  "authoritative-recovery",
+                      "gates":  [
+                                    "G-TASKBAR",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-taskbar/2.1.2",
+                      "mandatory":  true,
+                      "capability_id":  "taskbar-window-tracker",
+                      "requirement_id":  "taskbar-window-tracker",
+                      "scenario_id":  "authoritative-recovery",
+                      "gates":  [
+                                    "G-TASKBAR",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-taskbar/2.1.3",
+                      "mandatory":  true,
+                      "capability_id":  "taskbar-window-tracker",
+                      "requirement_id":  "taskbar-window-tracker",
+                      "scenario_id":  "authoritative-recovery",
+                      "gates":  [
+                                    "G-TASKBAR",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-taskbar/2.1.4",
+                      "mandatory":  true,
+                      "capability_id":  "taskbar-window-tracker",
+                      "requirement_id":  "taskbar-window-tracker",
+                      "scenario_id":  "authoritative-recovery",
+                      "gates":  [
+                                    "G-TASKBAR",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-taskbar/2.1.5",
+                      "mandatory":  true,
+                      "capability_id":  "taskbar-window-tracker",
+                      "requirement_id":  "taskbar-window-tracker",
+                      "scenario_id":  "authoritative-recovery",
+                      "gates":  [
+                                    "G-TASKBAR",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-taskbar/2.1.6",
+                      "mandatory":  true,
+                      "capability_id":  "taskbar-window-tracker",
+                      "requirement_id":  "taskbar-window-tracker",
+                      "scenario_id":  "authoritative-recovery",
+                      "gates":  [
+                                    "G-TASKBAR",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-taskbar/2.2.1",
+                      "mandatory":  true,
+                      "capability_id":  "taskbar-grouping",
+                      "requirement_id":  "taskbar-grouping",
+                      "scenario_id":  "stable-pin-order",
+                      "gates":  [
+                                    "G-TASKBAR"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-taskbar/2.2.2",
+                      "mandatory":  true,
+                      "capability_id":  "taskbar-grouping",
+                      "requirement_id":  "taskbar-grouping",
+                      "scenario_id":  "stable-pin-order",
+                      "gates":  [
+                                    "G-TASKBAR"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-taskbar/2.2.3",
+                      "mandatory":  true,
+                      "capability_id":  "taskbar-grouping",
+                      "requirement_id":  "taskbar-grouping",
+                      "scenario_id":  "stable-pin-order",
+                      "gates":  [
+                                    "G-TASKBAR"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-taskbar/2.2.4",
+                      "mandatory":  true,
+                      "capability_id":  "taskbar-grouping",
+                      "requirement_id":  "taskbar-grouping",
+                      "scenario_id":  "stable-pin-order",
+                      "gates":  [
+                                    "G-TASKBAR"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-taskbar/2.2.5",
+                      "mandatory":  true,
+                      "capability_id":  "taskbar-grouping",
+                      "requirement_id":  "taskbar-grouping",
+                      "scenario_id":  "stable-pin-order",
+                      "gates":  [
+                                    "G-TASKBAR"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-taskbar/2.3.1",
+                      "mandatory":  true,
+                      "capability_id":  "taskbar-interaction",
+                      "requirement_id":  "taskbar-interaction",
+                      "scenario_id":  "equivalent-actions",
+                      "gates":  [
+                                    "G-TASKBAR",
+                                    "G-A11Y-I18N"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-taskbar/2.3.2",
+                      "mandatory":  true,
+                      "capability_id":  "taskbar-interaction",
+                      "requirement_id":  "taskbar-interaction",
+                      "scenario_id":  "equivalent-actions",
+                      "gates":  [
+                                    "G-TASKBAR",
+                                    "G-A11Y-I18N"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-taskbar/2.3.3",
+                      "mandatory":  true,
+                      "capability_id":  "taskbar-interaction",
+                      "requirement_id":  "taskbar-interaction",
+                      "scenario_id":  "equivalent-actions",
+                      "gates":  [
+                                    "G-TASKBAR",
+                                    "G-A11Y-I18N"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-taskbar/2.3.4",
+                      "mandatory":  true,
+                      "capability_id":  "taskbar-interaction",
+                      "requirement_id":  "taskbar-interaction",
+                      "scenario_id":  "equivalent-actions",
+                      "gates":  [
+                                    "G-TASKBAR",
+                                    "G-A11Y-I18N"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-taskbar/2.3.5",
+                      "mandatory":  true,
+                      "capability_id":  "taskbar-interaction",
+                      "requirement_id":  "taskbar-interaction",
+                      "scenario_id":  "equivalent-actions",
+                      "gates":  [
+                                    "G-TASKBAR",
+                                    "G-A11Y-I18N"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-taskbar/3.1.1",
+                      "mandatory":  true,
+                      "capability_id":  "taskbar-fixed-entry",
+                      "requirement_id":  "taskbar-fixed-entry",
+                      "scenario_id":  "bridge-repair",
+                      "gates":  [
+                                    "G-TASKBAR",
+                                    "G-EXPLORER-BRIDGE",
+                                    "G-A11Y-I18N"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-taskbar/3.1.2",
+                      "mandatory":  true,
+                      "capability_id":  "taskbar-fixed-entry",
+                      "requirement_id":  "taskbar-fixed-entry",
+                      "scenario_id":  "bridge-repair",
+                      "gates":  [
+                                    "G-TASKBAR",
+                                    "G-EXPLORER-BRIDGE",
+                                    "G-A11Y-I18N"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-taskbar/3.1.3",
+                      "mandatory":  true,
+                      "capability_id":  "taskbar-fixed-entry",
+                      "requirement_id":  "taskbar-fixed-entry",
+                      "scenario_id":  "bridge-repair",
+                      "gates":  [
+                                    "G-TASKBAR",
+                                    "G-EXPLORER-BRIDGE",
+                                    "G-A11Y-I18N"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-taskbar/3.1.4",
+                      "mandatory":  true,
+                      "capability_id":  "taskbar-fixed-entry",
+                      "requirement_id":  "taskbar-fixed-entry",
+                      "scenario_id":  "bridge-repair",
+                      "gates":  [
+                                    "G-TASKBAR",
+                                    "G-EXPLORER-BRIDGE",
+                                    "G-A11Y-I18N"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-taskbar/3.1.5",
+                      "mandatory":  true,
+                      "capability_id":  "taskbar-fixed-entry",
+                      "requirement_id":  "taskbar-fixed-entry",
+                      "scenario_id":  "bridge-repair",
+                      "gates":  [
+                                    "G-TASKBAR",
+                                    "G-EXPLORER-BRIDGE",
+                                    "G-A11Y-I18N"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-taskbar/3.2.1",
+                      "mandatory":  true,
+                      "capability_id":  "taskbar-start-host",
+                      "requirement_id":  "taskbar-start-host",
+                      "scenario_id":  "truthful-availability",
+                      "gates":  [
+                                    "G-TASKBAR",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-taskbar/3.2.2",
+                      "mandatory":  true,
+                      "capability_id":  "taskbar-start-host",
+                      "requirement_id":  "taskbar-start-host",
+                      "scenario_id":  "truthful-availability",
+                      "gates":  [
+                                    "G-TASKBAR",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-taskbar/3.2.3",
+                      "mandatory":  true,
+                      "capability_id":  "taskbar-start-host",
+                      "requirement_id":  "taskbar-start-host",
+                      "scenario_id":  "truthful-availability",
+                      "gates":  [
+                                    "G-TASKBAR",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-taskbar/3.2.4",
+                      "mandatory":  true,
+                      "capability_id":  "taskbar-start-host",
+                      "requirement_id":  "taskbar-start-host",
+                      "scenario_id":  "truthful-availability",
+                      "gates":  [
+                                    "G-TASKBAR",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-taskbar/3.2.5",
+                      "mandatory":  true,
+                      "capability_id":  "taskbar-start-host",
+                      "requirement_id":  "taskbar-start-host",
+                      "scenario_id":  "truthful-availability",
+                      "gates":  [
+                                    "G-TASKBAR",
+                                    "G-SAFETY"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-taskbar/3.3.1",
+                      "mandatory":  true,
+                      "capability_id":  "taskbar-status",
+                      "requirement_id":  "taskbar-status",
+                      "scenario_id":  "truthful-providers",
+                      "gates":  [
+                                    "G-TASKBAR",
+                                    "G-A11Y-I18N"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-taskbar/3.3.2",
+                      "mandatory":  true,
+                      "capability_id":  "taskbar-status",
+                      "requirement_id":  "taskbar-status",
+                      "scenario_id":  "truthful-providers",
+                      "gates":  [
+                                    "G-TASKBAR",
+                                    "G-A11Y-I18N"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-taskbar/3.3.3",
+                      "mandatory":  true,
+                      "capability_id":  "taskbar-status",
+                      "requirement_id":  "taskbar-status",
+                      "scenario_id":  "truthful-providers",
+                      "gates":  [
+                                    "G-TASKBAR",
+                                    "G-A11Y-I18N"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-taskbar/3.3.4",
+                      "mandatory":  true,
+                      "capability_id":  "taskbar-status",
+                      "requirement_id":  "taskbar-status",
+                      "scenario_id":  "truthful-providers",
+                      "gates":  [
+                                    "G-TASKBAR",
+                                    "G-A11Y-I18N"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-taskbar/4.1.1",
+                      "mandatory":  true,
+                      "capability_id":  "taskbar-contract-gate",
+                      "requirement_id":  "taskbar-contract-gate",
+                      "scenario_id":  "headful-publication",
+                      "gates":  [
+                                    "G-TASKBAR",
+                                    "G-DPI-MONITOR",
+                                    "G-A11Y-I18N"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-taskbar/4.1.2",
+                      "mandatory":  true,
+                      "capability_id":  "taskbar-contract-gate",
+                      "requirement_id":  "taskbar-contract-gate",
+                      "scenario_id":  "headful-publication",
+                      "gates":  [
+                                    "G-TASKBAR",
+                                    "G-DPI-MONITOR",
+                                    "G-A11Y-I18N"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-taskbar/4.1.3",
+                      "mandatory":  true,
+                      "capability_id":  "taskbar-contract-gate",
+                      "requirement_id":  "taskbar-contract-gate",
+                      "scenario_id":  "headful-publication",
+                      "gates":  [
+                                    "G-TASKBAR",
+                                    "G-DPI-MONITOR",
+                                    "G-A11Y-I18N"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-taskbar/4.1.4",
+                      "mandatory":  true,
+                      "capability_id":  "taskbar-contract-gate",
+                      "requirement_id":  "taskbar-contract-gate",
+                      "scenario_id":  "headful-publication",
+                      "gates":  [
+                                    "G-TASKBAR",
+                                    "G-DPI-MONITOR",
+                                    "G-A11Y-I18N"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-taskbar/4.1.5",
+                      "mandatory":  true,
+                      "capability_id":  "taskbar-contract-gate",
+                      "requirement_id":  "taskbar-contract-gate",
+                      "scenario_id":  "headful-publication",
+                      "gates":  [
+                                    "G-TASKBAR",
+                                    "G-DPI-MONITOR",
+                                    "G-A11Y-I18N"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-taskbar/4.1.6",
+                      "mandatory":  true,
+                      "capability_id":  "taskbar-contract-gate",
+                      "requirement_id":  "taskbar-contract-gate",
+                      "scenario_id":  "headful-publication",
+                      "gates":  [
+                                    "G-TASKBAR",
+                                    "G-DPI-MONITOR",
+                                    "G-A11Y-I18N"
+                                ]
+                  },
+                  {
+                      "task_id":  "build-superdesktop-gpui-taskbar/4.1.7",
+                      "mandatory":  true,
+                      "capability_id":  "taskbar-contract-gate",
+                      "requirement_id":  "taskbar-contract-gate",
+                      "scenario_id":  "headful-publication",
+                      "gates":  [
+                                    "G-TASKBAR",
+                                    "G-DPI-MONITOR",
+                                    "G-A11Y-I18N"
+                                ]
+                  }
+              ]
+}

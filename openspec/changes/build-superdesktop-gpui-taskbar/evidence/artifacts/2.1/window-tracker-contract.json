@@ -1,0 +1,19 @@
+{
+    "schema":  "taskbar-window-tracker-contract/v1",
+    "incremental":  "owned-no-unwind-shell-hook",
+    "authority":  "EnumWindows",
+    "identity":  [
+                     "WindowId",
+                     "ApplicationId"
+                 ],
+    "filters":  [
+                    "invisible",
+                    "tool-window",
+                    "cloaked",
+                    "owned-transient"
+                ],
+    "queue_capacity":  2,
+    "overflow":  "single-flight-authoritative-refresh",
+    "stale":  "generation-suppressed",
+    "tests":  5
+}
