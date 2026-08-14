@@ -1,7 +1,9 @@
-cargo :     Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.37s
+cargo :     Checking taskbar-ui v0.1.0 (D:\SuperDesktop\SuperDesktop\crates\taskbar-ui)
 At D:\SuperDesktop\SuperDesktop\scripts\capture-m0-local-evidence.ps1:24 char:85
 + ... ,@('check',{cargo check --workspace --all-targets --locked --offline} ...
 +                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    + CategoryInfo          : NotSpecified: (    Finished `d...get(s) in 0.37s:String) [], RemoteException
+    + CategoryInfo          : NotSpecified: (    Checking ta...tes\taskbar-ui):String) [], RemoteException
     + FullyQualifiedErrorId : NativeCommandError
  
+    Checking superdesktop-app v0.1.0 (D:\SuperDesktop\SuperDesktop\crates\superdesktop-app)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.39s

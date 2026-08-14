@@ -1,10 +1,10 @@
 {
     "schema":  "m0-traceability-review/v1",
-    "revision":  "2dc3624f",
+    "revision":  "7f1f5aee",
     "total_tasks":  93,
-    "passed":  54,
-    "blocked":  39,
-    "coverage_percent":  58.06,
+    "passed":  56,
+    "blocked":  37,
+    "coverage_percent":  60.22,
     "tasks":  [
                   {
                       "id":  "1.1.1",
@@ -465,7 +465,7 @@
                   {
                       "id":  "5.1.4",
                       "group":  "5.1",
-                      "status":  "blocked",
+                      "status":  "passed",
                       "artifact":  "evidence/artifacts/5.1/performance.json"
                   },
                   {
@@ -477,7 +477,7 @@
                   {
                       "id":  "5.1.6",
                       "group":  "5.1",
-                      "status":  "blocked",
+                      "status":  "passed",
                       "artifact":  "evidence/artifacts/5.1/performance.json"
                   },
                   {

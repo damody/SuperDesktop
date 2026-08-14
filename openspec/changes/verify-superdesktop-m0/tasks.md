@@ -215,9 +215,9 @@
 - [x] 5.1.1 記錄 benchmark 工具版本、背景程序、暖機與樣本數設定。
 - [x] 5.1.2 量測冷啟動並保存逐 run timestamps。
 - [x] 5.1.3 量測 idle CPU 並保存原始 counter samples 與 median。
-- [ ] 5.1.4 量測 shell event-to-visible latency 並保存逐 event timestamps 與 p95。
+- [x] 5.1.4 量測 shell event-to-visible latency 並保存逐 event timestamps 與 p95。
 - [x] 5.1.5 量測 M0 working set 並保存原始 time series 與 peak/steady result。
-- [ ] 5.1.6 驗證四個 threshold 並發布 `G-PERF` disposition。
+- [x] 5.1.6 驗證四個 threshold 並發布 `G-PERF` disposition。
 
 ### 5.2 執行安全、授權與來源 Audit
 
