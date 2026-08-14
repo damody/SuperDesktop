@@ -59,8 +59,7 @@ impl Render for TaskbarView {
             .size_full()
             .flex()
             .flex_row()
-            .flex_wrap()
-            .items_center()
+            .items_stretch()
             .bg(linear_gradient(
                 90.,
                 linear_color_stop(rgb(0xd8eeb8), 0.),
@@ -80,7 +79,7 @@ impl Render for TaskbarView {
                     .aria_label("Start")
                     .tab_index(0)
                     .w(px(48.))
-                    .h(px(40.))
+                    .h(px(80.))
                     .flex_none()
                     .flex()
                     .items_center()
@@ -105,107 +104,119 @@ impl Render for TaskbarView {
             )
             .child(
                 div()
-                    .id("superexplorer-fixed-entry")
-                    .role(gpui::Role::Button)
-                    .aria_label(self.fixed_name.clone())
-                    .tab_index(0)
-                    .w(px(150.))
-                    .h(px(40.))
-                    .flex_none()
-                    .px_2()
+                    .h_full()
+                    .flex_1()
+                    .min_w_0()
                     .flex()
-                    .items_center()
-                    .cursor_pointer()
-                    .on_click(move |_, _, _| {
-                        if let Some(callback) = &fixed {
-                            callback();
-                        }
-                    })
-                    .on_key_down(move |event, _, _| {
-                        if matches!(event.keystroke.key.as_str(), "enter" | "space")
-                            && let Some(callback) = &fixed_key
-                        {
-                            callback();
-                        }
-                    })
-                    .child(self.fixed_name.clone()),
-            )
-            .children(self.tasks.iter().map(move |task| {
-                let callback = task_callback.clone();
-                let key_callback = callback.clone();
-                let stable_id = task.stable_id.clone();
-                let key_stable_id = stable_id.clone();
-                let available = task.available;
-                let state = if !available {
-                    "unavailable".to_owned()
-                } else if task.attention {
-                    "attention".to_owned()
-                } else if task.group_size > 1 {
-                    format!("group:{}", task.group_size)
-                } else if task.active {
-                    "active".to_owned()
-                } else if task.minimized {
-                    "minimized".to_owned()
-                } else {
-                    "available".to_owned()
-                };
-                let accessible_name = format!("{} [{state}]", task.name);
-                let display_name = if task.group_size > 1 {
-                    format!("{} ({})", task.name, task.group_size)
-                } else {
-                    task.name.clone()
-                };
-                let underline = if !available {
-                    rgb(0x6b6b6b)
-                } else if task.attention {
-                    rgb(0xff8c00)
-                } else if task.group_size > 1 {
-                    rgb(0x744da9)
-                } else if task.active {
-                    rgb(0x0067c0)
-                } else if task.minimized {
-                    rgb(0x87949a)
-                } else {
-                    rgb(0x1683d8)
-                };
-                div()
-                    .id(task.stable_id.clone())
-                    .role(gpui::Role::Button)
-                    .aria_label(accessible_name)
-                    .tab_index(0)
-                    .w(px(190.))
-                    .h(px(40.))
-                    .flex_none()
-                    .px_2()
-                    .flex()
-                    .items_center()
-                    .cursor_pointer()
+                    .flex_row()
+                    .flex_wrap()
+                    .content_start()
+                    .items_start()
                     .overflow_hidden()
-                    .whitespace_nowrap()
-                    .border_b_1()
-                    .border_color(underline)
-                    .when(!available, |element| element.opacity(0.55))
-                    .when(available, move |element| {
-                        element
+                    .child(
+                        div()
+                            .id("superexplorer-fixed-entry")
+                            .role(gpui::Role::Button)
+                            .aria_label(self.fixed_name.clone())
+                            .tab_index(0)
+                            .w(px(150.))
+                            .h(px(40.))
+                            .flex_none()
+                            .px_2()
+                            .flex()
+                            .items_center()
+                            .cursor_pointer()
                             .on_click(move |_, _, _| {
-                                if let Some(callback) = &callback {
-                                    callback(&stable_id);
+                                if let Some(callback) = &fixed {
+                                    callback();
                                 }
                             })
                             .on_key_down(move |event, _, _| {
                                 if matches!(event.keystroke.key.as_str(), "enter" | "space")
-                                    && let Some(callback) = &key_callback
+                                    && let Some(callback) = &fixed_key
                                 {
-                                    callback(&key_stable_id);
+                                    callback();
                                 }
                             })
-                    })
-                    .child(display_name)
-            }))
+                            .child(self.fixed_name.clone()),
+                    )
+                    .children(self.tasks.iter().map(move |task| {
+                        let callback = task_callback.clone();
+                        let key_callback = callback.clone();
+                        let stable_id = task.stable_id.clone();
+                        let key_stable_id = stable_id.clone();
+                        let available = task.available;
+                        let state = if !available {
+                            "unavailable".to_owned()
+                        } else if task.attention {
+                            "attention".to_owned()
+                        } else if task.group_size > 1 {
+                            format!("group:{}", task.group_size)
+                        } else if task.active {
+                            "active".to_owned()
+                        } else if task.minimized {
+                            "minimized".to_owned()
+                        } else {
+                            "available".to_owned()
+                        };
+                        let accessible_name = format!("{} [{state}]", task.name);
+                        let display_name = if task.group_size > 1 {
+                            format!("{} ({})", task.name, task.group_size)
+                        } else {
+                            task.name.clone()
+                        };
+                        let underline = if !available {
+                            rgb(0x6b6b6b)
+                        } else if task.attention {
+                            rgb(0xff8c00)
+                        } else if task.group_size > 1 {
+                            rgb(0x744da9)
+                        } else if task.active {
+                            rgb(0x0067c0)
+                        } else if task.minimized {
+                            rgb(0x87949a)
+                        } else {
+                            rgb(0x1683d8)
+                        };
+                        div()
+                            .id(task.stable_id.clone())
+                            .role(gpui::Role::Button)
+                            .aria_label(accessible_name)
+                            .tab_index(0)
+                            .w(px(190.))
+                            .h(px(40.))
+                            .flex_none()
+                            .px_2()
+                            .flex()
+                            .items_center()
+                            .cursor_pointer()
+                            .overflow_hidden()
+                            .whitespace_nowrap()
+                            .border_b_1()
+                            .border_color(underline)
+                            .when(!available, |element| element.opacity(0.55))
+                            .when(available, move |element| {
+                                element
+                                    .on_click(move |_, _, _| {
+                                        if let Some(callback) = &callback {
+                                            callback(&stable_id);
+                                        }
+                                    })
+                                    .on_key_down(move |event, _, _| {
+                                        if matches!(event.keystroke.key.as_str(), "enter" | "space")
+                                            && let Some(callback) = &key_callback
+                                        {
+                                            callback(&key_stable_id);
+                                        }
+                                    })
+                            })
+                            .child(display_name)
+                    })),
+            )
             .child(
                 div()
                     .ml_auto()
-                    .w(px(180.))
+                    .w(px(300.))
                     .h(px(80.))
                     .flex_none()
                     .px_2()
