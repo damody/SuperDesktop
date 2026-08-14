@@ -46,12 +46,18 @@ $localizationPath = Join-Path $verificationRoot 'evidence/artifacts/4.2/localiza
 $performancePath = Join-Path $verificationRoot 'evidence/artifacts/5.1/performance.json'
 $safetyPath = Join-Path $verificationRoot 'evidence/artifacts/5.2/safety-license-source.json'
 $architecturePath = Join-Path $verificationRoot 'evidence/artifacts/1.2/build-offline-gate.json'
+$traceabilityPath = Join-Path $verificationRoot 'evidence/artifacts/5.3/traceability-review.json'
+$coveragePath = Join-Path $verificationRoot 'evidence/coverage.json'
+$adjustmentsPath = Join-Path $verificationRoot 'evidence/adjustments.jsonl'
 $visual = Get-Content -Raw -Encoding UTF8 $visualPath | ConvertFrom-Json
 $accessibility = Get-Content -Raw -Encoding UTF8 $accessibilityPath | ConvertFrom-Json
 $localization = Get-Content -Raw -Encoding UTF8 $localizationPath | ConvertFrom-Json
 $performance = Get-Content -Raw -Encoding UTF8 $performancePath | ConvertFrom-Json
 $safety = Get-Content -Raw -Encoding UTF8 $safetyPath | ConvertFrom-Json
 $architecture = Get-Content -Raw -Encoding UTF8 $architecturePath | ConvertFrom-Json
+$traceability = Get-Content -Raw -Encoding UTF8 $traceabilityPath | ConvertFrom-Json
+$coverage = Get-Content -Raw -Encoding UTF8 $coveragePath | ConvertFrom-Json
+$adjustments = @(Get-Content -Encoding UTF8 $adjustmentsPath | Where-Object { $_ } | ForEach-Object { $_ | ConvertFrom-Json })
 
 if ($visual.visual_gate -ne 'passed' -or
     $visual.masked_global_ssim -lt $visual.minimum_ssim -or
@@ -86,6 +92,13 @@ if (@($safetyValues | Where-Object { $_ -ne 'passed' }).Count -gt 0 -or
     -not $architecture.all_exit_zero) {
     throw 'G-SAFETY/G-ARCH roll-up is not passed'
 }
+if (@($coverage.tasks).Count -ne 93 -or
+    @($traceability.tasks).Count -ne 93 -or
+    @($traceability.replacement_negative_fixtures | Where-Object { -not $_.rejected }).Count -ne 0 -or
+    @($adjustments).Count -eq 0 -or
+    @($adjustments | Where-Object { $_.status -ne 'replacement-passed' }).Count -ne 0) {
+    throw 'G-TRACE coverage/replacement/corrective lineage roll-up is not passed'
+}
 
 $wave6Path = Join-Path $evidence 'artifacts/4.2/wave6-local-gates.json'
 $wave6 = [ordered]@{
@@ -102,6 +115,7 @@ $wave6 = [ordered]@{
         'G-PERF' = 'passed'
         'G-SAFETY' = 'passed'
         'G-ARCH' = 'passed'
+        'G-TRACE' = 'passed'
     }
     source_artifacts = @(
         @{ path = 'verify-superdesktop-m0/evidence/artifacts/2.1/reference-ui-matrix.json'; sha256 = (Get-FileHash $visualPath -Algorithm SHA256).Hash },
@@ -109,7 +123,10 @@ $wave6 = [ordered]@{
         @{ path = 'verify-superdesktop-m0/evidence/artifacts/4.2/localization-ime.json'; sha256 = (Get-FileHash $localizationPath -Algorithm SHA256).Hash },
         @{ path = 'verify-superdesktop-m0/evidence/artifacts/5.1/performance.json'; sha256 = (Get-FileHash $performancePath -Algorithm SHA256).Hash },
         @{ path = 'verify-superdesktop-m0/evidence/artifacts/5.2/safety-license-source.json'; sha256 = (Get-FileHash $safetyPath -Algorithm SHA256).Hash },
-        @{ path = 'verify-superdesktop-m0/evidence/artifacts/1.2/build-offline-gate.json'; sha256 = (Get-FileHash $architecturePath -Algorithm SHA256).Hash }
+        @{ path = 'verify-superdesktop-m0/evidence/artifacts/1.2/build-offline-gate.json'; sha256 = (Get-FileHash $architecturePath -Algorithm SHA256).Hash },
+        @{ path = 'verify-superdesktop-m0/evidence/artifacts/5.3/traceability-review.json'; sha256 = (Get-FileHash $traceabilityPath -Algorithm SHA256).Hash },
+        @{ path = 'verify-superdesktop-m0/evidence/coverage.json'; sha256 = (Get-FileHash $coveragePath -Algorithm SHA256).Hash },
+        @{ path = 'verify-superdesktop-m0/evidence/adjustments.jsonl'; sha256 = (Get-FileHash $adjustmentsPath -Algorithm SHA256).Hash }
     )
     unresolved = @(
         'physical-five-dpi-matrix',

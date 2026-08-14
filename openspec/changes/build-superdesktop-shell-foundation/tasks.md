@@ -175,7 +175,7 @@
 - [x] 4.2.7 驗證 `G-A11Y-I18N` passed。
 - [x] 4.2.8 驗證 `G-PERF` passed。
 - [x] 4.2.9 驗證 `G-SAFETY` 與 `G-ARCH` passed。
-- [ ] 4.2.10 驗證 `G-TRACE`、coverage、replacement 與 corrective lineage passed。
+- [x] 4.2.10 驗證 `G-TRACE`、coverage、replacement 與 corrective lineage passed。
 - [ ] 4.2.11 驗證 Independent reviewer 報告無未解 P0/P1。
 - [ ] 4.2.12 封存 verification child 並記錄 immutable archive revision。
 - [ ] 4.2.13 發布所有列名 gates passed、無 blocked/stale/N/A 的 M0 release disposition。
