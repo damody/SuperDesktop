@@ -120,7 +120,7 @@ foreach ($crateName in $expectedNames) {
             $hasGuard = $true
         }
 
-        if (($crateName -in @('desktop-ui', 'taskbar-ui')) -and ($source -match '(?ms)pub\s+(?:use\s+[^;]*|trait\s+.*?|fn\s+.*?|type\s+.*?|struct\s+.*?|enum\s+.*?)(?:HWND|HANDLE|IUnknown|IDesktop|IShell|COM)')) {
+        if (($crateName -in @('desktop-ui', 'taskbar-ui')) -and ($source -match '(?mi)^\s*pub\s+(?:use\s+[^;]*|trait\s+[^\r\n{;]*|fn\s+[^\r\n{;]*|type\s+[^\r\n{;]*|struct\s+[^\r\n{;]*|enum\s+[^\r\n{;]*)(?:HWND|HANDLE|IUnknown|IDesktop|IShell|COM)(?:\b|_)')) {
             Add-Diagnostic $diagnostics 'UI_PUBLIC_WINDOWS_OR_COM_TYPE' "$crateName exports a Windows/COM type."
         }
         if ($crateName -ne 'platform-win' -and $source -match '(?m)^\s*#!\[allow\(unsafe_code\)\]') { Add-Diagnostic $diagnostics 'UNSAFE_OVERRIDE_OUTSIDE_PLATFORM' $crateName }

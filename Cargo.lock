@@ -929,6 +929,7 @@ dependencies = [
  "gpui_windows",
  "platform-win",
  "raw-window-handle",
+ "shell-core",
 ]
 
 [[package]]
