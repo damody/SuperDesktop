@@ -73,12 +73,12 @@
 **Gate／Evidence：** `G-ARCH`、`G-TRACE`、core reconciliation；program `evidence/artifacts/3.1/`。
 **完成門檻：** Strict/tasks validation、mandatory evidence、core gates、contract/handoff hash 與 archive 分項通過。
 
-- [ ] 3.1.1 記錄 child `openspec validate --strict` 成功輸出。
-- [ ] 3.1.2 記錄 child 詳細 tasks validator 成功輸出。
-- [ ] 3.1.3 驗證 child mandatory evidence index 無 failed/blocked/stale/N/A/invalid replacement。
-- [ ] 3.1.4 驗證 reducer/reconciliation/settings/fixture contract dispositions passed。
-- [ ] 3.1.5 驗證包含 bridge DTO 的 shell-core public contract SHA-256 manifest。
-- [ ] 3.1.6 驗證 core handoff manifest 已由所有 Wave 4 consumers 接受。
+- [x] 3.1.1 記錄 child `openspec validate --strict` 成功輸出。
+- [x] 3.1.2 記錄 child 詳細 tasks validator 成功輸出。
+- [x] 3.1.3 驗證 child mandatory evidence index 無 failed/blocked/stale/N/A/invalid replacement。
+- [x] 3.1.4 驗證 reducer/reconciliation/settings/fixture contract dispositions passed。
+- [x] 3.1.5 驗證包含 bridge DTO 的 shell-core public contract SHA-256 manifest。
+- [x] 3.1.6 驗證 core handoff manifest 已由所有 Wave 4 consumers 接受。
 - [ ] 3.1.7 封存 child 並記錄 immutable archive revision。
 
 ### 3.2 驗證並封存 GPUI Desktop

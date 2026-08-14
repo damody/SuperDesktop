@@ -1,0 +1,20 @@
+{
+  "change": "build-superdesktop-shell-foundation",
+  "l2": "3.1",
+  "status": "passed-active-archive-deferred",
+  "producer": "Primary integrator",
+  "consumer": "Wave 4 desktop, taskbar, and bridge",
+  "child_change": "build-superdesktop-shell-core",
+  "child_progress": "35/35",
+  "implementation_revision": "b5457cbc",
+  "evidence_revision": "bb7130c1ee3718d46ea65d0a4b4cd8ca5a50f2d2",
+  "contract_manifest_sha256": "EC7274261C39122474322A398049F8B8FD41B6AAC1AA3927E85C42B74C297C18",
+  "combined_input_sha256": "626C15588B08882CB523EC5B33512535589C005A9F3A9B2F45FFCE7395C19FEA",
+  "child_handoff_sha256": "E37E1AE2D0FD6FE16A71C75769C195100262CE0A2BD76A1F21E720D57DC2F565",
+  "gates": {
+    "G-ARCH": "passed",
+    "G-TRACE": "passed",
+    "G-SAFETY": "passed"
+  },
+  "archive": "deferred-by-user"
+}
