@@ -1,5 +1,5 @@
 cargo :     Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.43s
-At D:\SuperDesktop\SuperDesktop\scripts\capture-m0-local-evidence.ps1:24 char:156
+At D:\SuperDesktop\SuperDesktop\scripts\capture-m0-local-evidence.ps1:25 char:156
 + ... @('clippy',{cargo clippy --workspace --all-targets --locked --offline ...
 +                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     + CategoryInfo          : NotSpecified: (    Finished `d...get(s) in 0.43s:String) [], RemoteException

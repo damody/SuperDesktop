@@ -18,6 +18,18 @@ function Write-Json([string]$Path, $Value) {
     Write-Text $Path (($Value | ConvertTo-Json -Depth 20) + "`n")
 }
 
+function Mark-PassedTasks([string]$TasksPath, [string[]]$TaskIds) {
+    if (-not $TaskIds -or $TaskIds.Count -eq 0) { return }
+    $text = Get-Content -Raw -Encoding UTF8 $TasksPath
+    $updated = $text
+    foreach ($id in @($TaskIds | Sort-Object -Unique)) {
+        $escaped = [regex]::Escape($id)
+        if ($updated -notmatch "(?m)^\s*- \[[ xX]\]\s+$escaped\b") { throw "Cannot mark unknown task $id in $TasksPath" }
+        $updated = [regex]::Replace($updated, "(?m)^(\s*- )\[ \](\s+$escaped\b)", '$1[x]$2')
+    }
+    if ($updated -ne $text) { Write-Text $TasksPath $updated }
+}
+
 function Invoke-Captured([string]$Name, [scriptblock]$Command) {
     $prior = $ErrorActionPreference
     $ErrorActionPreference = 'Continue'
@@ -47,6 +59,8 @@ $performancePath = Join-Path $verificationRoot 'evidence/artifacts/5.1/performan
 $safetyPath = Join-Path $verificationRoot 'evidence/artifacts/5.2/safety-license-source.json'
 $architecturePath = Join-Path $verificationRoot 'evidence/artifacts/1.2/build-offline-gate.json'
 $traceabilityPath = Join-Path $verificationRoot 'evidence/artifacts/5.3/traceability-review.json'
+$blockedDispositionPath = Join-Path $verificationRoot 'evidence/blocked-disposition.json'
+$dpiMatrixPath = Join-Path $verificationRoot 'evidence/artifacts/2.2/dpi-matrix.json'
 $coveragePath = Join-Path $verificationRoot 'evidence/coverage.json'
 $adjustmentsPath = Join-Path $verificationRoot 'evidence/adjustments.jsonl'
 $visual = Get-Content -Raw -Encoding UTF8 $visualPath | ConvertFrom-Json
@@ -56,6 +70,8 @@ $performance = Get-Content -Raw -Encoding UTF8 $performancePath | ConvertFrom-Js
 $safety = Get-Content -Raw -Encoding UTF8 $safetyPath | ConvertFrom-Json
 $architecture = Get-Content -Raw -Encoding UTF8 $architecturePath | ConvertFrom-Json
 $traceability = Get-Content -Raw -Encoding UTF8 $traceabilityPath | ConvertFrom-Json
+$blockedDisposition = Get-Content -Raw -Encoding UTF8 $blockedDispositionPath | ConvertFrom-Json
+$dpiMatrix = Get-Content -Raw -Encoding UTF8 $dpiMatrixPath | ConvertFrom-Json
 $coverage = Get-Content -Raw -Encoding UTF8 $coveragePath | ConvertFrom-Json
 $adjustments = @(Get-Content -Encoding UTF8 $adjustmentsPath | Where-Object { $_ } | ForEach-Object { $_ | ConvertFrom-Json })
 
@@ -100,6 +116,35 @@ if (@($coverage.tasks).Count -ne 93 -or
     throw 'G-TRACE coverage/replacement/corrective lineage roll-up is not passed'
 }
 
+$windows10Passed = $blockedDisposition.windows_10_22h2.status -eq 'passed'
+$physicalMixedPassed = $blockedDisposition.physical_mixed_dpi.status -eq 'passed'
+$independentReviewPassed = $blockedDisposition.independent_review.status -eq 'passed'
+$allDpiPassed = @($dpiMatrix.remaining_task_ids).Count -eq 0 -and @($dpiMatrix.passed_task_ids).Count -eq 5
+$m0EvidenceComplete = $traceability.blocked -eq 0 -and $traceability.release_disposition -eq 'passed-releasable'
+$foundationPassedTasks = @()
+if ($windows10Passed) { $foundationPassedTasks += '4.2.5' }
+if ($physicalMixedPassed -and $allDpiPassed) { $foundationPassedTasks += '4.2.6' }
+if ($independentReviewPassed) { $foundationPassedTasks += '4.2.11' }
+if ($m0EvidenceComplete) { $foundationPassedTasks += '4.2.3' }
+Mark-PassedTasks (Join-Path $root 'tasks.md') $foundationPassedTasks
+$wave6SourceArtifacts = @(
+    @{ path = 'verify-superdesktop-m0/evidence/artifacts/2.1/reference-ui-matrix.json'; sha256 = (Get-FileHash $visualPath -Algorithm SHA256).Hash },
+    @{ path = 'verify-superdesktop-m0/evidence/artifacts/4.1/accessibility-input.json'; sha256 = (Get-FileHash $accessibilityPath -Algorithm SHA256).Hash },
+    @{ path = 'verify-superdesktop-m0/evidence/artifacts/4.2/localization-ime.json'; sha256 = (Get-FileHash $localizationPath -Algorithm SHA256).Hash },
+    @{ path = 'verify-superdesktop-m0/evidence/artifacts/5.1/performance.json'; sha256 = (Get-FileHash $performancePath -Algorithm SHA256).Hash },
+    @{ path = 'verify-superdesktop-m0/evidence/artifacts/5.2/safety-license-source.json'; sha256 = (Get-FileHash $safetyPath -Algorithm SHA256).Hash },
+    @{ path = 'verify-superdesktop-m0/evidence/artifacts/1.2/build-offline-gate.json'; sha256 = (Get-FileHash $architecturePath -Algorithm SHA256).Hash },
+    @{ path = 'verify-superdesktop-m0/evidence/artifacts/2.2/dpi-matrix.json'; sha256 = (Get-FileHash $dpiMatrixPath -Algorithm SHA256).Hash },
+    @{ path = 'verify-superdesktop-m0/evidence/artifacts/5.3/traceability-review.json'; sha256 = (Get-FileHash $traceabilityPath -Algorithm SHA256).Hash },
+    @{ path = 'verify-superdesktop-m0/evidence/blocked-disposition.json'; sha256 = (Get-FileHash $blockedDispositionPath -Algorithm SHA256).Hash },
+    @{ path = 'verify-superdesktop-m0/evidence/coverage.json'; sha256 = (Get-FileHash $coveragePath -Algorithm SHA256).Hash },
+    @{ path = 'verify-superdesktop-m0/evidence/adjustments.jsonl'; sha256 = (Get-FileHash $adjustmentsPath -Algorithm SHA256).Hash }
+)
+foreach ($relative in @('evidence/artifacts/3.1/windows10-gate.json','evidence/artifacts/2.4/physical-mixed-dpi-gate.json','evidence/artifacts/5.3/independent-review-gate.json')) {
+    $full = Join-Path $verificationRoot $relative
+    if (Test-Path -LiteralPath $full -PathType Leaf) { $wave6SourceArtifacts += @{ path = "verify-superdesktop-m0/$relative"; sha256 = (Get-FileHash $full -Algorithm SHA256).Hash } }
+}
+
 $wave6Path = Join-Path $evidence 'artifacts/4.2/wave6-local-gates.json'
 $wave6 = [ordered]@{
     schema = 'foundation-wave6-local-gates/v1'
@@ -116,23 +161,17 @@ $wave6 = [ordered]@{
         'G-SAFETY' = 'passed'
         'G-ARCH' = 'passed'
         'G-TRACE' = 'passed'
+        'G-SHELL-TAKEOVER' = if ($windows10Passed) { 'passed' } else { 'blocked' }
+        'G-GUARDIAN-RECOVERY' = if ($windows10Passed) { 'passed' } else { 'blocked' }
+        'G-DPI-MONITOR' = if ($physicalMixedPassed -and $allDpiPassed) { 'passed' } else { 'blocked' }
     }
-    source_artifacts = @(
-        @{ path = 'verify-superdesktop-m0/evidence/artifacts/2.1/reference-ui-matrix.json'; sha256 = (Get-FileHash $visualPath -Algorithm SHA256).Hash },
-        @{ path = 'verify-superdesktop-m0/evidence/artifacts/4.1/accessibility-input.json'; sha256 = (Get-FileHash $accessibilityPath -Algorithm SHA256).Hash },
-        @{ path = 'verify-superdesktop-m0/evidence/artifacts/4.2/localization-ime.json'; sha256 = (Get-FileHash $localizationPath -Algorithm SHA256).Hash },
-        @{ path = 'verify-superdesktop-m0/evidence/artifacts/5.1/performance.json'; sha256 = (Get-FileHash $performancePath -Algorithm SHA256).Hash },
-        @{ path = 'verify-superdesktop-m0/evidence/artifacts/5.2/safety-license-source.json'; sha256 = (Get-FileHash $safetyPath -Algorithm SHA256).Hash },
-        @{ path = 'verify-superdesktop-m0/evidence/artifacts/1.2/build-offline-gate.json'; sha256 = (Get-FileHash $architecturePath -Algorithm SHA256).Hash },
-        @{ path = 'verify-superdesktop-m0/evidence/artifacts/5.3/traceability-review.json'; sha256 = (Get-FileHash $traceabilityPath -Algorithm SHA256).Hash },
-        @{ path = 'verify-superdesktop-m0/evidence/coverage.json'; sha256 = (Get-FileHash $coveragePath -Algorithm SHA256).Hash },
-        @{ path = 'verify-superdesktop-m0/evidence/adjustments.jsonl'; sha256 = (Get-FileHash $adjustmentsPath -Algorithm SHA256).Hash }
-    )
+    independent_review = if ($independentReviewPassed) { 'passed' } else { 'blocked' }
+    source_artifacts = $wave6SourceArtifacts
     unresolved = @(
-        'physical-five-dpi-matrix',
-        'physical-mixed-dpi-dual-monitor',
-        'windows-10-22h2',
-        'independent-final-review',
+        if (-not $allDpiPassed) { 'physical-five-dpi-matrix' }
+        if (-not $physicalMixedPassed) { 'physical-mixed-dpi-dual-monitor' }
+        if (-not $windows10Passed) { 'windows-10-22h2' }
+        if (-not $independentReviewPassed) { 'independent-final-review' }
         'archive-deferred-by-user'
     )
 }
