@@ -1,6 +1,6 @@
 use gpui::{
     Context, InteractiveElement, IntoElement, ParentElement, Render, StatefulInteractiveElement,
-    Styled, Window, div, rgb,
+    Styled, Window, div, px, rgb,
 };
 
 use crate::AccessibleNode;
@@ -33,7 +33,11 @@ impl Render for DesktopView {
             .role(gpui::Role::List)
             .aria_label(self.accessible_root_name.clone())
             .size_full()
+            .flex()
+            .flex_col()
             .bg(background)
+            .text_color(rgb(0xf3f7f8))
+            .text_size(px(16.))
             .child(self.accessible_root_name.clone())
             .children(self.items.iter().map(|item| {
                 div()
@@ -42,6 +46,7 @@ impl Render for DesktopView {
                     .aria_label(item.name.clone())
                     .aria_selected(item.selected)
                     .tab_index(0)
+                    .p_2()
                     .on_click(|_, _, _| {})
                     .child(item.name.clone())
             }))

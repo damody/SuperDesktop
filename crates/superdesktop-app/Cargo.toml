@@ -16,7 +16,10 @@ workspace = true
 [dependencies]
 desktop-ui = { path = "../desktop-ui" }
 explorer-bridge = { path = "../explorer-bridge" }
+gpui.workspace = true
+gpui_windows.workspace = true
 platform-win = { path = "../platform-win" }
+raw-window-handle.workspace = true
 settings-store = { path = "../settings-store" }
 shell-core = { path = "../shell-core" }
 taskbar-ui = { path = "../taskbar-ui" }

@@ -6,6 +6,7 @@ compile_error!("SuperDesktop is supported only on Windows targets.");
 mod composition;
 mod identity;
 mod lifecycle;
+mod surface_runtime;
 
 pub use composition::{CompositionRoot, RouteSource, RoutedTerminal};
 pub use lifecycle::{
@@ -13,11 +14,14 @@ pub use lifecycle::{
     LeaseRegistry, LifecycleError, Mutation, Phase, ShutdownStep, TakeoverCoordinator,
 };
 
-pub fn run_product(request: ExecutionRequest) -> Result<(), &'static str> {
+fn admit_shell(
+    request: &ExecutionRequest,
+) -> Result<Option<platform_win::common::owner_lease::SessionOwnerMutex>, &'static str> {
+    platform_win::common::monitor_dpi_start::enable_per_monitor_v2()?;
     if request.shell {
         let probe = platform_win::common::admission::probe_current_session()?;
         Admission::evaluate(
-            &request,
+            request,
             &EnvironmentFacts {
                 safe_mode: probe.safe_mode,
                 interactive: probe.interactive,
@@ -42,14 +46,41 @@ pub fn run_product(request: ExecutionRequest) -> Result<(), &'static str> {
         if !start_available {
             return Err("start-host-unavailable");
         }
-        // The long-lived GPUI runtime consumes the same typed coordinator. The
-        // binary preflight intentionally performs no mutation until those
-        // surfaces report ready.
-        owner.release()?;
-        return Ok(());
+        return Ok(Some(owner));
     }
+    Ok(None)
+}
+
+pub fn run_preflight(request: ExecutionRequest) -> Result<(), &'static str> {
+    let owner = admit_shell(&request)?;
     let mut root = CompositionRoot::new(request);
-    root.start()
+    if !request.shell {
+        root.start()?;
+    }
+    if let Some(owner) = owner {
+        owner.release()?;
+    }
+    Ok(())
+}
+
+pub fn run_product(request: ExecutionRequest) -> Result<(), &'static str> {
+    run_product_for(request, None)
+}
+
+pub fn run_product_for(
+    request: ExecutionRequest,
+    duration: Option<std::time::Duration>,
+) -> Result<(), &'static str> {
+    let owner = admit_shell(&request)?;
+    let mut root = CompositionRoot::new(request);
+    if !request.shell {
+        root.start()?;
+    }
+    surface_runtime::run(request.shell, duration)?;
+    if let Some(owner) = owner {
+        owner.release()?;
+    }
+    Ok(())
 }
 
 /// Evidence-only parent mode for the real restricted guardian topology. The

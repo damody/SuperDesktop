@@ -26,7 +26,7 @@ $liveText=Invoke-Checked 'lifecycle live probe' {cargo run --release -p superdes
 if($live.admission.safe_mode -or -not $live.admission.interactive -or -not $live.owner.revalidated -or -not $live.explorer.authenticode_verified -or -not $live.start_available){throw 'live lifecycle preflight failed'}
 Write-Json (Join-Path $evidence 'artifacts/1.1/live-preview-admission.json') $live
 
-& (Join-Path $workspace 'target/release/superdesktop-app.exe');if($LASTEXITCODE -ne 0){throw 'preview product cycle failed'}
+& (Join-Path $workspace 'target/release/superdesktop-app.exe') --verification-capture-ms 500;if($LASTEXITCODE -ne 0){throw 'preview product cycle failed'}
 $preview=[ordered]@{schema='lifecycle-preview-cycle/v1';default_mode='preview';explicit_shell_opt_in=$false;explorer_before=$explorerBefore;explorer_after=(Explorer-Count);registry_equal=((Registry-Snapshot|ConvertTo-Json -Depth 20 -Compress)-eq($registryBefore|ConvertTo-Json -Depth 20 -Compress));work_area_mutation=$false;appbar_mutation=$false}
 if($preview.explorer_before-ne$preview.explorer_after-or-not$preview.registry_equal){throw 'preview zero mutation failed'}
 Write-Json (Join-Path $evidence 'artifacts/1.1/preview-zero-mutation.json') $preview
@@ -67,7 +67,7 @@ $inventory=@();foreach($file in $callbackFiles){$path=Join-Path $workspace $file
 $ffiTests=Invoke-Checked 'ffi release tests' {cargo test --release -p platform-win ffi_boundary -- --nocapture}
 Write-Json (Join-Path $evidence 'artifacts/4.1/callback-inventory.json') ([ordered]@{schema='lifecycle-callback-inventory/v1';wrapper_sha256=(Get-FileHash $ffiSource -Algorithm SHA256).Hash;wrapper='catch_unwind+typed-fatal+ownership-validation+at-most-once';inventory=$inventory;panic_result=$live.ffi;release_tests=$ffiTests.Trim();double_callback='passed';shutdown_race='passed';handle_close_pair='passed'})
 
-& (Join-Path $workspace 'target/release/superdesktop-app.exe') --shell;if($LASTEXITCODE-ne0){throw 'normal shell admission cycle failed'}
+& (Join-Path $workspace 'target/release/superdesktop-app.exe') --verification-capture-ms 500 --shell;if($LASTEXITCODE-ne0){throw 'normal shell admission cycle failed'}
 $registryAfter=Registry-Snapshot;$explorerAfter=Explorer-Count;$registryEqual=(($registryBefore|ConvertTo-Json -Depth 20 -Compress)-eq($registryAfter|ConvertTo-Json -Depth 20 -Compress))
 if(!$registryEqual-or$explorerBefore-ne$explorerAfter){throw 'permanent shell state mutation detected'}
 Write-Json (Join-Path $evidence 'artifacts/4.2/permanent-mutation-audit.json') ([ordered]@{schema='lifecycle-permanent-mutation-audit/v1';baseline=$registryBefore;after=$registryAfter;registry_equal=$registryEqual;explorer_before=$explorerBefore;explorer_after=$explorerAfter;preview_cycle='passed';normal_shell_cycle='passed';forced_crash_cycles=10;installer_mutation=$false;autostart_mutation=$false;dispositions=@{'G-SHELL-TAKEOVER-PROVISIONAL'='passed';'G-GUARDIAN-RECOVERY-PROVISIONAL'='passed';'G-SAFETY'='passed';'G-SHELL-TAKEOVER'='not-determined';'G-GUARDIAN-RECOVERY'='not-determined'}})

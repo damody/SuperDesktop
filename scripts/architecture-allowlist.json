@@ -20,7 +20,10 @@
     "superdesktop-app": [
       "desktop-ui",
       "explorer-bridge",
+      "gpui",
+      "gpui_windows",
       "platform-win",
+      "raw-window-handle",
       "settings-store",
       "shell-core",
       "serde_json",

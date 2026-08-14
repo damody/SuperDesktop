@@ -20,10 +20,35 @@ use windows::{
 
 const MONITORINFOF_PRIMARY: u32 = 1;
 const MDT_EFFECTIVE_DPI: u32 = 0;
+const DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2: isize = -4;
 
 #[link(name = "Shcore")]
 unsafe extern "system" {
     fn GetDpiForMonitor(monitor: HMONITOR, dpi_type: u32, dpi_x: *mut u32, dpi_y: *mut u32) -> i32;
+    fn SetProcessDpiAwarenessContext(value: isize) -> i32;
+    fn GetThreadDpiAwarenessContext() -> isize;
+    fn AreDpiAwarenessContextsEqual(first: isize, second: isize) -> i32;
+}
+
+pub fn enable_per_monitor_v2() -> Result<(), &'static str> {
+    // SAFETY: awareness is inspected and, if necessary, established before
+    // SuperDesktop creates any HWND or reads monitor geometry.
+    let current = unsafe { GetThreadDpiAwarenessContext() };
+    if unsafe { AreDpiAwarenessContextsEqual(current, DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2) }
+        != 0
+    {
+        return Ok(());
+    }
+    if unsafe { SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2) } == 0 {
+        return Err("set-per-monitor-v2");
+    }
+    let updated = unsafe { GetThreadDpiAwarenessContext() };
+    if unsafe { AreDpiAwarenessContextsEqual(updated, DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2) }
+        == 0
+    {
+        return Err("per-monitor-v2-not-active");
+    }
+    Ok(())
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

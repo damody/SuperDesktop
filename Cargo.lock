@@ -3712,7 +3712,10 @@ version = "0.1.0"
 dependencies = [
  "desktop-ui",
  "explorer-bridge",
+ "gpui",
+ "gpui_windows",
  "platform-win",
+ "raw-window-handle",
  "serde_json",
  "settings-store",
  "shell-core",

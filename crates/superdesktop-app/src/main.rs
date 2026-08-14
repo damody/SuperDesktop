@@ -3,7 +3,7 @@
 #[cfg(not(windows))]
 compile_error!("SuperDesktop is supported only on Windows targets.");
 
-use superdesktop_app::{ExecutionRequest, run_product};
+use superdesktop_app::{ExecutionRequest, run_preflight, run_product, run_product_for};
 
 fn main() {
     let args = std::env::args_os().skip(1).collect::<Vec<_>>();
@@ -40,11 +40,36 @@ fn main() {
             eprintln!("verification hold duration exceeds bound");
             std::process::exit(2);
         }
-        if let Err(reason) = run_product(ExecutionRequest::default()) {
+        if let Err(reason) = run_preflight(ExecutionRequest::default()) {
             eprintln!("verification preview failed: {reason}");
             std::process::exit(3);
         }
         std::thread::sleep(std::time::Duration::from_millis(milliseconds));
+        return;
+    }
+    if args
+        .first()
+        .is_some_and(|arg| arg == "--verification-capture-ms")
+    {
+        let Some(milliseconds) = args
+            .get(1)
+            .and_then(|value| value.to_str())
+            .and_then(|value| value.parse::<u64>().ok())
+        else {
+            eprintln!("invalid verification capture duration");
+            std::process::exit(2);
+        };
+        if !(250..=60_000).contains(&milliseconds) {
+            eprintln!("verification capture duration outside bounds");
+            std::process::exit(2);
+        }
+        if let Err(reason) = run_product_for(
+            ExecutionRequest::from_args(args.iter().skip(2).cloned()),
+            Some(std::time::Duration::from_millis(milliseconds)),
+        ) {
+            eprintln!("verification capture failed: {reason}");
+            std::process::exit(3);
+        }
         return;
     }
     let request = ExecutionRequest::from_args(args);
