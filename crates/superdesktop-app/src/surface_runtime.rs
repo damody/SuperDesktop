@@ -187,6 +187,20 @@ fn status() -> StatusRegion {
     )
 }
 
+fn fixed_label() -> &'static str {
+    match std::env::var("SUPERDESKTOP_LOCALE").as_deref() {
+        Ok("zh-CN") => "超级资源管理器",
+        Ok("zh-TW") => "超級檔案總管",
+        _ => "SuperExplorer",
+    }
+}
+
+fn fixed_node(monitor: &str) -> AccessibleNode {
+    let mut node = AccessibleNode::fixed_superexplorer(monitor, false, false);
+    node.name = fixed_label().into();
+    node
+}
+
 pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> {
     enable_per_monitor_v2()?;
     let snapshot = snapshot_real_monitors()?;
@@ -221,11 +235,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                     }
                     cx.new(|_| {
                         DesktopView::new(
-                            vec![AccessibleNode::fixed_superexplorer(
-                                &desktop_monitor.device_name,
-                                false,
-                                false,
-                            )],
+                            vec![fixed_node(&desktop_monitor.device_name)],
                             false,
                         )
                         .with_fixed_action(Rc::new(launch_superexplorer))
@@ -298,7 +308,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                             &["superexplorer".into()],
                         ),
                         tasks: taskbar_tasks,
-                        fixed_name: "SuperExplorer".into(),
+                        fixed_name: fixed_label().into(),
                         status: status(),
                         callbacks: Some(TaskbarCallbacks {
                             start: Rc::new(|| {
@@ -322,6 +332,9 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                 *terminal_for_app.borrow_mut() = Some(Err(error));
                 cx.quit();
                 return;
+            }
+            if let Ok(locale) = std::env::var("SUPERDESKTOP_LOCALE") {
+                trace_action(&format!("locale:{locale}"));
             }
 
             let refresh_handles = taskbar_handles.clone();
