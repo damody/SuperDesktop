@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "change": "add-superdesktop-start-search",
+  "result": "owned_shell_start_production_path_wired",
+  "captured_at": "2026-08-17",
+  "implemented": [
+    "shell-mode pointer and keyboard Start activation opens the same GPUI-owned StartView instead of delegating to Explorer",
+    "preview mode retains the controlled Windows Start-host probe",
+    "the Start surface is positioned above the taskbar in per-monitor logical coordinates and receives keyboard focus",
+    "the initial catalog contains admitted Start Menu applications and curated Windows settings",
+    "committed keyboard text queries applications, files, and settings through the adjacent isolated provider host",
+    "query generations clear superseded batches and accept only matching provider results",
+    "arrow navigation, Enter activation, Escape dismissal, pointer activation, dialog/list/listitem roles, and focus styling are wired",
+    "file and application results activate through canonical association admission; settings use an allowlisted ms-settings URI route",
+    "the provider request has a two-second deadline and failure leaves the owned Start surface usable",
+    "activating a result dismisses the Start surface and a second Start invocation toggles an existing surface closed"
+  ],
+  "remaining_production_enrichment": [
+    "persist user pin and recent-order changes through settings-store; current production catalog uses deterministic discovery order",
+    "wire explicit restart, shutdown, and sign-out actions behind native confirmation; the current Power region is present but non-mutating",
+    "wire native IME composition callbacks and the 50 millisecond debounce timer in the GPUI text-input adapter; the model contracts and tests already enforce those semantics",
+    "capture a shell-mode headful first-frame and provider timing artifact on the Windows 10 evidence machine"
+  ],
+  "commands": [
+    "cargo clippy -p taskbar-ui -p platform-win -p shell-provider-host -p superdesktop-app --all-targets --offline -- -D warnings",
+    "cargo test -p taskbar-ui -p platform-win -p shell-provider-host -p superdesktop-app --offline",
+    "cargo build -p shell-provider-host -p superdesktop-app --offline",
+    "target/debug/superdesktop-app.exe --verification-capture-ms 750"
+  ],
+  "verification": {
+    "clippy": "passed",
+    "tests": {
+      "taskbar-ui": "24 passed",
+      "platform-win": "41 passed",
+      "shell-provider-host": "5 passed including process integration",
+      "superdesktop-app": "7 passed"
+    },
+    "preview_smoke_exit_code": 0
+  }
+}

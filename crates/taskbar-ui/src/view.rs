@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use gpui::{
-    Context, FocusHandle, InteractiveElement, IntoElement, ParentElement, Render,
+    App, Context, FocusHandle, InteractiveElement, IntoElement, ParentElement, Render,
     StatefulInteractiveElement, Styled, Window, div, linear_color_stop, linear_gradient,
     prelude::FluentBuilder as _, px, rgb, svg,
 };
@@ -20,7 +20,7 @@ pub struct TaskbarView {
 
 #[derive(Clone)]
 pub struct TaskbarCallbacks {
-    pub start: Rc<dyn Fn()>,
+    pub start: Rc<dyn Fn(&mut App)>,
     pub fixed: Rc<dyn Fn()>,
     pub task: Rc<dyn Fn(&str)>,
     pub rendered: Rc<dyn Fn()>,
@@ -119,16 +119,16 @@ impl Render for TaskbarView {
                                     )),
                             )
                     })
-                    .on_click(move |_, _, _| {
+                    .on_click(move |_, _, cx| {
                         if let Some(callback) = &start {
-                            callback();
+                            callback(cx);
                         }
                     })
-                    .on_key_down(move |event, _, _| {
+                    .on_key_down(move |event, _, cx| {
                         if matches!(event.keystroke.key.as_str(), "enter" | "space")
                             && let Some(callback) = &start_key
                         {
-                            callback();
+                            callback(cx);
                         }
                     })
                     .child(

@@ -281,6 +281,30 @@ pub fn show_properties(path: &Path) -> Result<(), DesktopPlatformError> {
     }
 }
 
+pub fn launch_settings_uri(uri: &str) -> Result<(), DesktopPlatformError> {
+    if !uri.starts_with("ms-settings:")
+        || uri.contains('\0')
+        || uri.chars().any(char::is_whitespace)
+    {
+        return Err(DesktopPlatformError::Association(
+            "settings-uri-rejected".into(),
+        ));
+    }
+    let uri = uri.encode_utf16().chain(Some(0)).collect::<Vec<_>>();
+    // SAFETY: the allowlisted URI is NUL-terminated and remains live during
+    // the synchronous shell admission call.
+    unsafe {
+        ShellExecuteExW(&mut SHELLEXECUTEINFOW {
+            cbSize: size_of::<SHELLEXECUTEINFOW>() as u32,
+            fMask: SEE_MASK_NOCLOSEPROCESS,
+            lpFile: PCWSTR(uri.as_ptr()),
+            nShow: SW_HIDE.0,
+            ..Default::default()
+        })
+        .map_err(|error| DesktopPlatformError::Association(error.to_string()))
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct OwnedWatcherEvent {
     pub action: u32,

@@ -25,10 +25,11 @@ use platform_win::common::{
 use raw_window_handle::{HasWindowHandle, RawWindowHandle};
 use shell_provider_protocol::{
     CURRENT_PROTOCOL, CommandDescriptor, CommandId, CommandRisk, Envelope, MenuContext,
-    MenuEnumeration, MenuInvocation, ProviderRequest, ResponseBody, TerminalKind,
+    MenuEnumeration, MenuInvocation, ProviderRequest, ResponseBody, SearchBatch, SearchQuery,
+    TerminalKind,
 };
 use taskbar_ui::{
-    AccessibleTask, ClockLocale, CoreStatus, ProviderState, StatusRegion, TaskAction,
+    AccessibleTask, ClockLocale, CoreStatus, ProviderState, StartView, StatusRegion, TaskAction,
     TaskbarCallbacks, TaskbarLayout, TaskbarView, TestClock,
 };
 
@@ -433,6 +434,39 @@ fn provider_request(payload: ProviderRequest, deadline_ms: u64) -> Envelope<Prov
     }
 }
 
+fn search_start(provider: &Rc<RefCell<ProviderClient>>, query: SearchQuery) -> Vec<SearchBatch> {
+    let request = provider_request(ProviderRequest::Search(query), 2_000);
+    provider
+        .borrow_mut()
+        .request(&request, Duration::from_secs(2))
+        .ok()
+        .and_then(|response| {
+            (response.terminal == TerminalKind::Success)
+                .then_some(response.body)
+                .and_then(|body| match body {
+                    ResponseBody::Search(batches) => Some(batches),
+                    _ => None,
+                })
+        })
+        .unwrap_or_default()
+}
+
+fn activate_start_command(command: &CommandDescriptor) {
+    let id = command.id.0.as_str();
+    let outcome = if let Some(uri) = id.strip_prefix("settings:") {
+        platform_win::common::desktop::launch_settings_uri(uri).is_ok()
+    } else if let Some(path) = id.strip_prefix("open:") {
+        platform_win::common::desktop::launch_association(Path::new(path)).is_ok()
+    } else {
+        false
+    };
+    trace_action(if outcome {
+        "start:activation-succeeded"
+    } else {
+        "start:activation-rejected"
+    });
+}
+
 fn local_context_menu(stable_id: &str) -> Option<MenuModel> {
     let command = |id: &str, label: &str, risk| CommandDescriptor {
         id: CommandId(format!("local:{id}")),
@@ -720,6 +754,32 @@ fn options(monitor: &MonitorRecord, taskbar: bool, interactive: bool) -> WindowO
     }
 }
 
+fn start_options(monitor: &MonitorRecord) -> WindowOptions {
+    let scale = monitor.dpi_x as f32 / 96.0;
+    let monitor_width = (monitor.work_area.right - monitor.work_area.left) as f32 / scale;
+    let monitor_height = (monitor.work_area.bottom - monitor.work_area.top) as f32 / scale;
+    let width = monitor_width.min(560.0);
+    let height = monitor_height.min(680.0);
+    WindowOptions {
+        window_bounds: Some(WindowBounds::Windowed(Bounds {
+            origin: point(
+                px(monitor.work_area.left as f32 / scale),
+                px(monitor.work_area.bottom as f32 / scale - height),
+            ),
+            size: size(px(width), px(height)),
+        })),
+        titlebar: None,
+        focus: true,
+        show: true,
+        kind: WindowKind::PopUp,
+        is_movable: false,
+        is_resizable: false,
+        is_minimizable: false,
+        window_background: WindowBackgroundAppearance::Opaque,
+        ..Default::default()
+    }
+}
+
 fn status() -> StatusRegion {
     StatusRegion::new(
         TestClock {
@@ -928,6 +988,10 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                 let taskbar_tasks = initial_tasks.clone();
                 let taskbar_error = Rc::clone(&init_error);
                 let taskbar_leases = Rc::clone(&leases);
+                let start_window = Rc::new(RefCell::new(None::<gpui::WindowHandle<StartView>>));
+                let start_window_for_taskbar = Rc::clone(&start_window);
+                let start_provider_for_taskbar = Rc::clone(&provider_client);
+                let start_monitor = taskbar_monitor.clone();
                 let taskbar = cx.open_window(options(&monitor, true, interactive), move |window, cx| {
                     if interactive {
                         window.activate_window();
@@ -977,7 +1041,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                     if let Err(error) = configured {
                         *taskbar_error.borrow_mut() = Some(error);
                     }
-                    cx.new(|cx| {
+                    cx.new(move |cx| {
                         let focus_handle = interactive.then(|| cx.focus_handle());
                         if let Some(handle) = &focus_handle {
                             window.focus(handle, cx);
@@ -995,9 +1059,55 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                         fixed_name: fixed_label().into(),
                         status: status(),
                         callbacks: Some(TaskbarCallbacks {
-                            start: Rc::new(|| {
+                            start: Rc::new(move |app| {
                                 trace_action("start");
-                                let _ = platform_win::common::monitor_dpi_start::invoke_start_host_controlled();
+                                if !shell {
+                                    let _ = platform_win::common::monitor_dpi_start::invoke_start_host_controlled();
+                                    return;
+                                }
+                                if let Some(existing) = *start_window_for_taskbar.borrow() {
+                                    if existing
+                                        .update(app, |_, window, _| window.remove_window())
+                                        .is_ok()
+                                    {
+                                        *start_window_for_taskbar.borrow_mut() = None;
+                                        trace_action("start:closed");
+                                        return;
+                                    }
+                                    *start_window_for_taskbar.borrow_mut() = None;
+                                }
+                                let mut catalog = platform_win::common::start_search::settings_catalog();
+                                catalog.extend(platform_win::common::start_search::discover_applications(
+                                    &platform_win::common::start_search::default_application_roots(),
+                                    80,
+                                ));
+                                let search_provider = Rc::clone(&start_provider_for_taskbar);
+                                let dismiss_slot = Rc::clone(&start_window_for_taskbar);
+                                let opened = app.open_window(start_options(&start_monitor), move |window, cx| {
+                                    window.activate_window();
+                                    let provider = Rc::clone(&search_provider);
+                                    let dismiss_slot = Rc::clone(&dismiss_slot);
+                                    cx.new(move |cx| {
+                                        StartView::new(
+                                            catalog,
+                                            Rc::new(move |query| search_start(&provider, query)),
+                                            Rc::new(activate_start_command),
+                                            Rc::new(move |window, _| {
+                                                window.remove_window();
+                                                *dismiss_slot.borrow_mut() = None;
+                                                trace_action("start:closed");
+                                            }),
+                                            cx,
+                                        )
+                                    })
+                                });
+                                match opened {
+                                    Ok(handle) => {
+                                        *start_window_for_taskbar.borrow_mut() = Some(handle);
+                                        trace_action("start:owned-opened");
+                                    }
+                                    Err(_) => trace_action("start:owned-open-failed"),
+                                }
                             }),
                             fixed: Rc::new(launch_superexplorer),
                             task: Rc::new(activate_task),

@@ -4,6 +4,12 @@ use shell_provider_protocol::{
     rank_search_results,
 };
 use std::collections::{BTreeMap, BTreeSet};
+use std::rc::Rc;
+
+use gpui::{
+    Context, FocusHandle, InteractiveElement, IntoElement, ParentElement, Render,
+    StatefulInteractiveElement, Styled, Window, div, prelude::FluentBuilder as _, px, rgb,
+};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum StartFailure {
@@ -289,6 +295,207 @@ impl StartModel {
                 focused: self.focused_result == Some(index),
             })
             .collect()
+    }
+}
+
+pub type SearchAction = Rc<dyn Fn(SearchQuery) -> Vec<SearchBatch>>;
+pub type ActivationAction = Rc<dyn Fn(&CommandDescriptor)>;
+pub type DismissAction = Rc<dyn Fn(&mut Window, &mut gpui::App)>;
+
+pub struct StartView {
+    pub model: StartModel,
+    search: SearchAction,
+    activate: ActivationAction,
+    dismiss: DismissAction,
+    focus: FocusHandle,
+}
+
+impl StartView {
+    pub fn new(
+        catalogs: Vec<SearchResult>,
+        search: SearchAction,
+        activate: ActivationAction,
+        dismiss: DismissAction,
+        cx: &mut Context<Self>,
+    ) -> Self {
+        let mut model = StartModel::default();
+        model.open();
+        model.set_catalogs(
+            catalogs.iter().take(6).cloned().collect(),
+            Vec::new(),
+            catalogs,
+        );
+        Self {
+            model,
+            search,
+            activate,
+            dismiss,
+            focus: cx.focus_handle(),
+        }
+    }
+
+    fn search_now(&mut self) {
+        let query = self.model.commit_query(self.model.query.clone());
+        for batch in (self.search)(query) {
+            self.model.accept_batch(batch);
+        }
+    }
+}
+
+impl Render for StartView {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        window.focus(&self.focus, cx);
+        let nodes = self.model.accessibility_nodes();
+        let query = self.model.query.clone();
+        let composition = self.model.composition.clone();
+        let activate_for_key = self.activate.clone();
+        let dismiss_for_key = self.dismiss.clone();
+        let settings_activate = self.activate.clone();
+        div()
+            .id("superdesktop-start")
+            .role(gpui::Role::Dialog)
+            .aria_label("Start")
+            .tab_index(0)
+            .track_focus(&self.focus)
+            .size_full()
+            .p_3()
+            .flex()
+            .flex_col()
+            .gap_2()
+            .bg(rgb(0x182028))
+            .text_color(rgb(0xf4f7fa))
+            .on_key_down(
+                cx.listener(move |this, event: &gpui::KeyDownEvent, window, cx| {
+                    match event.keystroke.key.as_str() {
+                        "escape" => {
+                            this.model.close();
+                            dismiss_for_key(window, cx);
+                        }
+                        "down" => this.model.move_focus(1),
+                        "up" => this.model.move_focus(-1),
+                        "enter" => {
+                            if let Some(command) = this.model.activate_focused() {
+                                activate_for_key(&command);
+                                this.model.close();
+                                dismiss_for_key(window, cx);
+                            }
+                        }
+                        "backspace" => {
+                            this.model.query.pop();
+                            this.search_now();
+                        }
+                        _ if !event.keystroke.modifiers.control
+                            && !event.keystroke.modifiers.alt
+                            && !event.keystroke.modifiers.platform =>
+                        {
+                            if let Some(text) = &event.keystroke.key_char
+                                && !text.chars().any(char::is_control)
+                            {
+                                this.model.query.push_str(text);
+                                this.search_now();
+                            }
+                        }
+                        _ => return,
+                    }
+                    cx.stop_propagation();
+                    cx.notify();
+                }),
+            )
+            .child(
+                div()
+                    .id("start-search-input")
+                    .role(gpui::Role::TextInput)
+                    .aria_label("Search apps, settings, and files")
+                    .h(px(44.))
+                    .px_3()
+                    .flex()
+                    .items_center()
+                    .rounded_md()
+                    .bg(rgb(0xffffff))
+                    .text_color(rgb(0x111111))
+                    .child(if query.is_empty() && composition.is_empty() {
+                        "Search apps, settings, and files".to_owned()
+                    } else {
+                        format!("{query}{composition}")
+                    }),
+            )
+            .child(
+                div()
+                    .text_size(px(13.))
+                    .text_color(rgb(0xaab4be))
+                    .child(if query.is_empty() {
+                        "Pinned · Recent · All apps"
+                    } else {
+                        "Search results"
+                    }),
+            )
+            .child(
+                div()
+                    .id("start-results")
+                    .role(gpui::Role::List)
+                    .aria_label("Start results")
+                    .flex_1()
+                    .min_h_0()
+                    .overflow_hidden()
+                    .flex()
+                    .flex_col()
+                    .children(nodes.into_iter().enumerate().map(|(index, node)| {
+                        let activate = self.activate.clone();
+                        let dismiss = self.dismiss.clone();
+                        div()
+                            .id(node.stable_id)
+                            .role(gpui::Role::ListItem)
+                            .aria_label(node.name.clone())
+                            .tab_index(0)
+                            .px_3()
+                            .py_2()
+                            .rounded_md()
+                            .when(node.focused, |element| element.bg(rgb(0x285b8f)))
+                            .on_click(cx.listener(move |this, _, window, cx| {
+                                this.model.focused_result = Some(index);
+                                if let Some(result) = this.model.results().get(index) {
+                                    activate(&result.activation);
+                                }
+                                this.model.close();
+                                dismiss(window, cx);
+                                cx.notify();
+                            }))
+                            .child(node.name)
+                    })),
+            )
+            .child(
+                div()
+                    .h(px(42.))
+                    .flex()
+                    .items_center()
+                    .justify_between()
+                    .border_t_1()
+                    .border_color(rgb(0x3d4852))
+                    .child(
+                        div()
+                            .id("start-settings")
+                            .role(gpui::Role::Button)
+                            .aria_label("Settings")
+                            .tab_index(0)
+                            .px_2()
+                            .py_1()
+                            .rounded_md()
+                            .cursor_pointer()
+                            .on_click(move |_, _, _| {
+                                settings_activate(&CommandDescriptor {
+                                    id: shell_provider_protocol::CommandId(
+                                        "settings:ms-settings:".into(),
+                                    ),
+                                    label: "Settings".into(),
+                                    enabled: true,
+                                    risk: shell_provider_protocol::CommandRisk::Normal,
+                                    children: Vec::new(),
+                                });
+                            })
+                            .child("Settings"),
+                    )
+                    .child("Power"),
+            )
     }
 }
 fn map_reason(reason: &str) -> StartFailure {
