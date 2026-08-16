@@ -8,7 +8,8 @@ use std::{
 
 use desktop_ui::{
     AccessibleAction, AccessibleNode, DeletePolicy, DesktopItem, DesktopOperation,
-    DesktopOperationController, DesktopOperationTerminal, DesktopView, execute_desktop_operation,
+    DesktopOperationController, DesktopOperationTerminal, DesktopView, TransferIntent,
+    execute_desktop_operation,
 };
 use gpui::{
     App, AppContext, Bounds, WindowBackgroundAppearance, WindowBounds, WindowKind, WindowOptions,
@@ -90,6 +91,7 @@ fn launch_superexplorer_at(initial_path: Option<&Path>) {
 struct DesktopNamespaceRuntime {
     items: BTreeMap<String, DesktopItem>,
     allowed_roots: Vec<PathBuf>,
+    user_root: Option<PathBuf>,
 }
 
 fn desktop_item_key(item: &DesktopItem) -> String {
@@ -101,12 +103,16 @@ fn refresh_desktop_namespace(
     monitor: &str,
 ) -> Vec<AccessibleNode> {
     let mut nodes = vec![fixed_node(monitor)];
+    let Ok((user_root, public_root)) = platform_win::common::desktop::known_desktop_roots() else {
+        trace_action("desktop:root-resolution-failed");
+        return nodes;
+    };
     let Ok(entries) = platform_win::common::desktop::enumerate_known_desktops() else {
         trace_action("desktop:enumeration-failed");
         return nodes;
     };
     let mut items = BTreeMap::new();
-    let mut allowed_roots = Vec::new();
+    let mut allowed_roots = vec![user_root.clone(), public_root];
     for entry in entries {
         let Some(parent) = entry.canonical_path.parent().map(Path::to_path_buf) else {
             continue;
@@ -145,6 +151,7 @@ fn refresh_desktop_namespace(
     *runtime.borrow_mut() = DesktopNamespaceRuntime {
         items,
         allowed_roots,
+        user_root: Some(user_root),
     };
     trace_action("desktop:refreshed");
     nodes
@@ -283,6 +290,118 @@ fn rename_desktop_item(
         "desktop:rename-failed"
     });
     succeeded
+}
+
+fn transfer_desktop_item(
+    runtime: &Rc<RefCell<DesktopNamespaceRuntime>>,
+    operations: &Rc<RefCell<DesktopOperationController>>,
+    source_id: &str,
+    destination_id: &str,
+) -> bool {
+    let (source_item, destination_item, roots) = {
+        let runtime = runtime.borrow();
+        let Some(source) = runtime.items.get(source_id).cloned() else {
+            trace_action("desktop:transfer-source-stale");
+            return false;
+        };
+        let Some(destination) = runtime.items.get(destination_id).cloned() else {
+            trace_action("desktop:transfer-destination-stale");
+            return false;
+        };
+        (source, destination, runtime.allowed_roots.clone())
+    };
+    if !destination_item.capabilities.folder {
+        trace_action("desktop:transfer-destination-not-folder");
+        return false;
+    }
+    let source = PathBuf::from(&source_item.activation_token);
+    let destination_directory = PathBuf::from(&destination_item.activation_token);
+    let Some(file_name) = source.file_name().map(std::ffi::OsStr::to_os_string) else {
+        return false;
+    };
+    let intent = if source_item.origin == destination_item.origin {
+        TransferIntent::Move
+    } else {
+        TransferIntent::Copy
+    };
+    let request = match operations.borrow_mut().plan(DesktopOperation::Transfer {
+        source,
+        destination: destination_directory.join(file_name),
+        intent,
+        collision: platform_win::common::desktop_operations::CollisionPolicy::Rename,
+    }) {
+        Ok(request) => request,
+        Err(_) => {
+            trace_action("desktop:transfer-plan-rejected");
+            return false;
+        }
+    };
+    let terminal = execute_desktop_operation(&request, &roots, |_, _| true);
+    let accepted = operations
+        .borrow_mut()
+        .terminal(request.correlation_id, terminal)
+        .is_ok();
+    let succeeded = accepted && terminal == DesktopOperationTerminal::Succeeded;
+    trace_action(if succeeded {
+        "desktop:transfer-succeeded"
+    } else {
+        "desktop:transfer-failed"
+    });
+    succeeded
+}
+
+fn import_external_desktop_items(
+    runtime: &Rc<RefCell<DesktopNamespaceRuntime>>,
+    operations: &Rc<RefCell<DesktopOperationController>>,
+    paths: &[PathBuf],
+) -> bool {
+    if paths.is_empty() {
+        return false;
+    }
+    let (user_root, desktop_roots) = {
+        let runtime = runtime.borrow();
+        let Some(user_root) = runtime.user_root.clone() else {
+            return false;
+        };
+        (user_root, runtime.allowed_roots.clone())
+    };
+    let mut all_succeeded = true;
+    for source in paths {
+        let Some(name) = source.file_name() else {
+            all_succeeded = false;
+            continue;
+        };
+        let Some(parent) = source.parent() else {
+            all_succeeded = false;
+            continue;
+        };
+        let mut admitted_roots = desktop_roots.clone();
+        admitted_roots.push(parent.to_path_buf());
+        let request = match operations.borrow_mut().plan(DesktopOperation::Transfer {
+            source: source.clone(),
+            destination: user_root.join(name),
+            intent: TransferIntent::Copy,
+            collision: platform_win::common::desktop_operations::CollisionPolicy::Rename,
+        }) {
+            Ok(request) => request,
+            Err(_) => {
+                all_succeeded = false;
+                continue;
+            }
+        };
+        let terminal = execute_desktop_operation(&request, &admitted_roots, |_, _| true);
+        let accepted = operations
+            .borrow_mut()
+            .terminal(request.correlation_id, terminal)
+            .is_ok();
+        all_succeeded &= accepted && terminal == DesktopOperationTerminal::Succeeded;
+    }
+    trace_action(if all_succeeded {
+        "desktop:external-drop-succeeded"
+    } else {
+        "desktop:external-drop-partial-or-failed"
+    });
+    all_succeeded
 }
 
 fn activate_task(stable_id: &str) {
@@ -537,6 +656,10 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                 Rc::clone(&desktop_operations_for_view);
                             let rename_namespace = Rc::clone(&desktop_namespace_for_view);
                             let rename_operations = Rc::clone(&desktop_operations_for_view);
+                            let transfer_namespace = Rc::clone(&desktop_namespace_for_view);
+                            let transfer_operations = Rc::clone(&desktop_operations_for_view);
+                            let external_drop_namespace = Rc::clone(&desktop_namespace_for_view);
+                            let external_drop_operations = Rc::clone(&desktop_operations_for_view);
                             let refresh_namespace = Rc::clone(&desktop_namespace_for_view);
                             let refresh_monitor = monitor_key.clone();
                             let mut view = DesktopView::new(
@@ -567,6 +690,21 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                     &rename_operations,
                                     stable_id,
                                     new_name,
+                                )
+                            }))
+                            .with_item_transfer_action(Rc::new(move |source, destination| {
+                                transfer_desktop_item(
+                                    &transfer_namespace,
+                                    &transfer_operations,
+                                    source,
+                                    destination,
+                                )
+                            }))
+                            .with_external_drop_action(Rc::new(move |paths| {
+                                import_external_desktop_items(
+                                    &external_drop_namespace,
+                                    &external_drop_operations,
+                                    paths,
                                 )
                             }))
                             .with_refresh_action(Rc::new(move || {

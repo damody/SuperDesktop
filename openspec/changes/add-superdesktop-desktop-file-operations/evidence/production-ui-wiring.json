@@ -13,10 +13,13 @@
     "Delete routes through a typed correlated operation and the Recycle Bin policy before refresh",
     "F2 provides inline rename input and preserves the editor when validation or collision admission fails",
     "Shift+Delete requires a default-no native warning confirmation before selecting the explicit permanent-delete policy",
+    "dragging a desktop item onto an explicit folder destination moves within one Desktop origin and copies across user/public origins",
+    "external file drops copy into the user Desktop using explicit OS-provided paths",
+    "all production transfer destinations use collision-rename and never silently overwrite",
     "child key handling stops propagation so real-item activation cannot also trigger the fixed entry"
   ],
   "deliberately_not_claimed_yet": [
-    "drag copy/move with progress, cancellation, and collision UI",
+    "visible transfer progress and cancellation UI for long-running copy operations",
     "persistent manual positions and sort-selection UI"
   ],
   "commands": [

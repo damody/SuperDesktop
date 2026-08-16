@@ -1,9 +1,9 @@
 use std::{path::PathBuf, rc::Rc};
 
 use gpui::{
-    Context, FocusHandle, InteractiveElement, IntoElement, ObjectFit, ParentElement, Render,
-    StatefulInteractiveElement, Styled, StyledImage, Window, div, img, prelude::FluentBuilder as _,
-    px, rgb,
+    AppContext, Context, FocusHandle, InteractiveElement, IntoElement, ObjectFit, ParentElement,
+    Render, StatefulInteractiveElement, Styled, StyledImage, Window, div, img,
+    prelude::FluentBuilder as _, px, rgb,
 };
 
 use crate::AccessibleNode;
@@ -12,7 +12,31 @@ type ItemAction = Rc<dyn Fn(&str)>;
 type ItemRecycleAction = Rc<dyn Fn(&str) -> bool>;
 type ItemPermanentDeleteAction = Rc<dyn Fn(&str) -> bool>;
 type ItemRenameAction = Rc<dyn Fn(&str, &str) -> bool>;
+type ItemTransferAction = Rc<dyn Fn(&str, &str) -> bool>;
+type ExternalDropAction = Rc<dyn Fn(&[PathBuf]) -> bool>;
 type RefreshAction = Rc<dyn Fn() -> Vec<AccessibleNode>>;
+
+#[derive(Clone)]
+struct DesktopDrag {
+    stable_id: String,
+    label: String,
+}
+
+struct DesktopDragPreview {
+    label: String,
+}
+
+impl Render for DesktopDragPreview {
+    fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+        div()
+            .px_3()
+            .py_2()
+            .rounded_md()
+            .bg(rgb(0x285b8f))
+            .text_color(rgb(0xffffff))
+            .child(self.label.clone())
+    }
+}
 
 pub struct DesktopView {
     pub accessible_root_name: String,
@@ -23,6 +47,8 @@ pub struct DesktopView {
     item_recycle_action: Option<ItemRecycleAction>,
     item_permanent_delete_action: Option<ItemPermanentDeleteAction>,
     item_rename_action: Option<ItemRenameAction>,
+    item_transfer_action: Option<ItemTransferAction>,
+    external_drop_action: Option<ExternalDropAction>,
     refresh_action: Option<RefreshAction>,
     rendered_action: Option<Rc<dyn Fn()>>,
     keyboard_focus: Option<FocusHandle>,
@@ -42,6 +68,8 @@ impl DesktopView {
             item_recycle_action: None,
             item_permanent_delete_action: None,
             item_rename_action: None,
+            item_transfer_action: None,
+            external_drop_action: None,
             refresh_action: None,
             rendered_action: None,
             keyboard_focus: None,
@@ -73,6 +101,16 @@ impl DesktopView {
 
     pub fn with_item_rename_action(mut self, action: ItemRenameAction) -> Self {
         self.item_rename_action = Some(action);
+        self
+    }
+
+    pub fn with_item_transfer_action(mut self, action: ItemTransferAction) -> Self {
+        self.item_transfer_action = Some(action);
+        self
+    }
+
+    pub fn with_external_drop_action(mut self, action: ExternalDropAction) -> Self {
+        self.external_drop_action = Some(action);
         self
     }
 
@@ -123,10 +161,13 @@ impl Render for DesktopView {
         let fixed_action = self.fixed_action.clone();
         let root_action = fixed_action.clone();
         let root_refresh = self.refresh_action.clone();
+        let root_drop_refresh = self.refresh_action.clone();
+        let external_drop_action = self.external_drop_action.clone();
         let item_action = self.item_action.clone();
         let item_recycle_action = self.item_recycle_action.clone();
         let item_permanent_delete_action = self.item_permanent_delete_action.clone();
         let item_rename_action = self.item_rename_action.clone();
+        let item_transfer_action = self.item_transfer_action.clone();
         let item_refresh_action = self.refresh_action.clone();
         let rename_target = self.rename_target.clone();
         let rename_buffer = self.rename_buffer.clone();
@@ -161,6 +202,17 @@ impl Render for DesktopView {
                     action();
                 }
             }))
+            .on_drop(
+                cx.listener(move |this, paths: &gpui::ExternalPaths, _, cx| {
+                    if let Some(drop) = &external_drop_action
+                        && drop(paths.paths())
+                        && let Some(refresh) = &root_drop_refresh
+                    {
+                        this.apply_authoritative_refresh(refresh());
+                        cx.notify();
+                    }
+                }),
+            )
             .size_full()
             .relative()
             .flex()
@@ -194,7 +246,9 @@ impl Render for DesktopView {
                         let recycle_action = item_recycle_action.clone();
                         let permanent_delete_action = item_permanent_delete_action.clone();
                         let rename_action = item_rename_action.clone();
+                        let transfer_action = item_transfer_action.clone();
                         let refresh_action = item_refresh_action.clone();
+                        let drop_refresh_action = refresh_action.clone();
                         let stable_id = item.stable_id.clone();
                         let click_id = stable_id.clone();
                         let key_id = stable_id.clone();
@@ -225,6 +279,26 @@ impl Render for DesktopView {
                             .justify_center()
                             .rounded_md()
                             .cursor_pointer()
+                            .on_drag(
+                                DesktopDrag {
+                                    stable_id: stable_id.clone(),
+                                    label: item.name.clone(),
+                                },
+                                |data: &DesktopDrag, _, _, cx| {
+                                    let label = data.label.clone();
+                                    cx.new(|_| DesktopDragPreview { label })
+                                },
+                            )
+                            .on_drop(cx.listener(move |this, source: &DesktopDrag, _, cx| {
+                                if source.stable_id != stable_id
+                                    && let Some(transfer) = &transfer_action
+                                    && transfer(&source.stable_id, &stable_id)
+                                    && let Some(refresh) = &drop_refresh_action
+                                {
+                                    this.apply_authoritative_refresh(refresh());
+                                    cx.notify();
+                                }
+                            }))
                             .when(item.selected, |element| element.bg(rgb(0x285b8f)))
                             .when(item.focused || high_contrast, |element| {
                                 element.border_2().border_color(if high_contrast {

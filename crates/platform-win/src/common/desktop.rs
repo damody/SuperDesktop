@@ -126,11 +126,17 @@ pub fn configure_and_show_desktop_window(
 }
 
 pub fn enumerate_known_desktops() -> Result<Vec<OwnedDesktopEntry>, DesktopPlatformError> {
-    let user = known_folder(&FOLDERID_Desktop)?;
-    let public = known_folder(&FOLDERID_PublicDesktop)?;
+    let (user, public) = known_desktop_roots()?;
     let mut entries = enumerate_directory(&user, DesktopOrigin::User)?;
     entries.extend(enumerate_directory(&public, DesktopOrigin::Public)?);
     Ok(entries)
+}
+
+pub fn known_desktop_roots() -> Result<(PathBuf, PathBuf), DesktopPlatformError> {
+    Ok((
+        known_folder(&FOLDERID_Desktop)?,
+        known_folder(&FOLDERID_PublicDesktop)?,
+    ))
 }
 
 fn known_folder(id: &GUID) -> Result<PathBuf, DesktopPlatformError> {
