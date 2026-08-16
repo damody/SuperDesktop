@@ -27,6 +27,10 @@ $workspacePath = (Resolve-Path -LiteralPath $Workspace).Path
 $installerPath = (Resolve-Path -LiteralPath $Installer).Path
 $appPath = (Resolve-Path -LiteralPath $App).Path
 $guardianPath = (Resolve-Path -LiteralPath $Guardian).Path
+$installDirectory = Split-Path -Parent $appPath
+$providerHostPath = (Resolve-Path -LiteralPath (Join-Path $installDirectory 'shell-provider-host.exe')).Path
+$notificationHostPath = (Resolve-Path -LiteralPath (Join-Path $installDirectory 'notification-area-host.exe')).Path
+$superExplorerPath = (Resolve-Path -LiteralPath (Join-Path $installDirectory 'SuperExplorer.exe')).Path
 $rollbackPath = [IO.Path]::GetFullPath($RollbackRecord)
 $evidencePath = [IO.Path]::GetFullPath($EvidenceDirectory)
 [IO.Directory]::CreateDirectory($evidencePath) | Out-Null
@@ -61,7 +65,10 @@ function Read-ShellObservation {
 $binaryRecords = @(
     [ordered]@{ name='shell-installer';path=$installerPath;sha256=(Get-FileHash -Algorithm SHA256 -LiteralPath $installerPath).Hash.ToLowerInvariant() },
     [ordered]@{ name='superdesktop-app';path=$appPath;sha256=(Get-FileHash -Algorithm SHA256 -LiteralPath $appPath).Hash.ToLowerInvariant() },
-    [ordered]@{ name='superdesktop-guardian';path=$guardianPath;sha256=(Get-FileHash -Algorithm SHA256 -LiteralPath $guardianPath).Hash.ToLowerInvariant() }
+    [ordered]@{ name='superdesktop-guardian';path=$guardianPath;sha256=(Get-FileHash -Algorithm SHA256 -LiteralPath $guardianPath).Hash.ToLowerInvariant() },
+    [ordered]@{ name='shell-provider-host';path=$providerHostPath;sha256=(Get-FileHash -Algorithm SHA256 -LiteralPath $providerHostPath).Hash.ToLowerInvariant() },
+    [ordered]@{ name='notification-area-host';path=$notificationHostPath;sha256=(Get-FileHash -Algorithm SHA256 -LiteralPath $notificationHostPath).Hash.ToLowerInvariant() },
+    [ordered]@{ name='SuperExplorer';path=$superExplorerPath;sha256=(Get-FileHash -Algorithm SHA256 -LiteralPath $superExplorerPath).Hash.ToLowerInvariant() }
 )
 $shellBefore = Read-ShellObservation
 $rollbackExistedBefore = Test-Path -LiteralPath $rollbackPath -PathType Leaf

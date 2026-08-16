@@ -152,6 +152,7 @@ pub fn build_enable_plan(
     let guardian_path = admitted_binary(guardian_path, "guardian")?;
     let mut preflight = EnablePreflight::current();
     windows_registry::verify_product_identity(&app_path, &guardian_path)?;
+    validate_companion_binaries(&app_path)?;
     windows_registry::probe_guardian_recovery(&guardian_path)?;
     preflight.guardian_recovery_admitted = true;
     build_enable_plan_with_preflight(
@@ -339,7 +340,25 @@ pub fn validate_mutation_binaries(plan: &InstallerPlan) -> Result<(), InstallerE
         return Err(InstallerError::StateDrift);
     }
     windows_registry::verify_product_identity(&app_path, &guardian_path)?;
+    validate_companion_binaries(&app_path)?;
     windows_registry::probe_guardian_recovery(&guardian_path)
+}
+
+fn validate_companion_binaries(app_path: &Path) -> Result<(), InstallerError> {
+    let directory = app_path
+        .parent()
+        .ok_or(InstallerError::InvalidBinary("app"))?;
+    for (file_name, field) in [
+        ("shell-provider-host.exe", "shell-provider-host"),
+        ("notification-area-host.exe", "notification-area-host"),
+        ("SuperExplorer.exe", "SuperExplorer"),
+    ] {
+        let companion = admitted_binary(&directory.join(file_name), field)?;
+        if companion.parent() != Some(directory) {
+            return Err(InstallerError::InvalidBinary(field));
+        }
+    }
+    Ok(())
 }
 
 fn admitted_binary(path: &Path, field: &'static str) -> Result<PathBuf, InstallerError> {

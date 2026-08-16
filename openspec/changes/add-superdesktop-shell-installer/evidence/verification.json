@@ -10,7 +10,8 @@
       "cargo test --workspace --offline",
       "openspec validate add-superdesktop-shell-installer --strict",
       "validate_tasks.py openspec/changes/add-superdesktop-shell-installer/tasks.md",
-      "shell-installer enable (absolute app/guardian paths, dry-run only)"
+      "shell-installer enable (absolute app/guardian paths, dry-run only)",
+      "scripts/package-superdesktop.ps1 -SuperExplorerPath D:/SuperExplorer/target/release/SuperExplorer.exe -OutputDirectory build/SuperDesktop-package-smoke"
     ],
     "covered": [
       "dry-run without complete authority",
@@ -30,7 +31,9 @@
       "guardian recovery admission executes a five-second fail-closed read-only handshake before planning and immediately before mutation",
       "guardian handshake verifies an interactive non-Safe-Mode session and resolves the trusted Explorer recovery target without mutation",
       "partial or mismatched mutation authority is rejected instead of being mislabeled as dry-run",
-      "post-plan failures include operation, fingerprint, pre/post observations, affected targets, timestamp, and failed terminal audit"
+      "post-plan failures include operation, fingerprint, pre/post observations, affected targets, timestamp, and failed terminal audit",
+      "production enable and mutation revalidation require adjacent shell-provider-host, notification-area-host, and SuperExplorer regular non-reparse binaries",
+      "release packaging emits app, guardian, installer, both isolated hosts, SuperExplorer, and a SHA-256 manifest without overwriting an existing output directory"
     ]
   },
   "physical_gate": {
