@@ -1,0 +1,23 @@
+{
+  "change": "add-superdesktop-notification-area-host",
+  "result": "passed",
+  "commands": [
+    "cargo fmt --all -- --check",
+    "cargo clippy --workspace --all-targets --offline -- -D warnings",
+    "cargo test -p shell-provider-protocol -p notification-area-host -p taskbar-ui --offline",
+    "openspec validate add-superdesktop-notification-area-host --strict"
+  ],
+  "tests": {
+    "notification_area_host": 2,
+    "shell_provider_protocol": 7,
+    "taskbar_ui": 22,
+    "failures": 0
+  },
+  "limits": {
+    "clients": 64,
+    "icons": 256,
+    "events": 512,
+    "latency_p95_ms": 100
+  },
+  "fixture_latency_p95_ms": 42
+}

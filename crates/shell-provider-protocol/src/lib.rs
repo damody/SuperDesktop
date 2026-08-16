@@ -3,6 +3,7 @@
 mod context_menu;
 mod dto;
 mod envelope;
+mod notification;
 mod search;
 mod validation;
 
@@ -17,6 +18,10 @@ pub use dto::{
 pub use envelope::{
     CURRENT_PROTOCOL, Envelope, Handshake, HostHealth, ProtocolVersion, ProviderRequest,
     ProviderResponse, ResponseBody, TerminalKind, contract_manifest,
+};
+pub use notification::{
+    IconKey, NotificationEvent, NotificationEventKind, NotificationHostHealth,
+    NotificationHostResponse, NotificationMutation, NotificationSnapshot, RegisteredIcon,
 };
 pub use search::{
     SearchBatch, SearchProvider, SearchProviderState, SearchQuery, rank_search_results,

@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "crates/desktop-ui",
     "crates/explorer-bridge",
+    "crates/notification-area-host",
     "crates/platform-win",
     "crates/settings-store",
     "crates/shell-core",

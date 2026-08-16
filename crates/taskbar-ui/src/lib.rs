@@ -7,6 +7,7 @@ mod advanced;
 mod grouping;
 mod interaction;
 mod layout;
+mod notification_area;
 mod start;
 mod status;
 mod surface;
@@ -23,6 +24,9 @@ pub use interaction::{
     TaskInteraction, TaskSource,
 };
 pub use layout::{OverflowItem, SlotKind, TaskbarLayout, TaskbarRows, TaskbarSlot};
+pub use notification_area::{
+    NotificationAccessibleNode, NotificationAreaModel, NotificationPlacement,
+};
 pub use start::{
     StartAccessibilityNode, StartAvailability, StartControl, StartEffect, StartFailure, StartModel,
     StartSnapshot, StartSource,
