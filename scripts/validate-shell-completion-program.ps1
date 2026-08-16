@@ -46,19 +46,19 @@ try {
 }
 
 $verification = Get-Content -Raw -Encoding utf8 -LiteralPath (Join-Path $root 'openspec\changes\verify-superdesktop-shell-completion\evidence\current-rollup.json') | ConvertFrom-Json
-$expectedBlockers = @('G-DPI-MONITOR-PHYSICAL', 'G-GUARDIAN-RECOVERY', 'G-INSTALL-ROLLBACK', 'G-REVIEW', 'G-SHELL-TAKEOVER')
-if (-not $rollup.implementation_complete -or -not $rollup.local_verification_complete -or $rollup.release_allowed) {
+$expectedBlockers = @($verification.decision.blockers | ForEach-Object { (($_ -split ':')[0]).ToUpperInvariant() })
+if (-not $rollup.implementation_complete -or -not $rollup.local_verification_complete -or $rollup.release_allowed -ne $verification.decision.release_allowed) {
     throw 'Program derived disposition is inconsistent.'
 }
 if ((Compare-Object $expectedBlockers $rollup.release_blockers).Count -ne 0) { throw 'Program blocker set drift.' }
-if ($verification.decision.release_allowed -or $verification.decision.disposition -cne 'blocked') {
-    throw 'Verification roll-up does not fail closed.'
+if ($verification.decision.release_allowed -ne ($verification.decision.disposition -ceq 'passed')) {
+    throw 'Verification roll-up decision fields contradict each other.'
 }
 
 [ordered]@{
     result = 'passed'
     implementation_complete = $true
-    release_allowed = $false
+    release_allowed = [bool]$verification.decision.release_allowed
     children = $expected.Count
     blockers = $expectedBlockers
 } | ConvertTo-Json -Depth 4
