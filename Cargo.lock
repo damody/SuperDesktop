@@ -2796,6 +2796,7 @@ dependencies = [
 name = "platform-win"
 version = "0.1.0"
 dependencies = [
+ "settings-store",
  "shell-provider-protocol",
  "windows 0.62.2",
 ]

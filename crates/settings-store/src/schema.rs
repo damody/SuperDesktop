@@ -67,6 +67,13 @@ impl Default for TaskbarSettings {
     }
 }
 
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct StartSettings {
+    pub initialized: bool,
+    pub pinned_ids: Vec<String>,
+    pub recent_ids: Vec<String>,
+}
+
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum ThemePreference {
     #[default]
@@ -98,6 +105,7 @@ pub struct SettingsV1 {
     pub revision: u64,
     pub execution_preference: ExecutionPreference,
     pub taskbar: TaskbarSettings,
+    pub start: StartSettings,
     pub wallpaper: WallpaperSettings,
     pub desktop_positions: Vec<DesktopPosition>,
     pub monitor_mapping: BTreeMap<String, String>,
@@ -114,6 +122,7 @@ impl Default for SettingsV1 {
             revision: 0,
             execution_preference: ExecutionPreference::Preview,
             taskbar: TaskbarSettings::default(),
+            start: StartSettings::default(),
             wallpaper: WallpaperSettings::default(),
             desktop_positions: Vec::new(),
             monitor_mapping: BTreeMap::new(),
@@ -175,6 +184,13 @@ impl SettingsV1 {
             settings.taskbar.previews_enabled =
                 take_bool(&mut taskbar, "previews_enabled").unwrap_or(true);
             settings.taskbar.all_monitors = take_bool(&mut taskbar, "all_monitors").unwrap_or(true);
+        }
+        if let Some(Value::Object(mut start)) = object.remove("start") {
+            settings.start.initialized = take_bool(&mut start, "initialized").unwrap_or(false);
+            settings.start.pinned_ids =
+                take_string_array(&mut start, "pinned_ids").unwrap_or_default();
+            settings.start.recent_ids =
+                take_string_array(&mut start, "recent_ids").unwrap_or_default();
         }
         if let Some(Value::Object(mut wallpaper)) = object.remove("wallpaper") {
             settings.wallpaper.source = take_optional_string(&mut wallpaper, "source");
@@ -266,6 +282,34 @@ impl SettingsV1 {
                 (
                     "all_monitors".into(),
                     Value::Bool(self.taskbar.all_monitors),
+                ),
+            ])),
+        );
+        root.insert(
+            "start".into(),
+            Value::Object(BTreeMap::from([
+                ("initialized".into(), Value::Bool(self.start.initialized)),
+                (
+                    "pinned_ids".into(),
+                    Value::Array(
+                        self.start
+                            .pinned_ids
+                            .iter()
+                            .cloned()
+                            .map(Value::String)
+                            .collect(),
+                    ),
+                ),
+                (
+                    "recent_ids".into(),
+                    Value::Array(
+                        self.start
+                            .recent_ids
+                            .iter()
+                            .cloned()
+                            .map(Value::String)
+                            .collect(),
+                    ),
                 ),
             ])),
         );
@@ -498,7 +542,7 @@ mod tests {
 
     #[test]
     fn full_v1_round_trip_preserves_every_field_and_unknown_top_level() {
-        let input = r#"{"accessibility":{"high_contrast":true,"reduce_motion":true,"text_scale_percent":150},"desktop_positions":[{"item_id":"item","layout_revision":3,"logical_x":-4,"logical_y":8,"monitor_id":"monitor"}],"execution_preference":"shell","future":{"kept":true},"monitor_mapping":{"old":"new"},"revision":9,"schema_version":1,"superexplorer_path":"C:\\SuperExplorer.exe","taskbar":{"pins":["app"],"rows":3},"theme":"dark","wallpaper":{"mode":"span","source":"wall.jpg"}}"#;
+        let input = r#"{"accessibility":{"high_contrast":true,"reduce_motion":true,"text_scale_percent":150},"desktop_positions":[{"item_id":"item","layout_revision":3,"logical_x":-4,"logical_y":8,"monitor_id":"monitor"}],"execution_preference":"shell","future":{"kept":true},"monitor_mapping":{"old":"new"},"revision":9,"schema_version":1,"start":{"initialized":true,"pinned_ids":["app:a"],"recent_ids":["app:b"]},"superexplorer_path":"C:\\SuperExplorer.exe","taskbar":{"pins":["app"],"rows":3},"theme":"dark","wallpaper":{"mode":"span","source":"wall.jpg"}}"#;
         let decoded = SettingsV1::decode(input).unwrap();
         assert!(decoded.corrections.is_empty());
         assert_eq!(
@@ -508,6 +552,9 @@ mod tests {
             decoded.settings
         );
         assert!(decoded.settings.encode().contains("\"future\""));
+        assert_eq!(decoded.settings.start.pinned_ids, vec!["app:a"]);
+        assert_eq!(decoded.settings.start.recent_ids, vec!["app:b"]);
+        assert!(decoded.settings.start.initialized);
     }
 
     #[test]

@@ -4,11 +4,14 @@ use shell_provider_protocol::{
     rank_search_results,
 };
 use std::collections::{BTreeMap, BTreeSet};
+use std::ops::Range;
 use std::rc::Rc;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use gpui::{
-    Context, FocusHandle, InteractiveElement, IntoElement, ParentElement, Render,
-    StatefulInteractiveElement, Styled, Window, div, prelude::FluentBuilder as _, px, rgb,
+    AppContext, Bounds, Context, ElementInputHandler, EntityInputHandler, FocusHandle,
+    InteractiveElement, IntoElement, ParentElement, Pixels, Render, StatefulInteractiveElement,
+    Styled, UTF16Selection, Window, canvas, div, prelude::FluentBuilder as _, px, rgb,
 };
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -117,6 +120,7 @@ pub struct StartAccessibilityNode {
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct StartSnapshot {
+    pub initialized: bool,
     pub pinned_ids: Vec<String>,
     pub recent_ids: Vec<String>,
 }
@@ -226,11 +230,13 @@ impl StartModel {
 
     pub fn results(&self) -> Vec<&SearchResult> {
         if self.query.trim().is_empty() {
+            let mut seen = BTreeSet::new();
             return self
                 .pinned
                 .iter()
                 .chain(&self.recent)
                 .chain(&self.all_apps)
+                .filter(|item| seen.insert(item.id.as_str()))
                 .collect();
         }
         let mut output: Vec<_> = self.batches.values().flatten().collect();
@@ -260,8 +266,35 @@ impl StartModel {
             .map(|result| result.activation.clone())
     }
 
+    pub fn focused_result(&self) -> Option<SearchResult> {
+        self.results()
+            .get(self.focused_result?)
+            .map(|item| (*item).clone())
+    }
+
+    pub fn record_recent(&mut self, item: SearchResult) {
+        self.recent.retain(|existing| existing.id != item.id);
+        self.recent.insert(0, item);
+        self.recent.truncate(20);
+    }
+
+    pub fn toggle_pin(&mut self, item: SearchResult) -> bool {
+        if let Some(index) = self
+            .pinned
+            .iter()
+            .position(|existing| existing.id == item.id)
+        {
+            self.pinned.remove(index);
+            false
+        } else {
+            self.pinned.push(item);
+            true
+        }
+    }
+
     pub fn snapshot(&self) -> StartSnapshot {
         StartSnapshot {
+            initialized: true,
             pinned_ids: self.pinned.iter().map(|item| item.id.clone()).collect(),
             recent_ids: self.recent.iter().map(|item| item.id.clone()).collect(),
         }
@@ -301,44 +334,232 @@ impl StartModel {
 pub type SearchAction = Rc<dyn Fn(SearchQuery) -> Vec<SearchBatch>>;
 pub type ActivationAction = Rc<dyn Fn(&CommandDescriptor)>;
 pub type DismissAction = Rc<dyn Fn(&mut Window, &mut gpui::App)>;
+pub type PersistStartAction = Rc<dyn Fn(&StartSnapshot)>;
+pub type PowerAction = Rc<dyn Fn(StartPowerAction)>;
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum StartPowerAction {
+    SignOut,
+    Restart,
+    ShutDown,
+}
+
+pub struct StartActions {
+    pub search: SearchAction,
+    pub activate: ActivationAction,
+    pub dismiss: DismissAction,
+    pub persist: PersistStartAction,
+    pub power: PowerAction,
+}
 
 pub struct StartView {
     pub model: StartModel,
     search: SearchAction,
     activate: ActivationAction,
     dismiss: DismissAction,
+    persist: PersistStartAction,
+    power: PowerAction,
     focus: FocusHandle,
 }
 
 impl StartView {
     pub fn new(
         catalogs: Vec<SearchResult>,
-        search: SearchAction,
-        activate: ActivationAction,
-        dismiss: DismissAction,
+        snapshot: StartSnapshot,
+        actions: StartActions,
         cx: &mut Context<Self>,
     ) -> Self {
         let mut model = StartModel::default();
         model.open();
-        model.set_catalogs(
-            catalogs.iter().take(6).cloned().collect(),
-            Vec::new(),
-            catalogs,
-        );
+        let default_pins = catalogs.iter().take(6).cloned().collect();
+        model.set_catalogs(default_pins, Vec::new(), catalogs.clone());
+        if snapshot.initialized {
+            model.restore_snapshot(&snapshot, &catalogs);
+        }
         Self {
             model,
-            search,
-            activate,
-            dismiss,
+            search: actions.search,
+            activate: actions.activate,
+            dismiss: actions.dismiss,
+            persist: actions.persist,
+            power: actions.power,
             focus: cx.focus_handle(),
         }
     }
 
-    fn search_now(&mut self) {
-        let query = self.model.commit_query(self.model.query.clone());
+    fn dispatch_search(&mut self, query: SearchQuery) {
         for batch in (self.search)(query) {
             self.model.accept_batch(batch);
         }
+    }
+
+    fn schedule_search(&mut self, cx: &mut Context<Self>) {
+        self.model
+            .commit_text(self.model.query.clone(), unix_time_ms());
+        cx.spawn(async move |this, cx| {
+            cx.background_spawn(async {
+                std::thread::sleep(Duration::from_millis(50));
+            })
+            .await;
+            this.update(cx, |this, cx| {
+                if let Some(query) = this.model.take_debounced_query(unix_time_ms()) {
+                    this.dispatch_search(query);
+                    cx.notify();
+                }
+            })
+            .ok();
+        })
+        .detach();
+    }
+
+    fn activate_result(&mut self, result: SearchResult) {
+        (self.activate)(&result.activation);
+        self.model.record_recent(result);
+        (self.persist)(&self.model.snapshot());
+    }
+}
+
+fn unix_time_ms() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis()
+        .try_into()
+        .unwrap_or(u64::MAX)
+}
+
+fn utf16_to_byte(text: &str, offset: usize) -> usize {
+    if offset == 0 {
+        return 0;
+    }
+    let mut units = 0;
+    for (byte, ch) in text.char_indices() {
+        if units >= offset {
+            return byte;
+        }
+        units += ch.len_utf16();
+        if units > offset {
+            return byte;
+        }
+    }
+    text.len()
+}
+
+fn replace_utf16(text: &mut String, range: Range<usize>, replacement: &str) {
+    let start = utf16_to_byte(text, range.start);
+    let end = utf16_to_byte(text, range.end);
+    text.replace_range(start..end, replacement);
+}
+
+impl EntityInputHandler for StartView {
+    fn text_for_range(
+        &mut self,
+        range: Range<usize>,
+        adjusted_range: &mut Option<Range<usize>>,
+        _window: &mut Window,
+        _cx: &mut Context<Self>,
+    ) -> Option<String> {
+        let text = format!("{}{}", self.model.query, self.model.composition);
+        let maximum = text.encode_utf16().count();
+        let range = range.start.min(maximum)..range.end.min(maximum);
+        *adjusted_range = Some(range.clone());
+        Some(text[utf16_to_byte(&text, range.start)..utf16_to_byte(&text, range.end)].to_owned())
+    }
+
+    fn selected_text_range(
+        &mut self,
+        _ignore_disabled_input: bool,
+        _window: &mut Window,
+        _cx: &mut Context<Self>,
+    ) -> Option<UTF16Selection> {
+        let cursor =
+            self.model.query.encode_utf16().count() + self.model.composition.encode_utf16().count();
+        Some(UTF16Selection {
+            range: cursor..cursor,
+            reversed: false,
+        })
+    }
+
+    fn marked_text_range(
+        &self,
+        _window: &mut Window,
+        _cx: &mut Context<Self>,
+    ) -> Option<Range<usize>> {
+        if self.model.composition.is_empty() {
+            None
+        } else {
+            let start = self.model.query.encode_utf16().count();
+            Some(start..start + self.model.composition.encode_utf16().count())
+        }
+    }
+
+    fn unmark_text(&mut self, _window: &mut Window, cx: &mut Context<Self>) {
+        if !self.model.composition.is_empty() {
+            self.model
+                .query
+                .push_str(&std::mem::take(&mut self.model.composition));
+            self.schedule_search(cx);
+            cx.notify();
+        }
+    }
+
+    fn replace_text_in_range(
+        &mut self,
+        range: Option<Range<usize>>,
+        text: &str,
+        _window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.model.composition.clear();
+        let maximum = self.model.query.encode_utf16().count();
+        replace_utf16(
+            &mut self.model.query,
+            range.unwrap_or(maximum..maximum),
+            text,
+        );
+        self.schedule_search(cx);
+        cx.notify();
+    }
+
+    fn replace_and_mark_text_in_range(
+        &mut self,
+        range: Option<Range<usize>>,
+        new_text: &str,
+        _new_selected_range: Option<Range<usize>>,
+        _window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if let Some(range) = range {
+            let query_max = self.model.query.encode_utf16().count();
+            if range.start < query_max {
+                replace_utf16(
+                    &mut self.model.query,
+                    range.start..range.end.min(query_max),
+                    "",
+                );
+            }
+        }
+        self.model.composition_changed(new_text);
+        cx.notify();
+    }
+
+    fn bounds_for_range(
+        &mut self,
+        _range: Range<usize>,
+        element_bounds: Bounds<Pixels>,
+        _window: &mut Window,
+        _cx: &mut Context<Self>,
+    ) -> Option<Bounds<Pixels>> {
+        Some(element_bounds)
+    }
+
+    fn character_index_for_point(
+        &mut self,
+        _point: gpui::Point<Pixels>,
+        _window: &mut Window,
+        _cx: &mut Context<Self>,
+    ) -> Option<usize> {
+        Some(self.model.query.encode_utf16().count())
     }
 }
 
@@ -348,9 +569,13 @@ impl Render for StartView {
         let nodes = self.model.accessibility_nodes();
         let query = self.model.query.clone();
         let composition = self.model.composition.clone();
-        let activate_for_key = self.activate.clone();
         let dismiss_for_key = self.dismiss.clone();
         let settings_activate = self.activate.clone();
+        let input_entity = cx.entity();
+        let input_focus = self.focus.clone();
+        let sign_out = self.power.clone();
+        let restart = self.power.clone();
+        let shut_down = self.power.clone();
         div()
             .id("superdesktop-start")
             .role(gpui::Role::Dialog)
@@ -374,26 +599,21 @@ impl Render for StartView {
                         "down" => this.model.move_focus(1),
                         "up" => this.model.move_focus(-1),
                         "enter" => {
-                            if let Some(command) = this.model.activate_focused() {
-                                activate_for_key(&command);
+                            if let Some(result) = this.model.focused_result() {
+                                this.activate_result(result);
                                 this.model.close();
                                 dismiss_for_key(window, cx);
                             }
                         }
+                        "p" if event.keystroke.modifiers.control => {
+                            if let Some(result) = this.model.focused_result() {
+                                this.model.toggle_pin(result);
+                                (this.persist)(&this.model.snapshot());
+                            }
+                        }
                         "backspace" => {
                             this.model.query.pop();
-                            this.search_now();
-                        }
-                        _ if !event.keystroke.modifiers.control
-                            && !event.keystroke.modifiers.alt
-                            && !event.keystroke.modifiers.platform =>
-                        {
-                            if let Some(text) = &event.keystroke.key_char
-                                && !text.chars().any(char::is_control)
-                            {
-                                this.model.query.push_str(text);
-                                this.search_now();
-                            }
+                            this.schedule_search(cx);
                         }
                         _ => return,
                     }
@@ -413,6 +633,21 @@ impl Render for StartView {
                     .rounded_md()
                     .bg(rgb(0xffffff))
                     .text_color(rgb(0x111111))
+                    .relative()
+                    .child(
+                        canvas(
+                            |bounds, _, _| bounds,
+                            move |bounds, _, window, cx| {
+                                window.handle_input(
+                                    &input_focus,
+                                    ElementInputHandler::new(bounds, input_entity),
+                                    cx,
+                                );
+                            },
+                        )
+                        .absolute()
+                        .inset_0(),
+                    )
                     .child(if query.is_empty() && composition.is_empty() {
                         "Search apps, settings, and files".to_owned()
                     } else {
@@ -440,7 +675,6 @@ impl Render for StartView {
                     .flex()
                     .flex_col()
                     .children(nodes.into_iter().enumerate().map(|(index, node)| {
-                        let activate = self.activate.clone();
                         let dismiss = self.dismiss.clone();
                         div()
                             .id(node.stable_id)
@@ -453,8 +687,10 @@ impl Render for StartView {
                             .when(node.focused, |element| element.bg(rgb(0x285b8f)))
                             .on_click(cx.listener(move |this, _, window, cx| {
                                 this.model.focused_result = Some(index);
-                                if let Some(result) = this.model.results().get(index) {
-                                    activate(&result.activation);
+                                if let Some(result) =
+                                    this.model.results().get(index).map(|item| (*item).clone())
+                                {
+                                    this.activate_result(result);
                                 }
                                 this.model.close();
                                 dismiss(window, cx);
@@ -494,9 +730,53 @@ impl Render for StartView {
                             })
                             .child("Settings"),
                     )
-                    .child("Power"),
+                    .child(
+                        div()
+                            .id("start-power-actions")
+                            .role(gpui::Role::Group)
+                            .aria_label("Power")
+                            .flex()
+                            .gap_1()
+                            .child(power_button(
+                                "start-sign-out",
+                                "Sign out",
+                                sign_out,
+                                StartPowerAction::SignOut,
+                            ))
+                            .child(power_button(
+                                "start-restart",
+                                "Restart",
+                                restart,
+                                StartPowerAction::Restart,
+                            ))
+                            .child(power_button(
+                                "start-shut-down",
+                                "Shut down",
+                                shut_down,
+                                StartPowerAction::ShutDown,
+                            )),
+                    ),
             )
     }
+}
+
+fn power_button(
+    id: &'static str,
+    label: &'static str,
+    action: PowerAction,
+    value: StartPowerAction,
+) -> impl IntoElement {
+    div()
+        .id(id)
+        .role(gpui::Role::Button)
+        .aria_label(label)
+        .tab_index(0)
+        .px_2()
+        .py_1()
+        .rounded_md()
+        .cursor_pointer()
+        .on_click(move |_, _, _| action(value))
+        .child(label)
 }
 fn map_reason(reason: &str) -> StartFailure {
     if reason.contains("refus") || reason.contains("input") {
@@ -580,6 +860,13 @@ mod tests {
         assert_eq!(start.results().len(), 1);
         assert!(start.activate_focused().is_some());
         assert_eq!(start.accessibility_nodes()[0].role, "listitem");
+        let focused = start.focused_result().unwrap();
+        start.record_recent(focused.clone());
+        assert!(start.toggle_pin(focused.clone()));
+        assert!(!start.toggle_pin(focused));
+        let snapshot = start.snapshot();
+        assert!(snapshot.initialized);
+        assert_eq!(snapshot.recent_ids, vec!["terminal"]);
         start.close();
         assert!(!start.open);
     }

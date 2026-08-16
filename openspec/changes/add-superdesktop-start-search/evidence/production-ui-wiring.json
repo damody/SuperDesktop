@@ -10,15 +10,16 @@
     "the initial catalog contains admitted Start Menu applications and curated Windows settings",
     "committed keyboard text queries applications, files, and settings through the adjacent isolated provider host",
     "query generations clear superseded batches and accept only matching provider results",
+    "the GPUI EntityInputHandler receives native IME composition and commit callbacks; composition does not dispatch and committed text uses a 50 millisecond debounce",
     "arrow navigation, Enter activation, Escape dismissal, pointer activation, dialog/list/listitem roles, and focus styling are wired",
+    "Ctrl+P toggles the focused item pin, activations update a bounded recent list, and initialized empty or populated snapshots are atomically persisted in the versioned settings store",
+    "persisted file results are rehydrated only when the file still exists beneath an admitted local-search root",
     "file and application results activate through canonical association admission; settings use an allowlisted ms-settings URI route",
+    "sign-out, restart, and shut-down are explicit buttons routed through a native task-modal warning whose safe No choice is the default",
     "the provider request has a two-second deadline and failure leaves the owned Start surface usable",
     "activating a result dismisses the Start surface and a second Start invocation toggles an existing surface closed"
   ],
-  "remaining_production_enrichment": [
-    "persist user pin and recent-order changes through settings-store; current production catalog uses deterministic discovery order",
-    "wire explicit restart, shutdown, and sign-out actions behind native confirmation; the current Power region is present but non-mutating",
-    "wire native IME composition callbacks and the 50 millisecond debounce timer in the GPUI text-input adapter; the model contracts and tests already enforce those semantics",
+  "remaining_external_evidence": [
     "capture a shell-mode headful first-frame and provider timing artifact on the Windows 10 evidence machine"
   ],
   "commands": [
@@ -31,7 +32,7 @@
     "clippy": "passed",
     "tests": {
       "taskbar-ui": "24 passed",
-      "platform-win": "41 passed",
+      "platform-win": "44 passed",
       "shell-provider-host": "5 passed including process integration",
       "superdesktop-app": "7 passed"
     },

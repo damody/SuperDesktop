@@ -31,8 +31,9 @@ use shell_provider_protocol::{
 };
 use taskbar_ui::{
     AccessibleTask, ClockLocale, CoreStatus, FlyoutAction, NotificationAreaModel, PreviewCard,
-    ProviderState, StartView, StatusRegion, TaskAction, TaskFlyoutView, TaskViewModel,
-    TaskViewSurface, TaskbarCallbacks, TaskbarLayout, TaskbarView, TestClock,
+    ProviderState, StartActions, StartPowerAction, StartSnapshot, StartView, StatusRegion,
+    TaskAction, TaskFlyoutView, TaskViewModel, TaskViewSurface, TaskbarCallbacks, TaskbarLayout,
+    TaskbarView, TestClock,
 };
 
 use crate::{notification_client::NotificationClient, provider_client::ProviderClient};
@@ -1007,6 +1008,16 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
     let desktop_operations = Rc::new(RefCell::new(DesktopOperationController::default()));
     let provider_client = Rc::new(RefCell::new(ProviderClient::adjacent()?));
     let notification_client = Rc::new(RefCell::new(NotificationClient::adjacent()?));
+    let (mut settings_store, settings_target) =
+        platform_win::common::settings_file::production_settings_store()
+            .map_err(|_| "settings-store-init")?;
+    let persisted_settings = settings_store
+        .load(&settings_target)
+        .map_err(|_| "settings-store-load")?
+        .settings;
+    let settings_store = Rc::new(RefCell::new(settings_store));
+    let settings_target = Rc::new(settings_target);
+    let persisted_settings = Rc::new(RefCell::new(persisted_settings));
     let terminal = Rc::new(RefCell::new(None::<Result<(), &'static str>>));
     let terminal_for_app = Rc::clone(&terminal);
     let platform = gpui_windows::WindowsPlatform::new(false).map_err(|_| "gpui-platform")?;
@@ -1164,6 +1175,9 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                 let start_window = Rc::new(RefCell::new(None::<gpui::WindowHandle<StartView>>));
                 let start_window_for_taskbar = Rc::clone(&start_window);
                 let start_provider_for_taskbar = Rc::clone(&provider_client);
+                let start_settings_store = Rc::clone(&settings_store);
+                let start_settings_target = Rc::clone(&settings_target);
+                let start_persisted_settings = Rc::clone(&persisted_settings);
                 let start_monitor = taskbar_monitor.clone();
                 let flyout_window =
                     Rc::new(RefCell::new(None::<gpui::WindowHandle<TaskFlyoutView>>));
@@ -1266,6 +1280,28 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                 ));
                                 let search_provider = Rc::clone(&start_provider_for_taskbar);
                                 let dismiss_slot = Rc::clone(&start_window_for_taskbar);
+                                let snapshot = {
+                                    let settings = start_persisted_settings.borrow();
+                                    StartSnapshot {
+                                        initialized: settings.start.initialized,
+                                        pinned_ids: settings.start.pinned_ids.clone(),
+                                        recent_ids: settings.start.recent_ids.clone(),
+                                    }
+                                };
+                                for id in snapshot
+                                    .pinned_ids
+                                    .iter()
+                                    .chain(&snapshot.recent_ids)
+                                {
+                                    if !catalog.iter().any(|item| item.id == *id)
+                                        && let Some(item) = platform_win::common::start_search::restore_persisted_result(id)
+                                    {
+                                        catalog.push(item);
+                                    }
+                                }
+                                let persist_store = Rc::clone(&start_settings_store);
+                                let persist_target = Rc::clone(&start_settings_target);
+                                let persist_settings = Rc::clone(&start_persisted_settings);
                                 let opened = app.open_window(start_options(&start_monitor), move |window, cx| {
                                     window.activate_window();
                                     let provider = Rc::clone(&search_provider);
@@ -1273,13 +1309,41 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                     cx.new(move |cx| {
                                         StartView::new(
                                             catalog,
-                                            Rc::new(move |query| search_start(&provider, query)),
-                                            Rc::new(activate_start_command),
-                                            Rc::new(move |window, _| {
-                                                window.remove_window();
-                                                *dismiss_slot.borrow_mut() = None;
-                                                trace_action("start:closed");
-                                            }),
+                                            snapshot,
+                                            StartActions {
+                                                search: Rc::new(move |query| search_start(&provider, query)),
+                                                activate: Rc::new(activate_start_command),
+                                                dismiss: Rc::new(move |window, _| {
+                                                    window.remove_window();
+                                                    *dismiss_slot.borrow_mut() = None;
+                                                    trace_action("start:closed");
+                                                }),
+                                                persist: Rc::new(move |snapshot| {
+                                                    let mut settings = persist_settings.borrow().clone();
+                                                    settings.start.initialized = snapshot.initialized;
+                                                    settings.start.pinned_ids = snapshot.pinned_ids.clone();
+                                                    settings.start.recent_ids = snapshot.recent_ids.clone();
+                                                    match persist_store.borrow_mut().save(&persist_target, &settings) {
+                                                        Ok(saved) => {
+                                                            *persist_settings.borrow_mut() = saved;
+                                                            trace_action("start:snapshot-persisted");
+                                                        }
+                                                        Err(_) => trace_action("start:snapshot-persist-failed"),
+                                                    }
+                                                }),
+                                                power: Rc::new(move |action| {
+                                                    let action = match action {
+                                                        StartPowerAction::SignOut => platform_win::common::power::SessionPowerAction::SignOut,
+                                                        StartPowerAction::Restart => platform_win::common::power::SessionPowerAction::Restart,
+                                                        StartPowerAction::ShutDown => platform_win::common::power::SessionPowerAction::ShutDown,
+                                                    };
+                                                    match platform_win::common::power::confirm_and_execute(action) {
+                                                        Ok(true) => trace_action("start:power-accepted"),
+                                                        Ok(false) => trace_action("start:power-cancelled"),
+                                                        Err(_) => trace_action("start:power-failed"),
+                                                    }
+                                                }),
+                                            },
                                             cx,
                                         )
                                     })

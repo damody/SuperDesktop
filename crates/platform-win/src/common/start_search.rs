@@ -127,6 +127,17 @@ pub fn default_file_roots() -> Vec<PathBuf> {
         .collect()
 }
 
+/// Rehydrates a persisted file result only while it still resolves beneath an
+/// admitted local-search root. Missing, moved, or escaped items are dropped.
+pub fn restore_persisted_result(id: &str) -> Option<SearchResult> {
+    let path = PathBuf::from(id.strip_prefix("path:")?);
+    let canonical = path.canonicalize().ok()?;
+    if !canonical.is_file() || !is_path_within(&canonical, &default_file_roots()) {
+        return None;
+    }
+    Some(result_for_path(canonical, SearchCategory::File))
+}
+
 fn bounded_paths(
     query: &str,
     roots: &[PathBuf],

@@ -29,8 +29,8 @@ pub use notification_area::{
     NotificationAccessibleNode, NotificationAreaModel, NotificationPlacement,
 };
 pub use start::{
-    StartAccessibilityNode, StartAvailability, StartControl, StartEffect, StartFailure, StartModel,
-    StartSnapshot, StartSource, StartView,
+    StartAccessibilityNode, StartActions, StartAvailability, StartControl, StartEffect,
+    StartFailure, StartModel, StartPowerAction, StartSnapshot, StartSource, StartView,
 };
 pub use status::{ClockLocale, CoreStatus, ProviderState, StatusRegion, TestClock};
 pub use surface::{
