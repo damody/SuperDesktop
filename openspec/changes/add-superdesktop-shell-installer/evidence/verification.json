@@ -22,7 +22,10 @@
       "machine-readable CLI error and audit output",
       "binary content drift rejection before mutation",
       "SuperDesktop and SuperDesktopGuardian VersionInfo identity admission",
-      "restore remains reachable when product binaries are missing"
+      "restore remains reachable when product binaries are missing",
+      "repair reuses the immutable recovery record",
+      "repair rejects silent installed-binary path replacement",
+      "repair failure restores the exact transaction pre-state"
     ]
   },
   "physical_gate": {

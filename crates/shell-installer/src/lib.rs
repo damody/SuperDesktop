@@ -363,7 +363,7 @@ pub fn execute_plan<R: ShellRegistry, S: RollbackStore>(
         plan.command,
         InstallerCommand::Disable | InstallerCommand::Uninstall
     );
-    let record = if restoring {
+    if restoring {
         let record = store.load()?.ok_or_else(|| {
             InstallerError::RollbackStore("restore requires an existing rollback record".into())
         })?;
@@ -373,7 +373,25 @@ pub fn execute_plan<R: ShellRegistry, S: RollbackStore>(
         {
             return Err(InstallerError::StateDrift);
         }
-        record
+    } else if plan.command == InstallerCommand::Repair {
+        match store.load()? {
+            Some(record) => {
+                if record.target != plan.target || record.intended != plan.desired {
+                    return Err(InstallerError::PreflightRejected(
+                        "repair cannot silently replace the installed binary path; disable then enable"
+                            .into(),
+                    ));
+                }
+            }
+            None => {
+                store.save(&RollbackRecord {
+                    target: plan.target.clone(),
+                    prior: plan.observed.clone(),
+                    intended: plan.desired.clone(),
+                    plan_fingerprint: plan.fingerprint.clone(),
+                })?;
+            }
+        }
     } else {
         let record = RollbackRecord {
             target: plan.target.clone(),
@@ -382,8 +400,7 @@ pub fn execute_plan<R: ShellRegistry, S: RollbackStore>(
             plan_fingerprint: plan.fingerprint.clone(),
         };
         store.save(&record)?;
-        record
-    };
+    }
     let write_result = apply_value(registry, plan.desired.as_deref());
     let after_result = registry.read_shell();
     let verified = write_result.is_ok()
@@ -391,10 +408,10 @@ pub fn execute_plan<R: ShellRegistry, S: RollbackStore>(
             .as_ref()
             .is_ok_and(|after| *after == plan.desired);
     if !verified {
-        restore_and_verify(registry, record.prior.as_deref())?;
+        restore_and_verify(registry, plan.observed.as_deref())?;
         return Ok(audit(
             plan,
-            record.prior,
+            plan.observed.clone(),
             InstallerDisposition::RolledBack,
             if write_result.is_err() {
                 "write failed; prior state restored"
@@ -777,5 +794,62 @@ mod tests {
         fs::remove_file(app).unwrap();
         fs::remove_file(guardian).unwrap();
         fs::remove_dir(directory).unwrap();
+    }
+
+    #[test]
+    fn repair_reuses_immutable_record_and_restores_each_transaction_pre_state() {
+        let original = RollbackRecord {
+            target: SHELL_TARGET.into(),
+            prior: Some("explorer.exe".into()),
+            intended: Some("superdesktop.exe".into()),
+            plan_fingerprint: "original-install".into(),
+        };
+        let repair = finish_plan(
+            InstallerCommand::Repair,
+            Some("damaged-shell.exe".into()),
+            original.intended.clone(),
+            "C:\\app.exe".into(),
+            "C:\\guardian.exe".into(),
+        );
+        let mut registry = MemoryRegistry {
+            value: repair.observed.clone(),
+            ..Default::default()
+        };
+        let mut store = MemoryStore {
+            record: Some(original.clone()),
+            fail_save: true,
+        };
+        let audit = execute_plan(&mut registry, &mut store, &repair, &authority(&repair)).unwrap();
+        assert_eq!(audit.disposition, InstallerDisposition::Applied);
+        assert_eq!(registry.value, original.intended);
+        assert_eq!(store.record, Some(original.clone()));
+
+        let changed_path = finish_plan(
+            InstallerCommand::Repair,
+            original.intended.clone(),
+            Some("different-superdesktop.exe".into()),
+            "C:\\app.exe".into(),
+            "C:\\guardian.exe".into(),
+        );
+        registry.value = changed_path.observed.clone();
+        assert!(matches!(
+            execute_plan(
+                &mut registry,
+                &mut store,
+                &changed_path,
+                &authority(&changed_path)
+            ),
+            Err(InstallerError::PreflightRejected(_))
+        ));
+        assert_eq!(registry.value, changed_path.observed);
+
+        registry.value = repair.observed.clone();
+        registry.reads = 0;
+        registry.writes = 0;
+        registry.fail_read_at = Some(2);
+        let audit = execute_plan(&mut registry, &mut store, &repair, &authority(&repair)).unwrap();
+        assert_eq!(audit.disposition, InstallerDisposition::RolledBack);
+        assert_eq!(registry.value, repair.observed);
+        assert_eq!(store.record, Some(original));
     }
 }
