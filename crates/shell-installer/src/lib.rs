@@ -45,6 +45,7 @@ pub struct InstallerPlan {
     pub desired: Option<String>,
     pub app_path: PathBuf,
     pub guardian_path: PathBuf,
+    pub rollback_record_path: PathBuf,
     pub app_binary_fingerprint: Option<String>,
     pub guardian_binary_fingerprint: Option<String>,
     pub preflight: Option<EnablePreflight>,
@@ -141,12 +142,14 @@ pub fn build_enable_plan(
     observed: Option<String>,
     app_path: &Path,
     guardian_path: &Path,
+    rollback_record_path: &Path,
 ) -> Result<InstallerPlan, InstallerError> {
     build_enable_plan_with_preflight(
         command,
         observed,
         app_path,
         guardian_path,
+        rollback_record_path,
         EnablePreflight::current(),
     )
 }
@@ -156,10 +159,12 @@ pub fn build_enable_plan_with_preflight(
     observed: Option<String>,
     app_path: &Path,
     guardian_path: &Path,
+    rollback_record_path: &Path,
     preflight: EnablePreflight,
 ) -> Result<InstallerPlan, InstallerError> {
     let app_path = admitted_binary(app_path, "app")?;
     let guardian_path = admitted_binary(guardian_path, "guardian")?;
+    let rollback_record_path = validate_rollback_record_path(rollback_record_path)?;
     if app_path.parent() != guardian_path.parent() {
         return Err(InstallerError::PreflightRejected(
             "app and guardian must share an installation directory".into(),
@@ -182,8 +187,12 @@ pub fn build_enable_plan_with_preflight(
         desired,
         app_path,
         guardian_path,
-        Some((app_binary_fingerprint, guardian_binary_fingerprint)),
-        Some(preflight),
+        rollback_record_path,
+        Some((
+            app_binary_fingerprint,
+            guardian_binary_fingerprint,
+            preflight,
+        )),
     ))
 }
 
@@ -193,16 +202,18 @@ pub fn build_restore_plan(
     record: &RollbackRecord,
     app_path: PathBuf,
     guardian_path: PathBuf,
-) -> InstallerPlan {
-    finish_plan_with_preflight(
+    rollback_record_path: PathBuf,
+) -> Result<InstallerPlan, InstallerError> {
+    let rollback_record_path = validate_rollback_record_path(&rollback_record_path)?;
+    Ok(finish_plan_with_preflight(
         command,
         observed,
         record.prior.clone(),
         app_path,
         guardian_path,
+        rollback_record_path,
         None,
-        None,
-    )
+    ))
 }
 
 #[cfg(test)]
@@ -219,7 +230,7 @@ fn finish_plan(
         desired,
         app_path,
         guardian_path,
-        None,
+        PathBuf::from(r"C:\SuperDesktop\installer-rollback.json"),
         None,
     )
 }
@@ -230,16 +241,17 @@ fn finish_plan_with_preflight(
     desired: Option<String>,
     app_path: PathBuf,
     guardian_path: PathBuf,
-    binary_fingerprints: Option<(String, String)>,
-    preflight: Option<EnablePreflight>,
+    rollback_record_path: PathBuf,
+    enable_admission: Option<(String, String, EnablePreflight)>,
 ) -> InstallerPlan {
-    let (app_binary_fingerprint, guardian_binary_fingerprint) = binary_fingerprints
-        .map(|(app, guardian)| (Some(app), Some(guardian)))
-        .unwrap_or((None, None));
+    let (app_binary_fingerprint, guardian_binary_fingerprint, preflight) = enable_admission
+        .map(|(app, guardian, preflight)| (Some(app), Some(guardian), Some(preflight)))
+        .unwrap_or((None, None, None));
     let material = format!(
-        "{command:?}|{SHELL_TARGET}|{observed:?}|{desired:?}|{}|{}|{app_binary_fingerprint:?}|{guardian_binary_fingerprint:?}|{preflight:?}",
+        "{command:?}|{SHELL_TARGET}|{observed:?}|{desired:?}|{}|{}|{}|{app_binary_fingerprint:?}|{guardian_binary_fingerprint:?}|{preflight:?}",
         app_path.display(),
-        guardian_path.display()
+        guardian_path.display(),
+        rollback_record_path.display()
     );
     InstallerPlan {
         command,
@@ -248,11 +260,28 @@ fn finish_plan_with_preflight(
         desired,
         app_path,
         guardian_path,
+        rollback_record_path,
         app_binary_fingerprint,
         guardian_binary_fingerprint,
         preflight,
         fingerprint: stable_fingerprint(material.as_bytes()),
     }
+}
+
+pub fn validate_rollback_record_path(path: &Path) -> Result<PathBuf, InstallerError> {
+    use std::path::Component;
+
+    if !path.is_absolute()
+        || path.file_name().is_none()
+        || path
+            .components()
+            .any(|part| matches!(part, Component::CurDir | Component::ParentDir))
+    {
+        return Err(InstallerError::PreflightRejected(
+            "rollback record path must be an absolute, lexically normalized file path".into(),
+        ));
+    }
+    Ok(path.to_path_buf())
 }
 
 fn file_fingerprint(path: &Path, field: &'static str) -> Result<String, InstallerError> {
@@ -471,7 +500,10 @@ fn audit(
             .as_millis(),
         command: plan.command,
         target: plan.target.clone(),
-        affected_targets: vec![plan.target.clone()],
+        affected_targets: vec![
+            plan.target.clone(),
+            format!("rollback_record:{}", plan.rollback_record_path.display()),
+        ],
         fingerprint: plan.fingerprint.clone(),
         before: plan.observed.clone(),
         desired: plan.desired.clone(),
@@ -626,6 +658,17 @@ mod tests {
     #[test]
     fn dry_run_drift_write_before_mutate_and_exact_absence_restore() {
         let plan = test_plan(Some("explorer.exe"), Some("superdesktop.exe"));
+        let alternate_metadata_target = finish_plan_with_preflight(
+            InstallerCommand::Enable,
+            Some("explorer.exe".into()),
+            Some("superdesktop.exe".into()),
+            "C:\\app.exe".into(),
+            "C:\\guardian.exe".into(),
+            PathBuf::from(r"C:\Other\installer-rollback.json"),
+            None,
+        );
+        assert_ne!(plan.fingerprint, alternate_metadata_target.fingerprint);
+        assert!(validate_rollback_record_path(Path::new("relative-rollback.json")).is_err());
         let mut registry = MemoryRegistry {
             value: Some("explorer.exe".into()),
             ..Default::default()
@@ -643,6 +686,13 @@ mod tests {
         )
         .unwrap();
         assert_eq!(audit.disposition, InstallerDisposition::DryRun);
+        assert_eq!(
+            audit.affected_targets,
+            vec![
+                SHELL_TARGET.to_owned(),
+                r"rollback_record:C:\SuperDesktop\installer-rollback.json".to_owned()
+            ]
+        );
         assert_eq!(registry.value.as_deref(), Some("explorer.exe"));
         registry.value = Some("external.exe".into());
         assert!(matches!(
@@ -705,7 +755,9 @@ mod tests {
             &original,
             "C:\\app.exe".into(),
             "C:\\guardian.exe".into(),
-        );
+            PathBuf::from(r"C:\SuperDesktop\installer-rollback.json"),
+        )
+        .unwrap();
         let mut registry = MemoryRegistry {
             value: original.intended.clone(),
             ..Default::default()
@@ -765,6 +817,7 @@ mod tests {
             None,
             &app,
             &guardian,
+            &directory.join("installer-rollback.json"),
             EnablePreflight::current(),
         )
         .unwrap();
@@ -789,7 +842,9 @@ mod tests {
             },
             directory.join("missing-app.exe"),
             directory.join("missing-guardian.exe"),
-        );
+            directory.join("installer-rollback.json"),
+        )
+        .unwrap();
         assert!(validate_mutation_binaries(&restore).is_ok());
         fs::remove_file(app).unwrap();
         fs::remove_file(guardian).unwrap();

@@ -5,7 +5,7 @@ use serde_json::json;
 use shell_installer::{
     FileRollbackStore, InstallerCommand, InstallerError, MutationAuthority, RollbackStore,
     ShellRegistry, WindowsShellRegistry, build_enable_plan, build_restore_plan, execute_plan,
-    validate_mutation_binaries,
+    validate_mutation_binaries, validate_rollback_record_path,
 };
 
 #[derive(Debug)]
@@ -46,9 +46,11 @@ fn run() -> Result<(), (u8, InstallerError)> {
             )),
         )
     })?;
+    let rollback_record_path =
+        validate_rollback_record_path(&arguments.rollback_record).map_err(classify)?;
     let mut registry = WindowsShellRegistry;
     let observed = registry.read_shell().map_err(classify)?;
-    let mut store = FileRollbackStore::new(arguments.rollback_record);
+    let mut store = FileRollbackStore::new(rollback_record_path.clone());
     let plan = match arguments.command {
         InstallerCommand::Install | InstallerCommand::Enable | InstallerCommand::Repair => {
             build_enable_plan(
@@ -56,6 +58,7 @@ fn run() -> Result<(), (u8, InstallerError)> {
                 observed,
                 &arguments.app,
                 &arguments.guardian,
+                &rollback_record_path,
             )
             .map_err(classify)?
         }
@@ -71,7 +74,9 @@ fn run() -> Result<(), (u8, InstallerError)> {
                 &record,
                 arguments.app,
                 arguments.guardian,
+                rollback_record_path,
             )
+            .map_err(classify)?
         }
     };
     validate_mutation_binaries(&plan).map_err(classify)?;
