@@ -19,14 +19,18 @@
     "child key handling stops propagation so real-item activation cannot also trigger the fixed entry",
     "copy and move requests execute on a background worker while the GPUI desktop remains responsive",
     "a production transfer card reports byte progress and exposes cancellation backed by the operation controller cancellation contract",
+    "recursive directory copies preserve nested and empty directories while reporting aggregate byte progress",
+    "directory transfer admission rejects symbolic links and reparse points and revalidates every entry before mutation",
+    "cancelled or failed directory copies remove the entire newly-created destination while leaving the source intact",
+    "failed or cancelled operations publish terminal results for every remaining request in the background batch",
     "terminal transfer results reconcile every desktop surface with the authoritative namespace",
     "desktop icons use explicit logical positions and background drops persist per-monitor positions atomically",
     "background context commands select and persist name, kind, size, or modified ordering and ascending or descending direction"
   ],
   "deliberately_not_claimed_yet": [],
   "commands": [
-    "cargo test -p desktop-ui -p superdesktop-app --offline",
-    "cargo clippy -p desktop-ui -p superdesktop-app --all-targets --offline -- -D warnings",
+    "cargo test -p platform-win -p desktop-ui -p superdesktop-app --offline",
+    "cargo clippy -p platform-win -p desktop-ui -p superdesktop-app --all-targets --offline -- -D warnings",
     "cargo build -p superdesktop-app --offline",
     "target/debug/superdesktop-app.exe --verification-capture-ms 750"
   ]

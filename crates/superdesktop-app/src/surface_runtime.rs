@@ -61,12 +61,21 @@ struct ProductionTransferRuntime {
 
 impl ProductionTransferRuntime {
     fn start(&self, requests: Vec<(DesktopOperationRequest, Vec<PathBuf>, String)>) -> bool {
-        if requests.is_empty()
-            || self
-                .active
-                .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
-                .is_err()
+        if requests.is_empty() {
+            return false;
+        }
+        if self
+            .active
+            .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+            .is_err()
         {
+            if let Ok(mut snapshot) = self.snapshot.lock() {
+                snapshot
+                    .terminals
+                    .extend(requests.into_iter().map(|(request, _, _)| {
+                        (request.correlation_id, DesktopOperationTerminal::Failed)
+                    }));
+            }
             return false;
         }
         self.cancelled.store(false, Ordering::Release);
@@ -87,7 +96,8 @@ impl ProductionTransferRuntime {
         let cancelled = Arc::clone(&self.cancelled);
         let snapshot = Arc::clone(&self.snapshot);
         std::thread::spawn(move || {
-            for (request, roots, label) in requests {
+            let mut requests = requests.into_iter();
+            while let Some((request, roots, label)) = requests.next() {
                 let progress = Arc::clone(&snapshot);
                 let cancel = Arc::clone(&cancelled);
                 let terminal =
@@ -106,6 +116,18 @@ impl ProductionTransferRuntime {
                     current.terminals.push((request.correlation_id, terminal));
                 }
                 if terminal != DesktopOperationTerminal::Succeeded {
+                    let remaining_terminal = if terminal == DesktopOperationTerminal::Cancelled {
+                        DesktopOperationTerminal::Cancelled
+                    } else {
+                        DesktopOperationTerminal::Failed
+                    };
+                    if let Ok(mut current) = snapshot.lock() {
+                        current.terminals.extend(
+                            requests.map(|(request, _, _)| {
+                                (request.correlation_id, remaining_terminal)
+                            }),
+                        );
+                    }
                     break;
                 }
             }
