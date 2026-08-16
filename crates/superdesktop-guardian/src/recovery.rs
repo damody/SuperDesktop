@@ -5,7 +5,7 @@ pub struct GuardianInvocation {
     pub lease_handle: isize,
     pub channel_handle: isize,
     pub terminal_path: String,
-    pub deadline_ms: u32,
+    pub parent_wait_ms: u32,
 }
 
 impl GuardianInvocation {
@@ -41,7 +41,7 @@ impl GuardianInvocation {
             lease_handle,
             channel_handle,
             terminal_path,
-            deadline_ms: 10_000,
+            parent_wait_ms: u32::MAX,
         })
     }
 }
@@ -334,7 +334,10 @@ mod tests {
             r"C:\Temp\terminal.json",
         ]
         .map(str::to_owned);
-        assert!(GuardianInvocation::from_args(args).is_ok());
+        assert_eq!(
+            GuardianInvocation::from_args(args).unwrap().parent_wait_ms,
+            u32::MAX
+        );
         let bad = [
             "--guardian-child",
             "--lease-handle",

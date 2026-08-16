@@ -687,6 +687,9 @@ fn read_once_claim(handle: RawHandle) -> Result<LeaseIdentity, LeaseReject> {
     };
     decode_claim(&body)
 }
+fn valid_acknowledgement(bytes: &[u8], nonce: &str) -> bool {
+    bytes == format!("guardian-lease-accepted:{nonce}").as_bytes()
+}
 pub fn spawn_restricted_child(
     executable: &str,
     terminal_path: &str,
@@ -813,10 +816,17 @@ pub fn spawn_restricted_child(
     channel_write.close()?;
     let acknowledgement = format!("{terminal_path}.accepted");
     let deadline = Instant::now() + Duration::from_secs(2);
-    while !std::path::Path::new(&acknowledgement).is_file() && Instant::now() < deadline {
+    let mut acknowledged = false;
+    while Instant::now() < deadline {
+        if std::fs::read(&acknowledgement)
+            .is_ok_and(|bytes| valid_acknowledgement(&bytes, &identity.nonce))
+        {
+            acknowledged = true;
+            break;
+        }
         std::thread::sleep(Duration::from_millis(10));
     }
-    if !std::path::Path::new(&acknowledgement).is_file() {
+    if !acknowledged {
         return Err("child-acceptance-timeout");
     }
     let after = handle_count()?;
@@ -847,6 +857,31 @@ pub fn child_accept_and_wait(
 }
 
 pub fn child_accept_and_wait_expected(
+    parent_raw: RawHandle,
+    channel_raw: RawHandle,
+    terminal_path: &str,
+    deadline_ms: u32,
+    expected_parent_executable: &str,
+) -> Result<HandleCounts, LeaseReject> {
+    let counts = child_accept_and_wait_expected_deferred_terminal(
+        parent_raw,
+        channel_raw,
+        terminal_path,
+        deadline_ms,
+        expected_parent_executable,
+    )?;
+    let terminal = format!(
+        "{{\"schema\":\"guardian-terminal/v3\",\"parent_terminal_observed\":true,\"unique_success_terminal_count\":1,\"child_handles_before\":{},\"child_handles_after\":{},\"released_inherited_handles\":2,\"explicit_allowlist_exact\":true,\"verified_roles\":[\"parent-wait-handle\",\"one-shot-read-channel\"]}}\n",
+        counts.before, counts.after
+    );
+    std::fs::write(terminal_path, terminal).map_err(|_| LeaseReject::UnexpectedInheritedHandle)?;
+    Ok(counts)
+}
+
+/// Validates the restricted authority channel and waits for the exact parent,
+/// but deliberately leaves the success terminal to the caller. Production
+/// recovery uses this so success cannot be published before Explorer recovery.
+pub fn child_accept_and_wait_expected_deferred_terminal(
     parent_raw: RawHandle,
     channel_raw: RawHandle,
     terminal_path: &str,
@@ -884,7 +919,7 @@ pub fn child_accept_and_wait_expected(
     }
     std::fs::write(
         format!("{terminal_path}.accepted"),
-        "guardian-lease-accepted",
+        format!("guardian-lease-accepted:{}", actual.nonce),
     )
     .map_err(|_| LeaseReject::UnexpectedInheritedHandle)?;
     // SAFETY: validated parent process handle remains owned for the bounded wait.
@@ -899,10 +934,6 @@ pub fn child_accept_and_wait_expected(
         .close()
         .map_err(|_| LeaseReject::UnexpectedInheritedHandle)?;
     let after = handle_count().map_err(|_| LeaseReject::UnexpectedInheritedHandle)?;
-    let terminal = format!(
-        "{{\"schema\":\"guardian-terminal/v3\",\"parent_terminal_observed\":true,\"unique_success_terminal_count\":1,\"child_handles_before\":{before},\"child_handles_after\":{after},\"released_inherited_handles\":2,\"explicit_allowlist_exact\":true,\"verified_roles\":[\"parent-wait-handle\",\"one-shot-read-channel\"]}}\n"
-    );
-    std::fs::write(terminal_path, terminal).map_err(|_| LeaseReject::UnexpectedInheritedHandle)?;
     Ok(HandleCounts { before, after })
 }
 pub fn current_resources() -> Result<ResourceSnapshot, &'static str> {
@@ -1046,6 +1077,22 @@ mod tests {
     fn claim_round_trip_is_not_argv() {
         let value = id();
         assert_eq!(decode_claim(&encode_claim(&value)), Ok(value));
+    }
+    #[test]
+    fn acknowledgement_is_bound_to_the_sealed_pipe_nonce() {
+        let value = id();
+        assert!(valid_acknowledgement(
+            format!("guardian-lease-accepted:{}", value.nonce).as_bytes(),
+            &value.nonce
+        ));
+        assert!(!valid_acknowledgement(
+            b"guardian-lease-accepted",
+            &value.nonce
+        ));
+        assert!(!valid_acknowledgement(
+            b"guardian-lease-accepted:forged",
+            &value.nonce
+        ));
     }
     #[test]
     fn duplicate_roles_are_rejected() {

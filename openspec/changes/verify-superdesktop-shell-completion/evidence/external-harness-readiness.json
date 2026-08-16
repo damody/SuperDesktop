@@ -14,7 +14,8 @@
     "versioned candidate-bound M0 physical confirmation template",
     "attributable lifecycle and installer operator continuity across reboot phases",
     "derived external gate recomputation",
-    "fail-closed incomplete external evidence handling"
+    "fail-closed incomplete external evidence handling",
+    "production Shell forced-crash binding with authenticated guardian completion terminal"
   ],
   "verification": {
     "powershell_parser": "passed",

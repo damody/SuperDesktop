@@ -110,7 +110,7 @@ if (-not [string]::IsNullOrWhiteSpace($ExternalEvidenceDirectory)) {
                     if ([string]::IsNullOrWhiteSpace($operator.name) -or [string]::IsNullOrWhiteSpace($operator.organization) -or
                         [string]$operator.name -like 'REPLACE_WITH_*' -or [string]$operator.organization -like 'REPLACE_WITH_*') { throw 'Windows 10 lifecycle/installer operator is not attributable.' }
                 }
-                if ($document.lifecycle.forced_crash_runs -ne 10 -or $document.lifecycle.max_recovery_ms -gt 10000) {
+                if (-not $document.lifecycle.production_guardian_path -or $document.lifecycle.forced_crash_runs -ne 10 -or $document.lifecycle.max_recovery_ms -gt 10000) {
                     throw 'Windows 10 recovery contract failed.'
                 }
                 if (-not $document.lifecycle.preview_zero_mutation -or -not $document.lifecycle.normal_exit_restored) {

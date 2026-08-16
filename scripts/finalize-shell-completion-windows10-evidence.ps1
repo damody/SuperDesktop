@@ -31,7 +31,14 @@ if ($m0.host.build -ne 19045 -or $m0.host.display_version -cne '22H2') { throw '
 if ([string]::IsNullOrWhiteSpace($m0.operator.name) -or [string]::IsNullOrWhiteSpace($m0.operator.organization) -or
     [string]$m0.operator.name -like 'REPLACE_WITH_*' -or [string]$m0.operator.organization -like 'REPLACE_WITH_*') { throw 'M0 Windows 10 operator is not attributable.' }
 if ($m0.dispositions.'G-SHELL-TAKEOVER' -cne 'passed' -or $m0.dispositions.'G-GUARDIAN-RECOVERY' -cne 'passed') { throw 'M0 lifecycle gates are not passed.' }
-if ($m0.forced_crash.run_count -ne 10 -or $m0.forced_crash.max_elapsed_ms -gt 10000) { throw 'Guardian recovery matrix is incomplete.' }
+if (-not $m0.forced_crash.production_path -or $m0.forced_crash.run_count -ne 10 -or $m0.forced_crash.max_elapsed_ms -gt 10000) { throw 'Guardian recovery matrix is incomplete or did not exercise the production Shell path.' }
+foreach ($run in @($m0.forced_crash.runs)) {
+    if (-not $run.production_shell_crashed -or -not $run.parent_terminal_observed -or -not $run.recovery_verified -or
+        -not $run.work_area_owned_before_crash -or -not $run.work_area_baseline -or $run.guardian_pid -le 0 -or
+        $run.explorer_pid -le 0 -or $run.unique_terminal_count -ne 1 -or $run.ready_elapsed_ms -gt 10000) {
+        throw "Production guardian recovery run is incomplete: $($run.run)"
+    }
+}
 if (-not $m0.preview.zero_registry_mutation -or -not $m0.normal_exit.registry_restored -or -not $m0.normal_exit.explorer_restored -or -not $m0.normal_exit.work_areas_restored) { throw 'Lifecycle baseline was not restored.' }
 
 $requiredInstallerFiles = @(
@@ -144,7 +151,7 @@ $artifact = [ordered]@{
     revision = $revision
     host = [ordered]@{ build=19045;display_version='22H2';session_id=$m0.host.session_id;interactive=$m0.host.interactive }
     operators = [ordered]@{ lifecycle=$m0.operator;installer=$hostBaseline.operator }
-    lifecycle = [ordered]@{ preview_zero_mutation=$true;normal_exit_restored=$true;forced_crash_runs=10;max_recovery_ms=[double]$m0.forced_crash.max_elapsed_ms }
+    lifecycle = [ordered]@{ preview_zero_mutation=$true;normal_exit_restored=$true;production_guardian_path=$true;forced_crash_runs=10;max_recovery_ms=[double]$m0.forced_crash.max_elapsed_ms }
     installer = [ordered]@{ reboot_verified=$true;exact_rollback_verified=$true;metadata_removed=$true;prior_shell=$enablePlan.observed;enabled_shell=$enablePlan.desired }
     source_hashes = $sourceHashes
     gates = [ordered]@{ 'G-SHELL-TAKEOVER'='passed';'G-GUARDIAN-RECOVERY'='passed';'G-INSTALL-ROLLBACK'='passed' }

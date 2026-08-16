@@ -72,6 +72,9 @@ pub fn run_product_for(
     duration: Option<std::time::Duration>,
 ) -> Result<(), &'static str> {
     let owner = admit_shell(&request)?;
+    if request.shell {
+        arm_recovery_guardian()?;
+    }
     let mut root = CompositionRoot::new(request);
     if !request.shell {
         root.start()?;
@@ -81,6 +84,36 @@ pub fn run_product_for(
         owner.release()?;
     }
     Ok(())
+}
+
+fn arm_recovery_guardian() -> Result<u32, &'static str> {
+    let executable = std::env::current_exe().map_err(|_| "app-current-executable")?;
+    let install_directory = executable.parent().ok_or("app-no-binary-directory")?;
+    let guardian = install_directory.join("superdesktop-guardian.exe");
+    let local_app_data = std::env::var_os("LOCALAPPDATA")
+        .map(std::path::PathBuf::from)
+        .ok_or("guardian-local-app-data-unavailable")?;
+    if !local_app_data.is_absolute() {
+        return Err("guardian-local-app-data-not-absolute");
+    }
+    let recovery_directory = local_app_data.join("SuperDesktop").join("guardian");
+    std::fs::create_dir_all(&recovery_directory).map_err(|_| "guardian-record-directory")?;
+    let nonce = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_err(|_| "guardian-record-clock")?
+        .as_nanos();
+    let terminal =
+        recovery_directory.join(format!("recovery-{}-{nonce:032x}.json", std::process::id()));
+    let terminal = terminal.to_str().ok_or("guardian-record-path-encoding")?;
+    let lease = platform_win::common::guardian_lease::spawn_restricted_child(
+        guardian.to_str().ok_or("guardian-path-encoding")?,
+        terminal,
+    )?;
+    let child_pid = lease.child_pid;
+    lease.close_owned_handles()?;
+    std::fs::remove_file(format!("{terminal}.accepted"))
+        .map_err(|_| "guardian-acceptance-cleanup")?;
+    Ok(child_pid)
 }
 
 /// Evidence-only parent mode for the real restricted guardian topology. The
