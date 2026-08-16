@@ -9,6 +9,9 @@ use windows::Win32::UI::Shell::{
     FO_DELETE, FOF_ALLOWUNDO, FOF_NOCONFIRMATION, FOF_NOERRORUI, FOF_SILENT, SHFILEOPSTRUCTW,
     SHFileOperationW,
 };
+use windows::Win32::UI::WindowsAndMessaging::{
+    IDYES, MB_DEFBUTTON2, MB_ICONWARNING, MB_YESNO, MessageBoxW,
+};
 use windows::core::PCWSTR;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -157,6 +160,32 @@ pub fn permanent_delete(
         fs::remove_file(path)?;
     }
     Ok(())
+}
+
+/// Requires an explicit, default-no confirmation before the caller may select
+/// `PermanentExplicit`. The dialog owns no mutation authority itself.
+pub fn confirm_permanent_delete(display_name: &str) -> bool {
+    if display_name.is_empty() || display_name.contains('\0') {
+        return false;
+    }
+    let prompt = format!(
+        "Permanently delete \"{display_name}\"? This item will not be moved to the Recycle Bin."
+    );
+    let prompt = prompt.encode_utf16().chain(Some(0)).collect::<Vec<_>>();
+    let title = "SuperDesktop permanent delete"
+        .encode_utf16()
+        .chain(Some(0))
+        .collect::<Vec<_>>();
+    // SAFETY: both UTF-16 buffers are NUL-terminated and remain live for the
+    // synchronous dialog. The dialog is confirmation-only and performs no I/O.
+    unsafe {
+        MessageBoxW(
+            None,
+            PCWSTR(prompt.as_ptr()),
+            PCWSTR(title.as_ptr()),
+            MB_YESNO | MB_ICONWARNING | MB_DEFBUTTON2,
+        ) == IDYES
+    }
 }
 
 pub fn copy_file_cancellable(
@@ -320,6 +349,8 @@ mod tests {
     fn invalid_names_and_outside_roots_fail_closed() {
         assert!(validate_filename("CON.txt").is_err());
         assert!(validate_filename("bad?.txt").is_err());
+        assert!(!confirm_permanent_delete(""));
+        assert!(!confirm_permanent_delete("bad\0name"));
         let root = fixture();
         assert!(admit_existing(Path::new("C:\\Windows"), std::slice::from_ref(&root)).is_err());
         fs::remove_dir_all(root).unwrap();

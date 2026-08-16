@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "change": "add-superdesktop-desktop-file-operations",
+  "result": "production_path_partially_wired",
+  "captured_at": "2026-08-17",
+  "implemented": [
+    "production desktop surfaces enumerate the authoritative user and public Desktop namespaces",
+    "hidden and system entries remain excluded by the published visibility policy",
+    "single click selects while double click and Enter activate the selected real item",
+    "folders launch SuperExplorer with a validated canonical initial directory",
+    "files launch through the Windows association admission adapter",
+    "F5 performs authoritative namespace refresh and restores selection only for surviving stable identities",
+    "Delete routes through a typed correlated operation and the Recycle Bin policy before refresh",
+    "F2 provides inline rename input and preserves the editor when validation or collision admission fails",
+    "Shift+Delete requires a default-no native warning confirmation before selecting the explicit permanent-delete policy",
+    "child key handling stops propagation so real-item activation cannot also trigger the fixed entry"
+  ],
+  "deliberately_not_claimed_yet": [
+    "drag copy/move with progress, cancellation, and collision UI",
+    "persistent manual positions and sort-selection UI"
+  ],
+  "commands": [
+    "cargo test -p desktop-ui -p superdesktop-app --offline",
+    "cargo clippy -p desktop-ui -p superdesktop-app --all-targets --offline -- -D warnings",
+    "cargo build -p superdesktop-app --offline",
+    "target/debug/superdesktop-app.exe --verification-capture-ms 750"
+  ]
+}

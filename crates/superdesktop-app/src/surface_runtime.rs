@@ -1,6 +1,15 @@
-use std::{cell::RefCell, rc::Rc, time::Duration};
+use std::{
+    cell::RefCell,
+    collections::BTreeMap,
+    path::{Path, PathBuf},
+    rc::Rc,
+    time::Duration,
+};
 
-use desktop_ui::{AccessibleNode, DesktopView};
+use desktop_ui::{
+    AccessibleAction, AccessibleNode, DeletePolicy, DesktopItem, DesktopOperation,
+    DesktopOperationController, DesktopOperationTerminal, DesktopView, execute_desktop_operation,
+};
 use gpui::{
     App, AppContext, Bounds, WindowBackgroundAppearance, WindowBounds, WindowKind, WindowOptions,
     point, px, size,
@@ -36,6 +45,10 @@ fn trace_action(action: &str) {
 }
 
 fn launch_superexplorer() {
+    launch_superexplorer_at(None);
+}
+
+fn launch_superexplorer_at(initial_path: Option<&Path>) {
     let adjacent = std::env::current_exe()
         .ok()
         .and_then(|path| path.parent().map(|parent| parent.join("SuperExplorer.exe")))
@@ -47,7 +60,16 @@ fn launch_superexplorer() {
     };
     match resolver.resolve() {
         Ok((resolved, _)) => {
-            let spec = explorer_bridge::build_default_launch(&resolved);
+            let spec = match initial_path {
+                Some(path) => match explorer_bridge::build_folder_launch(&resolved, path) {
+                    Ok(spec) => spec,
+                    Err(_) => {
+                        trace_action("superexplorer:folder-validation-failed");
+                        return;
+                    }
+                },
+                None => explorer_bridge::build_default_launch(&resolved),
+            };
             match explorer_bridge::ProcessLauncher.launch(&spec) {
                 explorer_bridge::LaunchOutcome::Launched { .. } => {
                     trace_action("superexplorer:launched")
@@ -62,6 +84,205 @@ fn launch_superexplorer() {
         }
         Err(_) => trace_action("superexplorer:resolver-unavailable"),
     }
+}
+
+#[derive(Default)]
+struct DesktopNamespaceRuntime {
+    items: BTreeMap<String, DesktopItem>,
+    allowed_roots: Vec<PathBuf>,
+}
+
+fn desktop_item_key(item: &DesktopItem) -> String {
+    format!("desktop-item:{}", item.identity.as_str())
+}
+
+fn refresh_desktop_namespace(
+    runtime: &Rc<RefCell<DesktopNamespaceRuntime>>,
+    monitor: &str,
+) -> Vec<AccessibleNode> {
+    let mut nodes = vec![fixed_node(monitor)];
+    let Ok(entries) = platform_win::common::desktop::enumerate_known_desktops() else {
+        trace_action("desktop:enumeration-failed");
+        return nodes;
+    };
+    let mut items = BTreeMap::new();
+    let mut allowed_roots = Vec::new();
+    for entry in entries {
+        let Some(parent) = entry.canonical_path.parent().map(Path::to_path_buf) else {
+            continue;
+        };
+        if !allowed_roots.contains(&parent) {
+            allowed_roots.push(parent);
+        }
+        let Ok(item) = DesktopItem::try_from(entry) else {
+            continue;
+        };
+        if item.capabilities.hidden || item.capabilities.system {
+            continue;
+        }
+        let key = desktop_item_key(&item);
+        nodes.push(AccessibleNode {
+            stable_id: key.clone(),
+            name: item.display_name.clone(),
+            role: "button",
+            selected: false,
+            focused: false,
+            actions: vec![
+                AccessibleAction::Focus,
+                AccessibleAction::Select,
+                AccessibleAction::Invoke,
+            ],
+            message_key: None,
+        });
+        items.insert(key, item);
+    }
+    nodes[1..].sort_by(|left, right| {
+        left.name
+            .to_lowercase()
+            .cmp(&right.name.to_lowercase())
+            .then_with(|| left.stable_id.cmp(&right.stable_id))
+    });
+    *runtime.borrow_mut() = DesktopNamespaceRuntime {
+        items,
+        allowed_roots,
+    };
+    trace_action("desktop:refreshed");
+    nodes
+}
+
+fn activate_desktop_item(runtime: &Rc<RefCell<DesktopNamespaceRuntime>>, stable_id: &str) {
+    let item = runtime.borrow().items.get(stable_id).cloned();
+    let Some(item) = item else {
+        trace_action("desktop:activation-stale");
+        return;
+    };
+    let path = PathBuf::from(&item.activation_token);
+    if item.capabilities.folder {
+        launch_superexplorer_at(Some(&path));
+    } else {
+        match platform_win::common::desktop::launch_association(&path) {
+            Ok(platform_win::common::desktop::AssociationAdmission::Launched) => {
+                trace_action("desktop:association-launched")
+            }
+            Ok(platform_win::common::desktop::AssociationAdmission::ValidationFailed) => {
+                trace_action("desktop:association-validation-failed")
+            }
+            Ok(platform_win::common::desktop::AssociationAdmission::LaunchFailed) | Err(_) => {
+                trace_action("desktop:association-launch-failed")
+            }
+        }
+    }
+}
+
+fn recycle_desktop_item(
+    runtime: &Rc<RefCell<DesktopNamespaceRuntime>>,
+    operations: &Rc<RefCell<DesktopOperationController>>,
+    stable_id: &str,
+) -> bool {
+    delete_desktop_item(runtime, operations, stable_id, false)
+}
+
+fn permanently_delete_desktop_item(
+    runtime: &Rc<RefCell<DesktopNamespaceRuntime>>,
+    operations: &Rc<RefCell<DesktopOperationController>>,
+    stable_id: &str,
+) -> bool {
+    delete_desktop_item(runtime, operations, stable_id, true)
+}
+
+fn delete_desktop_item(
+    runtime: &Rc<RefCell<DesktopNamespaceRuntime>>,
+    operations: &Rc<RefCell<DesktopOperationController>>,
+    stable_id: &str,
+    permanent: bool,
+) -> bool {
+    let (source, display_name, roots) = {
+        let runtime = runtime.borrow();
+        let Some(item) = runtime.items.get(stable_id) else {
+            trace_action("desktop:delete-stale");
+            return false;
+        };
+        (
+            PathBuf::from(&item.activation_token),
+            item.display_name.clone(),
+            runtime.allowed_roots.clone(),
+        )
+    };
+    if permanent
+        && !platform_win::common::desktop_operations::confirm_permanent_delete(&display_name)
+    {
+        trace_action("desktop:permanent-delete-cancelled");
+        return false;
+    }
+    let request = match operations.borrow_mut().plan(DesktopOperation::Delete {
+        source,
+        policy: if permanent {
+            DeletePolicy::PermanentExplicit
+        } else {
+            DeletePolicy::Recycle
+        },
+    }) {
+        Ok(request) => request,
+        Err(_) => {
+            trace_action("desktop:delete-plan-rejected");
+            return false;
+        }
+    };
+    let terminal = execute_desktop_operation(&request, &roots, |_, _| true);
+    let accepted = operations
+        .borrow_mut()
+        .terminal(request.correlation_id, terminal)
+        .is_ok();
+    let succeeded = accepted && terminal == DesktopOperationTerminal::Succeeded;
+    trace_action(if succeeded && permanent {
+        "desktop:permanent-delete-succeeded"
+    } else if succeeded {
+        "desktop:recycle-succeeded"
+    } else {
+        "desktop:delete-failed"
+    });
+    succeeded
+}
+
+fn rename_desktop_item(
+    runtime: &Rc<RefCell<DesktopNamespaceRuntime>>,
+    operations: &Rc<RefCell<DesktopOperationController>>,
+    stable_id: &str,
+    new_name: &str,
+) -> bool {
+    let (source, roots) = {
+        let runtime = runtime.borrow();
+        let Some(item) = runtime.items.get(stable_id) else {
+            trace_action("desktop:rename-stale");
+            return false;
+        };
+        (
+            PathBuf::from(&item.activation_token),
+            runtime.allowed_roots.clone(),
+        )
+    };
+    let request = match operations.borrow_mut().plan(DesktopOperation::Rename {
+        source,
+        new_name: new_name.to_owned(),
+    }) {
+        Ok(request) => request,
+        Err(_) => {
+            trace_action("desktop:rename-plan-rejected");
+            return false;
+        }
+    };
+    let terminal = execute_desktop_operation(&request, &roots, |_, _| true);
+    let accepted = operations
+        .borrow_mut()
+        .terminal(request.correlation_id, terminal)
+        .is_ok();
+    let succeeded = accepted && terminal == DesktopOperationTerminal::Succeeded;
+    trace_action(if succeeded {
+        "desktop:rename-succeeded"
+    } else {
+        "desktop:rename-failed"
+    });
+    succeeded
 }
 
 fn activate_task(stable_id: &str) {
@@ -262,6 +483,8 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
         .or_else(|| current_wallpaper_path().ok());
     let verification_surface = std::env::var("SUPERDESKTOP_VERIFICATION_SURFACE").ok();
     let interactive = verification_surface.is_some();
+    let desktop_namespace = Rc::new(RefCell::new(DesktopNamespaceRuntime::default()));
+    let desktop_operations = Rc::new(RefCell::new(DesktopOperationController::default()));
     let terminal = Rc::new(RefCell::new(None::<Result<(), &'static str>>));
     let terminal_for_app = Rc::clone(&terminal);
     let platform = gpui_windows::WindowsPlatform::new(false).map_err(|_| "gpui-platform")?;
@@ -277,6 +500,8 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                     let desktop_monitor = monitor.clone();
                     let desktop_wallpaper = wallpaper.clone();
                     let desktop_error = Rc::clone(&init_error);
+                    let desktop_namespace_for_view = Rc::clone(&desktop_namespace);
+                    let desktop_operations_for_view = Rc::clone(&desktop_operations);
                     let desktop = cx.open_window(options(&monitor, false, interactive), move |window, cx| {
                         if interactive {
                             window.activate_window();
@@ -297,12 +522,56 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                         {
                             *desktop_error.borrow_mut() = Some(error);
                         }
-                        cx.new(|cx| {
+                        cx.new(move |cx| {
+                            let monitor_key = desktop_monitor.device_name.clone();
+                            let nodes = refresh_desktop_namespace(
+                                &desktop_namespace_for_view,
+                                &monitor_key,
+                            );
+                            let activation_namespace = Rc::clone(&desktop_namespace_for_view);
+                            let recycle_namespace = Rc::clone(&desktop_namespace_for_view);
+                            let recycle_operations = Rc::clone(&desktop_operations_for_view);
+                            let permanent_delete_namespace =
+                                Rc::clone(&desktop_namespace_for_view);
+                            let permanent_delete_operations =
+                                Rc::clone(&desktop_operations_for_view);
+                            let rename_namespace = Rc::clone(&desktop_namespace_for_view);
+                            let rename_operations = Rc::clone(&desktop_operations_for_view);
+                            let refresh_namespace = Rc::clone(&desktop_namespace_for_view);
+                            let refresh_monitor = monitor_key.clone();
                             let mut view = DesktopView::new(
-                                vec![fixed_node(&desktop_monitor.device_name)],
+                                nodes,
                                 false,
                             )
                             .with_fixed_action(Rc::new(launch_superexplorer))
+                            .with_item_action(Rc::new(move |stable_id| {
+                                activate_desktop_item(&activation_namespace, stable_id)
+                            }))
+                            .with_item_recycle_action(Rc::new(move |stable_id| {
+                                recycle_desktop_item(
+                                    &recycle_namespace,
+                                    &recycle_operations,
+                                    stable_id,
+                                )
+                            }))
+                            .with_item_permanent_delete_action(Rc::new(move |stable_id| {
+                                permanently_delete_desktop_item(
+                                    &permanent_delete_namespace,
+                                    &permanent_delete_operations,
+                                    stable_id,
+                                )
+                            }))
+                            .with_item_rename_action(Rc::new(move |stable_id, new_name| {
+                                rename_desktop_item(
+                                    &rename_namespace,
+                                    &rename_operations,
+                                    stable_id,
+                                    new_name,
+                                )
+                            }))
+                            .with_refresh_action(Rc::new(move || {
+                                refresh_desktop_namespace(&refresh_namespace, &refresh_monitor)
+                            }))
                             .with_rendered_action(Rc::new(|| trace_action("frame-visible")));
                             if let Some(path) = desktop_wallpaper.clone() {
                                 view = view.with_wallpaper(path);
