@@ -9,6 +9,7 @@ members = [
     "crates/shell-core",
     "crates/shell-provider-host",
     "crates/shell-provider-protocol",
+    "crates/shell-installer",
     "crates/superdesktop-app",
     "crates/superdesktop-guardian",
     "crates/superdesktop-test-support",

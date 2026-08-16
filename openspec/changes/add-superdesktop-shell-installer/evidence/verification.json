@@ -1,0 +1,31 @@
+{
+  "change": "add-superdesktop-shell-installer",
+  "captured_at": "2026-08-17",
+  "local_verification": {
+    "mutation_performed": false,
+    "commands": [
+      "cargo fmt --all -- --check",
+      "cargo check --workspace --offline",
+      "cargo clippy --workspace --all-targets --offline -- -D warnings",
+      "cargo test --workspace --offline",
+      "openspec validate add-superdesktop-shell-installer --strict",
+      "validate_tasks.py openspec/changes/add-superdesktop-shell-installer/tasks.md",
+      "shell-installer enable (absolute app/guardian paths, dry-run only)"
+    ],
+    "covered": [
+      "dry-run without complete authority",
+      "compare-before-write drift rejection",
+      "rollback-record failure before mutation",
+      "readback failure with exact prior-value rollback",
+      "rollback failure preserving recovery metadata",
+      "exact absent-value restore",
+      "machine-readable CLI error and audit output"
+    ]
+  },
+  "physical_gate": {
+    "status": "external_pending",
+    "required_host": "Windows 10 22H2 build 19045",
+    "collector": "scripts/capture-shell-installer-physical-evidence.ps1",
+    "phases": ["DryRun", "Enable", "AfterReboot", "Rollback"]
+  }
+}
