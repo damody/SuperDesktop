@@ -8,8 +8,10 @@ $ErrorActionPreference = 'Stop'
 if ([string]::IsNullOrWhiteSpace($Workspace)) { $Workspace = Split-Path -Parent $PSScriptRoot }
 $root = (Resolve-Path -LiteralPath $Workspace).Path
 $confirmationPath = (Resolve-Path -LiteralPath $ConfirmationPath).Path
-$revision = (& git -C $root rev-parse HEAD).Trim()
-if ($LASTEXITCODE -ne 0 -or $revision -notmatch '^[0-9a-f]{40}$') { throw 'Unable to bind current Git revision.' }
+$candidate = Get-Content -Raw -Encoding utf8 -LiteralPath (Join-Path $root 'openspec\changes\verify-superdesktop-shell-completion\evidence\release-candidate.json') | ConvertFrom-Json
+$revision = [string]$candidate.reviewed_revision
+& git -C $root cat-file -e "$revision^{commit}"
+if ($candidate.schema_version -ne 1 -or $LASTEXITCODE -ne 0) { throw 'Unable to bind frozen release-candidate revision.' }
 & git -C $root diff --quiet
 if ($LASTEXITCODE -ne 0) { throw 'Independent review must target a revision without tracked worktree changes.' }
 & git -C $root diff --cached --quiet

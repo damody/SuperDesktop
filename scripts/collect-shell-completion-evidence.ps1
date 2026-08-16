@@ -50,10 +50,14 @@ if (-not [string]::IsNullOrWhiteSpace($ExternalEvidenceDirectory)) {
         'physical-mixed-dpi' = 'physical-mixed-dpi.json'
         'independent-review' = 'independent-review.json'
     }
-    $revision = (& git -C $root rev-parse HEAD).Trim()
-    if ($LASTEXITCODE -ne 0 -or $revision -notmatch '^[0-9a-f]{40}$') {
-        throw 'Unable to resolve current Git revision.'
-    }
+    $candidatePath = Join-Path $evidenceRoot 'release-candidate.json'
+    $candidate = Get-Content -Raw -Encoding utf8 -LiteralPath $candidatePath | ConvertFrom-Json
+    $revision = [string]$candidate.reviewed_revision
+    if ($candidate.schema_version -ne 1 -or $revision -notmatch '^[0-9a-f]{40}$') { throw 'Invalid release-candidate manifest.' }
+    & git -C $root cat-file -e "$revision^{commit}"
+    if ($LASTEXITCODE -ne 0) { throw 'Release-candidate revision is unavailable.' }
+    & git -C $root merge-base --is-ancestor $revision HEAD
+    if ($LASTEXITCODE -ne 0) { throw 'Current revision does not descend from the frozen release candidate.' }
     foreach ($kind in $expectedExternal.Keys) {
         $path = Join-Path $externalRoot $expectedExternal[$kind]
         if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {

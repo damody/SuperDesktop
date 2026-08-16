@@ -10,8 +10,11 @@ if ([string]::IsNullOrWhiteSpace($Workspace)) { $Workspace = Split-Path -Parent 
 $root = (Resolve-Path -LiteralPath $Workspace).Path
 $physicalPath = (Resolve-Path -LiteralPath $M0PhysicalEvidence).Path
 $confirmationPath = (Resolve-Path -LiteralPath $CompletionConfirmation).Path
-$revision = (& git -C $root rev-parse HEAD).Trim()
-$shortRevision = (& git -C $root rev-parse --short=8 HEAD).Trim()
+$candidate = Get-Content -Raw -Encoding utf8 -LiteralPath (Join-Path $root 'openspec\changes\verify-superdesktop-shell-completion\evidence\release-candidate.json') | ConvertFrom-Json
+$revision = [string]$candidate.reviewed_revision
+$shortRevision = $revision.Substring(0, 8)
+& git -C $root cat-file -e "$revision^{commit}"
+if ($candidate.schema_version -ne 1 -or $LASTEXITCODE -ne 0) { throw 'Unable to bind frozen release-candidate revision.' }
 $physical = Get-Content -Raw -Encoding utf8 -LiteralPath $physicalPath | ConvertFrom-Json
 $confirmation = Get-Content -Raw -Encoding utf8 -LiteralPath $confirmationPath | ConvertFrom-Json
 if ($physical.schema -cne 'm0-physical-mixed-dpi-gate/v1' -or $physical.status -cne 'passed' -or $physical.revision -cne $shortRevision) { throw 'Physical M0 evidence is invalid or stale.' }

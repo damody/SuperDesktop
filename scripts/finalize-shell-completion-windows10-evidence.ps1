@@ -11,9 +11,11 @@ if ([string]::IsNullOrWhiteSpace($Workspace)) { $Workspace = Split-Path -Parent 
 $root = (Resolve-Path -LiteralPath $Workspace).Path
 $m0Path = (Resolve-Path -LiteralPath $M0Windows10Evidence).Path
 $installerRoot = (Resolve-Path -LiteralPath $InstallerEvidenceDirectory).Path
-$revision = (& git -C $root rev-parse HEAD).Trim()
-$shortRevision = (& git -C $root rev-parse --short=8 HEAD).Trim()
-if ($LASTEXITCODE -ne 0 -or $revision -notmatch '^[0-9a-f]{40}$') { throw 'Unable to bind current Git revision.' }
+$candidate = Get-Content -Raw -Encoding utf8 -LiteralPath (Join-Path $root 'openspec\changes\verify-superdesktop-shell-completion\evidence\release-candidate.json') | ConvertFrom-Json
+$revision = [string]$candidate.reviewed_revision
+$shortRevision = $revision.Substring(0, 8)
+& git -C $root cat-file -e "$revision^{commit}"
+if ($candidate.schema_version -ne 1 -or $LASTEXITCODE -ne 0) { throw 'Unable to bind frozen release-candidate revision.' }
 
 $m0 = Get-Content -Raw -Encoding utf8 -LiteralPath $m0Path | ConvertFrom-Json
 if ($m0.schema -cne 'm0-windows10-gate/v1' -or $m0.status -cne 'passed' -or $m0.revision -cne $shortRevision) { throw 'M0 Windows 10 evidence is invalid or stale.' }

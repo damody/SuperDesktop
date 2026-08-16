@@ -1,0 +1,6 @@
+{
+  "schema_version": 1,
+  "reviewed_revision": "b73ced245e10402de451d440bb65426c97192eaa",
+  "frozen_at_utc": "2026-08-17T00:00:00+08:00",
+  "purpose": "Immutable implementation and verification-harness revision for Windows 10, physical mixed-DPI, installer reboot/rollback, and independent review evidence."
+}
