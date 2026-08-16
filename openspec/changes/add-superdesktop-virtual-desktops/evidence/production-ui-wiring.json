@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "change": "add-superdesktop-virtual-desktops",
+  "result": "documented_partial_capability_task_view_wired",
+  "captured_at": "2026-08-17",
+  "implemented": [
+    "the production taskbar exposes an owned Task View control and a platform-key plus Tab keyboard route",
+    "Task View probes IVirtualDesktopManager capability at invocation time",
+    "eligible live top-level windows are revalidated and queried for owned virtual-desktop GUID values",
+    "observed window membership is grouped deterministically by desktop ID without retaining HWND or COM pointers in UI state",
+    "the GPUI Task View renders a full-work-area dialog with accessible tablist/tab semantics, focus styling, Left/Right navigation, Enter, pointer, and Escape routes",
+    "a second Task View invocation toggles the existing surface closed",
+    "when the documented Windows API cannot enumerate or switch desktops, the surface truthfully keeps switching disabled and exposes the unavailable reason",
+    "no undocumented create, remove, rename, enumerate, or switch COM interfaces are invoked"
+  ],
+  "capability_boundary": {
+    "query_window": "runtime probed",
+    "move_window": "runtime probed and available through the documented adapter",
+    "enumerate": "unavailable without a separately admitted adapter",
+    "switch": "unavailable without a separately admitted adapter",
+    "create": "unavailable without a separately admitted adapter",
+    "remove": "unavailable without a separately admitted adapter",
+    "rename": "unavailable without a separately admitted adapter"
+  },
+  "remaining_production_enrichment": [
+    "add a separately versioned and admitted adapter if Microsoft publishes stable enumeration and switch contracts for the supported Windows target",
+    "add a drag or destination-picker UI for the already implemented documented MoveWindowToDesktop effect"
+  ],
+  "commands": [
+    "cargo clippy -p taskbar-ui -p platform-win -p superdesktop-app --all-targets --offline -- -D warnings",
+    "cargo test -p taskbar-ui -p platform-win -p superdesktop-app --offline",
+    "cargo build -p superdesktop-app --offline",
+    "target/debug/superdesktop-app.exe --verification-capture-ms 750"
+  ],
+  "verification": {
+    "clippy": "passed",
+    "tests": {
+      "taskbar-ui": "24 passed",
+      "platform-win": "41 passed",
+      "superdesktop-app": "7 passed"
+    },
+    "preview_smoke_exit_code": 0
+  }
+}

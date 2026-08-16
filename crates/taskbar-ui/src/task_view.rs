@@ -1,4 +1,12 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    rc::Rc,
+};
+
+use gpui::{
+    Context, FocusHandle, InteractiveElement, IntoElement, ParentElement, Render,
+    StatefulInteractiveElement, Styled, Window, div, prelude::FluentBuilder as _, px, rgb,
+};
 
 use platform_win::common::virtual_desktop::VirtualDesktopCapabilities;
 use shell_core::WindowId;
@@ -49,6 +57,139 @@ pub struct TaskViewModel {
     pub focused: Option<usize>,
     pub capabilities: VirtualDesktopCapabilities,
     pub unavailable_reason: Option<String>,
+}
+
+pub type TaskViewDismissAction = Rc<dyn Fn(&mut Window, &mut gpui::App)>;
+
+pub struct TaskViewSurface {
+    pub model: TaskViewModel,
+    dismiss: TaskViewDismissAction,
+    focus: FocusHandle,
+}
+
+impl TaskViewSurface {
+    pub fn new(
+        mut model: TaskViewModel,
+        dismiss: TaskViewDismissAction,
+        cx: &mut Context<Self>,
+    ) -> Self {
+        model.open();
+        Self {
+            model,
+            dismiss,
+            focus: cx.focus_handle(),
+        }
+    }
+}
+
+impl Render for TaskViewSurface {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        window.focus(&self.focus, cx);
+        let nodes = self.model.accessibility_nodes();
+        let cards = self.model.desktops.clone();
+        let dismiss = self.dismiss.clone();
+        let switch_available = self.model.capabilities.switch;
+        let unavailable = (!switch_available).then_some(
+            "Desktop switching is unavailable through the documented Windows API; window membership remains observable.",
+        );
+        div()
+            .id("task-view-surface")
+            .role(gpui::Role::Dialog)
+            .aria_label("Task View")
+            .tab_index(0)
+            .track_focus(&self.focus)
+            .size_full()
+            .p_4()
+            .flex()
+            .flex_col()
+            .gap_3()
+            .bg(rgb(0x182028))
+            .text_color(rgb(0xf4f7fa))
+            .on_key_down(
+                cx.listener(move |this, event: &gpui::KeyDownEvent, window, cx| {
+                    match event.keystroke.key.as_str() {
+                        "left" => {
+                            let length = this.model.desktops.len();
+                            if length > 0 {
+                                let current = this.model.focused.unwrap_or(0);
+                                this.model.focused = Some((current + length - 1) % length);
+                            }
+                        }
+                        "right" => {
+                            let length = this.model.desktops.len();
+                            if length > 0 {
+                                this.model.focused =
+                                    Some((this.model.focused.unwrap_or(0) + 1) % length);
+                            }
+                        }
+                        "enter" => {
+                            if let Some(index) = this.model.focused
+                                && let Some(desktop) = this.model.desktops.get(index)
+                            {
+                                let _ = this.model.switch(desktop.id);
+                            }
+                        }
+                        "escape" => {
+                            this.model.dismiss();
+                            dismiss(window, cx);
+                        }
+                        _ => return,
+                    }
+                    cx.stop_propagation();
+                    cx.notify();
+                }),
+            )
+            .child(div().text_size(px(24.)).child("Task View"))
+            .when_some(unavailable, |root, message| {
+                root.child(div().text_color(rgb(0xffcc66)).child(message))
+            })
+            .child(
+                div()
+                    .id("virtual-desktop-list")
+                    .role(gpui::Role::TabList)
+                    .aria_label("Virtual desktops")
+                    .flex_1()
+                    .flex()
+                    .gap_3()
+                    .children(nodes.into_iter().zip(cards).enumerate().map(
+                        |(index, (node, card))| {
+                            div()
+                                .id(node.stable_id)
+                                .role(gpui::Role::Tab)
+                                .aria_label(format!(
+                                    "{}; {} windows{}",
+                                    node.name,
+                                    card.windows.len(),
+                                    if node.available {
+                                        ""
+                                    } else {
+                                        "; switching unavailable"
+                                    }
+                                ))
+                                .tab_index(0)
+                                .w(px(280.))
+                                .p_3()
+                                .rounded_md()
+                                .bg(rgb(0x2a343e))
+                                .when(node.focused, |element| {
+                                    element.border_2().border_color(rgb(0x4aa3ff))
+                                })
+                                .on_click(cx.listener(move |this, _, _, cx| {
+                                    this.model.focused = Some(index);
+                                    if let Some(desktop) = this.model.desktops.get(index) {
+                                        let _ = this.model.switch(desktop.id);
+                                    }
+                                    cx.notify();
+                                }))
+                                .child(node.name)
+                                .child(format!("{} windows", card.windows.len()))
+                                .children(card.windows.into_iter().map(|window| {
+                                    div().text_size(px(12.)).child(window.to_string())
+                                }))
+                        },
+                    )),
+            )
+    }
 }
 
 impl TaskViewModel {

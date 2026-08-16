@@ -30,8 +30,8 @@ use shell_provider_protocol::{
 };
 use taskbar_ui::{
     AccessibleTask, ClockLocale, CoreStatus, FlyoutAction, PreviewCard, ProviderState, StartView,
-    StatusRegion, TaskAction, TaskFlyoutView, TaskbarCallbacks, TaskbarLayout, TaskbarView,
-    TestClock,
+    StatusRegion, TaskAction, TaskFlyoutView, TaskViewModel, TaskViewSurface, TaskbarCallbacks,
+    TaskbarLayout, TaskbarView, TestClock,
 };
 
 use crate::provider_client::ProviderClient;
@@ -868,6 +868,59 @@ fn task_flyout_options(monitor: &MonitorRecord, card_count: usize) -> WindowOpti
     }
 }
 
+fn task_view_options(monitor: &MonitorRecord) -> WindowOptions {
+    let scale = monitor.dpi_x as f32 / 96.0;
+    let width = (monitor.work_area.right - monitor.work_area.left) as f32 / scale;
+    let height = (monitor.work_area.bottom - monitor.work_area.top) as f32 / scale;
+    WindowOptions {
+        window_bounds: Some(WindowBounds::Windowed(Bounds {
+            origin: point(
+                px(monitor.work_area.left as f32 / scale),
+                px(monitor.work_area.top as f32 / scale),
+            ),
+            size: size(px(width), px(height)),
+        })),
+        titlebar: None,
+        focus: true,
+        show: true,
+        kind: WindowKind::PopUp,
+        is_movable: false,
+        is_resizable: false,
+        is_minimizable: false,
+        window_background: WindowBackgroundAppearance::Opaque,
+        ..Default::default()
+    }
+}
+
+fn observed_task_view_model() -> TaskViewModel {
+    let capabilities = platform_win::common::virtual_desktop::probe_capabilities();
+    let mut model = TaskViewModel::new(capabilities);
+    let mut membership = BTreeMap::new();
+    if capabilities.query_window
+        && let Ok(windows) = snapshot_task_windows()
+    {
+        for window in windows.into_iter().filter(|window| {
+            window.visible && !window.tool_window && !window.cloaked && !window.owned_transient
+        }) {
+            let Ok(desktop_id) = platform_win::common::virtual_desktop::window_desktop_id(
+                window.hwnd_identity,
+                false,
+            ) else {
+                continue;
+            };
+            let Ok(window_id) = shell_core::WindowId::new(window.window_identity) else {
+                continue;
+            };
+            membership
+                .entry(desktop_id)
+                .or_insert_with(Vec::new)
+                .push(window_id);
+        }
+    }
+    model.observed_membership(membership);
+    model
+}
+
 fn status() -> StatusRegion {
     StatusRegion::new(
         TestClock {
@@ -1084,6 +1137,10 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                     Rc::new(RefCell::new(None::<gpui::WindowHandle<TaskFlyoutView>>));
                 let flyout_window_for_taskbar = Rc::clone(&flyout_window);
                 let flyout_monitor = taskbar_monitor.clone();
+                let task_view_window =
+                    Rc::new(RefCell::new(None::<gpui::WindowHandle<TaskViewSurface>>));
+                let task_view_window_for_taskbar = Rc::clone(&task_view_window);
+                let task_view_monitor = taskbar_monitor.clone();
                 let taskbar = cx.open_window(options(&monitor, true, interactive), move |window, cx| {
                     if interactive {
                         window.activate_window();
@@ -1199,6 +1256,43 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                         trace_action("start:owned-opened");
                                     }
                                     Err(_) => trace_action("start:owned-open-failed"),
+                                }
+                            }),
+                            task_view: Rc::new(move |app| {
+                                if let Some(existing) = *task_view_window_for_taskbar.borrow() {
+                                    if existing
+                                        .update(app, |_, window, _| window.remove_window())
+                                        .is_ok()
+                                    {
+                                        *task_view_window_for_taskbar.borrow_mut() = None;
+                                        trace_action("task-view:closed");
+                                        return;
+                                    }
+                                    *task_view_window_for_taskbar.borrow_mut() = None;
+                                }
+                                let model = observed_task_view_model();
+                                let dismiss_slot = Rc::clone(&task_view_window_for_taskbar);
+                                let opened = app.open_window(
+                                    task_view_options(&task_view_monitor),
+                                    move |window, cx| {
+                                        window.activate_window();
+                                        let dismiss_slot = Rc::clone(&dismiss_slot);
+                                        cx.new(move |cx| {
+                                            TaskViewSurface::new(
+                                                model,
+                                                Rc::new(move |window, _| {
+                                                    window.remove_window();
+                                                    *dismiss_slot.borrow_mut() = None;
+                                                    trace_action("task-view:closed");
+                                                }),
+                                                cx,
+                                            )
+                                        })
+                                    },
+                                );
+                                if let Ok(handle) = opened {
+                                    *task_view_window_for_taskbar.borrow_mut() = Some(handle);
+                                    trace_action("task-view:opened");
                                 }
                             }),
                             fixed: Rc::new(launch_superexplorer),

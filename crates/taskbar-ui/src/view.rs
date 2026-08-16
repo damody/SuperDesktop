@@ -23,6 +23,7 @@ pub type TaskCallback = Rc<dyn Fn(&str, &mut App)>;
 #[derive(Clone)]
 pub struct TaskbarCallbacks {
     pub start: Rc<dyn Fn(&mut App)>,
+    pub task_view: Rc<dyn Fn(&mut App)>,
     pub fixed: Rc<dyn Fn()>,
     pub task: TaskCallback,
     pub rendered: Rc<dyn Fn()>,
@@ -31,9 +32,14 @@ pub struct TaskbarCallbacks {
 impl Render for TaskbarView {
     fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
         let start = self.callbacks.as_ref().map(|value| Rc::clone(&value.start));
+        let task_view = self
+            .callbacks
+            .as_ref()
+            .map(|value| Rc::clone(&value.task_view));
         let fixed = self.callbacks.as_ref().map(|value| Rc::clone(&value.fixed));
         let task_callback = self.callbacks.as_ref().map(|value| Rc::clone(&value.task));
         let start_key = start.clone();
+        let task_view_key = task_view.clone();
         let fixed_key = fixed.clone();
         let root_fixed_key = fixed.clone();
         let keyboard_focus = self.keyboard_focus.clone();
@@ -56,7 +62,13 @@ impl Render for TaskbarView {
             .aria_label(self.accessible_root_name.clone())
             .tab_index(0)
             .when_some(keyboard_focus, |element, focus| element.track_focus(&focus))
-            .on_key_down(move |event, _, _| {
+            .on_key_down(move |event, _, cx| {
+                if event.keystroke.key == "tab" && event.keystroke.modifiers.platform {
+                    if let Some(callback) = &task_view_key {
+                        callback(cx);
+                    }
+                    return;
+                }
                 if matches!(event.keystroke.key.as_str(), "enter" | "space")
                     && let Some(callback) = &root_fixed_key
                 {
@@ -143,6 +155,26 @@ impl Render for TaskbarView {
                             .h(px(14.))
                             .text_color(start_color),
                     ),
+            )
+            .child(
+                div()
+                    .id("task-view-control")
+                    .role(gpui::Role::Button)
+                    .aria_label("Task View")
+                    .tab_index(0)
+                    .w(px(44.))
+                    .h(px(80.))
+                    .flex_none()
+                    .flex()
+                    .items_center()
+                    .justify_center()
+                    .cursor_pointer()
+                    .on_click(move |_, _, cx| {
+                        if let Some(callback) = &task_view {
+                            callback(cx);
+                        }
+                    })
+                    .child("▣"),
             )
             .child(
                 div()
