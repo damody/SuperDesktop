@@ -5,6 +5,7 @@ use serde_json::json;
 use shell_installer::{
     FileRollbackStore, InstallerCommand, InstallerError, MutationAuthority, RollbackStore,
     ShellRegistry, WindowsShellRegistry, build_enable_plan, build_restore_plan, execute_plan,
+    validate_mutation_binaries,
 };
 
 #[derive(Debug)]
@@ -73,6 +74,7 @@ fn run() -> Result<(), (u8, InstallerError)> {
             )
         }
     };
+    validate_mutation_binaries(&plan).map_err(classify)?;
     let audit =
         execute_plan(&mut registry, &mut store, &plan, &arguments.authority).map_err(classify)?;
     println!(

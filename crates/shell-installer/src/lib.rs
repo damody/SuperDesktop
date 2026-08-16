@@ -1,7 +1,7 @@
 //! Transactional, explicit-opt-in installer contracts for the per-user shell.
 
 use std::fs::{self, OpenOptions};
-use std::io::{self, Write};
+use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -45,6 +45,8 @@ pub struct InstallerPlan {
     pub desired: Option<String>,
     pub app_path: PathBuf,
     pub guardian_path: PathBuf,
+    pub app_binary_fingerprint: Option<String>,
+    pub guardian_binary_fingerprint: Option<String>,
     pub preflight: Option<EnablePreflight>,
     pub fingerprint: String,
 }
@@ -172,12 +174,15 @@ pub fn build_enable_plan_with_preflight(
         "\"{}\" --shell --explicit-opt-in",
         app_path.display()
     ));
+    let app_binary_fingerprint = file_fingerprint(&app_path, "app")?;
+    let guardian_binary_fingerprint = file_fingerprint(&guardian_path, "guardian")?;
     Ok(finish_plan_with_preflight(
         command,
         observed,
         desired,
         app_path,
         guardian_path,
+        Some((app_binary_fingerprint, guardian_binary_fingerprint)),
         Some(preflight),
     ))
 }
@@ -196,6 +201,7 @@ pub fn build_restore_plan(
         app_path,
         guardian_path,
         None,
+        None,
     )
 }
 
@@ -207,7 +213,15 @@ fn finish_plan(
     app_path: PathBuf,
     guardian_path: PathBuf,
 ) -> InstallerPlan {
-    finish_plan_with_preflight(command, observed, desired, app_path, guardian_path, None)
+    finish_plan_with_preflight(
+        command,
+        observed,
+        desired,
+        app_path,
+        guardian_path,
+        None,
+        None,
+    )
 }
 
 fn finish_plan_with_preflight(
@@ -216,10 +230,14 @@ fn finish_plan_with_preflight(
     desired: Option<String>,
     app_path: PathBuf,
     guardian_path: PathBuf,
+    binary_fingerprints: Option<(String, String)>,
     preflight: Option<EnablePreflight>,
 ) -> InstallerPlan {
+    let (app_binary_fingerprint, guardian_binary_fingerprint) = binary_fingerprints
+        .map(|(app, guardian)| (Some(app), Some(guardian)))
+        .unwrap_or((None, None));
     let material = format!(
-        "{command:?}|{SHELL_TARGET}|{observed:?}|{desired:?}|{}|{}|{preflight:?}",
+        "{command:?}|{SHELL_TARGET}|{observed:?}|{desired:?}|{}|{}|{app_binary_fingerprint:?}|{guardian_binary_fingerprint:?}|{preflight:?}",
         app_path.display(),
         guardian_path.display()
     );
@@ -230,9 +248,58 @@ fn finish_plan_with_preflight(
         desired,
         app_path,
         guardian_path,
+        app_binary_fingerprint,
+        guardian_binary_fingerprint,
         preflight,
         fingerprint: stable_fingerprint(material.as_bytes()),
     }
+}
+
+fn file_fingerprint(path: &Path, field: &'static str) -> Result<String, InstallerError> {
+    let mut file = fs::File::open(path).map_err(|_| InstallerError::InvalidBinary(field))?;
+    let mut hash = 0xcbf29ce484222325u64;
+    let mut length = 0u64;
+    let mut buffer = [0u8; 64 * 1024];
+    loop {
+        let count = file
+            .read(&mut buffer)
+            .map_err(|_| InstallerError::InvalidBinary(field))?;
+        if count == 0 {
+            break;
+        }
+        length = length
+            .checked_add(count as u64)
+            .ok_or(InstallerError::InvalidBinary(field))?;
+        for byte in &buffer[..count] {
+            hash ^= u64::from(*byte);
+            hash = hash.wrapping_mul(0x100000001b3);
+        }
+    }
+    Ok(format!("fnv1a64:{hash:016x}:len:{length}"))
+}
+
+/// Revalidates binary content and Windows product identity immediately before
+/// an authorized enable/install/repair mutation. Restore operations never
+/// depend on the continued availability of product binaries.
+pub fn validate_mutation_binaries(plan: &InstallerPlan) -> Result<(), InstallerError> {
+    if matches!(
+        plan.command,
+        InstallerCommand::Disable | InstallerCommand::Uninstall
+    ) {
+        return Ok(());
+    }
+    let app_path = admitted_binary(&plan.app_path, "app")?;
+    let guardian_path = admitted_binary(&plan.guardian_path, "guardian")?;
+    if app_path != plan.app_path
+        || guardian_path != plan.guardian_path
+        || plan.app_binary_fingerprint.as_deref()
+            != Some(file_fingerprint(&app_path, "app")?.as_str())
+        || plan.guardian_binary_fingerprint.as_deref()
+            != Some(file_fingerprint(&guardian_path, "guardian")?.as_str())
+    {
+        return Err(InstallerError::StateDrift);
+    }
+    windows_registry::verify_product_identity(&app_path, &guardian_path)
 }
 
 fn admitted_binary(path: &Path, field: &'static str) -> Result<PathBuf, InstallerError> {
@@ -659,5 +726,56 @@ mod tests {
         assert_eq!(store.load().unwrap(), Some(record));
         store.remove().unwrap();
         assert!(!path.exists());
+    }
+
+    #[test]
+    fn mutation_binary_drift_and_product_identity_fail_closed_but_restore_stays_reachable() {
+        let directory = std::env::temp_dir().join(format!(
+            "superdesktop-installer-binaries-{}-{}",
+            std::process::id(),
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        fs::create_dir(&directory).unwrap();
+        let app = directory.join("superdesktop-app.exe");
+        let guardian = directory.join("superdesktop-guardian.exe");
+        fs::write(&app, b"fixture-app").unwrap();
+        fs::write(&guardian, b"fixture-guardian").unwrap();
+        let plan = build_enable_plan_with_preflight(
+            InstallerCommand::Enable,
+            None,
+            &app,
+            &guardian,
+            EnablePreflight::current(),
+        )
+        .unwrap();
+        assert!(matches!(
+            validate_mutation_binaries(&plan),
+            Err(InstallerError::PreflightRejected(_))
+        ));
+        fs::write(&guardian, b"fixture-guardian-drifted").unwrap();
+        assert!(matches!(
+            validate_mutation_binaries(&plan),
+            Err(InstallerError::StateDrift)
+        ));
+
+        let restore = build_restore_plan(
+            InstallerCommand::Disable,
+            Some("owned-shell".into()),
+            &RollbackRecord {
+                target: SHELL_TARGET.into(),
+                prior: None,
+                intended: Some("owned-shell".into()),
+                plan_fingerprint: "original".into(),
+            },
+            directory.join("missing-app.exe"),
+            directory.join("missing-guardian.exe"),
+        );
+        assert!(validate_mutation_binaries(&restore).is_ok());
+        fs::remove_file(app).unwrap();
+        fs::remove_file(guardian).unwrap();
+        fs::remove_dir(directory).unwrap();
     }
 }

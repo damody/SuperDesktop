@@ -1,3 +1,4 @@
+use std::path::Path;
 use std::process::{Command, Output};
 
 use serde::Deserialize;
@@ -38,6 +39,20 @@ if (Test-Path -LiteralPath $p) {
     }
 }
 "#;
+const IDENTITY_SCRIPT: &str = r#"
+$OutputEncoding = [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)
+$appPath = [Environment]::GetEnvironmentVariable('SUPERDESKTOP_INSTALLER_APP_PATH', 'Process')
+$guardianPath = [Environment]::GetEnvironmentVariable('SUPERDESKTOP_INSTALLER_GUARDIAN_PATH', 'Process')
+if ([string]::IsNullOrWhiteSpace($appPath) -or [string]::IsNullOrWhiteSpace($guardianPath)) { exit 33 }
+$app = (Get-Item -LiteralPath $appPath -ErrorAction Stop).VersionInfo
+$guardian = (Get-Item -LiteralPath $guardianPath -ErrorAction Stop).VersionInfo
+[Console]::Out.Write((@{
+    app_original = [string]$app.OriginalFilename
+    app_product = [string]$app.ProductName
+    guardian_original = [string]$guardian.OriginalFilename
+    guardian_product = [string]$guardian.ProductName
+} | ConvertTo-Json -Compress))
+"#;
 
 /// Safe, Unicode-preserving adapter around the Windows inbox PowerShell
 /// Registry provider. The mutation script is fixed and receives the value only
@@ -68,6 +83,51 @@ impl ShellRegistry for WindowsShellRegistry {
 struct Observation {
     exists: bool,
     value: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct ProductIdentity {
+    app_original: String,
+    app_product: String,
+    guardian_original: String,
+    guardian_product: String,
+}
+
+pub(crate) fn verify_product_identity(
+    app_path: &Path,
+    guardian_path: &Path,
+) -> Result<(), InstallerError> {
+    let output = Command::new("powershell.exe")
+        .args([
+            "-NoLogo",
+            "-NoProfile",
+            "-NonInteractive",
+            "-Command",
+            IDENTITY_SCRIPT,
+        ])
+        .env("SUPERDESKTOP_INSTALLER_APP_PATH", app_path)
+        .env("SUPERDESKTOP_INSTALLER_GUARDIAN_PATH", guardian_path)
+        .output()
+        .map_err(|error| InstallerError::PreflightRejected(format!("identity-probe:{error}")))?;
+    if !output.status.success() {
+        return Err(InstallerError::PreflightRejected(format!(
+            "identity-probe:exit={}",
+            output.status.code().unwrap_or(-1)
+        )));
+    }
+    let identity: ProductIdentity = serde_json::from_slice(&output.stdout).map_err(|error| {
+        InstallerError::PreflightRejected(format!("identity-probe-output:{error}"))
+    })?;
+    if identity.app_original != "SuperDesktop.exe"
+        || identity.app_product != "SuperDesktop"
+        || identity.guardian_original != "SuperDesktopGuardian.exe"
+        || identity.guardian_product != "SuperDesktop"
+    {
+        return Err(InstallerError::PreflightRejected(
+            "binary product identity mismatch".into(),
+        ));
+    }
+    Ok(())
 }
 
 fn powershell(script: &str, value: Option<&str>) -> Result<Output, InstallerError> {

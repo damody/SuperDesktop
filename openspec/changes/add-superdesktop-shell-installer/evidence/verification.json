@@ -19,7 +19,10 @@
       "readback failure with exact prior-value rollback",
       "rollback failure preserving recovery metadata",
       "exact absent-value restore",
-      "machine-readable CLI error and audit output"
+      "machine-readable CLI error and audit output",
+      "binary content drift rejection before mutation",
+      "SuperDesktop and SuperDesktopGuardian VersionInfo identity admission",
+      "restore remains reachable when product binaries are missing"
     ]
   },
   "physical_gate": {

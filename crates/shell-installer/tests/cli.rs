@@ -14,7 +14,7 @@ fn unique_record() -> std::path::PathBuf {
 }
 
 #[test]
-fn enable_without_complete_authority_is_a_non_mutating_dry_run() {
+fn invalid_product_identity_is_rejected_without_metadata_or_registry_authority() {
     let executable = std::env::current_exe().unwrap();
     let record = unique_record();
     let output = Command::new(env!("CARGO_BIN_EXE_shell-installer"))
@@ -33,13 +33,15 @@ fn enable_without_complete_authority_is_a_non_mutating_dry_run() {
         ])
         .output()
         .unwrap();
-    assert!(
-        output.status.success(),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
+    assert_eq!(output.status.code(), Some(2));
     let value: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
-    assert_eq!(value["audit"]["disposition"], "dry_run");
+    assert_eq!(value["disposition"], "failed");
+    assert!(
+        value["error"]
+            .as_str()
+            .unwrap()
+            .contains("PreflightRejected")
+    );
     assert!(!record.exists());
 }
 
