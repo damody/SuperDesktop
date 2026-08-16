@@ -29,8 +29,9 @@ use shell_provider_protocol::{
     TerminalKind,
 };
 use taskbar_ui::{
-    AccessibleTask, ClockLocale, CoreStatus, ProviderState, StartView, StatusRegion, TaskAction,
-    TaskbarCallbacks, TaskbarLayout, TaskbarView, TestClock,
+    AccessibleTask, ClockLocale, CoreStatus, FlyoutAction, PreviewCard, ProviderState, StartView,
+    StatusRegion, TaskAction, TaskFlyoutView, TaskbarCallbacks, TaskbarLayout, TaskbarView,
+    TestClock,
 };
 
 use crate::provider_client::ProviderClient;
@@ -634,39 +635,100 @@ fn activate_task(stable_id: &str) {
     let _ = platform_win::common::taskbar::apply_window_action(window.hwnd_identity, action);
 }
 
+fn task_hwnd(stable_id: &str) -> Option<isize> {
+    let hex = stable_id.rsplit(':').next()?;
+    usize::from_str_radix(hex, 16)
+        .ok()
+        .map(|value| value as isize)
+}
+
+fn apply_flyout_action(action: FlyoutAction) {
+    let (window_id, action) = match action {
+        FlyoutAction::Activate(window_id) => (
+            window_id,
+            platform_win::common::taskbar::WindowAction::RestoreAndActivate,
+        ),
+        FlyoutAction::Close(window_id) => (
+            window_id,
+            platform_win::common::taskbar::WindowAction::Close,
+        ),
+    };
+    let outcome = task_hwnd(window_id.as_str())
+        .and_then(|hwnd| platform_win::common::taskbar::apply_window_action(hwnd, action).ok())
+        .is_some();
+    trace_action(if outcome {
+        "task-flyout:action-succeeded"
+    } else {
+        "task-flyout:action-rejected"
+    });
+}
+
+fn group_window_ids(stable_id: &str) -> Vec<isize> {
+    stable_id
+        .strip_prefix("task-group:")
+        .into_iter()
+        .flat_map(|ids| ids.split(','))
+        .filter_map(|value| usize::from_str_radix(value, 16).ok())
+        .map(|value| value as isize)
+        .collect()
+}
+
 fn visible_tasks() -> Result<Vec<AccessibleTask>, &'static str> {
     snapshot_task_windows()
         .map_err(|_| "task-window-snapshot")
         .map(|windows| {
-            windows
+            let mut groups = BTreeMap::<String, Vec<_>>::new();
+            for window in windows.into_iter().filter(|window| {
+                window.visible && !window.tool_window && !window.cloaked && !window.owned_transient
+            }) {
+                groups
+                    .entry(window.application_identity.clone())
+                    .or_default()
+                    .push(window);
+            }
+            groups
                 .into_iter()
-                .filter(|window| {
-                    window.visible
-                        && !window.tool_window
-                        && !window.cloaked
-                        && !window.owned_transient
-                })
                 .take(16)
-                .map(|window| AccessibleTask {
-                    stable_id: window.window_identity,
-                    name: if window.title.is_empty() {
-                        window.application_identity
+                .map(|(application, windows)| {
+                    let group_size = windows.len();
+                    let stable_id = if group_size == 1 {
+                        windows[0].window_identity.clone()
                     } else {
-                        window.title
-                    },
-                    role: "button",
-                    active: window.foreground,
-                    minimized: window.minimized,
-                    attention: false,
-                    group_size: 1,
-                    available: true,
-                    actions: vec![
-                        TaskAction::Focus,
-                        TaskAction::Select,
-                        TaskAction::Invoke,
-                        TaskAction::Minimize,
-                        TaskAction::Restore,
-                    ],
+                        format!(
+                            "task-group:{}",
+                            windows
+                                .iter()
+                                .map(|window| format!("{:X}", window.hwnd_identity as usize))
+                                .collect::<Vec<_>>()
+                                .join(",")
+                        )
+                    };
+                    let name = if group_size == 1 && !windows[0].title.is_empty() {
+                        windows[0].title.clone()
+                    } else {
+                        Path::new(&application)
+                            .file_stem()
+                            .and_then(|value| value.to_str())
+                            .unwrap_or(&application)
+                            .to_owned()
+                    };
+                    AccessibleTask {
+                        stable_id,
+                        name,
+                        role: "button",
+                        active: windows.iter().any(|window| window.foreground),
+                        minimized: windows.iter().all(|window| window.minimized),
+                        attention: false,
+                        group_size,
+                        available: true,
+                        actions: vec![
+                            TaskAction::Focus,
+                            TaskAction::Select,
+                            TaskAction::Invoke,
+                            TaskAction::Minimize,
+                            TaskAction::Restore,
+                        ],
+                    }
                 })
                 .collect()
         })
@@ -764,6 +826,32 @@ fn start_options(monitor: &MonitorRecord) -> WindowOptions {
         window_bounds: Some(WindowBounds::Windowed(Bounds {
             origin: point(
                 px(monitor.work_area.left as f32 / scale),
+                px(monitor.work_area.bottom as f32 / scale - height),
+            ),
+            size: size(px(width), px(height)),
+        })),
+        titlebar: None,
+        focus: true,
+        show: true,
+        kind: WindowKind::PopUp,
+        is_movable: false,
+        is_resizable: false,
+        is_minimizable: false,
+        window_background: WindowBackgroundAppearance::Opaque,
+        ..Default::default()
+    }
+}
+
+fn task_flyout_options(monitor: &MonitorRecord, card_count: usize) -> WindowOptions {
+    let scale = monitor.dpi_x as f32 / 96.0;
+    let width = (card_count.clamp(1, 4) as f32 * 228.0 + 16.0).min(928.0);
+    let height = 260.0;
+    let monitor_width = (monitor.work_area.right - monitor.work_area.left) as f32 / scale;
+    let left = monitor.work_area.left as f32 / scale + (monitor_width - width).max(0.0) / 2.0;
+    WindowOptions {
+        window_bounds: Some(WindowBounds::Windowed(Bounds {
+            origin: point(
+                px(left),
                 px(monitor.work_area.bottom as f32 / scale - height),
             ),
             size: size(px(width), px(height)),
@@ -992,6 +1080,10 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                 let start_window_for_taskbar = Rc::clone(&start_window);
                 let start_provider_for_taskbar = Rc::clone(&provider_client);
                 let start_monitor = taskbar_monitor.clone();
+                let flyout_window =
+                    Rc::new(RefCell::new(None::<gpui::WindowHandle<TaskFlyoutView>>));
+                let flyout_window_for_taskbar = Rc::clone(&flyout_window);
+                let flyout_monitor = taskbar_monitor.clone();
                 let taskbar = cx.open_window(options(&monitor, true, interactive), move |window, cx| {
                     if interactive {
                         window.activate_window();
@@ -1110,7 +1202,78 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                 }
                             }),
                             fixed: Rc::new(launch_superexplorer),
-                            task: Rc::new(activate_task),
+                            task: Rc::new(move |stable_id, app| {
+                                let group_ids = group_window_ids(stable_id);
+                                if group_ids.is_empty() {
+                                    activate_task(stable_id);
+                                    return;
+                                }
+                                if let Some(existing) = *flyout_window_for_taskbar.borrow() {
+                                    if existing
+                                        .update(app, |_, window, _| window.remove_window())
+                                        .is_ok()
+                                    {
+                                        *flyout_window_for_taskbar.borrow_mut() = None;
+                                        return;
+                                    }
+                                    *flyout_window_for_taskbar.borrow_mut() = None;
+                                }
+                                let Ok(windows) = snapshot_task_windows() else {
+                                    return;
+                                };
+                                let now = unix_time_ms();
+                                let cards = windows
+                                    .into_iter()
+                                    .filter(|window| group_ids.contains(&window.hwnd_identity))
+                                    .filter_map(|window| {
+                                        let window_id = shell_core::WindowId::new(window.window_identity).ok()?;
+                                        let preview_available = matches!(
+                                            platform_win::common::taskbar_preview::admit_live_preview(
+                                                window.hwnd_identity,
+                                                false,
+                                                now,
+                                                unix_time_ms(),
+                                            ),
+                                            platform_win::common::taskbar_preview::PreviewAdmission::Available { .. }
+                                        );
+                                        Some(PreviewCard {
+                                            window_id,
+                                            title: if window.title.is_empty() {
+                                                window.application_identity
+                                            } else {
+                                                window.title
+                                            },
+                                            minimized: window.minimized,
+                                            preview_available,
+                                        })
+                                    })
+                                    .collect::<Vec<_>>();
+                                if cards.is_empty() {
+                                    return;
+                                }
+                                let dismiss_slot = Rc::clone(&flyout_window_for_taskbar);
+                                let opened = app.open_window(
+                                    task_flyout_options(&flyout_monitor, cards.len()),
+                                    move |window, cx| {
+                                        window.activate_window();
+                                        let dismiss_slot = Rc::clone(&dismiss_slot);
+                                        cx.new(move |cx| {
+                                            TaskFlyoutView::new(
+                                                cards,
+                                                Rc::new(apply_flyout_action),
+                                                Rc::new(move |window, _| {
+                                                    window.remove_window();
+                                                    *dismiss_slot.borrow_mut() = None;
+                                                }),
+                                                cx,
+                                            )
+                                        })
+                                    },
+                                );
+                                if let Ok(handle) = opened {
+                                    *flyout_window_for_taskbar.borrow_mut() = Some(handle);
+                                }
+                            }),
                             rendered: Rc::new(|| trace_action("frame-visible")),
                         }),
                         keyboard_focus: focus_handle,

@@ -12,9 +12,9 @@ use windows::Win32::{
     UI::WindowsAndMessaging::{
         EnumWindows, GW_OWNER, GWL_EXSTYLE, GetClientRect, GetForegroundWindow, GetWindow,
         GetWindowLongPtrW, GetWindowRect, GetWindowTextLengthW, GetWindowTextW,
-        GetWindowThreadProcessId, HWND_TOPMOST, IsIconic, IsWindow, IsWindowVisible, SW_MINIMIZE,
-        SW_RESTORE, SWP_NOACTIVATE, SWP_SHOWWINDOW, SetForegroundWindow, SetWindowLongPtrW,
-        SetWindowPos, ShowWindow, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW,
+        GetWindowThreadProcessId, HWND_TOPMOST, IsIconic, IsWindow, IsWindowVisible, PostMessageW,
+        SW_MINIMIZE, SW_RESTORE, SWP_NOACTIVATE, SWP_SHOWWINDOW, SetForegroundWindow,
+        SetWindowLongPtrW, SetWindowPos, ShowWindow, WM_CLOSE, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW,
     },
 };
 use windows::core::{BOOL, PWSTR};
@@ -153,6 +153,7 @@ pub enum WindowAction {
     Activate,
     Minimize,
     RestoreAndActivate,
+    Close,
 }
 
 /// Applies the non-activating topmost taskbar style to a GPUI-owned HWND and
@@ -258,6 +259,10 @@ pub fn apply_window_action(hwnd_identity: isize, action: WindowAction) -> Result
             let _ = unsafe { ShowWindow(hwnd, SW_RESTORE) };
             unsafe { SetForegroundWindow(hwnd) }
                 .ok()
+                .map_err(|e| e.to_string())
+        }
+        WindowAction::Close => {
+            unsafe { PostMessageW(Some(hwnd), WM_CLOSE, Default::default(), Default::default()) }
                 .map_err(|e| e.to_string())
         }
     }

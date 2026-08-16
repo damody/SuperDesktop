@@ -1,4 +1,12 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    rc::Rc,
+};
+
+use gpui::{
+    Context, FocusHandle, InteractiveElement, IntoElement, ParentElement, Render,
+    StatefulInteractiveElement, Styled, Window, div, prelude::FluentBuilder as _, px, rgb,
+};
 
 use settings_store::TaskbarSettings;
 use shell_core::{ApplicationId, WindowId};
@@ -27,6 +35,143 @@ pub struct FlyoutModel {
     pub visible_after_ms: u64,
     pub cards: Vec<PreviewCard>,
     pub focused: Option<usize>,
+}
+
+pub type FlyoutWindowAction = Rc<dyn Fn(FlyoutAction)>;
+pub type FlyoutDismissAction = Rc<dyn Fn(&mut Window, &mut gpui::App)>;
+
+pub struct TaskFlyoutView {
+    pub model: FlyoutModel,
+    action: FlyoutWindowAction,
+    dismiss: FlyoutDismissAction,
+    focus: FocusHandle,
+}
+
+impl TaskFlyoutView {
+    pub fn new(
+        cards: Vec<PreviewCard>,
+        action: FlyoutWindowAction,
+        dismiss: FlyoutDismissAction,
+        cx: &mut Context<Self>,
+    ) -> Self {
+        let mut model = FlyoutModel::default();
+        model.schedule(cards, 0);
+        model.tick(HOVER_PREVIEW_DELAY_MS);
+        Self {
+            model,
+            action,
+            dismiss,
+            focus: cx.focus_handle(),
+        }
+    }
+}
+
+impl Render for TaskFlyoutView {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        window.focus(&self.focus, cx);
+        let action_for_key = self.action.clone();
+        let dismiss_for_key = self.dismiss.clone();
+        div()
+            .id("task-group-flyout")
+            .role(gpui::Role::Dialog)
+            .aria_label("Window previews")
+            .tab_index(0)
+            .track_focus(&self.focus)
+            .size_full()
+            .p_2()
+            .flex()
+            .gap_2()
+            .bg(rgb(0x182028))
+            .text_color(rgb(0xf4f7fa))
+            .on_key_down(
+                cx.listener(move |this, event: &gpui::KeyDownEvent, window, cx| {
+                    match event.keystroke.key.as_str() {
+                        "left" => this.model.move_focus(-1),
+                        "right" => this.model.move_focus(1),
+                        "enter" => {
+                            if let Some(index) = this.model.focused
+                                && let Some(effect) = this.model.activate(index)
+                            {
+                                action_for_key(effect);
+                                dismiss_for_key(window, cx);
+                            }
+                        }
+                        "delete" => {
+                            if let Some(index) = this.model.focused
+                                && let Some(effect) = this.model.close(index)
+                            {
+                                action_for_key(effect);
+                                dismiss_for_key(window, cx);
+                            }
+                        }
+                        "escape" => {
+                            this.model.dismiss();
+                            dismiss_for_key(window, cx);
+                        }
+                        _ => return,
+                    }
+                    cx.stop_propagation();
+                    cx.notify();
+                }),
+            )
+            .children(self.model.cards.iter().enumerate().map(|(index, card)| {
+                let action = self.action.clone();
+                let close_action = self.action.clone();
+                let dismiss = self.dismiss.clone();
+                let close_dismiss = self.dismiss.clone();
+                let activate_effect = FlyoutAction::Activate(card.window_id.clone());
+                let close_effect = FlyoutAction::Close(card.window_id.clone());
+                div()
+                    .id(format!("flyout-card-{index}"))
+                    .role(gpui::Role::Button)
+                    .aria_label(card.title.clone())
+                    .tab_index(0)
+                    .w(px(220.))
+                    .h_full()
+                    .p_2()
+                    .rounded_md()
+                    .flex()
+                    .flex_col()
+                    .gap_2()
+                    .when(self.model.focused == Some(index), |element| {
+                        element.border_2().border_color(rgb(0x4aa3ff))
+                    })
+                    .on_click(cx.listener(move |_, _, window, cx| {
+                        action(activate_effect.clone());
+                        dismiss(window, cx);
+                    }))
+                    .child(
+                        div()
+                            .flex_1()
+                            .rounded_md()
+                            .bg(rgb(0x2a343e))
+                            .flex()
+                            .items_center()
+                            .justify_center()
+                            .child(if card.preview_available {
+                                "Live preview available"
+                            } else {
+                                "Preview unavailable"
+                            }),
+                    )
+                    .child(card.title.clone())
+                    .child(
+                        div()
+                            .id(format!("flyout-close-{index}"))
+                            .role(gpui::Role::Button)
+                            .aria_label(format!("Close {}", card.title))
+                            .tab_index(0)
+                            .px_2()
+                            .py_1()
+                            .on_click(cx.listener(move |_, _, window, cx| {
+                                close_action(close_effect.clone());
+                                close_dismiss(window, cx);
+                                cx.stop_propagation();
+                            }))
+                            .child("Close"),
+                    )
+            }))
+    }
 }
 
 impl FlyoutModel {

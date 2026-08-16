@@ -18,11 +18,13 @@ pub struct TaskbarView {
     pub keyboard_focus: Option<FocusHandle>,
 }
 
+pub type TaskCallback = Rc<dyn Fn(&str, &mut App)>;
+
 #[derive(Clone)]
 pub struct TaskbarCallbacks {
     pub start: Rc<dyn Fn(&mut App)>,
     pub fixed: Rc<dyn Fn()>,
-    pub task: Rc<dyn Fn(&str)>,
+    pub task: TaskCallback,
     pub rendered: Rc<dyn Fn()>,
 }
 
@@ -239,16 +241,16 @@ impl Render for TaskbarView {
                             .when(!available, |element| element.opacity(0.55))
                             .when(available, move |element| {
                                 element
-                                    .on_click(move |_, _, _| {
+                                    .on_click(move |_, _, cx| {
                                         if let Some(callback) = &callback {
-                                            callback(&stable_id);
+                                            callback(&stable_id, cx);
                                         }
                                     })
-                                    .on_key_down(move |event, _, _| {
+                                    .on_key_down(move |event, _, cx| {
                                         if matches!(event.keystroke.key.as_str(), "enter" | "space")
                                             && let Some(callback) = &key_callback
                                         {
-                                            callback(&key_stable_id);
+                                            callback(&key_stable_id, cx);
                                         }
                                     })
                             })

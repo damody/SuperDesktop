@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "change": "add-superdesktop-taskbar-advanced-interactions",
+  "result": "group_flyout_production_path_wired",
+  "captured_at": "2026-08-17",
+  "implemented": [
+    "production task snapshots group eligible top-level windows by authoritative application identity",
+    "single-window buttons retain activate, minimize, and restore behavior while multi-window buttons open an owned GPUI flyout",
+    "flyout cards are rebuilt from a fresh authoritative snapshot and stale group members are omitted",
+    "DWM composition and live-HWND preview capability is revalidated within the 500 millisecond admission budget",
+    "title/state fallback remains visible when live preview is unavailable",
+    "pointer activation and close plus keyboard Left, Right, Enter, Delete, and Escape share typed FlyoutAction routes",
+    "activation, restore, and WM_CLOSE are admitted only after the target HWND is revalidated",
+    "flyout dialog, card, close-button, accessible labels, focus order, and visible focus state are wired",
+    "group and flyout windows use per-monitor logical placement above the taskbar"
+  ],
+  "remaining_production_enrichment": [
+    "register and render the admitted DWM thumbnail inside each GPUI card; the current card reports capability and uses the required title fallback",
+    "wire provider-backed Jump Lists into a right-click production surface",
+    "consume real application progress, pause/error, badge, and attention events in the production TaskbarView",
+    "load and save advanced taskbar preference snapshots through settings-store in the production lifecycle"
+  ],
+  "commands": [
+    "cargo clippy -p taskbar-ui -p platform-win -p superdesktop-app --all-targets --offline -- -D warnings",
+    "cargo test -p taskbar-ui -p platform-win -p superdesktop-app --offline",
+    "cargo build -p superdesktop-app --offline",
+    "target/debug/superdesktop-app.exe --verification-capture-ms 750"
+  ],
+  "verification": {
+    "clippy": "passed",
+    "tests": {
+      "taskbar-ui": "24 passed",
+      "platform-win": "41 passed",
+      "superdesktop-app": "7 passed"
+    },
+    "preview_smoke_exit_code": 0
+  }
+}
