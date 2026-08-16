@@ -60,16 +60,20 @@ pub struct TaskViewModel {
 }
 
 pub type TaskViewDismissAction = Rc<dyn Fn(&mut Window, &mut gpui::App)>;
+pub type TaskViewAction = Rc<dyn Fn(TaskViewEffect) -> bool>;
 
 pub struct TaskViewSurface {
     pub model: TaskViewModel,
     dismiss: TaskViewDismissAction,
+    action: TaskViewAction,
     focus: FocusHandle,
+    selected_window: Option<WindowId>,
 }
 
 impl TaskViewSurface {
     pub fn new(
         mut model: TaskViewModel,
+        action: TaskViewAction,
         dismiss: TaskViewDismissAction,
         cx: &mut Context<Self>,
     ) -> Self {
@@ -77,8 +81,50 @@ impl TaskViewSurface {
         Self {
             model,
             dismiss,
+            action,
             focus: cx.focus_handle(),
+            selected_window: None,
         }
+    }
+
+    fn select_window(&mut self, delta: i32) {
+        let Some(desktop) = self
+            .model
+            .focused
+            .and_then(|index| self.model.desktops.get(index))
+        else {
+            self.selected_window = None;
+            return;
+        };
+        if desktop.windows.is_empty() {
+            self.selected_window = None;
+            return;
+        }
+        let current = self
+            .selected_window
+            .as_ref()
+            .and_then(|window| desktop.windows.iter().position(|item| item == window))
+            .unwrap_or(0) as i32;
+        self.selected_window = Some(
+            desktop.windows[(current + delta).rem_euclid(desktop.windows.len() as i32) as usize]
+                .clone(),
+        );
+    }
+
+    fn move_selected_to(&mut self, desktop_id: u128) -> bool {
+        let Some(window_id) = self.selected_window.clone() else {
+            return false;
+        };
+        let Some(effect) = self.model.move_window(window_id.clone(), desktop_id) else {
+            return false;
+        };
+        if !(self.action)(effect) {
+            self.model.unavailable_reason = Some("virtual-desktop-move-failed".into());
+            return false;
+        }
+        self.model.reconcile_successful_move(&window_id, desktop_id);
+        self.selected_window = None;
+        true
     }
 }
 
@@ -88,6 +134,8 @@ impl Render for TaskViewSurface {
         let nodes = self.model.accessibility_nodes();
         let cards = self.model.desktops.clone();
         let dismiss = self.dismiss.clone();
+        let action_for_key = self.action.clone();
+        let selected_window = self.selected_window.clone();
         let switch_available = self.model.capabilities.switch;
         let unavailable = (!switch_available).then_some(
             "Desktop switching is unavailable through the documented Windows API; window membership remains observable.",
@@ -122,11 +170,24 @@ impl Render for TaskViewSurface {
                                     Some((this.model.focused.unwrap_or(0) + 1) % length);
                             }
                         }
+                        "up" => this.select_window(-1),
+                        "down" => this.select_window(1),
+                        "m" => {
+                            if let Some(desktop_id) = this
+                                .model
+                                .focused
+                                .and_then(|index| this.model.desktops.get(index))
+                                .map(|desktop| desktop.id)
+                            {
+                                this.move_selected_to(desktop_id);
+                            }
+                        }
                         "enter" => {
                             if let Some(index) = this.model.focused
                                 && let Some(desktop) = this.model.desktops.get(index)
+                                && let Some(effect) = this.model.switch(desktop.id)
                             {
-                                let _ = this.model.switch(desktop.id);
+                                action_for_key(effect);
                             }
                         }
                         "escape" => {
@@ -153,6 +214,13 @@ impl Render for TaskViewSurface {
                     .gap_3()
                     .children(nodes.into_iter().zip(cards).enumerate().map(
                         |(index, (node, card))| {
+                            let switch_action = self.action.clone();
+                            let move_available = self.model.capabilities.move_window;
+                            let selected_for_card = selected_window.clone();
+                            let selected_for_windows = selected_for_card.clone();
+                            let has_selected = selected_for_card.is_some();
+                            let destination_id = card.id;
+                            let desktop_name = card.name.clone();
                             div()
                                 .id(node.stable_id)
                                 .role(gpui::Role::Tab)
@@ -176,16 +244,57 @@ impl Render for TaskViewSurface {
                                 })
                                 .on_click(cx.listener(move |this, _, _, cx| {
                                     this.model.focused = Some(index);
-                                    if let Some(desktop) = this.model.desktops.get(index) {
-                                        let _ = this.model.switch(desktop.id);
+                                    if let Some(desktop) = this.model.desktops.get(index)
+                                        && let Some(effect) = this.model.switch(desktop.id)
+                                    {
+                                        switch_action(effect);
                                     }
                                     cx.notify();
                                 }))
                                 .child(node.name)
                                 .child(format!("{} windows", card.windows.len()))
-                                .children(card.windows.into_iter().map(|window| {
-                                    div().text_size(px(12.)).child(window.to_string())
+                                .children(card.windows.into_iter().map(|window_id| {
+                                    let selected =
+                                        selected_for_windows.as_ref() == Some(&window_id);
+                                    let display_id = window_id.to_string();
+                                    div()
+                                        .id(format!("task-view-window-{window_id}"))
+                                        .role(gpui::Role::Button)
+                                        .aria_label(format!("Select window {window_id}"))
+                                        .tab_index(0)
+                                        .px_2()
+                                        .py_1()
+                                        .rounded_md()
+                                        .when(selected, |element| element.bg(rgb(0x285b8f)))
+                                        .on_click(cx.listener(move |this, _, _, cx| {
+                                            this.selected_window = Some(window_id.clone());
+                                            cx.stop_propagation();
+                                            cx.notify();
+                                        }))
+                                        .child(display_id)
                                 }))
+                                .when(move_available && has_selected, |element| {
+                                    element.child(
+                                        div()
+                                            .id(format!("task-view-move-to-{destination_id:032x}"))
+                                            .role(gpui::Role::Button)
+                                            .aria_label(format!(
+                                                "Move selected window to {desktop_name}"
+                                            ))
+                                            .tab_index(0)
+                                            .mt_2()
+                                            .px_2()
+                                            .py_1()
+                                            .rounded_md()
+                                            .bg(rgb(0x285b8f))
+                                            .on_click(cx.listener(move |this, _, _, cx| {
+                                                this.move_selected_to(destination_id);
+                                                cx.stop_propagation();
+                                                cx.notify();
+                                            }))
+                                            .child("Move selected here"),
+                                    )
+                                })
                         },
                     )),
             )
@@ -238,6 +347,17 @@ impl TaskViewModel {
         for desktop in &mut self.desktops {
             desktop.windows.retain(|window| available.contains(window));
         }
+    }
+
+    pub fn reconcile_successful_move(&mut self, window_id: &WindowId, desktop_id: u128) {
+        for desktop in &mut self.desktops {
+            desktop.windows.retain(|window| window != window_id);
+            if desktop.id == desktop_id && !desktop.windows.contains(window_id) {
+                desktop.windows.push(window_id.clone());
+                desktop.windows.sort();
+            }
+        }
+        self.unavailable_reason = None;
     }
 
     pub fn observed_membership(&mut self, membership: BTreeMap<u128, Vec<WindowId>>) {
@@ -346,7 +466,7 @@ mod tests {
     fn partial_capability_is_truthful_and_window_move_remains_available() {
         let mut model = TaskViewModel::new(partial());
         model.observed_membership(
-            [(1, vec![WindowId::new("window").unwrap()])]
+            [(1, vec![WindowId::new("window").unwrap()]), (2, Vec::new())]
                 .into_iter()
                 .collect(),
         );
@@ -354,9 +474,15 @@ mod tests {
         assert!(model.switch(1).is_none());
         assert!(model.unavailable_reason.is_some());
         assert!(matches!(
-            model.move_window(WindowId::new("window").unwrap(), 1),
+            model.move_window(WindowId::new("window").unwrap(), 2),
             Some(TaskViewEffect::MoveWindow { .. })
         ));
+        model.reconcile_successful_move(&WindowId::new("window").unwrap(), 2);
+        assert!(model.desktops[0].windows.is_empty());
+        assert_eq!(
+            model.desktops[1].windows,
+            vec![WindowId::new("window").unwrap()]
+        );
         assert!(!model.accessibility_nodes()[0].available);
     }
 

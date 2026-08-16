@@ -10,6 +10,9 @@
     "observed window membership is grouped deterministically by desktop ID without retaining HWND or COM pointers in UI state",
     "the GPUI Task View renders a full-work-area dialog with accessible tablist/tab semantics, focus styling, Left/Right navigation, Enter, pointer, and Escape routes",
     "a second Task View invocation toggles the existing surface closed",
+    "Task View exposes selectable window rows and capability-gated Move selected here controls for every observed destination desktop",
+    "Up and Down select a window, Left and Right select a destination, and M emits the same typed move effect as the pointer control",
+    "the production move callback re-resolves the WindowId, revalidates the live HWND, calls documented MoveWindowToDesktop, and re-queries the desktop GUID before reconciling membership",
     "when the documented Windows API cannot enumerate or switch desktops, the surface truthfully keeps switching disabled and exposes the unavailable reason",
     "no undocumented create, remove, rename, enumerate, or switch COM interfaces are invoked"
   ],
@@ -22,9 +25,8 @@
     "remove": "unavailable without a separately admitted adapter",
     "rename": "unavailable without a separately admitted adapter"
   },
-  "remaining_production_enrichment": [
-    "add a separately versioned and admitted adapter if Microsoft publishes stable enumeration and switch contracts for the supported Windows target",
-    "add a drag or destination-picker UI for the already implemented documented MoveWindowToDesktop effect"
+  "remaining_external_api": [
+    "add a separately versioned and admitted adapter only if Microsoft publishes stable enumeration and switch contracts for the supported Windows target"
   ],
   "commands": [
     "cargo clippy -p taskbar-ui -p platform-win -p superdesktop-app --all-targets --offline -- -D warnings",
@@ -36,7 +38,7 @@
     "clippy": "passed",
     "tests": {
       "taskbar-ui": "24 passed",
-      "platform-win": "41 passed",
+      "platform-win": "45 passed",
       "superdesktop-app": "7 passed"
     },
     "preview_smoke_exit_code": 0

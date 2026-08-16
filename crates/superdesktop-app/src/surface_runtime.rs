@@ -32,8 +32,8 @@ use shell_provider_protocol::{
 use taskbar_ui::{
     AccessibleTask, ClockLocale, CoreStatus, FlyoutAction, JumpListModel, JumpListView,
     NotificationAreaModel, PreviewCard, ProviderState, StartActions, StartPowerAction,
-    StartSnapshot, StartView, StatusRegion, TaskAction, TaskFlyoutView, TaskViewModel,
-    TaskViewSurface, TaskbarCallbacks, TaskbarLayout, TaskbarView, TestClock,
+    StartSnapshot, StartView, StatusRegion, TaskAction, TaskFlyoutView, TaskViewEffect,
+    TaskViewModel, TaskViewSurface, TaskbarCallbacks, TaskbarLayout, TaskbarView, TestClock,
 };
 
 use crate::{notification_client::NotificationClient, provider_client::ProviderClient};
@@ -730,6 +730,29 @@ fn apply_flyout_action(action: FlyoutAction) {
     } else {
         "task-flyout:action-rejected"
     });
+}
+
+fn apply_task_view_effect(effect: TaskViewEffect) -> bool {
+    let TaskViewEffect::MoveWindow {
+        window_id,
+        desktop_id,
+    } = effect
+    else {
+        trace_action("task-view:unsupported-effect-rejected");
+        return false;
+    };
+    let completed = task_hwnd(window_id.as_str()).is_some_and(|hwnd| {
+        platform_win::common::virtual_desktop::move_window_to_desktop(hwnd, false, desktop_id)
+            .is_ok()
+            && platform_win::common::virtual_desktop::window_desktop_id(hwnd, false)
+                .is_ok_and(|observed| observed == desktop_id)
+    });
+    trace_action(if completed {
+        "task-view:move-succeeded"
+    } else {
+        "task-view:move-rejected"
+    });
+    completed
 }
 
 fn group_window_ids(stable_id: &str) -> Vec<isize> {
@@ -1509,6 +1532,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                         cx.new(move |cx| {
                                             TaskViewSurface::new(
                                                 model,
+                                                Rc::new(apply_task_view_effect),
                                                 Rc::new(move |window, _| {
                                                     window.remove_window();
                                                     *dismiss_slot.borrow_mut() = None;
