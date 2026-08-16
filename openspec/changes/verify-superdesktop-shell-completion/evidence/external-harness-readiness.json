@@ -1,18 +1,29 @@
 {
   "change": "verify-superdesktop-shell-completion",
   "result": "harness_ready_external_evidence_pending",
-  "captured_at_utc": "2026-08-17T00:00:00+08:00",
+  "captured_at_utc": "2026-08-17T01:30:00+08:00",
   "implemented": [
     "Windows 10 lifecycle and installer evidence normalization",
     "physical mixed-DPI completion-feature evidence normalization",
     "independent architecture, security, accessibility, and lineage review admission",
     "revision-bound and SHA-256-bound external source lineage",
+    "same-binary binding across Windows 10 lifecycle and installer reboot phases",
+    "exact rollback metadata target binding",
+    "repository-contained rehashable raw evidence and media lineage",
+    "attributable placeholder-resistant operator and reviewer admission",
+    "versioned candidate-bound M0 physical confirmation template",
+    "attributable lifecycle and installer operator continuity across reboot phases",
     "derived external gate recomputation",
     "fail-closed incomplete external evidence handling"
   ],
   "verification": {
     "powershell_parser": "passed",
     "rollup_schema_without_external_sources": "passed",
+    "installer_dry_run_state_snapshot_smoke": "passed",
+    "powershell_external_scripts_parser": "passed",
+    "windows_powershell_5_1_path_compatibility": "passed",
+    "placeholder_reviewer_admission": "rejected_without_output",
+    "wrong_windows_host_admission": "rejected_without_output",
     "incomplete_external_admission": "rejected_without_output",
     "external_tasks_marked_complete": false
   },

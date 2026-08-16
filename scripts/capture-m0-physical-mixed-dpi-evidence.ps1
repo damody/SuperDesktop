@@ -33,7 +33,29 @@ function Monitor-Profile([string]$ProbePath) {
 
 $Workspace = (Resolve-Path -LiteralPath $Workspace).Path
 $ConfirmationPath = (Resolve-Path -LiteralPath $ConfirmationPath).Path
+function Get-RepositoryRelativePath([string]$Path, [string]$Label) {
+    $full = [IO.Path]::GetFullPath($Path)
+    $prefix = $Workspace.TrimEnd('\') + '\'
+    if (-not $full.StartsWith($prefix, [StringComparison]::OrdinalIgnoreCase)) { throw "$Label must be stored inside the repository." }
+    return $full.Substring($prefix.Length).Replace('\','/')
+}
+$confirmationRelativePath = Get-RepositoryRelativePath $ConfirmationPath 'Physical confirmation'
+$candidatePath = Join-Path $Workspace 'openspec/changes/verify-superdesktop-shell-completion/evidence/release-candidate.json'
+$candidate = Get-Content -Raw -Encoding utf8 -LiteralPath $candidatePath | ConvertFrom-Json
+$reviewedRevision = [string]$candidate.reviewed_revision
+& git -C $Workspace cat-file -e "$reviewedRevision^{commit}"
+if ($candidate.schema_version -ne 1 -or $LASTEXITCODE -ne 0) { throw 'Unable to bind frozen release-candidate revision.' }
+& git -C $Workspace merge-base --is-ancestor $reviewedRevision HEAD
+if ($LASTEXITCODE -ne 0) { throw 'Current checkout does not descend from the frozen release candidate.' }
+& git -C $Workspace diff --quiet $reviewedRevision HEAD -- crates Cargo.toml Cargo.lock
+if ($LASTEXITCODE -ne 0) { throw 'Committed production source or dependency drift exists relative to the frozen candidate.' }
+& git -C $Workspace diff --quiet -- crates Cargo.toml Cargo.lock
+if ($LASTEXITCODE -ne 0) { throw 'Uncommitted production source or dependency drift exists relative to the frozen candidate.' }
+& git -C $Workspace diff --cached --quiet -- crates Cargo.toml Cargo.lock
+if ($LASTEXITCODE -ne 0) { throw 'Staged production source or dependency drift exists relative to the frozen candidate.' }
 if (-not [Environment]::UserInteractive -or (Get-Process -Id $PID).SessionId -eq 0) { throw 'An interactive non-session-0 desktop is required' }
+$null = Invoke-Checked 'release application build' { cargo build -p superdesktop-app --release --offline --manifest-path (Join-Path $Workspace 'Cargo.toml') }
+$null = Invoke-Checked 'release monitor/DPI probe build' { cargo build -p platform-win --release --offline --example monitor_dpi_start_capability --manifest-path (Join-Path $Workspace 'Cargo.toml') }
 $wmiMonitors = @(Get-CimInstance -Namespace root\wmi -ClassName WmiMonitorID | Where-Object Active)
 if ($wmiMonitors.Count -lt 2) { throw "At least two active physical WMI monitors are required; observed $($wmiMonitors.Count)" }
 
@@ -46,12 +68,16 @@ if ($realMonitors.Count -lt 2 -or @($realMonitors.dpi_x | Sort-Object -Unique).C
 
 $confirmation = Get-Content -Raw -Encoding UTF8 $ConfirmationPath | ConvertFrom-Json
 $requiredChecks = @('cross_monitor_pointer','cross_monitor_keyboard_focus','cross_monitor_drag','primary_change','hot_plug_recovery')
-if ([string]::IsNullOrWhiteSpace($confirmation.reviewer) -or [string]::IsNullOrWhiteSpace($confirmation.recorded_at)) { throw 'Manual confirmation requires reviewer and recorded_at' }
+if ($confirmation.schema -cne 'm0-physical-mixed-dpi-confirmation/v1' -or $confirmation.reviewed_revision -cne $reviewedRevision) { throw 'Physical confirmation is invalid or stale.' }
+try { [DateTimeOffset]::Parse($confirmation.recorded_at_utc) | Out-Null } catch { throw 'recorded_at_utc must be ISO-8601.' }
+if ([string]::IsNullOrWhiteSpace($confirmation.reviewer.name) -or [string]::IsNullOrWhiteSpace($confirmation.reviewer.organization) -or
+    [string]$confirmation.reviewer.name -like 'REPLACE_WITH_*' -or [string]$confirmation.reviewer.organization -like 'REPLACE_WITH_*') { throw 'Manual confirmation requires an attributable reviewer.' }
 foreach ($name in $requiredChecks) { if ($confirmation.$name -ne 'passed') { throw "Manual confirmation check $name is not passed" } }
 if (@($confirmation.photos).Count -lt 2) { throw 'At least two physical topology photos are required' }
 $photos = @()
 foreach ($photo in @($confirmation.photos)) {
     $path = (Resolve-Path -LiteralPath $photo).Path
+    Get-RepositoryRelativePath $path 'Physical topology photo' | Out-Null
     $photos += [ordered]@{ path = $path; sha256 = (Get-FileHash $path -Algorithm SHA256).Hash }
 }
 
@@ -89,11 +115,11 @@ if (($profileBefore.real_profile.monitors | ConvertTo-Json -Depth 20 -Compress) 
 $drivers = @(Get-CimInstance Win32_PnPSignedDriver | Where-Object DeviceClass -eq 'MONITOR' | ForEach-Object { [ordered]@{ device_name=$_.DeviceName;device_id=$_.DeviceID;driver_version=$_.DriverVersion;driver_provider=$_.DriverProviderName } })
 $identities = @($wmiMonitors | ForEach-Object { [ordered]@{ instance_name=$_.InstanceName;manufacturer=(Decode-WmiString $_.ManufacturerName);product=(Decode-WmiString $_.ProductCodeID);serial=(Decode-WmiString $_.SerialNumberID) } })
 $artifact = [ordered]@{
-    schema = 'm0-physical-mixed-dpi-gate/v1'; status = 'passed'; recorded_at = [DateTime]::UtcNow.ToString('o'); revision = (& git -C $Workspace rev-parse --short=8 HEAD).Trim(); app_sha256 = (Get-FileHash $app -Algorithm SHA256).Hash
+    schema = 'm0-physical-mixed-dpi-gate/v1'; status = 'passed'; recorded_at = [DateTime]::UtcNow.ToString('o'); revision = $reviewedRevision.Substring(0, 8); app_sha256 = (Get-FileHash $app -Algorithm SHA256).Hash
     physical_identities = $identities; monitor_geometry = $realMonitors; drivers = $drivers; screenshots = $screenshots; photos = $photos
     interactions = [ordered]@{ pointer=$confirmation.cross_monitor_pointer;keyboard_focus=$confirmation.cross_monitor_keyboard_focus;drag=$confirmation.cross_monitor_drag;input_route_count=$inputRoutes.route_count }
     topology = [ordered]@{ primary_change=$confirmation.primary_change;hot_plug_recovery=$confirmation.hot_plug_recovery;work_area_restored=$true;distinct_dpi_count=@($realMonitors.dpi_x|Sort-Object -Unique).Count }
-    reviewer = $confirmation.reviewer; dispositions = @{ 'G-DPI-MONITOR'='passed' }; task_ids = @('2.4.1','2.4.2','2.4.3','2.4.4','2.4.5')
+    reviewer = $confirmation.reviewer; confirmation_path = $confirmationRelativePath; confirmation_sha256 = (Get-FileHash $ConfirmationPath -Algorithm SHA256).Hash; dispositions = @{ 'G-DPI-MONITOR'='passed' }; task_ids = @('2.4.1','2.4.2','2.4.3','2.4.4','2.4.5')
 }
 Write-Json $OutputPath $artifact
 Write-Output "Physical mixed-DPI M0 evidence captured at $OutputPath"

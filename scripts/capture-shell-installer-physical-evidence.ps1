@@ -1,5 +1,6 @@
 [CmdletBinding()]
 param(
+    [string]$Workspace,
     [Parameter(Mandatory)]
     [ValidateSet('DryRun', 'Enable', 'AfterReboot', 'Rollback')]
     [string]$Phase,
@@ -13,17 +14,57 @@ param(
     [string]$RollbackRecord,
     [Parameter(Mandatory)]
     [string]$EvidenceDirectory,
+    [string]$OperatorName,
+    [string]$OperatorOrganization,
     [switch]$Apply,
     [switch]$ExplicitOptIn,
     [string]$ConfirmPlan
 )
 
 $ErrorActionPreference = 'Stop'
+if ([string]::IsNullOrWhiteSpace($Workspace)) { $Workspace = Split-Path -Parent $PSScriptRoot }
+$workspacePath = (Resolve-Path -LiteralPath $Workspace).Path
 $installerPath = (Resolve-Path -LiteralPath $Installer).Path
 $appPath = (Resolve-Path -LiteralPath $App).Path
 $guardianPath = (Resolve-Path -LiteralPath $Guardian).Path
+$rollbackPath = [IO.Path]::GetFullPath($RollbackRecord)
 $evidencePath = [IO.Path]::GetFullPath($EvidenceDirectory)
 [IO.Directory]::CreateDirectory($evidencePath) | Out-Null
+
+$candidatePath = Join-Path $workspacePath 'openspec\changes\verify-superdesktop-shell-completion\evidence\release-candidate.json'
+$candidate = Get-Content -Raw -Encoding utf8 -LiteralPath $candidatePath | ConvertFrom-Json
+$revision = [string]$candidate.reviewed_revision
+& git -C $workspacePath cat-file -e "$revision^{commit}"
+if ($candidate.schema_version -ne 1 -or $LASTEXITCODE -ne 0) { throw 'Unable to bind frozen release-candidate revision.' }
+& git -C $workspacePath merge-base --is-ancestor $revision HEAD
+if ($LASTEXITCODE -ne 0) { throw 'Current checkout does not descend from the frozen release candidate.' }
+& git -C $workspacePath diff --quiet $revision HEAD -- crates Cargo.toml Cargo.lock
+if ($LASTEXITCODE -ne 0) { throw 'Production source or dependency drift exists after the frozen release candidate.' }
+& git -C $workspacePath diff --quiet -- crates Cargo.toml Cargo.lock
+if ($LASTEXITCODE -ne 0) { throw 'Uncommitted production source or dependency drift exists.' }
+& git -C $workspacePath diff --cached --quiet -- crates Cargo.toml Cargo.lock
+if ($LASTEXITCODE -ne 0) { throw 'Staged production source or dependency drift exists.' }
+
+function Read-ShellObservation {
+    try {
+        return [ordered]@{
+            exists = $true
+            value = [string](Get-ItemPropertyValue -LiteralPath 'HKCU:\Software\Microsoft\Windows NT\CurrentVersion\Winlogon' -Name Shell -ErrorAction Stop)
+        }
+    } catch [System.Management.Automation.ItemNotFoundException] {
+        return [ordered]@{ exists = $false; value = $null }
+    } catch [System.Management.Automation.PSArgumentException] {
+        return [ordered]@{ exists = $false; value = $null }
+    }
+}
+
+$binaryRecords = @(
+    [ordered]@{ name='shell-installer';path=$installerPath;sha256=(Get-FileHash -Algorithm SHA256 -LiteralPath $installerPath).Hash.ToLowerInvariant() },
+    [ordered]@{ name='superdesktop-app';path=$appPath;sha256=(Get-FileHash -Algorithm SHA256 -LiteralPath $appPath).Hash.ToLowerInvariant() },
+    [ordered]@{ name='superdesktop-guardian';path=$guardianPath;sha256=(Get-FileHash -Algorithm SHA256 -LiteralPath $guardianPath).Hash.ToLowerInvariant() }
+)
+$shellBefore = Read-ShellObservation
+$rollbackExistedBefore = Test-Path -LiteralPath $rollbackPath -PathType Leaf
 
 $os = Get-ItemProperty -LiteralPath 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion'
 $hostRecord = [ordered]@{
@@ -32,6 +73,12 @@ $hostRecord = [ordered]@{
     build = [int]$os.CurrentBuildNumber
     ubr = [int]$os.UBR
     phase = $Phase
+    operator = [ordered]@{ name=$OperatorName;organization=$OperatorOrganization }
+    revision = $revision
+    binaries = $binaryRecords
+    shellBefore = $shellBefore
+    rollbackRecordPath = $rollbackPath
+    rollbackRecordExistedBefore = $rollbackExistedBefore
     capturedAtUtc = [DateTime]::UtcNow.ToString('o')
 }
 $hostRecord | ConvertTo-Json | Set-Content -Encoding utf8 -LiteralPath (Join-Path $evidencePath "host-$Phase.json")
@@ -65,14 +112,36 @@ $baseArguments = @(
     $command,
     '--app', $appPath,
     '--guardian', $guardianPath,
-    '--rollback-record', [IO.Path]::GetFullPath($RollbackRecord)
+    '--rollback-record', $rollbackPath
 )
 $dryRunText = (& $installerPath @baseArguments | Out-String).Trim()
 if ($LASTEXITCODE -ne 0) { throw "Installer dry-run failed with exit code $LASTEXITCODE.`n$dryRunText" }
 $dryRun = $dryRunText | ConvertFrom-Json
 $dryRunText | Set-Content -Encoding utf8 -LiteralPath (Join-Path $evidencePath "plan-$Phase.json")
 
-if (-not $Apply -or $Phase -eq 'DryRun') { return }
+if ($Phase -eq 'DryRun') {
+    $shellAfter = Read-ShellObservation
+    $rollbackExistedAfter = Test-Path -LiteralPath $rollbackPath -PathType Leaf
+    $shellUnchanged = (($shellBefore | ConvertTo-Json -Compress) -ceq ($shellAfter | ConvertTo-Json -Compress))
+    $rollbackUnchanged = $rollbackExistedBefore -eq $rollbackExistedAfter
+    if ($dryRun.audit.disposition -cne 'dry_run' -or -not $shellUnchanged -or -not $rollbackUnchanged) {
+        throw 'Installer dry-run mutated Shell or rollback metadata state.'
+    }
+    [ordered]@{
+        schema = 'shell-installer-dry-run-non-mutation/v1'
+        revision = $revision
+        shellBefore = $shellBefore
+        shellAfter = $shellAfter
+        shellUnchanged = $shellUnchanged
+        rollbackRecordPath = $rollbackPath
+        rollbackExistedBefore = $rollbackExistedBefore
+        rollbackExistedAfter = $rollbackExistedAfter
+        rollbackUnchanged = $rollbackUnchanged
+        capturedAtUtc = [DateTime]::UtcNow.ToString('o')
+    } | ConvertTo-Json -Depth 10 | Set-Content -Encoding utf8 -LiteralPath (Join-Path $evidencePath 'dry-run-non-mutation.json')
+    return
+}
+if (-not $Apply) { return }
 if ($dryRun.plan.fingerprint -cne $ConfirmPlan) {
     throw "Plan fingerprint mismatch. Current plan is $($dryRun.plan.fingerprint)."
 }

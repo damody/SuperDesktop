@@ -11,6 +11,32 @@ if ([string]::IsNullOrWhiteSpace($RepositoryRoot)) {
 }
 $root = (Resolve-Path -LiteralPath $RepositoryRoot).Path
 $evidenceRoot = Join-Path $root 'openspec\changes\verify-superdesktop-shell-completion\evidence'
+function Resolve-RepositoryEvidencePath([string]$RelativePath, [string]$Label) {
+    if ([string]::IsNullOrWhiteSpace($RelativePath) -or [IO.Path]::IsPathRooted($RelativePath)) { throw "$Label path must be repository-relative." }
+    $full = [IO.Path]::GetFullPath((Join-Path $root ($RelativePath -replace '/', '\')))
+    $prefix = $root.TrimEnd('\') + '\'
+    if (-not $full.StartsWith($prefix, [StringComparison]::OrdinalIgnoreCase) -or -not (Test-Path -LiteralPath $full -PathType Leaf)) {
+        throw "$Label path is missing or escapes the repository: $RelativePath"
+    }
+    return $full
+}
+function Assert-HashRecords($Records, [int]$RequiredCount, [string]$Label, [switch]$AllowMore) {
+    $items = @($Records)
+    if (($AllowMore -and $items.Count -lt $RequiredCount) -or (-not $AllowMore -and $items.Count -ne $RequiredCount)) {
+        throw "$Label hash-record count is invalid."
+    }
+    $seen = @{}
+    foreach ($item in $items) {
+        $relative = [string]$item.path
+        if ($seen.ContainsKey($relative)) { throw "$Label contains duplicate path: $relative" }
+        $seen[$relative] = $true
+        $expected = ([string]$item.sha256).ToLowerInvariant()
+        if ($expected -notmatch '^[0-9a-f]{64}$') { throw "$Label contains an invalid SHA-256: $relative" }
+        $path = Resolve-RepositoryEvidencePath $relative $Label
+        $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $path).Hash.ToLowerInvariant()
+        if ($actual -cne $expected) { throw "$Label source hash drift: $relative" }
+    }
+}
 $manifest = Get-Content -Raw -Encoding utf8 -LiteralPath (Join-Path $evidenceRoot 'required-children.json') | ConvertFrom-Json
 if ($manifest.schema_version -ne 1 -or $manifest.children.Count -ne 8) {
     throw 'Unsupported or incomplete completion child manifest.'
@@ -80,6 +106,10 @@ if (-not [string]::IsNullOrWhiteSpace($ExternalEvidenceDirectory)) {
                 if ($document.host.build -ne 19045 -or $document.host.display_version -cne '22H2') {
                     throw 'Windows 10 evidence host is not build 19045 22H2.'
                 }
+                foreach ($operator in @($document.operators.lifecycle,$document.operators.installer)) {
+                    if ([string]::IsNullOrWhiteSpace($operator.name) -or [string]::IsNullOrWhiteSpace($operator.organization) -or
+                        [string]$operator.name -like 'REPLACE_WITH_*' -or [string]$operator.organization -like 'REPLACE_WITH_*') { throw 'Windows 10 lifecycle/installer operator is not attributable.' }
+                }
                 if ($document.lifecycle.forced_crash_runs -ne 10 -or $document.lifecycle.max_recovery_ms -gt 10000) {
                     throw 'Windows 10 recovery contract failed.'
                 }
@@ -89,6 +119,7 @@ if (-not [string]::IsNullOrWhiteSpace($ExternalEvidenceDirectory)) {
                 if (-not $document.installer.reboot_verified -or -not $document.installer.exact_rollback_verified -or -not $document.installer.metadata_removed) {
                     throw 'Installer reboot/rollback contract failed.'
                 }
+                Assert-HashRecords $document.source_hashes 12 'Windows 10 lifecycle/installer evidence'
                 foreach ($gate in @('G-SHELL-TAKEOVER','G-GUARDIAN-RECOVERY','G-INSTALL-ROLLBACK')) {
                     if ($document.gates.$gate -cne 'passed') { throw "Missing passed $gate" }
                     $externalGates[$gate] = 'passed'
@@ -101,6 +132,13 @@ if (-not [string]::IsNullOrWhiteSpace($ExternalEvidenceDirectory)) {
                 foreach ($check in @('pointer','keyboard_focus','drag','primary_change','hot_plug','work_area_restored')) {
                     if ($document.interactions.$check -cne 'passed') { throw "Physical interaction is not passed: $check" }
                 }
+                foreach ($feature in @('desktop_file_operations','context_menu','start_search','taskbar_flyouts','notification_area','virtual_desktop_query_move','accessibility')) {
+                    if ($document.completion_features.$feature -cne 'passed') { throw "Physical completion feature is not passed: $feature" }
+                }
+                if ([string]::IsNullOrWhiteSpace($document.operator.name) -or [string]::IsNullOrWhiteSpace($document.operator.organization) -or
+                    [string]$document.operator.name -like 'REPLACE_WITH_*' -or [string]$document.operator.organization -like 'REPLACE_WITH_*') { throw 'Physical evidence operator is not attributable.' }
+                Assert-HashRecords $document.source_hashes 3 'Physical mixed-DPI source evidence'
+                Assert-HashRecords $document.artifact_hashes 4 'Physical mixed-DPI photo/screenshot evidence' -AllowMore
                 if ($document.gates.'G-DPI-MONITOR-PHYSICAL' -cne 'passed') { throw 'Missing passed physical DPI gate.' }
                 $externalGates['G-DPI-MONITOR-PHYSICAL'] = 'passed'
             }
@@ -111,11 +149,42 @@ if (-not [string]::IsNullOrWhiteSpace($ExternalEvidenceDirectory)) {
                 foreach ($area in @('architecture','security','accessibility','evidence_lineage')) {
                     if ($document.scope.$area -cne 'passed') { throw "Independent review area is not passed: $area" }
                 }
+                if ([string]::IsNullOrWhiteSpace($document.reviewer.name) -or [string]::IsNullOrWhiteSpace($document.reviewer.organization) -or
+                    [string]$document.reviewer.name -like 'REPLACE_WITH_*' -or [string]$document.reviewer.organization -like 'REPLACE_WITH_*') { throw 'Independent reviewer is not attributable.' }
+                $expectedChanges = @(
+                    'extend-superdesktop-shell-contracts','add-superdesktop-desktop-file-operations','add-superdesktop-shell-context-menu-host',
+                    'add-superdesktop-start-search','add-superdesktop-taskbar-advanced-interactions','add-superdesktop-notification-area-host',
+                    'add-superdesktop-virtual-desktops','add-superdesktop-shell-installer','verify-superdesktop-shell-completion','complete-superdesktop-windows-shell'
+                )
+                $actualChanges = @($document.scope.changes | Sort-Object -Unique)
+                if ($actualChanges.Count -ne $expectedChanges.Count -or @($expectedChanges | Where-Object { $_ -notin $actualChanges }).Count -ne 0) { throw 'Independent review change scope is incomplete.' }
+                $expectedPaths = @(
+                    'docs/superpowers/specs/2026-08-16-superdesktop-windows-shell-completion-design.md',
+                    'openspec/changes/complete-superdesktop-windows-shell/PROGRAM.md',
+                    'openspec/changes/complete-superdesktop-windows-shell/design.md',
+                    'openspec/changes/complete-superdesktop-windows-shell/specs/windows-shell-completion-program/spec.md',
+                    'openspec/changes/verify-superdesktop-shell-completion/design.md',
+                    'openspec/changes/verify-superdesktop-shell-completion/specs/shell-completion-verification/spec.md',
+                    'openspec/changes/verify-superdesktop-shell-completion/evidence/current-rollup.json'
+                )
+                $manifestEntries = @($document.source_manifest)
+                if ($manifestEntries.Count -ne $expectedPaths.Count) { throw 'Independent review source manifest is incomplete.' }
+                foreach ($sourcePath in $expectedPaths) {
+                    $entries = @($manifestEntries | Where-Object path -CEQ $sourcePath)
+                    $expectedOid = (& git -C $root rev-parse "$revision`:$sourcePath").Trim()
+                    if ($entries.Count -ne 1 -or $entries[0].git_blob_oid -cne $expectedOid) { throw "Independent review source lineage drift: $sourcePath" }
+                }
+                $expectedTree = (& git -C $root rev-parse "$revision^{tree}").Trim()
+                if ($document.reviewed_tree_oid -cne $expectedTree) { throw 'Independent review tree lineage drift.' }
+                Assert-HashRecords @($document.confirmation) 1 'Independent review confirmation'
+                $unresolved = @($document.findings | Where-Object { $_.severity -in @('P0','P1') -and $_.status -cne 'resolved' })
+                if ($unresolved.Count -ne 0 -or $document.unresolved_p0_p1 -ne $unresolved.Count -or $document.final_disposition -cne 'no-unresolved-p0-p1') { throw 'Independent review finding disposition is inconsistent.' }
                 if ($document.gates.'G-REVIEW' -cne 'passed') { throw 'Missing passed review gate.' }
                 $externalGates['G-REVIEW'] = 'passed'
             }
         }
-        $relative = [IO.Path]::GetRelativePath($root, $path).Replace('\','/')
+        $rootPrefix = $root.TrimEnd('\') + '\'
+        $relative = $path.Substring($rootPrefix.Length).Replace('\','/')
         $externalSources[$kind] = [ordered]@{
             kind = $kind
             relative_path = $relative

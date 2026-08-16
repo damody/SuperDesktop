@@ -1,0 +1,18 @@
+{
+  "schema": "m0-physical-mixed-dpi-confirmation/v1",
+  "recorded_at_utc": "REPLACE_WITH_ISO_8601_TIMESTAMP",
+  "reviewed_revision": "REPLACE_WITH_FULL_40_CHARACTER_FROZEN_REVISION",
+  "reviewer": {
+    "name": "REPLACE_WITH_PHYSICAL_REVIEWER_NAME",
+    "organization": "REPLACE_WITH_ORGANIZATION"
+  },
+  "cross_monitor_pointer": "passed",
+  "cross_monitor_keyboard_focus": "passed",
+  "cross_monitor_drag": "passed",
+  "primary_change": "passed",
+  "hot_plug_recovery": "passed",
+  "photos": [
+    "REPLACE_WITH_REPOSITORY_RELATIVE_PHOTO_1",
+    "REPLACE_WITH_REPOSITORY_RELATIVE_PHOTO_2"
+  ]
+}

@@ -1,7 +1,9 @@
 [CmdletBinding()]
 param(
     [string]$Workspace,
-    [string]$OutputPath
+    [string]$OutputPath,
+    [string]$OperatorName,
+    [string]$OperatorOrganization
 )
 
 $ErrorActionPreference = 'Stop'
@@ -68,6 +70,19 @@ function Monitor-Profile([string]$ProbePath) {
 }
 
 $Workspace = (Resolve-Path -LiteralPath $Workspace).Path
+$candidatePath = Join-Path $Workspace 'openspec/changes/verify-superdesktop-shell-completion/evidence/release-candidate.json'
+$candidate = Get-Content -Raw -Encoding utf8 -LiteralPath $candidatePath | ConvertFrom-Json
+$reviewedRevision = [string]$candidate.reviewed_revision
+& git -C $Workspace cat-file -e "$reviewedRevision^{commit}"
+if ($candidate.schema_version -ne 1 -or $LASTEXITCODE -ne 0) { throw 'Unable to bind frozen release-candidate revision.' }
+& git -C $Workspace merge-base --is-ancestor $reviewedRevision HEAD
+if ($LASTEXITCODE -ne 0) { throw 'Current checkout does not descend from the frozen release candidate.' }
+& git -C $Workspace diff --quiet $reviewedRevision HEAD -- crates Cargo.toml Cargo.lock
+if ($LASTEXITCODE -ne 0) { throw 'Committed production source or dependency drift exists relative to the frozen candidate.' }
+& git -C $Workspace diff --quiet -- crates Cargo.toml Cargo.lock
+if ($LASTEXITCODE -ne 0) { throw 'Uncommitted production source or dependency drift exists relative to the frozen candidate.' }
+& git -C $Workspace diff --cached --quiet -- crates Cargo.toml Cargo.lock
+if ($LASTEXITCODE -ne 0) { throw 'Staged production source or dependency drift exists relative to the frozen candidate.' }
 $os = Get-CimInstance Win32_OperatingSystem
 $displayVersion = (Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion').DisplayVersion
 if ([int]$os.BuildNumber -ne 19045 -or $displayVersion -ne '22H2' -or [int]$os.ProductType -ne 1) {
@@ -76,6 +91,11 @@ if ([int]$os.BuildNumber -ne 19045 -or $displayVersion -ne '22H2' -or [int]$os.P
 if (-not [Environment]::UserInteractive -or (Get-Process -Id $PID).SessionId -eq 0) {
     throw 'An interactive non-session-0 desktop is required'
 }
+if ([string]::IsNullOrWhiteSpace($OperatorName) -or [string]::IsNullOrWhiteSpace($OperatorOrganization) -or
+    $OperatorName -like 'REPLACE_WITH_*' -or $OperatorOrganization -like 'REPLACE_WITH_*') { throw 'An attributable Windows 10 operator name and organization are required.' }
+
+Invoke-Checked 'release workspace build' { cargo build --workspace --release --offline --manifest-path (Join-Path $Workspace 'Cargo.toml') } | Out-Null
+Invoke-Checked 'release monitor/DPI probe build' { cargo build -p platform-win --release --offline --example monitor_dpi_start_capability --manifest-path (Join-Path $Workspace 'Cargo.toml') } | Out-Null
 
 $app = Join-Path $Workspace 'target/release/superdesktop-app.exe'
 $guardian = Join-Path $Workspace 'target/release/superdesktop-guardian.exe'
@@ -87,7 +107,7 @@ foreach ($path in @($app, $guardian, $monitorProbe, $superExplorer)) {
     }
 }
 
-$revision = (& git -C $Workspace rev-parse --short=8 HEAD).Trim()
+$revision = $reviewedRevision.Substring(0, 8)
 $recordedAt = [DateTime]::UtcNow.ToString('o')
 $registryBefore = Registry-Snapshot
 $explorerBefore = Explorer-Count
@@ -180,6 +200,7 @@ $artifact = [ordered]@{
         session_id = (Get-Process -Id $PID).SessionId
         interactive = [Environment]::UserInteractive
     }
+    operator = [ordered]@{ name=$OperatorName;organization=$OperatorOrganization }
     binaries = @(
         @{ name = 'superdesktop-app'; sha256 = (Get-FileHash $app -Algorithm SHA256).Hash },
         @{ name = 'superdesktop-guardian'; sha256 = (Get-FileHash $guardian -Algorithm SHA256).Hash },
