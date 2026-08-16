@@ -36,6 +36,9 @@ fn invalid_product_identity_is_rejected_without_metadata_or_registry_authority()
     assert_eq!(output.status.code(), Some(2));
     let value: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
     assert_eq!(value["disposition"], "failed");
+    assert_eq!(value["operation"], "enable");
+    assert!(value["timestamp_unix_ms"].as_u64().is_some());
+    assert!(value["affected_targets"].as_array().is_some());
     assert!(
         value["error"]
             .as_str()
@@ -58,7 +61,11 @@ fn malformed_invocation_is_machine_readable_and_does_not_create_metadata() {
         .output()
         .unwrap();
     assert_eq!(output.status.code(), Some(2));
-    serde_json::from_slice::<serde_json::Value>(&output.stdout).unwrap();
+    let value = serde_json::from_slice::<serde_json::Value>(&output.stdout).unwrap();
+    assert_eq!(value["disposition"], "failed");
+    assert_eq!(value["operation"], "enable");
+    assert!(value["timestamp_unix_ms"].as_u64().is_some());
+    assert_eq!(value["affected_targets"].as_array().unwrap().len(), 0);
     assert!(!record.exists());
     let _ = fs::remove_file(record);
 }

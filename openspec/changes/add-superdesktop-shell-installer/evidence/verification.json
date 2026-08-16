@@ -28,7 +28,9 @@
       "repair failure restores the exact transaction pre-state",
       "rollback metadata path is absolute, included in the plan fingerprint, and reported as an affected target",
       "guardian recovery admission executes a five-second fail-closed read-only handshake before planning and immediately before mutation",
-      "guardian handshake verifies an interactive non-Safe-Mode session and resolves the trusted Explorer recovery target without mutation"
+      "guardian handshake verifies an interactive non-Safe-Mode session and resolves the trusted Explorer recovery target without mutation",
+      "partial or mismatched mutation authority is rejected instead of being mislabeled as dry-run",
+      "post-plan failures include operation, fingerprint, pre/post observations, affected targets, timestamp, and failed terminal audit"
     ]
   },
   "physical_gate": {

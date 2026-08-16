@@ -35,6 +35,10 @@ impl MutationAuthority {
             && self.explicit_opt_in
             && self.confirmed_fingerprint.as_deref() == Some(fingerprint)
     }
+
+    fn is_dry_run_request(&self) -> bool {
+        !self.apply && !self.explicit_opt_in && self.confirmed_fingerprint.is_none()
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -383,13 +387,16 @@ pub fn execute_plan<R: ShellRegistry, S: RollbackStore>(
     plan: &InstallerPlan,
     authority: &MutationAuthority,
 ) -> Result<InstallerAudit, InstallerError> {
-    if !authority.authorizes(&plan.fingerprint) {
+    if authority.is_dry_run_request() {
         return Ok(audit(
             plan,
             plan.observed.clone(),
             InstallerDisposition::DryRun,
             "mutation authority absent",
         ));
+    }
+    if !authority.authorizes(&plan.fingerprint) {
+        return Err(InstallerError::Unauthorized);
     }
     let current = registry.read_shell()?;
     if current != plan.observed {
@@ -518,6 +525,17 @@ fn audit(
         disposition,
         message: message.into(),
     }
+}
+
+/// Produces the same machine-readable terminal shape for failures that occur
+/// after a plan exists but before a normal terminal audit can be returned.
+pub fn failed_audit(plan: &InstallerPlan, error: &InstallerError) -> InstallerAudit {
+    audit(
+        plan,
+        None,
+        InstallerDisposition::Failed,
+        &format!("{error:?}"),
+    )
 }
 
 #[derive(Clone, Debug)]
@@ -700,6 +718,20 @@ mod tests {
                 r"rollback_record:C:\SuperDesktop\installer-rollback.json".to_owned()
             ]
         );
+        assert_eq!(registry.value.as_deref(), Some("explorer.exe"));
+        assert!(matches!(
+            execute_plan(
+                &mut registry,
+                &mut store,
+                &plan,
+                &MutationAuthority {
+                    apply: true,
+                    explicit_opt_in: true,
+                    confirmed_fingerprint: Some("wrong-plan".into()),
+                },
+            ),
+            Err(InstallerError::Unauthorized)
+        ));
         assert_eq!(registry.value.as_deref(), Some("explorer.exe"));
         registry.value = Some("external.exe".into());
         assert!(matches!(

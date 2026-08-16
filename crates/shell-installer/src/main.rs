@@ -1,11 +1,12 @@
 use std::path::PathBuf;
 use std::process::ExitCode;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde_json::json;
 use shell_installer::{
-    FileRollbackStore, InstallerCommand, InstallerError, MutationAuthority, RollbackStore,
-    ShellRegistry, WindowsShellRegistry, build_enable_plan, build_restore_plan, execute_plan,
-    validate_mutation_binaries, validate_rollback_record_path,
+    FileRollbackStore, InstallerAudit, InstallerCommand, InstallerError, MutationAuthority,
+    RollbackStore, ShellRegistry, WindowsShellRegistry, build_enable_plan, build_restore_plan,
+    execute_plan, failed_audit, validate_mutation_binaries, validate_rollback_record_path,
 };
 
 #[derive(Debug)]
@@ -18,15 +19,29 @@ struct Arguments {
 }
 
 fn main() -> ExitCode {
-    match run() {
+    let raw_arguments = std::env::args().skip(1).collect::<Vec<_>>();
+    let requested_operation = raw_arguments.first().cloned();
+    match run(raw_arguments.into_iter()) {
         Ok(()) => ExitCode::SUCCESS,
-        Err((code, error)) => {
+        Err((code, error, audit)) => {
+            let operation = audit
+                .as_ref()
+                .map(|record| format!("{:?}", record.command).to_ascii_lowercase())
+                .or(requested_operation);
             println!(
                 "{}",
                 serde_json::to_string(&json!({
                     "disposition": "failed",
                     "exit_code": code,
                     "error": format!("{error:?}"),
+                    "timestamp_unix_ms": timestamp_unix_ms(),
+                    "operation": operation,
+                    "plan_fingerprint": audit.as_ref().map(|record| &record.fingerprint),
+                    "before": audit.as_ref().and_then(|record| record.before.as_ref()),
+                    "desired": audit.as_ref().and_then(|record| record.desired.as_ref()),
+                    "after": audit.as_ref().and_then(|record| record.after.as_ref()),
+                    "affected_targets": audit.as_ref().map(|record| &record.affected_targets).cloned().unwrap_or_default(),
+                    "audit": audit,
                 }))
                 .expect("error audit serializes")
             );
@@ -35,21 +50,23 @@ fn main() -> ExitCode {
     }
 }
 
-fn run() -> Result<(), (u8, InstallerError)> {
-    let arguments = parse(std::env::args().skip(1)).map_err(|message| {
-        (
+fn run(arguments: impl Iterator<Item = String>) -> Result<(), CliFailure> {
+    let arguments = parse(arguments).map_err(|message| {
+        failure((
             2,
             InstallerError::PreflightRejected(format!(
                 "{message}; usage: shell-installer <install|enable|disable|repair|uninstall> \
                  [--app PATH] [--guardian PATH] [--rollback-record PATH] \
                  [--apply --explicit-opt-in --confirm-plan FINGERPRINT]"
             )),
-        )
+        ))
     })?;
-    let rollback_record_path =
-        validate_rollback_record_path(&arguments.rollback_record).map_err(classify)?;
+    let rollback_record_path = validate_rollback_record_path(&arguments.rollback_record)
+        .map_err(|error| failure(classify(error)))?;
     let mut registry = WindowsShellRegistry;
-    let observed = registry.read_shell().map_err(classify)?;
+    let observed = registry
+        .read_shell()
+        .map_err(|error| failure(classify(error)))?;
     let mut store = FileRollbackStore::new(rollback_record_path.clone());
     let plan = match arguments.command {
         InstallerCommand::Install | InstallerCommand::Enable | InstallerCommand::Repair => {
@@ -60,14 +77,17 @@ fn run() -> Result<(), (u8, InstallerError)> {
                 &arguments.guardian,
                 &rollback_record_path,
             )
-            .map_err(classify)?
+            .map_err(|error| failure(classify(error)))?
         }
         InstallerCommand::Disable | InstallerCommand::Uninstall => {
-            let record = store.load().map_err(classify)?.ok_or_else(|| {
-                classify(InstallerError::RollbackStore(
-                    "no rollback record exists; refusing an inexact restore".into(),
-                ))
-            })?;
+            let record = store
+                .load()
+                .map_err(|error| failure(classify(error)))?
+                .ok_or_else(|| {
+                    failure(classify(InstallerError::RollbackStore(
+                        "no rollback record exists; refusing an inexact restore".into(),
+                    )))
+                })?;
             build_restore_plan(
                 arguments.command,
                 observed,
@@ -76,18 +96,39 @@ fn run() -> Result<(), (u8, InstallerError)> {
                 arguments.guardian,
                 rollback_record_path,
             )
-            .map_err(classify)?
+            .map_err(|error| failure(classify(error)))?
         }
     };
-    validate_mutation_binaries(&plan).map_err(classify)?;
-    let audit =
-        execute_plan(&mut registry, &mut store, &plan, &arguments.authority).map_err(classify)?;
+    validate_mutation_binaries(&plan).map_err(|error| failure_with_plan(classify(error), &plan))?;
+    let audit = execute_plan(&mut registry, &mut store, &plan, &arguments.authority)
+        .map_err(|error| failure_with_plan(classify(error), &plan))?;
     println!(
         "{}",
         serde_json::to_string_pretty(&json!({ "plan": plan, "audit": audit }))
             .expect("installer audit serializes")
     );
     Ok(())
+}
+
+type CliFailure = (u8, InstallerError, Option<Box<InstallerAudit>>);
+
+fn failure((code, error): (u8, InstallerError)) -> CliFailure {
+    (code, error, None)
+}
+
+fn failure_with_plan(
+    (code, error): (u8, InstallerError),
+    plan: &shell_installer::InstallerPlan,
+) -> CliFailure {
+    let audit = failed_audit(plan, &error);
+    (code, error, Some(Box::new(audit)))
+}
+
+fn timestamp_unix_ms() -> u128 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis()
 }
 
 fn classify(error: InstallerError) -> (u8, InstallerError) {
