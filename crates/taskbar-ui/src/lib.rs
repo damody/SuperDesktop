@@ -3,6 +3,7 @@
 #[cfg(not(windows))]
 compile_error!("SuperDesktop is supported only on Windows targets.");
 
+mod advanced;
 mod grouping;
 mod interaction;
 mod layout;
@@ -12,6 +13,10 @@ mod surface;
 mod tracker;
 mod view;
 
+pub use advanced::{
+    AdvancedTaskbarPreferences, FlyoutAction, FlyoutModel, JumpListGroup, JumpListModel,
+    PreviewCard, ProgressState, TaskOverlay,
+};
 pub use grouping::{GroupModel, PinChange, TaskGroup};
 pub use interaction::{
     AccessibleTask, FixedEntry, GroupSelection, RepairPrompt, TaskAction, TaskEffect,

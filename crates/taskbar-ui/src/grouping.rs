@@ -111,6 +111,7 @@ impl GroupModel {
         TaskbarSettings {
             rows: 2,
             pins: self.pin_order.iter().map(ToString::to_string).collect(),
+            ..TaskbarSettings::default()
         }
     }
 }

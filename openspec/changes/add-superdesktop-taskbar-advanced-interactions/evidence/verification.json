@@ -1,0 +1,22 @@
+{
+  "change": "add-superdesktop-taskbar-advanced-interactions",
+  "result": "passed",
+  "commands": [
+    "cargo fmt --all -- --check",
+    "cargo clippy --workspace --all-targets --offline -- -D warnings",
+    "cargo test -p settings-store -p platform-win -p taskbar-ui --offline",
+    "openspec validate add-superdesktop-taskbar-advanced-interactions --strict"
+  ],
+  "tests": {
+    "platform_win": 39,
+    "settings_store": 12,
+    "taskbar_ui": 21,
+    "failures": 0
+  },
+  "budgets_ms": {
+    "hover_delay": 400,
+    "preview_admission": 500
+  },
+  "jump_list_limit": 60,
+  "settings_schema": 1
+}

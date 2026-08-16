@@ -48,6 +48,10 @@ pub struct DesktopPosition {
 pub struct TaskbarSettings {
     pub rows: u8,
     pub pins: Vec<String>,
+    pub combine_groups: bool,
+    pub show_labels: bool,
+    pub previews_enabled: bool,
+    pub all_monitors: bool,
 }
 
 impl Default for TaskbarSettings {
@@ -55,6 +59,10 @@ impl Default for TaskbarSettings {
         Self {
             rows: 2,
             pins: Vec::new(),
+            combine_groups: true,
+            show_labels: false,
+            previews_enabled: true,
+            all_monitors: true,
         }
     }
 }
@@ -161,6 +169,12 @@ impl SettingsV1 {
                 corrections.push(SettingsCorrection::TaskbarRows);
             }
             settings.taskbar.pins = take_string_array(&mut taskbar, "pins").unwrap_or_default();
+            settings.taskbar.combine_groups =
+                take_bool(&mut taskbar, "combine_groups").unwrap_or(true);
+            settings.taskbar.show_labels = take_bool(&mut taskbar, "show_labels").unwrap_or(false);
+            settings.taskbar.previews_enabled =
+                take_bool(&mut taskbar, "previews_enabled").unwrap_or(true);
+            settings.taskbar.all_monitors = take_bool(&mut taskbar, "all_monitors").unwrap_or(true);
         }
         if let Some(Value::Object(mut wallpaper)) = object.remove("wallpaper") {
             settings.wallpaper.source = take_optional_string(&mut wallpaper, "source");
@@ -240,6 +254,19 @@ impl SettingsV1 {
                     ),
                 ),
                 ("rows".into(), Value::Number(i64::from(self.taskbar.rows))),
+                (
+                    "combine_groups".into(),
+                    Value::Bool(self.taskbar.combine_groups),
+                ),
+                ("show_labels".into(), Value::Bool(self.taskbar.show_labels)),
+                (
+                    "previews_enabled".into(),
+                    Value::Bool(self.taskbar.previews_enabled),
+                ),
+                (
+                    "all_monitors".into(),
+                    Value::Bool(self.taskbar.all_monitors),
+                ),
             ])),
         );
         root.insert(
