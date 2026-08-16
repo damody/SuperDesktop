@@ -1,9 +1,14 @@
 //! Versioned, platform-neutral contracts for isolated SuperDesktop providers.
 
+mod context_menu;
 mod dto;
 mod envelope;
 mod validation;
 
+pub use context_menu::{
+    MAX_MENU_DEPTH, MenuContext, MenuEnumeration, MenuInvocation, MenuInvocationResult,
+    validate_command_tree,
+};
 pub use dto::{
     CommandDescriptor, CommandId, CommandRisk, IconData, NotificationIcon, ProviderCapability,
     SearchCategory, SearchResult, ShellItem, ShellItemKind, TaskPreview, VirtualDesktop,

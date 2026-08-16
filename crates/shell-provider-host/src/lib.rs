@@ -1,10 +1,12 @@
 //! Bounded dispatcher for providers hosted outside the GPUI shell process.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use shell_provider_protocol::{
-    CURRENT_PROTOCOL, Envelope, Handshake, HostHealth, MAX_FRAME_BYTES, ProviderCapability,
-    ProviderRequest, ProviderResponse, ResponseBody, TerminalKind, ValidationError,
+    CURRENT_PROTOCOL, CommandDescriptor, CommandId, CommandRisk, Envelope, Handshake, HostHealth,
+    MAX_FRAME_BYTES, MenuContext, MenuEnumeration, MenuInvocation, MenuInvocationResult,
+    ProviderCapability, ProviderRequest, ProviderResponse, ResponseBody, TerminalKind,
+    ValidationError,
 };
 
 pub const DEFAULT_MAX_ACTIVE_REQUESTS: usize = 32;
@@ -14,6 +16,15 @@ pub struct Dispatcher {
     active: BTreeSet<String>,
     max_active: usize,
     capabilities: Vec<ProviderCapability>,
+    menu_generation: u64,
+    menu_tokens: BTreeMap<String, RegisteredMenuCommand>,
+}
+
+#[derive(Clone, Debug)]
+struct RegisteredMenuCommand {
+    generation: u64,
+    selection_fingerprint: String,
+    command_id: String,
 }
 
 impl Default for Dispatcher {
@@ -37,6 +48,8 @@ impl Dispatcher {
                 ProviderCapability::TaskPreview,
                 ProviderCapability::VirtualDesktop,
             ],
+            menu_generation: 0,
+            menu_tokens: BTreeMap::new(),
         }
     }
 
@@ -124,10 +137,90 @@ impl Dispatcher {
                     },
                 )
             }
+            ProviderRequest::ContextMenuEnumerate(context) => {
+                let menu = self.enumerate_menu(context);
+                response(&request, TerminalKind::Success, ResponseBody::Menu(menu))
+            }
+            ProviderRequest::ContextMenuInvoke(invocation) => match self.invoke_menu(invocation) {
+                Some(result) => response(
+                    &request,
+                    TerminalKind::Success,
+                    ResponseBody::MenuInvocation(result),
+                ),
+                None => response(&request, TerminalKind::InvalidRequest, ResponseBody::Empty),
+            },
             ProviderRequest::Cancel { .. } => unreachable!("cancel returns before dispatch"),
         };
         self.finish(&request.request_id);
         result
+    }
+
+    fn enumerate_menu(&mut self, context: &MenuContext) -> MenuEnumeration {
+        self.menu_generation = self.menu_generation.saturating_add(1);
+        self.menu_tokens.clear();
+        let generation = self.menu_generation;
+        let mut commands = Vec::new();
+        let mut add = |command_id: &str, label: &str, enabled: bool, risk: CommandRisk| {
+            let token = format!(
+                "ctx:{generation}:{}:{command_id}",
+                context.selection_fingerprint
+            );
+            self.menu_tokens.insert(
+                token.clone(),
+                RegisteredMenuCommand {
+                    generation,
+                    selection_fingerprint: context.selection_fingerprint.clone(),
+                    command_id: command_id.into(),
+                },
+            );
+            commands.push(CommandDescriptor {
+                id: CommandId(token),
+                label: label.into(),
+                enabled,
+                risk,
+                children: Vec::new(),
+            });
+        };
+        if context.background {
+            add("refresh", "Refresh", true, CommandRisk::Normal);
+            add("sort", "Sort by", true, CommandRisk::Normal);
+            add("new", "New", true, CommandRisk::Normal);
+        } else {
+            add("open", "Open", context.can_open, CommandRisk::Normal);
+            add(
+                "rename",
+                "Rename",
+                context.can_rename && context.selection_count == 1,
+                CommandRisk::Normal,
+            );
+            add(
+                "recycle",
+                "Delete",
+                context.can_delete,
+                CommandRisk::Destructive,
+            );
+            add(
+                "properties",
+                "Properties",
+                context.can_show_properties,
+                CommandRisk::Normal,
+            );
+        }
+        MenuEnumeration {
+            generation,
+            selection_fingerprint: context.selection_fingerprint.clone(),
+            commands,
+            optional_enrichment_complete: false,
+        }
+    }
+
+    fn invoke_menu(&self, invocation: &MenuInvocation) -> Option<MenuInvocationResult> {
+        let registered = self.menu_tokens.get(&invocation.token)?;
+        (registered.generation == invocation.generation
+            && registered.selection_fingerprint == invocation.selection_fingerprint)
+            .then(|| MenuInvocationResult {
+                command_id: registered.command_id.clone(),
+            })
     }
 }
 
@@ -206,5 +299,54 @@ mod tests {
         assert_eq!(cancel.terminal, TerminalKind::Cancelled);
         let expired = dispatcher.dispatch(request("expired", ProviderRequest::Health), 2_000);
         assert_eq!(expired.terminal, TerminalKind::Timeout);
+    }
+
+    #[test]
+    fn menu_tokens_are_generation_and_selection_bound() {
+        let mut dispatcher = Dispatcher::default();
+        let context = MenuContext {
+            selection_fingerprint: "one".into(),
+            selection_count: 1,
+            background: false,
+            can_open: true,
+            can_rename: true,
+            can_delete: true,
+            can_show_properties: true,
+        };
+        let response = dispatcher.dispatch(
+            request(
+                "menu",
+                ProviderRequest::ContextMenuEnumerate(context.clone()),
+            ),
+            1_000,
+        );
+        let ResponseBody::Menu(menu) = response.body else {
+            panic!()
+        };
+        let token = menu.commands[0].id.0.clone();
+        let valid = dispatcher.dispatch(
+            request(
+                "invoke",
+                ProviderRequest::ContextMenuInvoke(MenuInvocation {
+                    generation: menu.generation,
+                    selection_fingerprint: "one".into(),
+                    token: token.clone(),
+                }),
+            ),
+            1_000,
+        );
+        assert_eq!(valid.terminal, TerminalKind::Success);
+        let stale = dispatcher.dispatch(
+            request(
+                "stale",
+                ProviderRequest::ContextMenuInvoke(MenuInvocation {
+                    generation: menu.generation,
+                    selection_fingerprint: "other".into(),
+                    token,
+                }),
+            ),
+            1_000,
+        );
+        assert_eq!(stale.terminal, TerminalKind::InvalidRequest);
     }
 }

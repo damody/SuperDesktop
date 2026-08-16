@@ -4,6 +4,7 @@ use shell_core::{
     BridgeLaunchRequest, BridgeLaunchSource, BridgeTerminal, CorrelationId, MessageKey, RequestId,
     ShellItemId,
 };
+use shell_provider_protocol::{CURRENT_PROTOCOL, Envelope, MenuContext, ProviderRequest};
 
 use crate::DesktopItem;
 use crate::DesktopOperationRequest;
@@ -13,11 +14,6 @@ pub enum ActivationSource {
     Pointer,
     Keyboard,
     Accessibility,
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum DeferredAction {
-    ContextMenu,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -33,7 +29,7 @@ pub struct AssociationRequest {
 pub enum ActivationEffect {
     Bridge(BridgeLaunchRequest),
     Association(AssociationRequest),
-    DeferredUnavailable(DeferredAction),
+    ContextMenu(Envelope<ProviderRequest>),
     DesktopOperation(DesktopOperationRequest),
 }
 
@@ -120,8 +116,19 @@ impl ActivationController {
         ))
     }
 
-    pub fn deferred(&self, action: DeferredAction) -> ActivationEffect {
-        ActivationEffect::DeferredUnavailable(action)
+    pub fn context_menu(
+        &mut self,
+        context: MenuContext,
+        deadline_unix_ms: u64,
+    ) -> ActivationEffect {
+        let (request_id, correlation_id) = self.allocate();
+        ActivationEffect::ContextMenu(Envelope {
+            protocol: CURRENT_PROTOCOL,
+            request_id: format!("request-{}", request_id.0),
+            correlation_id: format!("correlation-{}", correlation_id.0),
+            deadline_unix_ms: Some(deadline_unix_ms),
+            payload: ProviderRequest::ContextMenuEnumerate(context),
+        })
     }
     pub fn desktop_operation(&self, request: DesktopOperationRequest) -> ActivationEffect {
         ActivationEffect::DesktopOperation(request)
@@ -329,12 +336,26 @@ mod tests {
         );
     }
     #[test]
-    fn deferred_actions_never_emit_mutating_effect() {
-        let controller = ActivationController::default();
-        let action = DeferredAction::ContextMenu;
-        assert_eq!(
-            controller.deferred(action),
-            ActivationEffect::DeferredUnavailable(action)
+    fn context_menu_emits_typed_isolated_provider_request() {
+        let mut controller = ActivationController::default();
+        let effect = controller.context_menu(
+            MenuContext {
+                selection_fingerprint: "one".into(),
+                selection_count: 1,
+                background: false,
+                can_open: true,
+                can_rename: true,
+                can_delete: true,
+                can_show_properties: true,
+            },
+            10_000,
         );
+        assert!(matches!(
+            effect,
+            ActivationEffect::ContextMenu(Envelope {
+                payload: ProviderRequest::ContextMenuEnumerate(_),
+                ..
+            })
+        ));
     }
 }

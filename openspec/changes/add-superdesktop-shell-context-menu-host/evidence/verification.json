@@ -1,0 +1,22 @@
+{
+  "change": "add-superdesktop-shell-context-menu-host",
+  "result": "passed",
+  "commands": [
+    "cargo fmt --all -- --check",
+    "cargo clippy --workspace --all-targets --offline -- -D warnings",
+    "cargo test -p shell-provider-protocol -p shell-provider-host -p desktop-ui --offline",
+    "openspec validate add-superdesktop-shell-context-menu-host --strict"
+  ],
+  "tests": {
+    "desktop_ui": 20,
+    "shell_provider_host": 4,
+    "shell_provider_protocol": 5,
+    "failures": 0
+  },
+  "limits": {
+    "menu_depth": 8,
+    "menu_nodes": 1024,
+    "optional_enrichment_deadline_ms": 2000
+  },
+  "isolation": "provider-process"
+}

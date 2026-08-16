@@ -1,6 +1,9 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{MAX_COLLECTION_ITEMS, ProviderCapability, Validate, ValidationError};
+use crate::{
+    MAX_COLLECTION_ITEMS, MenuContext, MenuEnumeration, MenuInvocation, MenuInvocationResult,
+    ProviderCapability, Validate, ValidationError,
+};
 
 pub const CURRENT_PROTOCOL: ProtocolVersion = ProtocolVersion { major: 1, minor: 0 };
 
@@ -59,6 +62,8 @@ pub enum ProviderRequest {
     Cancel {
         target_request_id: String,
     },
+    ContextMenuEnumerate(MenuContext),
+    ContextMenuInvoke(MenuInvocation),
 }
 
 impl Validate for ProviderRequest {
@@ -78,6 +83,8 @@ impl Validate for ProviderRequest {
             Self::Cancel { target_request_id } if target_request_id.trim().is_empty() => {
                 return Err(ValidationError::Empty("target_request_id"));
             }
+            Self::ContextMenuEnumerate(context) => context.validate()?,
+            Self::ContextMenuInvoke(invocation) => invocation.validate()?,
             _ => {}
         }
         Ok(())
@@ -117,6 +124,8 @@ pub enum ResponseBody {
     Handshake(Handshake),
     Health(HostHealth),
     Arguments(Vec<String>),
+    Menu(MenuEnumeration),
+    MenuInvocation(MenuInvocationResult),
     Message(String),
     Empty,
 }

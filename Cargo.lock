@@ -930,6 +930,7 @@ dependencies = [
  "platform-win",
  "raw-window-handle",
  "shell-core",
+ "shell-provider-protocol",
 ]
 
 [[package]]

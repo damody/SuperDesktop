@@ -3,6 +3,7 @@
 #[cfg(not(windows))]
 compile_error!("SuperDesktop is supported only on Windows targets.");
 
+mod context_menu;
 mod geometry;
 mod interaction;
 mod layout;
@@ -12,13 +13,14 @@ mod view;
 mod wallpaper;
 mod watcher;
 
+pub use context_menu::{MenuAccessibleNode, MenuModel};
 pub use geometry::{
     DesktopSurfaceRegistry, Dpi, LogicalPoint, LogicalRect, MonitorDescriptor, SurfaceChange,
     SurfaceState,
 };
 pub use interaction::{
     AccessibleAction, AccessibleNode, ActivationController, ActivationEffect, ActivationSource,
-    AssociationRequest, DeferredAction, RepairState, TerminalResult,
+    AssociationRequest, RepairState, TerminalResult,
 };
 pub use layout::{
     DesktopLayout, DesktopSortKey, DesktopSortRecord, GridMetrics, PersistedPosition,
