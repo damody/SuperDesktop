@@ -3,12 +3,13 @@ use std::{
     collections::BTreeMap,
     path::{Path, PathBuf},
     rc::Rc,
-    time::Duration,
+    sync::atomic::{AtomicU64, Ordering},
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
 use desktop_ui::{
     AccessibleAction, AccessibleNode, DeletePolicy, DesktopItem, DesktopOperation,
-    DesktopOperationController, DesktopOperationTerminal, DesktopView, TransferIntent,
+    DesktopOperationController, DesktopOperationTerminal, DesktopView, MenuModel, TransferIntent,
     execute_desktop_operation,
 };
 use gpui::{
@@ -22,10 +23,18 @@ use platform_win::common::{
     taskbar::{configure_and_show_taskbar_window, snapshot_task_windows},
 };
 use raw_window_handle::{HasWindowHandle, RawWindowHandle};
+use shell_provider_protocol::{
+    CURRENT_PROTOCOL, CommandDescriptor, CommandId, CommandRisk, Envelope, MenuContext,
+    MenuEnumeration, MenuInvocation, ProviderRequest, ResponseBody, TerminalKind,
+};
 use taskbar_ui::{
     AccessibleTask, ClockLocale, CoreStatus, ProviderState, StatusRegion, TaskAction,
     TaskbarCallbacks, TaskbarLayout, TaskbarView, TestClock,
 };
+
+use crate::provider_client::ProviderClient;
+
+static NEXT_PROVIDER_REQUEST: AtomicU64 = AtomicU64::new(1);
 
 fn trace_action(action: &str) {
     let Some(path) = std::env::var_os("SUPERDESKTOP_ACTION_TRACE") else {
@@ -404,6 +413,166 @@ fn import_external_desktop_items(
     all_succeeded
 }
 
+fn unix_time_ms() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis()
+        .try_into()
+        .unwrap_or(u64::MAX)
+}
+
+fn provider_request(payload: ProviderRequest, deadline_ms: u64) -> Envelope<ProviderRequest> {
+    let sequence = NEXT_PROVIDER_REQUEST.fetch_add(1, Ordering::Relaxed);
+    Envelope {
+        protocol: CURRENT_PROTOCOL,
+        request_id: format!("surface-{sequence}"),
+        correlation_id: format!("surface-correlation-{sequence}"),
+        deadline_unix_ms: Some(unix_time_ms().saturating_add(deadline_ms)),
+        payload,
+    }
+}
+
+fn local_context_menu(stable_id: &str) -> Option<MenuModel> {
+    let command = |id: &str, label: &str, risk| CommandDescriptor {
+        id: CommandId(format!("local:{id}")),
+        label: label.into(),
+        enabled: true,
+        risk,
+        children: Vec::new(),
+    };
+    let commands = if stable_id == "desktop-background" {
+        vec![
+            command("refresh", "Refresh", CommandRisk::Normal),
+            command("sort", "Sort by name", CommandRisk::Normal),
+            command("new", "New folder", CommandRisk::Normal),
+        ]
+    } else {
+        vec![
+            command("open", "Open", CommandRisk::Normal),
+            command("rename", "Rename", CommandRisk::Normal),
+            command("recycle", "Delete", CommandRisk::Destructive),
+            command("properties", "Properties", CommandRisk::Normal),
+        ]
+    };
+    MenuModel::new(MenuEnumeration {
+        generation: 0,
+        selection_fingerprint: stable_id.into(),
+        commands,
+        optional_enrichment_complete: false,
+    })
+    .ok()
+}
+
+fn enumerate_desktop_context_menu(
+    runtime: &Rc<RefCell<DesktopNamespaceRuntime>>,
+    provider: &Rc<RefCell<ProviderClient>>,
+    stable_id: &str,
+) -> Option<MenuModel> {
+    let background = stable_id == "desktop-background";
+    if !background && !runtime.borrow().items.contains_key(stable_id) {
+        return None;
+    }
+    let request = provider_request(
+        ProviderRequest::ContextMenuEnumerate(MenuContext {
+            selection_fingerprint: stable_id.into(),
+            selection_count: usize::from(!background),
+            background,
+            can_open: !background,
+            can_rename: !background,
+            can_delete: !background,
+            can_show_properties: !background,
+        }),
+        2_000,
+    );
+    let menu = provider
+        .borrow_mut()
+        .request(&request, Duration::from_millis(200))
+        .ok()
+        .and_then(|response| {
+            (response.terminal == TerminalKind::Success)
+                .then_some(response.body)
+                .and_then(|body| match body {
+                    ResponseBody::Menu(menu) => MenuModel::new(menu).ok(),
+                    _ => None,
+                })
+        });
+    if menu.is_some() {
+        trace_action("desktop:context-menu-provider");
+        menu
+    } else {
+        trace_action("desktop:context-menu-fallback");
+        local_context_menu(stable_id)
+    }
+}
+
+fn invoke_desktop_context_menu(
+    provider: &Rc<RefCell<ProviderClient>>,
+    invocation: &MenuInvocation,
+) -> Option<String> {
+    if let Some(command) = invocation.token.strip_prefix("local:") {
+        return matches!(
+            command,
+            "open" | "rename" | "recycle" | "properties" | "refresh" | "sort" | "new"
+        )
+        .then(|| command.to_owned());
+    }
+    let request = provider_request(
+        ProviderRequest::ContextMenuInvoke(invocation.clone()),
+        2_000,
+    );
+    provider
+        .borrow_mut()
+        .request(&request, Duration::from_secs(2))
+        .ok()
+        .and_then(|response| {
+            (response.terminal == TerminalKind::Success)
+                .then_some(response.body)
+                .and_then(|body| match body {
+                    ResponseBody::MenuInvocation(result) => Some(result.command_id),
+                    _ => None,
+                })
+        })
+}
+
+fn create_desktop_folder(runtime: &Rc<RefCell<DesktopNamespaceRuntime>>) -> bool {
+    let (Some(user_root), allowed_roots) = ({
+        let runtime = runtime.borrow();
+        (runtime.user_root.clone(), runtime.allowed_roots.clone())
+    }) else {
+        trace_action("desktop:new-folder-root-unavailable");
+        return false;
+    };
+    let created = platform_win::common::desktop_operations::create_directory(
+        &user_root,
+        "New folder",
+        &allowed_roots,
+    )
+    .is_ok();
+    trace_action(if created {
+        "desktop:new-folder-created"
+    } else {
+        "desktop:new-folder-failed"
+    });
+    created
+}
+
+fn show_desktop_item_properties(runtime: &Rc<RefCell<DesktopNamespaceRuntime>>, stable_id: &str) {
+    let path = runtime
+        .borrow()
+        .items
+        .get(stable_id)
+        .map(|item| PathBuf::from(&item.activation_token));
+    if path
+        .as_deref()
+        .is_some_and(|path| platform_win::common::desktop::show_properties(path).is_ok())
+    {
+        trace_action("desktop:properties-opened");
+    } else {
+        trace_action("desktop:properties-failed");
+    }
+}
+
 fn activate_task(stable_id: &str) {
     trace_action("task");
     let Some(hex) = stable_id.rsplit(':').next() else {
@@ -604,6 +773,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
     let interactive = verification_surface.is_some();
     let desktop_namespace = Rc::new(RefCell::new(DesktopNamespaceRuntime::default()));
     let desktop_operations = Rc::new(RefCell::new(DesktopOperationController::default()));
+    let provider_client = Rc::new(RefCell::new(ProviderClient::adjacent()?));
     let terminal = Rc::new(RefCell::new(None::<Result<(), &'static str>>));
     let terminal_for_app = Rc::clone(&terminal);
     let platform = gpui_windows::WindowsPlatform::new(false).map_err(|_| "gpui-platform")?;
@@ -621,6 +791,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                     let desktop_error = Rc::clone(&init_error);
                     let desktop_namespace_for_view = Rc::clone(&desktop_namespace);
                     let desktop_operations_for_view = Rc::clone(&desktop_operations);
+                    let provider_client_for_view = Rc::clone(&provider_client);
                     let desktop = cx.open_window(options(&monitor, false, interactive), move |window, cx| {
                         if interactive {
                             window.activate_window();
@@ -660,6 +831,11 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                             let transfer_operations = Rc::clone(&desktop_operations_for_view);
                             let external_drop_namespace = Rc::clone(&desktop_namespace_for_view);
                             let external_drop_operations = Rc::clone(&desktop_operations_for_view);
+                            let context_namespace = Rc::clone(&desktop_namespace_for_view);
+                            let context_provider = Rc::clone(&provider_client_for_view);
+                            let invocation_provider = Rc::clone(&provider_client_for_view);
+                            let properties_namespace = Rc::clone(&desktop_namespace_for_view);
+                            let new_folder_namespace = Rc::clone(&desktop_namespace_for_view);
                             let refresh_namespace = Rc::clone(&desktop_namespace_for_view);
                             let refresh_monitor = monitor_key.clone();
                             let mut view = DesktopView::new(
@@ -706,6 +882,22 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                     &external_drop_operations,
                                     paths,
                                 )
+                            }))
+                            .with_context_menu_action(Rc::new(move |stable_id| {
+                                enumerate_desktop_context_menu(
+                                    &context_namespace,
+                                    &context_provider,
+                                    stable_id,
+                                )
+                            }))
+                            .with_context_invoke_action(Rc::new(move |invocation| {
+                                invoke_desktop_context_menu(&invocation_provider, invocation)
+                            }))
+                            .with_item_properties_action(Rc::new(move |stable_id| {
+                                show_desktop_item_properties(&properties_namespace, stable_id)
+                            }))
+                            .with_background_new_action(Rc::new(move || {
+                                create_desktop_folder(&new_folder_namespace)
                             }))
                             .with_refresh_action(Rc::new(move || {
                                 refresh_desktop_namespace(&refresh_namespace, &refresh_monitor)

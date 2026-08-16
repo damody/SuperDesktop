@@ -6,6 +6,7 @@ compile_error!("SuperDesktop is supported only on Windows targets.");
 mod composition;
 mod identity;
 mod lifecycle;
+mod provider_client;
 mod surface_runtime;
 
 pub use composition::{CompositionRoot, RouteSource, RoutedTerminal};

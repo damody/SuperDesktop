@@ -124,6 +124,18 @@ pub fn rename_item(
     Ok(destination)
 }
 
+pub fn create_directory(
+    parent: &Path,
+    requested_name: &str,
+    allowed_roots: &[PathBuf],
+) -> Result<PathBuf, FileOperationError> {
+    validate_filename(requested_name)?;
+    let parent = admit_existing(parent, allowed_roots)?;
+    let destination = resolve_destination(&parent.join(requested_name), CollisionPolicy::Rename)?;
+    fs::create_dir(&destination)?;
+    Ok(destination)
+}
+
 pub fn recycle_item(path: &Path, allowed_roots: &[PathBuf]) -> Result<(), FileOperationError> {
     let path = admit_existing(path, allowed_roots)?;
     let mut wide: Vec<u16> = path.as_os_str().encode_wide().collect();
@@ -316,6 +328,10 @@ mod tests {
     fn rename_copy_collision_cancel_and_delete_are_admitted() {
         let root = fixture();
         let source = root.join("source.txt");
+        let folder = create_directory(&root, "New folder", std::slice::from_ref(&root)).unwrap();
+        let renamed_folder =
+            create_directory(&root, "New folder", std::slice::from_ref(&root)).unwrap();
+        assert_ne!(folder, renamed_folder);
         fs::write(&source, vec![7u8; 200_000]).unwrap();
         let renamed = rename_item(&source, "renamed.txt", std::slice::from_ref(&root)).unwrap();
         let copy = root.join("copy.txt");

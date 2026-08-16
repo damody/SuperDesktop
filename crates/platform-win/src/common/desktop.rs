@@ -16,8 +16,8 @@ use windows::Win32::Storage::FileSystem::{
 use windows::Win32::System::Com::CoTaskMemFree;
 use windows::Win32::System::Threading::GetCurrentProcessId;
 use windows::Win32::UI::Shell::{
-    FOLDERID_Desktop, FOLDERID_PublicDesktop, KF_FLAG_DEFAULT, SEE_MASK_NOCLOSEPROCESS,
-    SHELLEXECUTEINFOW, SHGetKnownFolderPath, ShellExecuteExW,
+    FOLDERID_Desktop, FOLDERID_PublicDesktop, KF_FLAG_DEFAULT, SEE_MASK_INVOKEIDLIST,
+    SEE_MASK_NOCLOSEPROCESS, SHELLEXECUTEINFOW, SHGetKnownFolderPath, ShellExecuteExW,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
     GWL_EXSTYLE, GetWindowLongPtrW, GetWindowThreadProcessId, HWND_BOTTOM, IsWindow,
@@ -250,6 +250,34 @@ pub fn launch_association(path: &Path) -> Result<AssociationAdmission, DesktopPl
             let _ = CloseHandle(info.hProcess);
         }
         Ok(AssociationAdmission::Launched)
+    }
+}
+
+pub fn show_properties(path: &Path) -> Result<(), DesktopPlatformError> {
+    let canonical = path
+        .canonicalize()
+        .map_err(|error| DesktopPlatformError::Association(error.to_string()))?;
+    let file = canonical
+        .as_os_str()
+        .encode_wide()
+        .chain(Some(0))
+        .collect::<Vec<_>>();
+    let verb = "properties"
+        .encode_utf16()
+        .chain(Some(0))
+        .collect::<Vec<_>>();
+    // SAFETY: both UTF-16 strings are NUL-terminated and live through the
+    // synchronous admission call. Explorer owns the resulting property sheet.
+    unsafe {
+        ShellExecuteExW(&mut SHELLEXECUTEINFOW {
+            cbSize: size_of::<SHELLEXECUTEINFOW>() as u32,
+            fMask: SEE_MASK_INVOKEIDLIST,
+            lpVerb: PCWSTR(verb.as_ptr()),
+            lpFile: PCWSTR(file.as_ptr()),
+            nShow: SW_HIDE.0,
+            ..Default::default()
+        })
+        .map_err(|error| DesktopPlatformError::Association(error.to_string()))
     }
 }
 

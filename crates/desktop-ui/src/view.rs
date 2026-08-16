@@ -1,12 +1,13 @@
 use std::{path::PathBuf, rc::Rc};
 
 use gpui::{
-    AppContext, Context, FocusHandle, InteractiveElement, IntoElement, ObjectFit, ParentElement,
-    Render, StatefulInteractiveElement, Styled, StyledImage, Window, div, img,
+    AppContext, Context, FocusHandle, InteractiveElement, IntoElement, MouseButton, ObjectFit,
+    ParentElement, Render, StatefulInteractiveElement, Styled, StyledImage, Window, div, img,
     prelude::FluentBuilder as _, px, rgb,
 };
 
-use crate::AccessibleNode;
+use crate::{AccessibleNode, MenuModel};
+use shell_provider_protocol::MenuInvocation;
 
 type ItemAction = Rc<dyn Fn(&str)>;
 type ItemRecycleAction = Rc<dyn Fn(&str) -> bool>;
@@ -14,6 +15,10 @@ type ItemPermanentDeleteAction = Rc<dyn Fn(&str) -> bool>;
 type ItemRenameAction = Rc<dyn Fn(&str, &str) -> bool>;
 type ItemTransferAction = Rc<dyn Fn(&str, &str) -> bool>;
 type ExternalDropAction = Rc<dyn Fn(&[PathBuf]) -> bool>;
+type ContextMenuAction = Rc<dyn Fn(&str) -> Option<MenuModel>>;
+type ContextInvokeAction = Rc<dyn Fn(&MenuInvocation) -> Option<String>>;
+type ItemPropertiesAction = Rc<dyn Fn(&str)>;
+type BackgroundNewAction = Rc<dyn Fn() -> bool>;
 type RefreshAction = Rc<dyn Fn() -> Vec<AccessibleNode>>;
 
 #[derive(Clone)]
@@ -49,12 +54,18 @@ pub struct DesktopView {
     item_rename_action: Option<ItemRenameAction>,
     item_transfer_action: Option<ItemTransferAction>,
     external_drop_action: Option<ExternalDropAction>,
+    context_menu_action: Option<ContextMenuAction>,
+    context_invoke_action: Option<ContextInvokeAction>,
+    item_properties_action: Option<ItemPropertiesAction>,
+    background_new_action: Option<BackgroundNewAction>,
     refresh_action: Option<RefreshAction>,
     rendered_action: Option<Rc<dyn Fn()>>,
     keyboard_focus: Option<FocusHandle>,
     wallpaper: Option<PathBuf>,
     rename_target: Option<String>,
     rename_buffer: String,
+    context_menu: Option<MenuModel>,
+    context_target: Option<String>,
 }
 
 impl DesktopView {
@@ -70,12 +81,18 @@ impl DesktopView {
             item_rename_action: None,
             item_transfer_action: None,
             external_drop_action: None,
+            context_menu_action: None,
+            context_invoke_action: None,
+            item_properties_action: None,
+            background_new_action: None,
             refresh_action: None,
             rendered_action: None,
             keyboard_focus: None,
             wallpaper: None,
             rename_target: None,
             rename_buffer: String::new(),
+            context_menu: None,
+            context_target: None,
         }
     }
 
@@ -111,6 +128,26 @@ impl DesktopView {
 
     pub fn with_external_drop_action(mut self, action: ExternalDropAction) -> Self {
         self.external_drop_action = Some(action);
+        self
+    }
+
+    pub fn with_context_menu_action(mut self, action: ContextMenuAction) -> Self {
+        self.context_menu_action = Some(action);
+        self
+    }
+
+    pub fn with_context_invoke_action(mut self, action: ContextInvokeAction) -> Self {
+        self.context_invoke_action = Some(action);
+        self
+    }
+
+    pub fn with_item_properties_action(mut self, action: ItemPropertiesAction) -> Self {
+        self.item_properties_action = Some(action);
+        self
+    }
+
+    pub fn with_background_new_action(mut self, action: BackgroundNewAction) -> Self {
+        self.background_new_action = Some(action);
         self
     }
 
@@ -154,6 +191,86 @@ impl DesktopView {
         }
         self.items = refreshed;
     }
+
+    fn open_context_menu(&mut self, stable_id: &str) {
+        self.context_menu = self
+            .context_menu_action
+            .as_ref()
+            .and_then(|action| action(stable_id));
+        self.context_target = self.context_menu.as_ref().map(|_| stable_id.to_owned());
+    }
+
+    fn invoke_context(&mut self, index: Option<usize>) {
+        let invocation = self.context_menu.as_ref().and_then(|menu| match index {
+            Some(index) => menu.invoke(index),
+            None => menu.invoke_focused(),
+        });
+        let command = invocation.as_ref().and_then(|invocation| {
+            self.context_invoke_action
+                .as_ref()
+                .and_then(|action| action(invocation))
+        });
+        let target = self.context_target.clone();
+        self.context_menu = None;
+        self.context_target = None;
+        let (Some(command), Some(target)) = (command.as_deref(), target.as_deref()) else {
+            return;
+        };
+        match command {
+            "open" => {
+                if let Some(action) = &self.item_action {
+                    action(target);
+                }
+            }
+            "rename" => {
+                if let Some(item) = self.items.iter().find(|item| item.stable_id == target) {
+                    self.rename_target = Some(target.to_owned());
+                    self.rename_buffer.clone_from(&item.name);
+                }
+            }
+            "recycle" => {
+                if self
+                    .item_recycle_action
+                    .as_ref()
+                    .is_some_and(|action| action(target))
+                    && let Some(refresh) = &self.refresh_action
+                {
+                    self.apply_authoritative_refresh(refresh());
+                }
+            }
+            "properties" => {
+                if let Some(action) = &self.item_properties_action {
+                    action(target);
+                }
+            }
+            "refresh" => {
+                if let Some(refresh) = &self.refresh_action {
+                    self.apply_authoritative_refresh(refresh());
+                }
+            }
+            "sort" => {
+                if self.items.len() > 2 {
+                    self.items[1..].sort_by(|left, right| {
+                        left.name
+                            .to_lowercase()
+                            .cmp(&right.name.to_lowercase())
+                            .then_with(|| left.stable_id.cmp(&right.stable_id))
+                    });
+                }
+            }
+            "new" => {
+                if self
+                    .background_new_action
+                    .as_ref()
+                    .is_some_and(|action| action())
+                    && let Some(refresh) = &self.refresh_action
+                {
+                    self.apply_authoritative_refresh(refresh());
+                }
+            }
+            _ => {}
+        }
+    }
 }
 
 impl Render for DesktopView {
@@ -171,6 +288,11 @@ impl Render for DesktopView {
         let item_refresh_action = self.refresh_action.clone();
         let rename_target = self.rename_target.clone();
         let rename_buffer = self.rename_buffer.clone();
+        let context_nodes = self
+            .context_menu
+            .as_ref()
+            .map(MenuModel::accessible_nodes)
+            .unwrap_or_default();
         let keyboard_focus = self.keyboard_focus.clone();
         let wallpaper = self.wallpaper.clone();
         if let Some(action) = &self.rendered_action {
@@ -182,17 +304,86 @@ impl Render for DesktopView {
         } else {
             rgb(0x101820)
         };
+        let has_context_menu = !context_nodes.is_empty();
+        let context_menu_element = div()
+            .id("desktop-context-menu")
+            .role(gpui::Role::Menu)
+            .absolute()
+            .right_4()
+            .top_4()
+            .min_w(px(220.))
+            .p_1()
+            .rounded_md()
+            .bg(rgb(0x20242b))
+            .border_1()
+            .border_color(rgb(0x66717d))
+            .flex()
+            .flex_col()
+            .children(context_nodes.into_iter().enumerate().map(|(index, node)| {
+                div()
+                    .id(node.stable_id)
+                    .role(gpui::Role::MenuItem)
+                    .aria_label(node.name.clone())
+                    .tab_index(0)
+                    .px_3()
+                    .py_2()
+                    .rounded_sm()
+                    .when(node.focused, |element| element.bg(rgb(0x285b8f)))
+                    .when(!node.enabled, |element| element.text_color(rgb(0x8b929a)))
+                    .on_click(cx.listener(move |this, _, _, cx| {
+                        this.invoke_context(Some(index));
+                        cx.stop_propagation();
+                        cx.notify();
+                    }))
+                    .child(node.name)
+            }));
         div()
             .id("superdesktop-root")
             .role(gpui::Role::List)
             .aria_label(self.accessible_root_name.clone())
             .tab_index(0)
             .when_some(keyboard_focus, |element, focus| element.track_focus(&focus))
+            .on_mouse_down(
+                MouseButton::Right,
+                cx.listener(|this, _, _, cx| {
+                    this.open_context_menu("desktop-background");
+                    cx.stop_propagation();
+                    cx.notify();
+                }),
+            )
             .on_key_down(cx.listener(move |this, event: &gpui::KeyDownEvent, _, cx| {
+                if let Some(menu) = this.context_menu.as_mut() {
+                    match event.keystroke.key.as_str() {
+                        "down" => menu.move_focus(1),
+                        "up" => menu.move_focus(-1),
+                        "right" => {
+                            menu.enter_submenu();
+                        }
+                        "left" => {
+                            menu.leave_submenu();
+                        }
+                        "enter" | "space" => this.invoke_context(None),
+                        "escape" => {
+                            menu.dismiss();
+                            this.context_menu = None;
+                            this.context_target = None;
+                        }
+                        _ => return,
+                    }
+                    cx.stop_propagation();
+                    cx.notify();
+                    return;
+                }
                 if event.keystroke.key == "f5"
                     && let Some(refresh) = &root_refresh
                 {
                     this.apply_authoritative_refresh(refresh());
+                    cx.notify();
+                    return;
+                }
+                if event.keystroke.key == "f10" && event.keystroke.modifiers.shift {
+                    this.open_context_menu("desktop-background");
+                    cx.stop_propagation();
                     cx.notify();
                     return;
                 }
@@ -252,6 +443,7 @@ impl Render for DesktopView {
                         let stable_id = item.stable_id.clone();
                         let click_id = stable_id.clone();
                         let key_id = stable_id.clone();
+                        let context_id = stable_id.clone();
                         let key_action = fixed_action.clone();
                         let renaming = rename_target.as_deref() == Some(stable_id.as_str());
                         let display_name = if renaming {
@@ -307,6 +499,18 @@ impl Render for DesktopView {
                                     rgb(0xffffff)
                                 })
                             })
+                            .on_mouse_down(
+                                MouseButton::Right,
+                                cx.listener(move |this, _, _, cx| {
+                                    for candidate in &mut this.items {
+                                        candidate.selected = candidate.stable_id == context_id;
+                                        candidate.focused = candidate.selected;
+                                    }
+                                    this.open_context_menu(&context_id);
+                                    cx.stop_propagation();
+                                    cx.notify();
+                                }),
+                            )
                             .on_click(cx.listener(move |this, event: &gpui::ClickEvent, _, cx| {
                                 for candidate in &mut this.items {
                                     candidate.selected = candidate.stable_id == click_id;
@@ -404,6 +608,10 @@ impl Render for DesktopView {
                                                 cx.notify();
                                             }
                                         }
+                                        "f10" if event.keystroke.modifiers.shift => {
+                                            this.open_context_menu(&key_id);
+                                            cx.notify();
+                                        }
                                         "f5" => {
                                             if let Some(refresh) = &refresh_action {
                                                 this.apply_authoritative_refresh(refresh());
@@ -429,6 +637,7 @@ impl Render for DesktopView {
                             )
                     })),
             )
+            .when(has_context_menu, |root| root.child(context_menu_element))
     }
 }
 
@@ -436,6 +645,7 @@ impl Render for DesktopView {
 mod tests {
     use super::*;
     use crate::AccessibleAction;
+    use std::cell::Cell;
 
     fn node(id: &str) -> AccessibleNode {
         AccessibleNode {
@@ -466,5 +676,39 @@ mod tests {
                 .iter()
                 .all(|item| !item.selected && !item.focused)
         );
+    }
+
+    #[test]
+    fn context_menu_invocation_uses_the_same_typed_command_for_pointer_and_keyboard() {
+        use shell_provider_protocol::{CommandDescriptor, CommandId, CommandRisk, MenuEnumeration};
+        let invoked = Rc::new(Cell::new(0));
+        let invoked_for_action = Rc::clone(&invoked);
+        let mut view = DesktopView::new(vec![node("item")], false)
+            .with_context_menu_action(Rc::new(|stable_id| {
+                MenuModel::new(MenuEnumeration {
+                    generation: 1,
+                    selection_fingerprint: stable_id.into(),
+                    commands: vec![CommandDescriptor {
+                        id: CommandId("typed-open".into()),
+                        label: "Open".into(),
+                        enabled: true,
+                        risk: CommandRisk::Normal,
+                        children: Vec::new(),
+                    }],
+                    optional_enrichment_complete: false,
+                })
+                .ok()
+            }))
+            .with_context_invoke_action(Rc::new(|invocation| {
+                (invocation.token == "typed-open").then(|| "open".into())
+            }))
+            .with_item_action(Rc::new(move |_| {
+                invoked_for_action.set(invoked_for_action.get() + 1)
+            }));
+        view.open_context_menu("item");
+        view.invoke_context(Some(0));
+        view.open_context_menu("item");
+        view.invoke_context(None);
+        assert_eq!(invoked.get(), 2);
     }
 }
