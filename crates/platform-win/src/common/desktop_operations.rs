@@ -106,13 +106,24 @@ pub fn admit_existing(
     }
 }
 
+fn admit_existing_item(
+    path: &Path,
+    allowed_roots: &[PathBuf],
+) -> Result<PathBuf, FileOperationError> {
+    let metadata = fs::symlink_metadata(path)?;
+    if metadata.file_type().is_symlink() || is_reparse_point(&metadata) {
+        return Err(FileOperationError::UnsupportedItem);
+    }
+    admit_existing(path, allowed_roots)
+}
+
 pub fn rename_item(
     source: &Path,
     new_name: &str,
     allowed_roots: &[PathBuf],
 ) -> Result<PathBuf, FileOperationError> {
     validate_filename(new_name)?;
-    let source = admit_existing(source, allowed_roots)?;
+    let source = admit_existing_item(source, allowed_roots)?;
     let destination = source
         .parent()
         .ok_or(FileOperationError::UnsupportedItem)?
@@ -137,7 +148,7 @@ pub fn create_directory(
 }
 
 pub fn recycle_item(path: &Path, allowed_roots: &[PathBuf]) -> Result<(), FileOperationError> {
-    let path = admit_existing(path, allowed_roots)?;
+    let path = admit_existing_item(path, allowed_roots)?;
     let mut wide: Vec<u16> = path.as_os_str().encode_wide().collect();
     wide.extend([0, 0]);
     let mut operation = SHFILEOPSTRUCTW {
@@ -165,7 +176,7 @@ pub fn permanent_delete(
     if !explicitly_allowed {
         return Err(FileOperationError::UnsupportedItem);
     }
-    let path = admit_existing(path, allowed_roots)?;
+    let path = admit_existing_item(path, allowed_roots)?;
     if path.is_dir() {
         fs::remove_dir_all(path)?;
     } else {
@@ -207,7 +218,7 @@ pub fn copy_file_cancellable(
     collision: CollisionPolicy,
     mut continue_copy: impl FnMut(u64, u64) -> bool,
 ) -> Result<(PathBuf, TransferTerminal), FileOperationError> {
-    let source = admit_existing(source, allowed_roots)?;
+    let source = admit_existing_item(source, allowed_roots)?;
     let source_metadata = fs::symlink_metadata(&source)?;
     if source_metadata.file_type().is_symlink() || is_reparse_point(&source_metadata) {
         return Err(FileOperationError::UnsupportedItem);
@@ -428,7 +439,7 @@ pub fn move_item(
     allowed_roots: &[PathBuf],
     collision: CollisionPolicy,
 ) -> Result<PathBuf, FileOperationError> {
-    let source = admit_existing(source, allowed_roots)?;
+    let source = admit_existing_item(source, allowed_roots)?;
     let parent = admit_existing(
         destination
             .parent()
@@ -454,7 +465,11 @@ fn resolve_destination(
     match collision {
         CollisionPolicy::Fail => Err(FileOperationError::Collision),
         CollisionPolicy::Replace => {
-            if path.is_dir() {
+            let metadata = fs::symlink_metadata(path)?;
+            if metadata.file_type().is_symlink() || is_reparse_point(&metadata) {
+                return Err(FileOperationError::UnsupportedItem);
+            }
+            if metadata.is_dir() {
                 fs::remove_dir_all(path)?;
             } else {
                 fs::remove_file(path)?;
@@ -486,6 +501,7 @@ fn resolve_destination(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::os::windows::fs::symlink_file;
     use std::sync::atomic::{AtomicU64, Ordering};
 
     static NEXT_FIXTURE: AtomicU64 = AtomicU64::new(1);
@@ -594,6 +610,56 @@ mod tests {
             vec![2u8; 80_000]
         );
         assert!(copied.join("nested/empty").is_dir());
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn reparse_items_and_replace_destinations_never_mutate_their_targets() {
+        let root = fixture();
+        let target = root.join("target.txt");
+        let link = root.join("link.txt");
+        fs::write(&target, b"target").unwrap();
+        if symlink_file(&target, &link).is_err() {
+            fs::remove_dir_all(root).unwrap();
+            return;
+        }
+        let roots = std::slice::from_ref(&root);
+
+        assert!(matches!(
+            rename_item(&link, "renamed.txt", roots),
+            Err(FileOperationError::UnsupportedItem)
+        ));
+        assert!(matches!(
+            copy_file_cancellable(
+                &link,
+                &root.join("copy.txt"),
+                roots,
+                CollisionPolicy::Fail,
+                |_, _| true
+            ),
+            Err(FileOperationError::UnsupportedItem)
+        ));
+        assert!(matches!(
+            move_item(&link, &root.join("moved.txt"), roots, CollisionPolicy::Fail),
+            Err(FileOperationError::UnsupportedItem)
+        ));
+        assert!(matches!(
+            recycle_item(&link, roots),
+            Err(FileOperationError::UnsupportedItem)
+        ));
+        assert!(matches!(
+            permanent_delete(&link, roots, true),
+            Err(FileOperationError::UnsupportedItem)
+        ));
+
+        let source = root.join("source.txt");
+        fs::write(&source, b"source").unwrap();
+        assert!(matches!(
+            copy_file_cancellable(&source, &link, roots, CollisionPolicy::Replace, |_, _| true),
+            Err(FileOperationError::UnsupportedItem)
+        ));
+        assert_eq!(fs::read(&target).unwrap(), b"target");
+        assert!(link.exists());
         fs::remove_dir_all(root).unwrap();
     }
 }

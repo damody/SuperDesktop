@@ -21,6 +21,7 @@
     "a production transfer card reports byte progress and exposes cancellation backed by the operation controller cancellation contract",
     "recursive directory copies preserve nested and empty directories while reporting aggregate byte progress",
     "directory transfer admission rejects symbolic links and reparse points and revalidates every entry before mutation",
+    "all mutation sources and replacement destinations reject top-level symbolic links and reparse points before canonical admission",
     "cancelled or failed directory copies remove the entire newly-created destination while leaving the source intact",
     "failed or cancelled operations publish terminal results for every remaining request in the background batch",
     "terminal transfer results reconcile every desktop surface with the authoritative namespace",
