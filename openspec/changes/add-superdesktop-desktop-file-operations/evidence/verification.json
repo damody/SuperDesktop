@@ -1,0 +1,22 @@
+{
+  "change": "add-superdesktop-desktop-file-operations",
+  "result": "passed",
+  "commands": [
+    "cargo fmt --all -- --check",
+    "cargo check --workspace --offline",
+    "cargo clippy --workspace --all-targets --offline -- -D warnings",
+    "cargo test -p platform-win -p desktop-ui --offline",
+    "openspec validate add-superdesktop-desktop-file-operations --strict"
+  ],
+  "tests": {
+    "desktop_ui": 19,
+    "platform_win": 37,
+    "failures": 0
+  },
+  "safety": {
+    "default_delete": "recycle-bin",
+    "permanent_delete_requires_explicit_policy": true,
+    "copy_cancellation_removes_incomplete_destination": true,
+    "root_admission": "canonical-allowlist"
+  }
+}

@@ -6,6 +6,7 @@ use shell_core::{
 };
 
 use crate::DesktopItem;
+use crate::DesktopOperationRequest;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ActivationSource {
@@ -16,11 +17,7 @@ pub enum ActivationSource {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum DeferredAction {
-    Rename,
     ContextMenu,
-    DeleteOrRecycle,
-    ExplicitRefresh,
-    FileTransferDrag,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -37,6 +34,7 @@ pub enum ActivationEffect {
     Bridge(BridgeLaunchRequest),
     Association(AssociationRequest),
     DeferredUnavailable(DeferredAction),
+    DesktopOperation(DesktopOperationRequest),
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -124,6 +122,9 @@ impl ActivationController {
 
     pub fn deferred(&self, action: DeferredAction) -> ActivationEffect {
         ActivationEffect::DeferredUnavailable(action)
+    }
+    pub fn desktop_operation(&self, request: DesktopOperationRequest) -> ActivationEffect {
+        ActivationEffect::DesktopOperation(request)
     }
     pub fn apply_bridge_terminal(
         &mut self,
@@ -330,17 +331,10 @@ mod tests {
     #[test]
     fn deferred_actions_never_emit_mutating_effect() {
         let controller = ActivationController::default();
-        for action in [
-            DeferredAction::Rename,
-            DeferredAction::ContextMenu,
-            DeferredAction::DeleteOrRecycle,
-            DeferredAction::ExplicitRefresh,
-            DeferredAction::FileTransferDrag,
-        ] {
-            assert_eq!(
-                controller.deferred(action),
-                ActivationEffect::DeferredUnavailable(action)
-            );
-        }
+        let action = DeferredAction::ContextMenu;
+        assert_eq!(
+            controller.deferred(action),
+            ActivationEffect::DeferredUnavailable(action)
+        );
     }
 }

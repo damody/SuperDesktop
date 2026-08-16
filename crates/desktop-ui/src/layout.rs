@@ -4,6 +4,80 @@ use shell_core::{MonitorId, ShellItemId};
 
 use crate::{LogicalPoint, LogicalRect};
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum DesktopSortKey {
+    Name,
+    Kind,
+    Size,
+    Modified,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum SortDirection {
+    Ascending,
+    Descending,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct DesktopSortRecord {
+    pub identity: ShellItemId,
+    pub name: String,
+    pub kind: String,
+    pub size: u64,
+    pub modified_unix_ms: u64,
+}
+
+pub fn sort_desktop_records(
+    records: &mut [DesktopSortRecord],
+    key: DesktopSortKey,
+    direction: SortDirection,
+) {
+    records.sort_by(|left, right| {
+        let primary = match key {
+            DesktopSortKey::Name => natural_cmp(&left.name, &right.name),
+            DesktopSortKey::Kind => left.kind.to_lowercase().cmp(&right.kind.to_lowercase()),
+            DesktopSortKey::Size => left.size.cmp(&right.size),
+            DesktopSortKey::Modified => left.modified_unix_ms.cmp(&right.modified_unix_ms),
+        };
+        let ordered = if direction == SortDirection::Descending {
+            primary.reverse()
+        } else {
+            primary
+        };
+        ordered.then_with(|| left.identity.cmp(&right.identity))
+    });
+}
+
+fn natural_cmp(left: &str, right: &str) -> std::cmp::Ordering {
+    let left = natural_parts(left);
+    let right = natural_parts(right);
+    left.cmp(&right)
+}
+
+fn natural_parts(value: &str) -> Vec<(bool, u64, String)> {
+    let mut output = Vec::new();
+    let mut current = String::new();
+    let mut digits = None;
+    for character in value.to_lowercase().chars() {
+        let is_digit = character.is_ascii_digit();
+        if digits.is_some_and(|state| state != is_digit) {
+            let number = current.parse().unwrap_or(0);
+            output.push((
+                digits.unwrap_or(false),
+                number,
+                std::mem::take(&mut current),
+            ));
+        }
+        digits = Some(is_digit);
+        current.push(character);
+    }
+    if !current.is_empty() {
+        let number = current.parse().unwrap_or(0);
+        output.push((digits.unwrap_or(false), number, current));
+    }
+    output
+}
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct GridMetrics {
     pub cell_width: f32,
@@ -45,6 +119,58 @@ pub struct DesktopLayout {
 }
 
 impl DesktopLayout {
+    pub fn restore_snapshot(
+        &mut self,
+        snapshot: impl IntoIterator<Item = PersistedPosition>,
+        available: &BTreeSet<ShellItemId>,
+        work_areas: &BTreeMap<MonitorId, LogicalRect>,
+        fallback_monitor: &MonitorId,
+        metrics: GridMetrics,
+    ) {
+        self.revision = self.revision.saturating_add(1);
+        self.positions.clear();
+        let fallback_area = work_areas.get(fallback_monitor).copied();
+        for mut position in snapshot {
+            if !available.contains(&position.item_id) {
+                continue;
+            }
+            let (monitor, area) = work_areas
+                .get(&position.monitor_id)
+                .map(|area| (position.monitor_id.clone(), *area))
+                .or_else(|| fallback_area.map(|area| (fallback_monitor.clone(), area)))
+                .unwrap_or((
+                    position.monitor_id.clone(),
+                    LogicalRect::new(0.0, 0.0, metrics.cell_width, metrics.cell_height)
+                        .expect("valid fallback"),
+                ));
+            position.monitor_id = monitor;
+            position.logical =
+                area.clamp_point(position.logical, metrics.cell_width, metrics.cell_height);
+            position.layout_revision = self.revision;
+            self.positions.insert(position.item_id.clone(), position);
+        }
+        if let Some(area) = fallback_area {
+            self.resolve_collisions(area, metrics);
+        }
+    }
+
+    pub fn align_to_grid(&mut self, work_area: LogicalRect, metrics: GridMetrics) {
+        self.revision = self.revision.saturating_add(1);
+        for position in self.positions.values_mut() {
+            let x = ((position.logical.x - work_area.left) / metrics.cell_width).round();
+            let y = ((position.logical.y - work_area.top) / metrics.cell_height).round();
+            position.logical = work_area.clamp_point(
+                LogicalPoint {
+                    x: work_area.left + x * metrics.cell_width,
+                    y: work_area.top + y * metrics.cell_height,
+                },
+                metrics.cell_width,
+                metrics.cell_height,
+            );
+            position.layout_revision = self.revision;
+        }
+        self.resolve_collisions(work_area, metrics);
+    }
     pub fn arrange(
         &mut self,
         monitor_id: &MonitorId,
@@ -292,5 +418,47 @@ mod tests {
         let position = &layout.positions()[&item];
         assert_eq!(position.monitor_id, new);
         assert!(position.logical.x <= 160.0 && position.logical.y <= 184.0);
+    }
+
+    #[test]
+    fn natural_sort_and_snapshot_restore_are_stable() {
+        let mut records = vec![
+            DesktopSortRecord {
+                identity: id("10"),
+                name: "File 10".into(),
+                kind: "txt".into(),
+                size: 10,
+                modified_unix_ms: 2,
+            },
+            DesktopSortRecord {
+                identity: id("2"),
+                name: "file 2".into(),
+                kind: "txt".into(),
+                size: 2,
+                modified_unix_ms: 1,
+            },
+        ];
+        sort_desktop_records(&mut records, DesktopSortKey::Name, SortDirection::Ascending);
+        assert_eq!(records[0].identity, id("2"));
+
+        let old = MonitorId::new("old").unwrap();
+        let fallback = MonitorId::new("fallback").unwrap();
+        let keep = id("keep");
+        let snapshot = vec![PersistedPosition {
+            monitor_id: old,
+            item_id: keep.clone(),
+            logical: LogicalPoint { x: 999.0, y: 999.0 },
+            layout_revision: 1,
+        }];
+        let mut layout = DesktopLayout::default();
+        layout.restore_snapshot(
+            snapshot,
+            &[keep.clone()].into_iter().collect(),
+            &[(fallback.clone(), area())].into_iter().collect(),
+            &fallback,
+            GridMetrics::WINDOWS_10,
+        );
+        assert_eq!(layout.positions()[&keep].monitor_id, fallback);
+        assert!(layout.positions()[&keep].logical.x <= 160.0);
     }
 }

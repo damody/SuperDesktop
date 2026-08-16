@@ -7,6 +7,7 @@ mod geometry;
 mod interaction;
 mod layout;
 mod namespace;
+mod operations;
 mod view;
 mod wallpaper;
 mod watcher;
@@ -19,9 +20,17 @@ pub use interaction::{
     AccessibleAction, AccessibleNode, ActivationController, ActivationEffect, ActivationSource,
     AssociationRequest, DeferredAction, RepairState, TerminalResult,
 };
-pub use layout::{DesktopLayout, GridMetrics, PersistedPosition, SelectionGesture, SelectionModel};
+pub use layout::{
+    DesktopLayout, DesktopSortKey, DesktopSortRecord, GridMetrics, PersistedPosition,
+    SelectionGesture, SelectionModel, SortDirection, sort_desktop_records,
+};
 pub use namespace::{
     DesktopItem, DesktopOrigin, IconDescriptor, ItemCapabilities, merge_desktop_items,
+};
+pub use operations::{
+    DeletePolicy, DesktopOperation, DesktopOperationController, DesktopOperationError,
+    DesktopOperationRequest, DesktopOperationTerminal, OperationProgress, TransferIntent,
+    execute_desktop_operation,
 };
 pub use view::DesktopView;
 pub use wallpaper::{
