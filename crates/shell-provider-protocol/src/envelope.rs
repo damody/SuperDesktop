@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     MAX_COLLECTION_ITEMS, MenuContext, MenuEnumeration, MenuInvocation, MenuInvocationResult,
-    ProviderCapability, Validate, ValidationError,
+    ProviderCapability, SearchBatch, SearchQuery, Validate, ValidationError,
 };
 
 pub const CURRENT_PROTOCOL: ProtocolVersion = ProtocolVersion { major: 1, minor: 0 };
@@ -64,6 +64,7 @@ pub enum ProviderRequest {
     },
     ContextMenuEnumerate(MenuContext),
     ContextMenuInvoke(MenuInvocation),
+    Search(SearchQuery),
 }
 
 impl Validate for ProviderRequest {
@@ -85,6 +86,7 @@ impl Validate for ProviderRequest {
             }
             Self::ContextMenuEnumerate(context) => context.validate()?,
             Self::ContextMenuInvoke(invocation) => invocation.validate()?,
+            Self::Search(query) => query.validate()?,
             _ => {}
         }
         Ok(())
@@ -126,6 +128,7 @@ pub enum ResponseBody {
     Arguments(Vec<String>),
     Menu(MenuEnumeration),
     MenuInvocation(MenuInvocationResult),
+    Search(Vec<SearchBatch>),
     Message(String),
     Empty,
 }

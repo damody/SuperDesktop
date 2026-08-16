@@ -2788,6 +2788,7 @@ dependencies = [
 name = "platform-win"
 version = "0.1.0"
 dependencies = [
+ "shell-provider-protocol",
  "windows 0.62.2",
 ]
 
@@ -3520,6 +3521,7 @@ dependencies = [
 name = "shell-provider-host"
 version = "0.1.0"
 dependencies = [
+ "platform-win",
  "serde_json",
  "shell-provider-protocol",
 ]
@@ -3915,6 +3917,7 @@ dependencies = [
  "raw-window-handle",
  "settings-store",
  "shell-core",
+ "shell-provider-protocol",
 ]
 
 [[package]]

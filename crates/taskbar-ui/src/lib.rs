@@ -18,7 +18,10 @@ pub use interaction::{
     TaskInteraction, TaskSource,
 };
 pub use layout::{OverflowItem, SlotKind, TaskbarLayout, TaskbarRows, TaskbarSlot};
-pub use start::{StartAvailability, StartControl, StartEffect, StartFailure, StartSource};
+pub use start::{
+    StartAccessibilityNode, StartAvailability, StartControl, StartEffect, StartFailure, StartModel,
+    StartSnapshot, StartSource,
+};
 pub use status::{ClockLocale, CoreStatus, ProviderState, StatusRegion, TestClock};
 pub use surface::{
     AppBarEffect, AppBarMode, AppBarRegistry, MonitorBar, MonitorGeometry, SurfaceChange,

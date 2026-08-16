@@ -2,11 +2,16 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use platform_win::common::start_search::{
+    SearchLimits, default_application_roots, default_file_roots, discover_applications,
+    search_files, settings_catalog,
+};
 use shell_provider_protocol::{
     CURRENT_PROTOCOL, CommandDescriptor, CommandId, CommandRisk, Envelope, Handshake, HostHealth,
     MAX_FRAME_BYTES, MenuContext, MenuEnumeration, MenuInvocation, MenuInvocationResult,
-    ProviderCapability, ProviderRequest, ProviderResponse, ResponseBody, TerminalKind,
-    ValidationError,
+    ProviderCapability, ProviderRequest, ProviderResponse, ResponseBody, SearchBatch,
+    SearchProvider, SearchProviderState, SearchQuery, TerminalKind, ValidationError,
+    rank_search_results,
 };
 
 pub const DEFAULT_MAX_ACTIVE_REQUESTS: usize = 32;
@@ -149,6 +154,11 @@ impl Dispatcher {
                 ),
                 None => response(&request, TerminalKind::InvalidRequest, ResponseBody::Empty),
             },
+            ProviderRequest::Search(query) => response(
+                &request,
+                TerminalKind::Success,
+                ResponseBody::Search(dispatch_search(query)),
+            ),
             ProviderRequest::Cancel { .. } => unreachable!("cancel returns before dispatch"),
         };
         self.finish(&request.request_id);
@@ -222,6 +232,40 @@ impl Dispatcher {
                 command_id: registered.command_id.clone(),
             })
     }
+}
+
+fn dispatch_search(query: &SearchQuery) -> Vec<SearchBatch> {
+    let mut batches = Vec::new();
+    for provider in &query.providers {
+        let mut results = match provider {
+            SearchProvider::Applications => {
+                discover_applications(&default_application_roots(), query.max_results)
+            }
+            SearchProvider::Settings => settings_catalog(),
+            SearchProvider::Files => search_files(
+                &query.text,
+                &default_file_roots(),
+                SearchLimits {
+                    max_results: query.max_results,
+                    ..SearchLimits::default()
+                },
+                || true,
+            ),
+        };
+        if !query.text.trim().is_empty() {
+            let needle = query.text.to_lowercase();
+            results.retain(|result| result.title.to_lowercase().contains(&needle));
+        }
+        rank_search_results(&query.text, &mut results, &BTreeMap::new());
+        results.truncate(query.max_results);
+        batches.push(SearchBatch {
+            generation: query.generation,
+            provider: *provider,
+            state: SearchProviderState::Complete,
+            results,
+        });
+    }
+    batches
 }
 
 fn response(
@@ -348,5 +392,33 @@ mod tests {
             1_000,
         );
         assert_eq!(stale.terminal, TerminalKind::InvalidRequest);
+    }
+
+    #[test]
+    fn settings_search_returns_generation_bound_terminal_batch() {
+        let mut dispatcher = Dispatcher::default();
+        let response = dispatcher.dispatch(
+            request(
+                "search",
+                ProviderRequest::Search(SearchQuery {
+                    generation: 9,
+                    text: "display".into(),
+                    max_results: 10,
+                    providers: vec![SearchProvider::Settings],
+                }),
+            ),
+            1_000,
+        );
+        let ResponseBody::Search(batches) = response.body else {
+            panic!()
+        };
+        assert_eq!(batches[0].generation, 9);
+        assert_eq!(batches[0].state, SearchProviderState::Complete);
+        assert!(
+            batches[0]
+                .results
+                .iter()
+                .any(|result| result.title == "Display settings")
+        );
     }
 }

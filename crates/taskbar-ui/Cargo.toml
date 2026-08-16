@@ -13,6 +13,7 @@ gpui.workspace = true
 platform-win = { path = "../platform-win" }
 settings-store = { path = "../settings-store" }
 shell-core = { path = "../shell-core" }
+shell-provider-protocol = { path = "../shell-provider-protocol" }
 
 [dev-dependencies]
 gpui_windows.workspace = true

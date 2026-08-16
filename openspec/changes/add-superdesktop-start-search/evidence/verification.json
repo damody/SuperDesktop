@@ -1,0 +1,28 @@
+{
+  "change": "add-superdesktop-start-search",
+  "result": "passed",
+  "commands": [
+    "cargo fmt --all -- --check",
+    "cargo clippy --workspace --all-targets --offline -- -D warnings",
+    "cargo test -p shell-provider-protocol -p platform-win -p shell-provider-host -p taskbar-ui --offline",
+    "openspec validate add-superdesktop-start-search --strict"
+  ],
+  "tests": {
+    "platform_win": 38,
+    "shell_provider_host": 5,
+    "shell_provider_protocol": 6,
+    "taskbar_ui": 19,
+    "failures": 0
+  },
+  "budgets_ms": {
+    "start_first_frame": 250,
+    "local_apps_first_batch": 150,
+    "all_providers_terminal": 2000,
+    "ime_debounce": 50
+  },
+  "provider_limits": {
+    "results": 100,
+    "file_depth": 8,
+    "visited_entries": 10000
+  }
+}

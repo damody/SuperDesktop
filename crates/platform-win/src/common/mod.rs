@@ -10,4 +10,5 @@ pub mod guardian_lease;
 pub mod monitor_dpi_start;
 pub mod native_window;
 pub mod owner_lease;
+pub mod start_search;
 pub mod taskbar;

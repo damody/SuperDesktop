@@ -7,6 +7,7 @@ license.workspace = true
 
 [dependencies]
 windows.workspace = true
+shell-provider-protocol = { path = "../shell-provider-protocol" }
 
 [lints.rust]
 unsafe_code = "allow"

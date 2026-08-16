@@ -11,3 +11,4 @@ workspace = true
 [dependencies]
 serde_json.workspace = true
 shell-provider-protocol = { path = "../shell-provider-protocol" }
+platform-win = { path = "../platform-win" }
