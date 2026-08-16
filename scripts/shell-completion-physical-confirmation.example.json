@@ -1,0 +1,18 @@
+{
+  "schema": "shell-completion-physical-confirmation/v1",
+  "recorded_at_utc": "REPLACE_WITH_ISO_8601_TIMESTAMP",
+  "reviewed_revision": "REPLACE_WITH_FULL_40_CHARACTER_GIT_REVISION",
+  "operator": {
+    "name": "REPLACE_WITH_OPERATOR_NAME",
+    "organization": "REPLACE_WITH_ORGANIZATION"
+  },
+  "features": {
+    "desktop_file_operations": "passed",
+    "context_menu": "passed",
+    "start_search": "passed",
+    "taskbar_flyouts": "passed",
+    "notification_area": "passed",
+    "virtual_desktop_query_move": "passed",
+    "accessibility": "passed"
+  }
+}

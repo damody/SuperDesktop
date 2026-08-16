@@ -1,7 +1,8 @@
 [CmdletBinding()]
 param(
     [string]$RepositoryRoot,
-    [string]$OutputPath
+    [string]$OutputPath,
+    [string]$ExternalEvidenceDirectory
 )
 
 $ErrorActionPreference = 'Stop'
@@ -36,6 +37,90 @@ foreach ($change in $manifest.children) {
     }
 }
 
+$externalSources = [ordered]@{}
+$externalGates = @{}
+if (-not [string]::IsNullOrWhiteSpace($ExternalEvidenceDirectory)) {
+    $externalRoot = (Resolve-Path -LiteralPath $ExternalEvidenceDirectory).Path
+    $requiredExternalRoot = [IO.Path]::GetFullPath((Join-Path $evidenceRoot 'external'))
+    if ($externalRoot -cne $requiredExternalRoot) {
+        throw "External evidence must be admitted from $requiredExternalRoot"
+    }
+    $expectedExternal = [ordered]@{
+        'windows10-lifecycle-installer' = 'windows10-lifecycle-installer.json'
+        'physical-mixed-dpi' = 'physical-mixed-dpi.json'
+        'independent-review' = 'independent-review.json'
+    }
+    $revision = (& git -C $root rev-parse HEAD).Trim()
+    if ($LASTEXITCODE -ne 0 -or $revision -notmatch '^[0-9a-f]{40}$') {
+        throw 'Unable to resolve current Git revision.'
+    }
+    foreach ($kind in $expectedExternal.Keys) {
+        $path = Join-Path $externalRoot $expectedExternal[$kind]
+        if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+            throw "Missing external evidence: $kind"
+        }
+        $document = Get-Content -Raw -Encoding utf8 -LiteralPath $path | ConvertFrom-Json
+        if ($document.schema_version -ne 1 -or $document.kind -cne $kind -or $document.status -cne 'passed') {
+            throw "Invalid external evidence envelope: $kind"
+        }
+        if ($document.revision -cne $revision) {
+            throw "External evidence revision drift: $kind"
+        }
+        try {
+            [DateTimeOffset]::Parse($document.recorded_at_utc) | Out-Null
+        } catch {
+            throw "Invalid external timestamp: $kind"
+        }
+        switch ($kind) {
+            'windows10-lifecycle-installer' {
+                if ($document.host.build -ne 19045 -or $document.host.display_version -cne '22H2') {
+                    throw 'Windows 10 evidence host is not build 19045 22H2.'
+                }
+                if ($document.lifecycle.forced_crash_runs -ne 10 -or $document.lifecycle.max_recovery_ms -gt 10000) {
+                    throw 'Windows 10 recovery contract failed.'
+                }
+                if (-not $document.lifecycle.preview_zero_mutation -or -not $document.lifecycle.normal_exit_restored) {
+                    throw 'Windows 10 lifecycle contract failed.'
+                }
+                if (-not $document.installer.reboot_verified -or -not $document.installer.exact_rollback_verified -or -not $document.installer.metadata_removed) {
+                    throw 'Installer reboot/rollback contract failed.'
+                }
+                foreach ($gate in @('G-SHELL-TAKEOVER','G-GUARDIAN-RECOVERY','G-INSTALL-ROLLBACK')) {
+                    if ($document.gates.$gate -cne 'passed') { throw "Missing passed $gate" }
+                    $externalGates[$gate] = 'passed'
+                }
+            }
+            'physical-mixed-dpi' {
+                if ($document.monitor_count -lt 2 -or $document.distinct_dpi_count -lt 2 -or $document.artifact_hashes.Count -lt 4) {
+                    throw 'Physical mixed-DPI topology or artifacts are incomplete.'
+                }
+                foreach ($check in @('pointer','keyboard_focus','drag','primary_change','hot_plug','work_area_restored')) {
+                    if ($document.interactions.$check -cne 'passed') { throw "Physical interaction is not passed: $check" }
+                }
+                if ($document.gates.'G-DPI-MONITOR-PHYSICAL' -cne 'passed') { throw 'Missing passed physical DPI gate.' }
+                $externalGates['G-DPI-MONITOR-PHYSICAL'] = 'passed'
+            }
+            'independent-review' {
+                if (-not $document.independence.not_implementation_owner -or -not $document.independence.not_remediation_owner -or $document.unresolved_p0_p1 -ne 0) {
+                    throw 'Independent review admission failed.'
+                }
+                foreach ($area in @('architecture','security','accessibility','evidence_lineage')) {
+                    if ($document.scope.$area -cne 'passed') { throw "Independent review area is not passed: $area" }
+                }
+                if ($document.gates.'G-REVIEW' -cne 'passed') { throw 'Missing passed review gate.' }
+                $externalGates['G-REVIEW'] = 'passed'
+            }
+        }
+        $relative = [IO.Path]::GetRelativePath($root, $path).Replace('\','/')
+        $externalSources[$kind] = [ordered]@{
+            kind = $kind
+            relative_path = $relative
+            sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $path).Hash.ToLowerInvariant()
+            status = 'passed'
+        }
+    }
+}
+
 $gates = [ordered]@{
     'G-A11Y-I18N' = 'passed'
     'G-ARCH' = 'passed'
@@ -51,11 +136,15 @@ $gates = [ordered]@{
     'G-TASKBAR' = 'passed'
     'G-TRACE' = 'passed'
 }
+foreach ($gate in $externalGates.Keys) {
+    $gates[$gate] = $externalGates[$gate]
+}
 $blockers = @($gates.GetEnumerator() | Where-Object Value -ne 'passed' | ForEach-Object { "$($_.Key):$($_.Value)".ToLowerInvariant() })
 $rollup = [ordered]@{
     schema_version = 1
     generated_at_utc = [DateTime]::UtcNow.ToString('o')
     sources = $sources
+    external_sources = $externalSources
     gates = $gates
     limitations = @(
         [ordered]@{ capability = 'legacy-explorer-notification-protocol'; disposition = 'not-claimed'; reason = 'implemented host uses the owned versioned provider protocol' },

@@ -37,6 +37,14 @@ pub struct EvidenceSource {
     pub local_result: String,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct ExternalEvidenceSource {
+    pub kind: String,
+    pub relative_path: String,
+    pub sha256: String,
+    pub status: String,
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum GateDisposition {
@@ -74,6 +82,7 @@ pub struct CompletionRollup {
     pub schema_version: u32,
     pub generated_at_utc: String,
     pub sources: BTreeMap<String, EvidenceSource>,
+    pub external_sources: BTreeMap<String, ExternalEvidenceSource>,
     pub gates: BTreeMap<String, GateDisposition>,
     pub limitations: Vec<CapabilityLimitation>,
     pub commands: Vec<String>,
@@ -147,6 +156,7 @@ impl CompletionRollup {
             schema_version: 1,
             generated_at_utc,
             sources: source_map,
+            external_sources: BTreeMap::new(),
             gates,
             limitations,
             commands,

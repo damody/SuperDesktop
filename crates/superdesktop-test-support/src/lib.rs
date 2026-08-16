@@ -11,8 +11,8 @@ mod shell_fixture;
 mod verification;
 
 pub use completion_rollup::{
-    CapabilityLimitation, CompletionRollup, EvidenceSource, GateDisposition,
-    REQUIRED_COMPLETION_CHILDREN, REQUIRED_COMPLETION_GATES, RollupDecision,
+    CapabilityLimitation, CompletionRollup, EvidenceSource, ExternalEvidenceSource,
+    GateDisposition, REQUIRED_COMPLETION_CHILDREN, REQUIRED_COMPLETION_GATES, RollupDecision,
 };
 pub use shell_fixture::{FakeEffectAdapter, ShellFixtureBuilder};
 pub use verification::{

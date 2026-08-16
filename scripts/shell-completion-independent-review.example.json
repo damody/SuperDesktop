@@ -1,0 +1,34 @@
+{
+  "schema": "shell-completion-independent-review/v1",
+  "recorded_at_utc": "REPLACE_WITH_ISO_8601_TIMESTAMP",
+  "reviewed_revision": "REPLACE_WITH_FULL_40_CHARACTER_GIT_REVISION",
+  "reviewer": {
+    "name": "REPLACE_WITH_INDEPENDENT_REVIEWER_NAME",
+    "organization": "REPLACE_WITH_ORGANIZATION",
+    "role": "Architecture, security, accessibility, and evidence reviewer"
+  },
+  "independence": {
+    "not_implementation_owner": true,
+    "not_remediation_owner": true
+  },
+  "scope": {
+    "architecture": "passed",
+    "security": "passed",
+    "accessibility": "passed",
+    "evidence_lineage": "passed",
+    "changes": [
+      "extend-superdesktop-shell-contracts",
+      "add-superdesktop-desktop-file-operations",
+      "add-superdesktop-shell-context-menu-host",
+      "add-superdesktop-start-search",
+      "add-superdesktop-taskbar-advanced-interactions",
+      "add-superdesktop-notification-area-host",
+      "add-superdesktop-virtual-desktops",
+      "add-superdesktop-shell-installer",
+      "verify-superdesktop-shell-completion",
+      "complete-superdesktop-windows-shell"
+    ]
+  },
+  "findings": [],
+  "final_disposition": "no-unresolved-p0-p1"
+}

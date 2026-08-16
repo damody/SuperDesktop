@@ -51,6 +51,7 @@
       "local_result": "passed"
     }
   },
+  "external_sources": {},
   "gates": {
     "G-A11Y-I18N": "passed",
     "G-ARCH": "passed",

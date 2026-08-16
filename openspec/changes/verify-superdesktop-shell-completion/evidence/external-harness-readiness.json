@@ -1,0 +1,20 @@
+{
+  "change": "verify-superdesktop-shell-completion",
+  "result": "harness_ready_external_evidence_pending",
+  "captured_at_utc": "2026-08-17T00:00:00+08:00",
+  "implemented": [
+    "Windows 10 lifecycle and installer evidence normalization",
+    "physical mixed-DPI completion-feature evidence normalization",
+    "independent architecture, security, accessibility, and lineage review admission",
+    "revision-bound and SHA-256-bound external source lineage",
+    "derived external gate recomputation",
+    "fail-closed incomplete external evidence handling"
+  ],
+  "verification": {
+    "powershell_parser": "passed",
+    "rollup_schema_without_external_sources": "passed",
+    "incomplete_external_admission": "rejected_without_output",
+    "external_tasks_marked_complete": false
+  },
+  "reason_external_tasks_remain_pending": "No Windows 10 build 19045 run, physical mixed-DPI topology, reboot rollback, or attributable independent review was supplied."
+}
