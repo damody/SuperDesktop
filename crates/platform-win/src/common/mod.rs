@@ -13,3 +13,4 @@ pub mod owner_lease;
 pub mod start_search;
 pub mod taskbar;
 pub mod taskbar_preview;
+pub mod virtual_desktop;

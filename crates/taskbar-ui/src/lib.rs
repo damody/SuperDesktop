@@ -11,6 +11,7 @@ mod notification_area;
 mod start;
 mod status;
 mod surface;
+mod task_view;
 mod tracker;
 mod view;
 
@@ -34,6 +35,9 @@ pub use start::{
 pub use status::{ClockLocale, CoreStatus, ProviderState, StatusRegion, TestClock};
 pub use surface::{
     AppBarEffect, AppBarMode, AppBarRegistry, MonitorBar, MonitorGeometry, SurfaceChange,
+};
+pub use task_view::{
+    DesktopCard, TaskViewAccessibleNode, TaskViewEffect, TaskViewModel, VirtualDesktopSnapshot,
 };
 pub use tracker::{
     Eligibility, OwnedWindowEvent, TaskWindow, TrackerPush, WindowObservation, WindowTracker,

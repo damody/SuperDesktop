@@ -1,0 +1,18 @@
+{
+  "change": "add-superdesktop-virtual-desktops",
+  "result": "passed",
+  "commands": [
+    "cargo fmt --all -- --check",
+    "cargo clippy --workspace --all-targets --offline -- -D warnings",
+    "cargo test -p platform-win -p taskbar-ui --offline",
+    "openspec validate add-superdesktop-virtual-desktops --strict"
+  ],
+  "tests": {
+    "platform_win": 40,
+    "taskbar_ui": 24,
+    "failures": 0
+  },
+  "documented_capabilities": ["query_window", "move_window"],
+  "fail_closed_optional_capabilities": ["enumerate", "switch", "create", "remove", "rename"],
+  "adapter": "IVirtualDesktopManager"
+}
