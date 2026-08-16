@@ -1,0 +1,17 @@
+{
+  "change": "extend-superdesktop-shell-contracts",
+  "commands": [
+    "cargo fmt --all -- --check",
+    "cargo check --workspace --offline",
+    "cargo clippy --workspace --all-targets --offline -- -D warnings",
+    "cargo test -p shell-provider-protocol -p shell-provider-host -p shell-core --offline",
+    "openspec validate extend-superdesktop-shell-contracts --strict"
+  ],
+  "result": "passed",
+  "tests": {
+    "shell_core": 19,
+    "shell_provider_host": 3,
+    "shell_provider_protocol": 4,
+    "failures": 0
+  }
+}

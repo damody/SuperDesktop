@@ -1,0 +1,18 @@
+{
+  "max_collection_items": 1024,
+  "max_frame_bytes": 262144,
+  "name": "superdesktop-shell-provider-protocol",
+  "protocol": {
+    "major": 1,
+    "minor": 0
+  },
+  "terminal_outcomes": [
+    "success",
+    "unavailable",
+    "cancelled",
+    "timeout",
+    "invalid_request",
+    "busy",
+    "provider_failure"
+  ]
+}

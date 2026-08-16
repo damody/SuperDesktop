@@ -3511,6 +3511,25 @@ dependencies = [
 [[package]]
 name = "shell-core"
 version = "0.1.0"
+dependencies = [
+ "shell-provider-protocol",
+]
+
+[[package]]
+name = "shell-provider-host"
+version = "0.1.0"
+dependencies = [
+ "serde_json",
+ "shell-provider-protocol",
+]
+
+[[package]]
+name = "shell-provider-protocol"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
 
 [[package]]
 name = "shlex"

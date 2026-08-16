@@ -1,5 +1,5 @@
 [package]
-name = "shell-core"
+name = "shell-provider-host"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -8,5 +8,6 @@ license.workspace = true
 [lints]
 workspace = true
 
-[dev-dependencies]
+[dependencies]
+serde_json.workspace = true
 shell-provider-protocol = { path = "../shell-provider-protocol" }
