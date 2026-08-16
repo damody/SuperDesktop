@@ -44,6 +44,28 @@ pub struct DesktopPosition {
     pub layout_revision: u64,
 }
 
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum DesktopSortKey {
+    #[default]
+    Name,
+    Kind,
+    Size,
+    Modified,
+}
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum DesktopSortDirection {
+    #[default]
+    Ascending,
+    Descending,
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct DesktopSettings {
+    pub sort_key: DesktopSortKey,
+    pub sort_direction: DesktopSortDirection,
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TaskbarSettings {
     pub rows: u8,
@@ -107,6 +129,7 @@ pub struct SettingsV1 {
     pub taskbar: TaskbarSettings,
     pub start: StartSettings,
     pub wallpaper: WallpaperSettings,
+    pub desktop: DesktopSettings,
     pub desktop_positions: Vec<DesktopPosition>,
     pub monitor_mapping: BTreeMap<String, String>,
     pub superexplorer_path: Option<String>,
@@ -124,6 +147,7 @@ impl Default for SettingsV1 {
             taskbar: TaskbarSettings::default(),
             start: StartSettings::default(),
             wallpaper: WallpaperSettings::default(),
+            desktop: DesktopSettings::default(),
             desktop_positions: Vec::new(),
             monitor_mapping: BTreeMap::new(),
             superexplorer_path: None,
@@ -196,6 +220,24 @@ impl SettingsV1 {
             settings.wallpaper.source = take_optional_string(&mut wallpaper, "source");
             settings.wallpaper.mode = take_string(&mut wallpaper, "mode")
                 .and_then(|value| wallpaper_mode(&value))
+                .unwrap_or_default();
+        }
+        if let Some(Value::Object(mut desktop)) = object.remove("desktop") {
+            settings.desktop.sort_key = take_string(&mut desktop, "sort_key")
+                .and_then(|value| match value.as_str() {
+                    "name" => Some(DesktopSortKey::Name),
+                    "kind" => Some(DesktopSortKey::Kind),
+                    "size" => Some(DesktopSortKey::Size),
+                    "modified" => Some(DesktopSortKey::Modified),
+                    _ => None,
+                })
+                .unwrap_or_default();
+            settings.desktop.sort_direction = take_string(&mut desktop, "sort_direction")
+                .and_then(|value| match value.as_str() {
+                    "ascending" => Some(DesktopSortDirection::Ascending),
+                    "descending" => Some(DesktopSortDirection::Descending),
+                    _ => None,
+                })
                 .unwrap_or_default();
         }
         settings.desktop_positions = object
@@ -333,6 +375,33 @@ impl SettingsV1 {
         root.insert(
             "desktop_positions".into(),
             Value::Array(self.desktop_positions.iter().map(position_value).collect()),
+        );
+        root.insert(
+            "desktop".into(),
+            Value::Object(BTreeMap::from([
+                (
+                    "sort_key".into(),
+                    Value::String(
+                        match self.desktop.sort_key {
+                            DesktopSortKey::Name => "name",
+                            DesktopSortKey::Kind => "kind",
+                            DesktopSortKey::Size => "size",
+                            DesktopSortKey::Modified => "modified",
+                        }
+                        .into(),
+                    ),
+                ),
+                (
+                    "sort_direction".into(),
+                    Value::String(
+                        match self.desktop.sort_direction {
+                            DesktopSortDirection::Ascending => "ascending",
+                            DesktopSortDirection::Descending => "descending",
+                        }
+                        .into(),
+                    ),
+                ),
+            ])),
         );
         root.insert(
             "monitor_mapping".into(),
@@ -565,6 +634,27 @@ mod tests {
         };
         assert_eq!(settings.effective_mode(false), RuntimeMode::Preview);
         assert_eq!(settings.effective_mode(true), RuntimeMode::Shell);
+    }
+
+    #[test]
+    fn desktop_sort_preference_round_trips_with_manual_positions() {
+        let settings = SettingsV1 {
+            desktop: DesktopSettings {
+                sort_key: DesktopSortKey::Modified,
+                sort_direction: DesktopSortDirection::Descending,
+            },
+            desktop_positions: vec![DesktopPosition {
+                monitor_id: "display-1".into(),
+                item_id: "desktop-item:a".into(),
+                logical_x: 104,
+                logical_y: 224,
+                layout_revision: 8,
+            }],
+            ..SettingsV1::default()
+        };
+        let decoded = SettingsV1::decode(&settings.encode()).unwrap().settings;
+        assert_eq!(decoded.desktop, settings.desktop);
+        assert_eq!(decoded.desktop_positions, settings.desktop_positions);
     }
 
     #[test]

@@ -1,9 +1,9 @@
-use std::{path::PathBuf, rc::Rc};
+use std::{collections::BTreeMap, path::PathBuf, rc::Rc};
 
 use gpui::{
-    AppContext, Context, FocusHandle, InteractiveElement, IntoElement, MouseButton, ObjectFit,
-    ParentElement, Render, StatefulInteractiveElement, Styled, StyledImage, Window, div, img,
-    prelude::FluentBuilder as _, px, rgb,
+    AppContext, Context, DragMoveEvent, FocusHandle, InteractiveElement, IntoElement, MouseButton,
+    ObjectFit, ParentElement, Render, StatefulInteractiveElement, Styled, StyledImage, Window, div,
+    img, prelude::FluentBuilder as _, px, rgb,
 };
 
 use crate::{AccessibleNode, MenuModel};
@@ -14,12 +14,23 @@ type ItemRecycleAction = Rc<dyn Fn(&str) -> bool>;
 type ItemPermanentDeleteAction = Rc<dyn Fn(&str) -> bool>;
 type ItemRenameAction = Rc<dyn Fn(&str, &str) -> bool>;
 type ItemTransferAction = Rc<dyn Fn(&str, &str) -> bool>;
+type ItemRepositionAction = Rc<dyn Fn(&str, f32, f32)>;
 type ExternalDropAction = Rc<dyn Fn(&[PathBuf]) -> bool>;
 type ContextMenuAction = Rc<dyn Fn(&str) -> Option<MenuModel>>;
 type ContextInvokeAction = Rc<dyn Fn(&MenuInvocation) -> Option<String>>;
 type ItemPropertiesAction = Rc<dyn Fn(&str)>;
 type BackgroundNewAction = Rc<dyn Fn() -> bool>;
 type RefreshAction = Rc<dyn Fn() -> Vec<AccessibleNode>>;
+type SortAction = Rc<dyn Fn(&str) -> Vec<AccessibleNode>>;
+type CancelTransferAction = Rc<dyn Fn()>;
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct DesktopTransferStatus {
+    pub label: String,
+    pub completed_bytes: u64,
+    pub total_bytes: u64,
+    pub cancellable: bool,
+}
 
 #[derive(Clone)]
 struct DesktopDrag {
@@ -53,12 +64,15 @@ pub struct DesktopView {
     item_permanent_delete_action: Option<ItemPermanentDeleteAction>,
     item_rename_action: Option<ItemRenameAction>,
     item_transfer_action: Option<ItemTransferAction>,
+    item_reposition_action: Option<ItemRepositionAction>,
     external_drop_action: Option<ExternalDropAction>,
     context_menu_action: Option<ContextMenuAction>,
     context_invoke_action: Option<ContextInvokeAction>,
     item_properties_action: Option<ItemPropertiesAction>,
     background_new_action: Option<BackgroundNewAction>,
     refresh_action: Option<RefreshAction>,
+    sort_action: Option<SortAction>,
+    cancel_transfer_action: Option<CancelTransferAction>,
     rendered_action: Option<Rc<dyn Fn()>>,
     keyboard_focus: Option<FocusHandle>,
     wallpaper: Option<PathBuf>,
@@ -66,6 +80,10 @@ pub struct DesktopView {
     rename_buffer: String,
     context_menu: Option<MenuModel>,
     context_target: Option<String>,
+    item_positions: BTreeMap<String, (f32, f32)>,
+    drag_position: Option<(f32, f32)>,
+    drag_consumed: bool,
+    transfer_status: Option<DesktopTransferStatus>,
 }
 
 impl DesktopView {
@@ -80,12 +98,15 @@ impl DesktopView {
             item_permanent_delete_action: None,
             item_rename_action: None,
             item_transfer_action: None,
+            item_reposition_action: None,
             external_drop_action: None,
             context_menu_action: None,
             context_invoke_action: None,
             item_properties_action: None,
             background_new_action: None,
             refresh_action: None,
+            sort_action: None,
+            cancel_transfer_action: None,
             rendered_action: None,
             keyboard_focus: None,
             wallpaper: None,
@@ -93,6 +114,10 @@ impl DesktopView {
             rename_buffer: String::new(),
             context_menu: None,
             context_target: None,
+            item_positions: BTreeMap::new(),
+            drag_position: None,
+            drag_consumed: false,
+            transfer_status: None,
         }
     }
 
@@ -126,6 +151,16 @@ impl DesktopView {
         self
     }
 
+    pub fn with_item_reposition_action(mut self, action: ItemRepositionAction) -> Self {
+        self.item_reposition_action = Some(action);
+        self
+    }
+
+    pub fn with_item_positions(mut self, positions: BTreeMap<String, (f32, f32)>) -> Self {
+        self.item_positions = positions;
+        self
+    }
+
     pub fn with_external_drop_action(mut self, action: ExternalDropAction) -> Self {
         self.external_drop_action = Some(action);
         self
@@ -154,6 +189,26 @@ impl DesktopView {
     pub fn with_refresh_action(mut self, action: RefreshAction) -> Self {
         self.refresh_action = Some(action);
         self
+    }
+
+    pub fn with_sort_action(mut self, action: SortAction) -> Self {
+        self.sort_action = Some(action);
+        self
+    }
+
+    pub fn with_cancel_transfer_action(mut self, action: CancelTransferAction) -> Self {
+        self.cancel_transfer_action = Some(action);
+        self
+    }
+
+    pub fn set_transfer_status(&mut self, status: Option<DesktopTransferStatus>) {
+        self.transfer_status = status;
+    }
+
+    pub fn refresh_authoritative(&mut self) {
+        if let Some(refresh) = self.refresh_action.clone() {
+            self.apply_authoritative_refresh(refresh());
+        }
     }
 
     pub fn with_rendered_action(mut self, action: Rc<dyn Fn()>) -> Self {
@@ -248,14 +303,9 @@ impl DesktopView {
                     self.apply_authoritative_refresh(refresh());
                 }
             }
-            "sort" => {
-                if self.items.len() > 2 {
-                    self.items[1..].sort_by(|left, right| {
-                        left.name
-                            .to_lowercase()
-                            .cmp(&right.name.to_lowercase())
-                            .then_with(|| left.stable_id.cmp(&right.stable_id))
-                    });
+            command if command.starts_with("sort-") => {
+                if let Some(sort) = &self.sort_action {
+                    self.apply_authoritative_refresh(sort(command));
                 }
             }
             "new" => {
@@ -278,13 +328,13 @@ impl Render for DesktopView {
         let fixed_action = self.fixed_action.clone();
         let root_action = fixed_action.clone();
         let root_refresh = self.refresh_action.clone();
-        let root_drop_refresh = self.refresh_action.clone();
         let external_drop_action = self.external_drop_action.clone();
         let item_action = self.item_action.clone();
         let item_recycle_action = self.item_recycle_action.clone();
         let item_permanent_delete_action = self.item_permanent_delete_action.clone();
         let item_rename_action = self.item_rename_action.clone();
         let item_transfer_action = self.item_transfer_action.clone();
+        let item_reposition_action = self.item_reposition_action.clone();
         let item_refresh_action = self.refresh_action.clone();
         let rename_target = self.rename_target.clone();
         let rename_buffer = self.rename_buffer.clone();
@@ -295,6 +345,9 @@ impl Render for DesktopView {
             .unwrap_or_default();
         let keyboard_focus = self.keyboard_focus.clone();
         let wallpaper = self.wallpaper.clone();
+        let transfer_status = self.transfer_status.clone();
+        let cancel_transfer_action = self.cancel_transfer_action.clone();
+        let item_positions = self.item_positions.clone();
         if let Some(action) = &self.rendered_action {
             action();
         }
@@ -305,6 +358,43 @@ impl Render for DesktopView {
             rgb(0x101820)
         };
         let has_context_menu = !context_nodes.is_empty();
+        let transfer_status_element = transfer_status.map(|status| {
+            let percent = status
+                .completed_bytes
+                .saturating_mul(100)
+                .checked_div(status.total_bytes)
+                .unwrap_or_default();
+            div()
+                .id("desktop-transfer-status")
+                .absolute()
+                .right_4()
+                .bottom_4()
+                .min_w(px(280.))
+                .p_3()
+                .rounded_md()
+                .bg(rgb(0x20242b))
+                .border_1()
+                .border_color(rgb(0x66717d))
+                .child(format!("{} — {percent}%", status.label))
+                .when(status.cancellable, |element| {
+                    element.child(
+                        div()
+                            .id("desktop-transfer-cancel")
+                            .mt_2()
+                            .px_3()
+                            .py_1()
+                            .rounded_sm()
+                            .bg(rgb(0x8f2d2d))
+                            .cursor_pointer()
+                            .on_click(cx.listener(move |_, _, _, _| {
+                                if let Some(cancel) = &cancel_transfer_action {
+                                    cancel();
+                                }
+                            }))
+                            .child("Cancel"),
+                    )
+                })
+        });
         let context_menu_element = div()
             .id("desktop-context-menu")
             .role(gpui::Role::Menu)
@@ -393,17 +483,33 @@ impl Render for DesktopView {
                     action();
                 }
             }))
-            .on_drop(
-                cx.listener(move |this, paths: &gpui::ExternalPaths, _, cx| {
-                    if let Some(drop) = &external_drop_action
-                        && drop(paths.paths())
-                        && let Some(refresh) = &root_drop_refresh
-                    {
-                        this.apply_authoritative_refresh(refresh());
-                        cx.notify();
+            .on_drop(cx.listener(move |_, paths: &gpui::ExternalPaths, _, cx| {
+                if let Some(drop) = &external_drop_action {
+                    let _ = drop(paths.paths());
+                    cx.notify();
+                }
+            }))
+            .on_drag_move::<DesktopDrag>(cx.listener(
+                |this, event: &DragMoveEvent<DesktopDrag>, _, _| {
+                    this.drag_position = Some((
+                        f32::from(event.event.position.x - event.bounds.origin.x),
+                        f32::from(event.event.position.y - event.bounds.origin.y),
+                    ));
+                    this.drag_consumed = false;
+                },
+            ))
+            .on_drop(cx.listener(move |this, source: &DesktopDrag, _, cx| {
+                if !this.drag_consumed
+                    && let Some((x, y)) = this.drag_position.take()
+                {
+                    this.item_positions.insert(source.stable_id.clone(), (x, y));
+                    if let Some(reposition) = &item_reposition_action {
+                        reposition(&source.stable_id, x, y);
                     }
-                }),
-            )
+                    cx.notify();
+                }
+                this.drag_consumed = false;
+            }))
             .size_full()
             .relative()
             .flex()
@@ -425,12 +531,7 @@ impl Render for DesktopView {
                     .absolute()
                     .inset_0()
                     .p_2()
-                    .flex()
-                    .flex_row()
-                    .flex_wrap()
-                    .content_start()
-                    .items_start()
-                    .children(self.items.iter().map(move |item| {
+                    .children(self.items.iter().enumerate().map(move |(index, item)| {
                         let fixed_action = fixed_action.clone();
                         let item_action = item_action.clone();
                         let key_item_action = item_action.clone();
@@ -439,7 +540,6 @@ impl Render for DesktopView {
                         let rename_action = item_rename_action.clone();
                         let transfer_action = item_transfer_action.clone();
                         let refresh_action = item_refresh_action.clone();
-                        let drop_refresh_action = refresh_action.clone();
                         let stable_id = item.stable_id.clone();
                         let click_id = stable_id.clone();
                         let key_id = stable_id.clone();
@@ -456,6 +556,12 @@ impl Render for DesktopView {
                         } else {
                             display_name.clone()
                         };
+                        let default_column = index / 8;
+                        let default_row = index % 8;
+                        let (item_x, item_y) = item_positions.get(&stable_id).copied().unwrap_or((
+                            8.0 + default_column as f32 * 104.0,
+                            8.0 + default_row as f32 * 112.0,
+                        ));
                         div()
                             .id(item.stable_id.clone())
                             .role(gpui::Role::Button)
@@ -463,6 +569,9 @@ impl Render for DesktopView {
                             .tab_index(0)
                             .w(px(104.))
                             .h(px(112.))
+                            .absolute()
+                            .left(px(item_x))
+                            .top(px(item_y))
                             .flex_none()
                             .p_2()
                             .flex()
@@ -485,9 +594,8 @@ impl Render for DesktopView {
                                 if source.stable_id != stable_id
                                     && let Some(transfer) = &transfer_action
                                     && transfer(&source.stable_id, &stable_id)
-                                    && let Some(refresh) = &drop_refresh_action
                                 {
-                                    this.apply_authoritative_refresh(refresh());
+                                    this.drag_consumed = true;
                                     cx.notify();
                                 }
                             }))
@@ -637,6 +745,7 @@ impl Render for DesktopView {
                             )
                     })),
             )
+            .when_some(transfer_status_element, |root, status| root.child(status))
             .when(has_context_menu, |root| root.child(context_menu_element))
     }
 }

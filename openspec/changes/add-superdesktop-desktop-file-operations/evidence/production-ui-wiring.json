@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "change": "add-superdesktop-desktop-file-operations",
-  "result": "production_path_partially_wired",
+  "result": "production_path_wired",
   "captured_at": "2026-08-17",
   "implemented": [
     "production desktop surfaces enumerate the authoritative user and public Desktop namespaces",
@@ -16,12 +16,14 @@
     "dragging a desktop item onto an explicit folder destination moves within one Desktop origin and copies across user/public origins",
     "external file drops copy into the user Desktop using explicit OS-provided paths",
     "all production transfer destinations use collision-rename and never silently overwrite",
-    "child key handling stops propagation so real-item activation cannot also trigger the fixed entry"
+    "child key handling stops propagation so real-item activation cannot also trigger the fixed entry",
+    "copy and move requests execute on a background worker while the GPUI desktop remains responsive",
+    "a production transfer card reports byte progress and exposes cancellation backed by the operation controller cancellation contract",
+    "terminal transfer results reconcile every desktop surface with the authoritative namespace",
+    "desktop icons use explicit logical positions and background drops persist per-monitor positions atomically",
+    "background context commands select and persist name, kind, size, or modified ordering and ascending or descending direction"
   ],
-  "deliberately_not_claimed_yet": [
-    "visible transfer progress and cancellation UI for long-running copy operations",
-    "persistent manual positions and sort-selection UI"
-  ],
+  "deliberately_not_claimed_yet": [],
   "commands": [
     "cargo test -p desktop-ui -p superdesktop-app --offline",
     "cargo clippy -p desktop-ui -p superdesktop-app --all-targets --offline -- -D warnings",

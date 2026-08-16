@@ -34,7 +34,7 @@ pub use operations::{
     DesktopOperationRequest, DesktopOperationTerminal, OperationProgress, TransferIntent,
     execute_desktop_operation,
 };
-pub use view::DesktopView;
+pub use view::{DesktopTransferStatus, DesktopView};
 pub use wallpaper::{
     BoundedWallpaperCache, ImageSize, Placement, WallpaperError, WallpaperMode, wallpaper_placement,
 };

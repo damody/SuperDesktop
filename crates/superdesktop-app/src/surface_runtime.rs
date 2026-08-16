@@ -3,14 +3,17 @@ use std::{
     collections::BTreeMap,
     path::{Path, PathBuf},
     rc::Rc,
-    sync::atomic::{AtomicU64, Ordering},
+    sync::{
+        Arc, Mutex,
+        atomic::{AtomicBool, AtomicU64, Ordering},
+    },
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
 use desktop_ui::{
     AccessibleAction, AccessibleNode, DeletePolicy, DesktopItem, DesktopOperation,
-    DesktopOperationController, DesktopOperationTerminal, DesktopView, MenuModel, TransferIntent,
-    execute_desktop_operation,
+    DesktopOperationController, DesktopOperationRequest, DesktopOperationTerminal,
+    DesktopTransferStatus, DesktopView, MenuModel, TransferIntent, execute_desktop_operation,
 };
 use gpui::{
     App, AppContext, Bounds, WindowBackgroundAppearance, WindowBounds, WindowKind, WindowOptions,
@@ -23,6 +26,7 @@ use platform_win::common::{
     taskbar::{configure_and_show_taskbar_window, snapshot_task_windows},
 };
 use raw_window_handle::{HasWindowHandle, RawWindowHandle};
+use settings_store::{DesktopSortDirection, DesktopSortKey};
 use shell_provider_protocol::{
     CURRENT_PROTOCOL, CommandDescriptor, CommandId, CommandRisk, Envelope, IconKey,
     JumpListRequest, MenuContext, MenuEnumeration, MenuInvocation, NotificationEvent,
@@ -39,6 +43,90 @@ use taskbar_ui::{
 use crate::{notification_client::NotificationClient, provider_client::ProviderClient};
 
 static NEXT_PROVIDER_REQUEST: AtomicU64 = AtomicU64::new(1);
+
+#[derive(Clone, Debug, Default)]
+struct ProductionTransferSnapshot {
+    status: Option<DesktopTransferStatus>,
+    active_correlations: Vec<shell_core::CorrelationId>,
+    terminals: Vec<(shell_core::CorrelationId, DesktopOperationTerminal)>,
+    refresh_pending: bool,
+}
+
+#[derive(Clone, Default)]
+struct ProductionTransferRuntime {
+    active: Arc<AtomicBool>,
+    cancelled: Arc<AtomicBool>,
+    snapshot: Arc<Mutex<ProductionTransferSnapshot>>,
+}
+
+impl ProductionTransferRuntime {
+    fn start(&self, requests: Vec<(DesktopOperationRequest, Vec<PathBuf>, String)>) -> bool {
+        if requests.is_empty()
+            || self
+                .active
+                .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+                .is_err()
+        {
+            return false;
+        }
+        self.cancelled.store(false, Ordering::Release);
+        if let Ok(mut snapshot) = self.snapshot.lock() {
+            snapshot.status = Some(DesktopTransferStatus {
+                label: requests[0].2.clone(),
+                completed_bytes: 0,
+                total_bytes: 0,
+                cancellable: true,
+            });
+            snapshot.active_correlations = requests
+                .iter()
+                .map(|(request, _, _)| request.correlation_id)
+                .collect();
+            snapshot.refresh_pending = false;
+        }
+        let active = Arc::clone(&self.active);
+        let cancelled = Arc::clone(&self.cancelled);
+        let snapshot = Arc::clone(&self.snapshot);
+        std::thread::spawn(move || {
+            for (request, roots, label) in requests {
+                let progress = Arc::clone(&snapshot);
+                let cancel = Arc::clone(&cancelled);
+                let terminal =
+                    execute_desktop_operation(&request, &roots, move |completed, total| {
+                        if let Ok(mut current) = progress.lock() {
+                            current.status = Some(DesktopTransferStatus {
+                                label: label.clone(),
+                                completed_bytes: completed,
+                                total_bytes: total,
+                                cancellable: true,
+                            });
+                        }
+                        !cancel.load(Ordering::Acquire)
+                    });
+                if let Ok(mut current) = snapshot.lock() {
+                    current.terminals.push((request.correlation_id, terminal));
+                }
+                if terminal != DesktopOperationTerminal::Succeeded {
+                    break;
+                }
+            }
+            if let Ok(mut current) = snapshot.lock() {
+                current.status = None;
+                current.active_correlations.clear();
+                current.refresh_pending = true;
+            }
+            active.store(false, Ordering::Release);
+        });
+        true
+    }
+
+    fn cancel(&self) -> Vec<shell_core::CorrelationId> {
+        self.cancelled.store(true, Ordering::Release);
+        self.snapshot
+            .lock()
+            .map(|snapshot| snapshot.active_correlations.clone())
+            .unwrap_or_default()
+    }
+}
 
 fn trace_action(action: &str) {
     let Some(path) = std::env::var_os("SUPERDESKTOP_ACTION_TRACE") else {
@@ -114,6 +202,8 @@ fn desktop_item_key(item: &DesktopItem) -> String {
 fn refresh_desktop_namespace(
     runtime: &Rc<RefCell<DesktopNamespaceRuntime>>,
     monitor: &str,
+    sort_key: DesktopSortKey,
+    sort_direction: DesktopSortDirection,
 ) -> Vec<AccessibleNode> {
     let mut nodes = vec![fixed_node(monitor)];
     let Ok((user_root, public_root)) = platform_win::common::desktop::known_desktop_roots() else {
@@ -156,10 +246,41 @@ fn refresh_desktop_namespace(
         items.insert(key, item);
     }
     nodes[1..].sort_by(|left, right| {
-        left.name
-            .to_lowercase()
-            .cmp(&right.name.to_lowercase())
-            .then_with(|| left.stable_id.cmp(&right.stable_id))
+        let properties = |stable_id: &str| {
+            let path = items
+                .get(stable_id)
+                .map(|item| PathBuf::from(&item.activation_token));
+            let metadata = path.as_ref().and_then(|path| std::fs::metadata(path).ok());
+            let kind = path.as_ref().map_or_else(String::new, |path| {
+                if metadata.as_ref().is_some_and(std::fs::Metadata::is_dir) {
+                    "folder".into()
+                } else {
+                    path.extension()
+                        .map(|value| value.to_string_lossy().to_lowercase())
+                        .unwrap_or_default()
+                }
+            });
+            let size = metadata.as_ref().map_or(0, std::fs::Metadata::len);
+            let modified = metadata
+                .and_then(|value| value.modified().ok())
+                .and_then(|value| value.duration_since(UNIX_EPOCH).ok())
+                .map_or(0, |value| value.as_millis());
+            (kind, size, modified)
+        };
+        let (left_kind, left_size, left_modified) = properties(&left.stable_id);
+        let (right_kind, right_size, right_modified) = properties(&right.stable_id);
+        let primary = match sort_key {
+            DesktopSortKey::Name => left.name.to_lowercase().cmp(&right.name.to_lowercase()),
+            DesktopSortKey::Kind => left_kind.cmp(&right_kind),
+            DesktopSortKey::Size => left_size.cmp(&right_size),
+            DesktopSortKey::Modified => left_modified.cmp(&right_modified),
+        };
+        let primary = if sort_direction == DesktopSortDirection::Descending {
+            primary.reverse()
+        } else {
+            primary
+        };
+        primary.then_with(|| left.stable_id.cmp(&right.stable_id))
     });
     *runtime.borrow_mut() = DesktopNamespaceRuntime {
         items,
@@ -308,6 +429,7 @@ fn rename_desktop_item(
 fn transfer_desktop_item(
     runtime: &Rc<RefCell<DesktopNamespaceRuntime>>,
     operations: &Rc<RefCell<DesktopOperationController>>,
+    transfers: &ProductionTransferRuntime,
     source_id: &str,
     destination_id: &str,
 ) -> bool {
@@ -349,23 +471,20 @@ fn transfer_desktop_item(
             return false;
         }
     };
-    let terminal = execute_desktop_operation(&request, &roots, |_, _| true);
-    let accepted = operations
-        .borrow_mut()
-        .terminal(request.correlation_id, terminal)
-        .is_ok();
-    let succeeded = accepted && terminal == DesktopOperationTerminal::Succeeded;
-    trace_action(if succeeded {
-        "desktop:transfer-succeeded"
+    let label = format!("Transferring {}", source_item.display_name);
+    let accepted = transfers.start(vec![(request, roots, label)]);
+    trace_action(if accepted {
+        "desktop:transfer-started"
     } else {
-        "desktop:transfer-failed"
+        "desktop:transfer-busy-or-failed"
     });
-    succeeded
+    accepted
 }
 
 fn import_external_desktop_items(
     runtime: &Rc<RefCell<DesktopNamespaceRuntime>>,
     operations: &Rc<RefCell<DesktopOperationController>>,
+    transfers: &ProductionTransferRuntime,
     paths: &[PathBuf],
 ) -> bool {
     if paths.is_empty() {
@@ -378,14 +497,12 @@ fn import_external_desktop_items(
         };
         (user_root, runtime.allowed_roots.clone())
     };
-    let mut all_succeeded = true;
+    let mut requests = Vec::new();
     for source in paths {
         let Some(name) = source.file_name() else {
-            all_succeeded = false;
             continue;
         };
         let Some(parent) = source.parent() else {
-            all_succeeded = false;
             continue;
         };
         let mut admitted_roots = desktop_roots.clone();
@@ -398,23 +515,22 @@ fn import_external_desktop_items(
         }) {
             Ok(request) => request,
             Err(_) => {
-                all_succeeded = false;
                 continue;
             }
         };
-        let terminal = execute_desktop_operation(&request, &admitted_roots, |_, _| true);
-        let accepted = operations
-            .borrow_mut()
-            .terminal(request.correlation_id, terminal)
-            .is_ok();
-        all_succeeded &= accepted && terminal == DesktopOperationTerminal::Succeeded;
+        requests.push((
+            request,
+            admitted_roots,
+            format!("Copying {}", name.to_string_lossy()),
+        ));
     }
-    trace_action(if all_succeeded {
-        "desktop:external-drop-succeeded"
+    let accepted = transfers.start(requests);
+    trace_action(if accepted {
+        "desktop:external-drop-started"
     } else {
-        "desktop:external-drop-partial-or-failed"
+        "desktop:external-drop-busy-or-rejected"
     });
-    all_succeeded
+    accepted
 }
 
 fn unix_time_ms() -> u64 {
@@ -548,7 +664,12 @@ fn local_context_menu(stable_id: &str) -> Option<MenuModel> {
     let commands = if stable_id == "desktop-background" {
         vec![
             command("refresh", "Refresh", CommandRisk::Normal),
-            command("sort", "Sort by name", CommandRisk::Normal),
+            command("sort-name", "Sort by name", CommandRisk::Normal),
+            command("sort-kind", "Sort by kind", CommandRisk::Normal),
+            command("sort-size", "Sort by size", CommandRisk::Normal),
+            command("sort-modified", "Sort by modified", CommandRisk::Normal),
+            command("sort-ascending", "Ascending", CommandRisk::Normal),
+            command("sort-descending", "Descending", CommandRisk::Normal),
             command("new", "New folder", CommandRisk::Normal),
         ]
     } else {
@@ -576,6 +697,9 @@ fn enumerate_desktop_context_menu(
     let background = stable_id == "desktop-background";
     if !background && !runtime.borrow().items.contains_key(stable_id) {
         return None;
+    }
+    if background {
+        return local_context_menu(stable_id);
     }
     let request = provider_request(
         ProviderRequest::ContextMenuEnumerate(MenuContext {
@@ -617,7 +741,18 @@ fn invoke_desktop_context_menu(
     if let Some(command) = invocation.token.strip_prefix("local:") {
         return matches!(
             command,
-            "open" | "rename" | "recycle" | "properties" | "refresh" | "sort" | "new"
+            "open"
+                | "rename"
+                | "recycle"
+                | "properties"
+                | "refresh"
+                | "sort-name"
+                | "sort-kind"
+                | "sort-size"
+                | "sort-modified"
+                | "sort-ascending"
+                | "sort-descending"
+                | "new"
         )
         .then(|| command.to_owned());
     }
@@ -1130,6 +1265,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
     let interactive = verification_surface.is_some();
     let desktop_namespace = Rc::new(RefCell::new(DesktopNamespaceRuntime::default()));
     let desktop_operations = Rc::new(RefCell::new(DesktopOperationController::default()));
+    let desktop_transfers = ProductionTransferRuntime::default();
     let provider_client = Rc::new(RefCell::new(ProviderClient::adjacent()?));
     let notification_client = Rc::new(RefCell::new(NotificationClient::adjacent()?));
     let settings_store = Rc::new(RefCell::new(settings_store));
@@ -1152,7 +1288,11 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                     let desktop_error = Rc::clone(&init_error);
                     let desktop_namespace_for_view = Rc::clone(&desktop_namespace);
                     let desktop_operations_for_view = Rc::clone(&desktop_operations);
+                    let desktop_transfers_for_view = desktop_transfers.clone();
                     let provider_client_for_view = Rc::clone(&provider_client);
+                    let desktop_settings_for_view = Rc::clone(&persisted_settings);
+                    let desktop_store_for_view = Rc::clone(&settings_store);
+                    let desktop_target_for_view = Rc::clone(&settings_target);
                     let desktop = cx.open_window(options(&monitor, false, interactive, 2), move |window, cx| {
                         if interactive {
                             window.activate_window();
@@ -1175,10 +1315,25 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                         }
                         cx.new(move |cx| {
                             let monitor_key = desktop_monitor.device_name.clone();
+                            let desktop_settings = desktop_settings_for_view.borrow().desktop.clone();
                             let nodes = refresh_desktop_namespace(
                                 &desktop_namespace_for_view,
                                 &monitor_key,
+                                desktop_settings.sort_key,
+                                desktop_settings.sort_direction,
                             );
+                            let item_positions = desktop_settings_for_view
+                                .borrow()
+                                .desktop_positions
+                                .iter()
+                                .filter(|position| position.monitor_id == monitor_key)
+                                .map(|position| {
+                                    (
+                                        position.item_id.clone(),
+                                        (position.logical_x as f32, position.logical_y as f32),
+                                    )
+                                })
+                                .collect::<BTreeMap<_, _>>();
                             let activation_namespace = Rc::clone(&desktop_namespace_for_view);
                             let recycle_namespace = Rc::clone(&desktop_namespace_for_view);
                             let recycle_operations = Rc::clone(&desktop_operations_for_view);
@@ -1190,8 +1345,10 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                             let rename_operations = Rc::clone(&desktop_operations_for_view);
                             let transfer_namespace = Rc::clone(&desktop_namespace_for_view);
                             let transfer_operations = Rc::clone(&desktop_operations_for_view);
+                            let transfer_runtime = desktop_transfers_for_view.clone();
                             let external_drop_namespace = Rc::clone(&desktop_namespace_for_view);
                             let external_drop_operations = Rc::clone(&desktop_operations_for_view);
+                            let external_drop_runtime = desktop_transfers_for_view.clone();
                             let context_namespace = Rc::clone(&desktop_namespace_for_view);
                             let context_provider = Rc::clone(&provider_client_for_view);
                             let invocation_provider = Rc::clone(&provider_client_for_view);
@@ -1199,10 +1356,24 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                             let new_folder_namespace = Rc::clone(&desktop_namespace_for_view);
                             let refresh_namespace = Rc::clone(&desktop_namespace_for_view);
                             let refresh_monitor = monitor_key.clone();
+                            let refresh_settings = Rc::clone(&desktop_settings_for_view);
+                            let sort_namespace = Rc::clone(&desktop_namespace_for_view);
+                            let sort_monitor = monitor_key.clone();
+                            let sort_settings = Rc::clone(&desktop_settings_for_view);
+                            let sort_store = Rc::clone(&desktop_store_for_view);
+                            let sort_target = Rc::clone(&desktop_target_for_view);
+                            let position_settings = Rc::clone(&desktop_settings_for_view);
+                            let position_store = Rc::clone(&desktop_store_for_view);
+                            let position_target = Rc::clone(&desktop_target_for_view);
+                            let position_monitor = monitor_key.clone();
+                            let cancel_transfer_runtime = desktop_transfers_for_view.clone();
+                            let cancel_transfer_operations =
+                                Rc::clone(&desktop_operations_for_view);
                             let mut view = DesktopView::new(
                                 nodes,
                                 false,
                             )
+                            .with_item_positions(item_positions)
                             .with_fixed_action(Rc::new(launch_superexplorer))
                             .with_item_action(Rc::new(move |stable_id| {
                                 activate_desktop_item(&activation_namespace, stable_id)
@@ -1233,16 +1404,54 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                 transfer_desktop_item(
                                     &transfer_namespace,
                                     &transfer_operations,
+                                    &transfer_runtime,
                                     source,
                                     destination,
                                 )
+                            }))
+                            .with_item_reposition_action(Rc::new(move |stable_id, x, y| {
+                                let mut settings = position_settings.borrow().clone();
+                                let next_revision = settings
+                                    .desktop_positions
+                                    .iter()
+                                    .map(|position| position.layout_revision)
+                                    .max()
+                                    .unwrap_or_default()
+                                    .saturating_add(1);
+                                settings.desktop_positions.retain(|position| {
+                                    position.monitor_id != position_monitor
+                                        || position.item_id != stable_id
+                                });
+                                settings.desktop_positions.push(settings_store::DesktopPosition {
+                                    monitor_id: position_monitor.clone(),
+                                    item_id: stable_id.to_owned(),
+                                    logical_x: x.round() as i32,
+                                    logical_y: y.round() as i32,
+                                    layout_revision: next_revision,
+                                });
+                                match position_store.borrow_mut().save(&position_target, &settings) {
+                                    Ok(saved) => {
+                                        *position_settings.borrow_mut() = saved;
+                                        trace_action("desktop:position-persisted");
+                                    }
+                                    Err(_) => trace_action("desktop:position-persist-failed"),
+                                }
                             }))
                             .with_external_drop_action(Rc::new(move |paths| {
                                 import_external_desktop_items(
                                     &external_drop_namespace,
                                     &external_drop_operations,
+                                    &external_drop_runtime,
                                     paths,
                                 )
+                            }))
+                            .with_cancel_transfer_action(Rc::new(move || {
+                                for correlation_id in cancel_transfer_runtime.cancel() {
+                                    let _ = cancel_transfer_operations
+                                        .borrow_mut()
+                                        .cancel(correlation_id);
+                                }
+                                trace_action("desktop:transfer-cancel-requested");
                             }))
                             .with_context_menu_action(Rc::new(move |stable_id| {
                                 enumerate_desktop_context_menu(
@@ -1261,7 +1470,35 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                 create_desktop_folder(&new_folder_namespace)
                             }))
                             .with_refresh_action(Rc::new(move || {
-                                refresh_desktop_namespace(&refresh_namespace, &refresh_monitor)
+                                let desktop = refresh_settings.borrow().desktop.clone();
+                                refresh_desktop_namespace(
+                                    &refresh_namespace,
+                                    &refresh_monitor,
+                                    desktop.sort_key,
+                                    desktop.sort_direction,
+                                )
+                            }))
+                            .with_sort_action(Rc::new(move |command| {
+                                let mut settings = sort_settings.borrow().clone();
+                                match command {
+                                    "sort-name" => settings.desktop.sort_key = DesktopSortKey::Name,
+                                    "sort-kind" => settings.desktop.sort_key = DesktopSortKey::Kind,
+                                    "sort-size" => settings.desktop.sort_key = DesktopSortKey::Size,
+                                    "sort-modified" => settings.desktop.sort_key = DesktopSortKey::Modified,
+                                    "sort-ascending" => settings.desktop.sort_direction = DesktopSortDirection::Ascending,
+                                    "sort-descending" => settings.desktop.sort_direction = DesktopSortDirection::Descending,
+                                    _ => {}
+                                }
+                                if let Ok(saved) = sort_store.borrow_mut().save(&sort_target, &settings) {
+                                    *sort_settings.borrow_mut() = saved;
+                                }
+                                let desktop = sort_settings.borrow().desktop.clone();
+                                refresh_desktop_namespace(
+                                    &sort_namespace,
+                                    &sort_monitor,
+                                    desktop.sort_key,
+                                    desktop.sort_direction,
+                                )
                             }))
                             .with_rendered_action(Rc::new(|| trace_action("frame-visible")));
                             if let Some(path) = desktop_wallpaper.clone() {
@@ -1772,6 +2009,47 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
             }
             if wallpaper.is_some() {
                 trace_action("wallpaper:loaded");
+            }
+
+            let transfer_handles = desktop_handles.clone();
+            if !transfer_handles.is_empty() && !state_matrix {
+                let transfer_background = cx.background_executor().clone();
+                let transfer_foreground = cx.foreground_executor().clone();
+                let transfer_app = cx.to_async();
+                let transfer_runtime = desktop_transfers.clone();
+                let transfer_operations = Rc::clone(&desktop_operations);
+                transfer_foreground
+                    .spawn(async move {
+                        loop {
+                            transfer_background.timer(Duration::from_millis(50)).await;
+                            let (status, terminals, refresh) = {
+                                let Ok(mut snapshot) = transfer_runtime.snapshot.lock() else {
+                                    continue;
+                                };
+                                let terminals = std::mem::take(&mut snapshot.terminals);
+                                let refresh = std::mem::take(&mut snapshot.refresh_pending);
+                                (snapshot.status.clone(), terminals, refresh)
+                            };
+                            for (correlation_id, terminal) in terminals {
+                                let _ = transfer_operations
+                                    .borrow_mut()
+                                    .terminal(correlation_id, terminal);
+                            }
+                            transfer_app.update(|app| {
+                                for handle in &transfer_handles {
+                                    let _ = handle.update(app, |view, _, cx| {
+                                        view.set_transfer_status(status.clone());
+                                        if refresh {
+                                            view.refresh_authoritative();
+                                            trace_action("desktop:transfer-reconciled");
+                                        }
+                                        cx.notify();
+                                    });
+                                }
+                            });
+                        }
+                    })
+                    .detach();
             }
 
             let refresh_handles = taskbar_handles.clone();
