@@ -3932,6 +3932,7 @@ version = "0.1.0"
 dependencies = [
  "gpui",
  "gpui_windows",
+ "image",
  "platform-win",
  "raw-window-handle",
  "settings-store",

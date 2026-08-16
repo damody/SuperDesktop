@@ -1,8 +1,8 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use shell_provider_protocol::{
-    IconKey, NotificationEvent, NotificationEventKind, NotificationSnapshot, RegisteredIcon,
-    Validate,
+    IconData, IconKey, NotificationEvent, NotificationEventKind, NotificationSnapshot,
+    RegisteredIcon, Validate,
 };
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -19,6 +19,7 @@ pub struct NotificationAccessibleNode {
     pub role: &'static str,
     pub focused: bool,
     pub placement: NotificationPlacement,
+    pub icon: Option<IconData>,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -140,6 +141,7 @@ impl NotificationAreaModel {
                     role: "button",
                     focused: self.focus.as_ref() == Some(key),
                     placement,
+                    icon: icon.icon.icon.clone(),
                 })
             })
             .collect()
@@ -209,7 +211,11 @@ mod tests {
                 icon_id: id,
                 tooltip: format!("Icon {id}"),
                 visible: true,
-                icon: None,
+                icon: Some(IconData {
+                    width: 1,
+                    height: 1,
+                    rgba: vec![255, 0, 0, 255],
+                }),
             },
             always_visible: always,
         }
@@ -228,7 +234,9 @@ mod tests {
         assert_eq!(model.visible().len(), 1);
         assert_eq!(model.overflow().len(), 1);
         model.open_overflow();
-        assert!(model.accessible_nodes().iter().any(|node| node.focused));
+        let nodes = model.accessible_nodes();
+        assert!(nodes.iter().any(|node| node.focused));
+        assert!(nodes.iter().all(|node| node.icon.is_some()));
         let key = model.overflow()[0].clone();
         let event = model
             .event(&key, NotificationEventKind::Activate, "event".into(), 1_000)

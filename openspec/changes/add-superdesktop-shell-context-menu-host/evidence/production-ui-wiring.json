@@ -9,7 +9,7 @@
     "menu enumeration is bounded to 200 milliseconds and falls back to a functional local menu without blocking desktop input",
     "menu invocation is bounded to 2 seconds and a failed or mismatched host is terminated before a later request can restart it",
     "real desktop items expose Open, Rename, Delete, and Properties through both pointer right-click and Shift+F10",
-    "desktop background exposes Refresh, Sort by name, and New folder through both pointer right-click and Shift+F10",
+    "desktop background exposes Refresh, persisted name/kind/size/modified sorting with direction, and New folder through both pointer right-click and Shift+F10",
     "pointer, keyboard, and accessibility menu activation all produce the same generation- and selection-bound MenuInvocation",
     "Properties delegates to the Windows properties verb while mutation commands return to the existing admitted desktop-operation routes",
     "New folder is confined to the resolved user Desktop root, validates the requested name, and resolves collisions without overwrite",

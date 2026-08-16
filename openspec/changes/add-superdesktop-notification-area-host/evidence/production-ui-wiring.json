@@ -13,11 +13,11 @@
     "overflow invocation focuses the first hidden icon and Escape/dismiss state stays inside the owned model",
     "registered icons expose tooltip text, button roles, keyboard focus, activation, and context pointer routes",
     "activation and context events are timestamped, bounded, admitted only for a registered icon, and can be drained only by the owning client",
-    "event and snapshot host calls are bounded to 100 milliseconds in the production taskbar path"
+    "event and snapshot host calls are bounded to 100 milliseconds in the production taskbar path",
+    "validated owned RGBA icon payloads are converted to GPUI render images for both visible and overflow placements; a neutral marker is used only when the client supplied no bitmap"
   ],
   "deliberately_not_claimed": [
-    "legacy Shell_NotifyIcon/WM_COPYDATA compatibility; the current isolated host accepts the published SuperDesktop notification protocol",
-    "native RGBA bitmap rendering in GPUI; registered entries currently render an accessible neutral marker and their authoritative tooltip",
+    "legacy Shell_NotifyIcon/WM_COPYDATA compatibility; Windows exposes no documented notification-area hosting API and the design forbids undocumented toolbar emulation, so the current isolated host accepts the published SuperDesktop notification protocol",
     "physical p95 event latency evidence; this remains an external evidence-machine gate"
   ],
   "commands": [

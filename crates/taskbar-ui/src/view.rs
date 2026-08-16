@@ -1,16 +1,25 @@
-use std::{collections::BTreeMap, rc::Rc};
+use std::{collections::BTreeMap, rc::Rc, sync::Arc};
 
 use gpui::{
-    App, AppContext, Context, FocusHandle, InteractiveElement, IntoElement, ParentElement, Render,
-    StatefulInteractiveElement, Styled, Window, div, linear_color_stop, linear_gradient,
-    prelude::FluentBuilder as _, px, rgb, svg,
+    App, AppContext, Context, FocusHandle, InteractiveElement, IntoElement, ObjectFit,
+    ParentElement, Render, RenderImage, StatefulInteractiveElement, Styled, StyledImage, Window,
+    div, img, linear_color_stop, linear_gradient, prelude::FluentBuilder as _, px, rgb, svg,
 };
 
 use crate::{
     AccessibleTask, NotificationAreaModel, NotificationPlacement, ProgressState, StatusRegion,
     TaskOverlay, TaskbarLayout,
 };
-use shell_provider_protocol::{IconKey, NotificationEventKind};
+use shell_provider_protocol::{IconData, IconKey, NotificationEventKind};
+
+fn notification_render_image(icon: &IconData) -> Option<Arc<RenderImage>> {
+    let mut bgra = icon.rgba.clone();
+    for pixel in bgra.chunks_exact_mut(4) {
+        pixel.swap(0, 2);
+    }
+    let buffer = image::RgbaImage::from_raw(icon.width, icon.height, bgra)?;
+    Some(Arc::new(RenderImage::new(vec![image::Frame::new(buffer)])))
+}
 
 pub struct TaskbarView {
     pub accessible_root_name: String,
@@ -159,6 +168,8 @@ impl Render for TaskbarView {
                         let key = node.key.clone();
                         let context_key = node.key.clone();
                         let tooltip = node.name.clone();
+                        let icon = node.icon.as_ref().and_then(notification_render_image);
+                        let has_native_icon = icon.is_some();
                         div()
                             .id(node.stable_id)
                             .role(gpui::Role::Button)
@@ -185,7 +196,15 @@ impl Render for TaskbarView {
                                     callback(&context_key, NotificationEventKind::Context);
                                 }
                             })
-                            .child("•")
+                            .when_some(icon, |element, image| {
+                                element.child(
+                                    img(image)
+                                        .w(px(24.))
+                                        .h(px(24.))
+                                        .object_fit(ObjectFit::Contain),
+                                )
+                            })
+                            .when(!has_native_icon, |element| element.child("•"))
                     }))
                     .when(has_overflow, |area| {
                         area.child(
@@ -227,6 +246,9 @@ impl Render for TaskbarView {
                                 .children(overflow_notifications.into_iter().map(|node| {
                                     let callback = notification_callback.clone();
                                     let key = node.key.clone();
+                                    let icon =
+                                        node.icon.as_ref().and_then(notification_render_image);
+                                    let has_native_icon = icon.is_some();
                                     div()
                                         .id(node.stable_id)
                                         .role(gpui::Role::Button)
@@ -242,7 +264,15 @@ impl Render for TaskbarView {
                                                 callback(&key, NotificationEventKind::Activate);
                                             }
                                         })
-                                        .child("•")
+                                        .when_some(icon, |element, image| {
+                                            element.child(
+                                                img(image)
+                                                    .w(px(24.))
+                                                    .h(px(24.))
+                                                    .object_fit(ObjectFit::Contain),
+                                            )
+                                        })
+                                        .when(!has_native_icon, |element| element.child("•"))
                                 })),
                         )
                     }),
