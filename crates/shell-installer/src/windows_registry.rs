@@ -1,5 +1,9 @@
 use std::path::Path;
-use std::process::{Command, Output};
+use std::process::{Command, Output, Stdio};
+use std::thread;
+use std::time::{Duration, Instant};
+
+use std::os::windows::process::CommandExt;
 
 use serde::Deserialize;
 
@@ -128,6 +132,47 @@ pub(crate) fn verify_product_identity(
         ));
     }
     Ok(())
+}
+
+pub(crate) fn probe_guardian_recovery(guardian_path: &Path) -> Result<(), InstallerError> {
+    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+    let mut child = Command::new(guardian_path)
+        .arg("--installer-recovery-probe")
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .creation_flags(CREATE_NO_WINDOW)
+        .spawn()
+        .map_err(|error| {
+            InstallerError::PreflightRejected(format!("guardian-recovery-probe:{error}"))
+        })?;
+    let deadline = Instant::now() + Duration::from_secs(5);
+    loop {
+        match child.try_wait() {
+            Ok(Some(status)) if status.success() => return Ok(()),
+            Ok(Some(status)) => {
+                return Err(InstallerError::PreflightRejected(format!(
+                    "guardian-recovery-probe:exit={}",
+                    status.code().unwrap_or(-1)
+                )));
+            }
+            Ok(None) if Instant::now() < deadline => thread::sleep(Duration::from_millis(25)),
+            Ok(None) => {
+                let _ = child.kill();
+                let _ = child.wait();
+                return Err(InstallerError::PreflightRejected(
+                    "guardian-recovery-probe:timeout".into(),
+                ));
+            }
+            Err(error) => {
+                let _ = child.kill();
+                let _ = child.wait();
+                return Err(InstallerError::PreflightRejected(format!(
+                    "guardian-recovery-probe:wait:{error}"
+                )));
+            }
+        }
+    }
 }
 
 fn powershell(script: &str, value: Option<&str>) -> Result<Output, InstallerError> {

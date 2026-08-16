@@ -70,7 +70,7 @@ impl EnablePreflight {
             session_supported,
             policy_allows_per_user_shell: std::env::var_os("SUPERDESKTOP_DISABLE_SHELL_INSTALL")
                 .is_none(),
-            guardian_recovery_admitted: true,
+            guardian_recovery_admitted: false,
         }
     }
 
@@ -144,13 +144,19 @@ pub fn build_enable_plan(
     guardian_path: &Path,
     rollback_record_path: &Path,
 ) -> Result<InstallerPlan, InstallerError> {
+    let app_path = admitted_binary(app_path, "app")?;
+    let guardian_path = admitted_binary(guardian_path, "guardian")?;
+    let mut preflight = EnablePreflight::current();
+    windows_registry::verify_product_identity(&app_path, &guardian_path)?;
+    windows_registry::probe_guardian_recovery(&guardian_path)?;
+    preflight.guardian_recovery_admitted = true;
     build_enable_plan_with_preflight(
         command,
         observed,
-        app_path,
-        guardian_path,
+        &app_path,
+        &guardian_path,
         rollback_record_path,
-        EnablePreflight::current(),
+        preflight,
     )
 }
 
@@ -328,7 +334,8 @@ pub fn validate_mutation_binaries(plan: &InstallerPlan) -> Result<(), InstallerE
     {
         return Err(InstallerError::StateDrift);
     }
-    windows_registry::verify_product_identity(&app_path, &guardian_path)
+    windows_registry::verify_product_identity(&app_path, &guardian_path)?;
+    windows_registry::probe_guardian_recovery(&guardian_path)
 }
 
 fn admitted_binary(path: &Path, field: &'static str) -> Result<PathBuf, InstallerError> {
@@ -812,13 +819,15 @@ mod tests {
         let guardian = directory.join("superdesktop-guardian.exe");
         fs::write(&app, b"fixture-app").unwrap();
         fs::write(&guardian, b"fixture-guardian").unwrap();
+        let mut admitted = EnablePreflight::current();
+        admitted.guardian_recovery_admitted = true;
         let plan = build_enable_plan_with_preflight(
             InstallerCommand::Enable,
             None,
             &app,
             &guardian,
             &directory.join("installer-rollback.json"),
-            EnablePreflight::current(),
+            admitted,
         )
         .unwrap();
         assert!(matches!(

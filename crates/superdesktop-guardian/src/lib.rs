@@ -11,6 +11,20 @@ pub use recovery::{
     RecoveryEffect, RecoveryError, RecoveryIdentity, RecoveryTerminal, RecoveryTiming,
 };
 
+/// Read-only installer handshake proving that this guardian can run in the
+/// current interactive session and resolve the trusted Explorer recovery
+/// target. It deliberately performs no lease acceptance or Shell mutation.
+pub fn probe_recovery_readiness() -> Result<(), &'static str> {
+    let session = platform_win::common::admission::probe_current_session()
+        .map_err(|_| "guardian-admission-probe")?;
+    if session.safe_mode || !session.interactive || session.process_session_id == 0 {
+        return Err("guardian-session-not-admitted");
+    }
+    platform_win::common::explorer_recovery::TrustedExplorer::resolve()
+        .map(|_| ())
+        .map_err(|_| "guardian-explorer-recovery-target")
+}
+
 pub fn run_guardian(invocation: GuardianInvocation) -> Result<(), &'static str> {
     let app = std::env::current_exe()
         .map_err(|_| "guardian-current-exe")?

@@ -26,7 +26,9 @@
       "repair reuses the immutable recovery record",
       "repair rejects silent installed-binary path replacement",
       "repair failure restores the exact transaction pre-state",
-      "rollback metadata path is absolute, included in the plan fingerprint, and reported as an affected target"
+      "rollback metadata path is absolute, included in the plan fingerprint, and reported as an affected target",
+      "guardian recovery admission executes a five-second fail-closed read-only handshake before planning and immediately before mutation",
+      "guardian handshake verifies an interactive non-Safe-Mode session and resolves the trusted Explorer recovery target without mutation"
     ]
   },
   "physical_gate": {

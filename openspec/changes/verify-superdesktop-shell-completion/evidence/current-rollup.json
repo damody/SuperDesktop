@@ -1,6 +1,6 @@
 {
     "schema_version":  1,
-    "generated_at_utc":  "2026-08-16T17:13:09.0255516Z",
+    "generated_at_utc":  "2026-08-16T17:17:45.8200969Z",
     "sources":  {
                     "add-superdesktop-desktop-file-operations":  {
                                                                      "change":  "add-superdesktop-desktop-file-operations",
@@ -23,7 +23,7 @@
                     "add-superdesktop-shell-installer":  {
                                                              "change":  "add-superdesktop-shell-installer",
                                                              "relative_path":  "openspec/changes/add-superdesktop-shell-installer/evidence/verification.json",
-                                                             "sha256":  "06d259af96ff0407b122cb4b99258fc949283356f8aa0182300dcf8671bc8530",
+                                                             "sha256":  "655b2227a5d2dd98b73b67a52f007373aa7886c489d7f5b9a729e6f6cf216324",
                                                              "local_result":  "passed"
                                                          },
                     "add-superdesktop-start-search":  {
