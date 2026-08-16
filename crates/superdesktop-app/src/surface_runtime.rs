@@ -24,17 +24,18 @@ use platform_win::common::{
 };
 use raw_window_handle::{HasWindowHandle, RawWindowHandle};
 use shell_provider_protocol::{
-    CURRENT_PROTOCOL, CommandDescriptor, CommandId, CommandRisk, Envelope, MenuContext,
-    MenuEnumeration, MenuInvocation, ProviderRequest, ResponseBody, SearchBatch, SearchQuery,
-    TerminalKind,
+    CURRENT_PROTOCOL, CommandDescriptor, CommandId, CommandRisk, Envelope, IconKey, MenuContext,
+    MenuEnumeration, MenuInvocation, NotificationEvent, NotificationEventKind,
+    NotificationHostResponse, NotificationMutation, ProviderRequest, ResponseBody, SearchBatch,
+    SearchQuery, TerminalKind,
 };
 use taskbar_ui::{
-    AccessibleTask, ClockLocale, CoreStatus, FlyoutAction, PreviewCard, ProviderState, StartView,
-    StatusRegion, TaskAction, TaskFlyoutView, TaskViewModel, TaskViewSurface, TaskbarCallbacks,
-    TaskbarLayout, TaskbarView, TestClock,
+    AccessibleTask, ClockLocale, CoreStatus, FlyoutAction, NotificationAreaModel, PreviewCard,
+    ProviderState, StartView, StatusRegion, TaskAction, TaskFlyoutView, TaskViewModel,
+    TaskViewSurface, TaskbarCallbacks, TaskbarLayout, TaskbarView, TestClock,
 };
 
-use crate::provider_client::ProviderClient;
+use crate::{notification_client::NotificationClient, provider_client::ProviderClient};
 
 static NEXT_PROVIDER_REQUEST: AtomicU64 = AtomicU64::new(1);
 
@@ -450,6 +451,36 @@ fn search_start(provider: &Rc<RefCell<ProviderClient>>, query: SearchQuery) -> V
                 })
         })
         .unwrap_or_default()
+}
+
+fn send_notification_event(
+    client: &Rc<RefCell<NotificationClient>>,
+    key: &IconKey,
+    kind: NotificationEventKind,
+) {
+    let sequence = NEXT_PROVIDER_REQUEST.fetch_add(1, Ordering::Relaxed);
+    let request = NotificationMutation::Event {
+        event: NotificationEvent {
+            correlation_id: format!("notification-event-{sequence}"),
+            key: key.clone(),
+            kind,
+            admitted_unix_ms: unix_time_ms(),
+        },
+    };
+    let completed = client
+        .borrow_mut()
+        .request(&request, Duration::from_millis(100))
+        .is_ok_and(|response| {
+            matches!(
+                response,
+                NotificationHostResponse::Accepted { changed: false, .. }
+            )
+        });
+    trace_action(if completed {
+        "notification:event-completed"
+    } else {
+        "notification:event-rejected"
+    });
 }
 
 fn activate_start_command(command: &CommandDescriptor) {
@@ -975,6 +1006,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
     let desktop_namespace = Rc::new(RefCell::new(DesktopNamespaceRuntime::default()));
     let desktop_operations = Rc::new(RefCell::new(DesktopOperationController::default()));
     let provider_client = Rc::new(RefCell::new(ProviderClient::adjacent()?));
+    let notification_client = Rc::new(RefCell::new(NotificationClient::adjacent()?));
     let terminal = Rc::new(RefCell::new(None::<Result<(), &'static str>>));
     let terminal_for_app = Rc::clone(&terminal);
     let platform = gpui_windows::WindowsPlatform::new(false).map_err(|_| "gpui-platform")?;
@@ -1141,6 +1173,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                     Rc::new(RefCell::new(None::<gpui::WindowHandle<TaskViewSurface>>));
                 let task_view_window_for_taskbar = Rc::clone(&task_view_window);
                 let task_view_monitor = taskbar_monitor.clone();
+                let notification_client_for_taskbar = Rc::clone(&notification_client);
                 let taskbar = cx.open_window(options(&monitor, true, interactive), move |window, cx| {
                     if interactive {
                         window.activate_window();
@@ -1207,6 +1240,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                         tasks: taskbar_tasks,
                         fixed_name: fixed_label().into(),
                         status: status(),
+                        notification_area: NotificationAreaModel::default(),
                         callbacks: Some(TaskbarCallbacks {
                             start: Rc::new(move |app| {
                                 trace_action("start");
@@ -1368,6 +1402,13 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                     *flyout_window_for_taskbar.borrow_mut() = Some(handle);
                                 }
                             }),
+                            notification: Rc::new(move |key, kind| {
+                                send_notification_event(
+                                    &notification_client_for_taskbar,
+                                    key,
+                                    kind,
+                                )
+                            }),
                             rendered: Rc::new(|| trace_action("frame-visible")),
                         }),
                         keyboard_focus: focus_handle,
@@ -1401,13 +1442,31 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                 let refresh_background = cx.background_executor().clone();
                 let refresh_foreground = cx.foreground_executor().clone();
                 let refresh_app = cx.to_async();
+                let refresh_notification_client = Rc::clone(&notification_client);
                 refresh_foreground
                     .spawn(async move {
+                        let mut notification_tick = 0u8;
                         loop {
                             refresh_background.timer(Duration::from_millis(50)).await;
                             let Ok(tasks) = visible_tasks() else {
                                 continue;
                             };
+                            notification_tick = notification_tick.wrapping_add(1);
+                            let notification_update = notification_tick.is_multiple_of(10).then(|| {
+                                refresh_notification_client
+                                    .borrow_mut()
+                                    .request(
+                                        &NotificationMutation::Snapshot,
+                                        Duration::from_millis(100),
+                                    )
+                                    .ok()
+                                    .and_then(|response| match response {
+                                        NotificationHostResponse::Snapshot(snapshot) => {
+                                            Some(snapshot)
+                                        }
+                                        _ => None,
+                                    })
+                            });
                             refresh_app.update(|app| {
                                 let mut alive = false;
                                 for handle in &refresh_handles {
@@ -1418,6 +1477,26 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                                 view.tasks = tasks.clone();
                                                 trace_action("shell-event");
                                                 cx.notify();
+                                            }
+                                            if let Some(snapshot) = notification_update.clone() {
+                                                let changed = if let Some(snapshot) = snapshot {
+                                                    view.notification_area
+                                                        .apply_snapshot(snapshot, 5)
+                                                } else if view
+                                                    .notification_area
+                                                    .provider_available()
+                                                {
+                                                    view.notification_area.provider_unavailable();
+                                                    true
+                                                } else {
+                                                    false
+                                                };
+                                                if changed {
+                                                    trace_action(
+                                                        "notification:snapshot-reconciled",
+                                                    );
+                                                    cx.notify();
+                                                }
                                             }
                                         })
                                         .is_err()

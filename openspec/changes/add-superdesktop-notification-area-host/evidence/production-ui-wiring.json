@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "change": "add-superdesktop-notification-area-host",
+  "result": "isolated_host_supervision_and_taskbar_surface_wired",
+  "captured_at": "2026-08-17",
+  "implemented": [
+    "production starts the adjacent notification-area-host outside the GPUI process on the first snapshot request",
+    "the client uses bounded newline-framed JSON over redirected pipes and terminates the child on write, parse, EOF, or timeout failure",
+    "the taskbar polls a generation-bound full snapshot twice per second and restarts the host on a later poll after failure",
+    "host failure clears stale icons while leaving Start, tasks, clock, and independent status providers alive",
+    "equal snapshots do not trigger redundant taskbar reconciliation",
+    "visible and overflow placement is rendered from NotificationAreaModel without synthetic registrations",
+    "overflow invocation focuses the first hidden icon and Escape/dismiss state stays inside the owned model",
+    "registered icons expose tooltip text, button roles, keyboard focus, activation, and context pointer routes",
+    "activation and context events are timestamped, bounded, admitted only for a registered icon, and can be drained only by the owning client",
+    "event and snapshot host calls are bounded to 100 milliseconds in the production taskbar path"
+  ],
+  "deliberately_not_claimed": [
+    "legacy Shell_NotifyIcon/WM_COPYDATA compatibility; the current isolated host accepts the published SuperDesktop notification protocol",
+    "native RGBA bitmap rendering in GPUI; registered entries currently render an accessible neutral marker and their authoritative tooltip",
+    "physical p95 event latency evidence; this remains an external evidence-machine gate"
+  ],
+  "commands": [
+    "cargo clippy -p shell-provider-protocol -p notification-area-host -p taskbar-ui -p superdesktop-app --all-targets --offline -- -D warnings",
+    "cargo test -p shell-provider-protocol -p notification-area-host -p taskbar-ui -p superdesktop-app --offline",
+    "cargo build -p notification-area-host -p superdesktop-app --offline",
+    "target/debug/superdesktop-app.exe --verification-capture-ms 1250"
+  ],
+  "verification": {
+    "clippy": "passed",
+    "tests": {
+      "notification-area-host": "3 passed including process integration",
+      "shell-provider-protocol": "7 passed",
+      "taskbar-ui": "24 passed",
+      "superdesktop-app": "7 passed"
+    },
+    "preview_smoke_exit_code": 0,
+    "preview_trace": "notification:snapshot-reconciled"
+  }
+}

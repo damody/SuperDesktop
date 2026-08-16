@@ -47,6 +47,8 @@ pub enum NotificationMutation {
     Delete { key: IconKey, generation: u64 },
     Focus { key: IconKey, generation: u64 },
     Disconnect { client_id: String },
+    Event { event: NotificationEvent },
+    DrainEvents { client_id: String },
     Snapshot,
     Health,
 }
@@ -54,13 +56,16 @@ pub enum NotificationMutation {
 impl Validate for NotificationMutation {
     fn validate(&self) -> Result<(), ValidationError> {
         match self {
-            Self::RegisterClient { client_id } | Self::Disconnect { client_id } => IconKey {
+            Self::RegisterClient { client_id }
+            | Self::Disconnect { client_id }
+            | Self::DrainEvents { client_id } => IconKey {
                 client_id: client_id.clone(),
                 icon_id: 0,
             }
             .validate(),
             Self::Add { icon } | Self::Modify { icon } => icon.validate(),
             Self::Delete { key, .. } | Self::Focus { key, .. } => key.validate(),
+            Self::Event { event } => event.validate(),
             Self::Snapshot | Self::Health => Ok(()),
         }
     }
@@ -124,6 +129,7 @@ pub enum NotificationHostResponse {
     Accepted { changed: bool, generation: u64 },
     Snapshot(NotificationSnapshot),
     Health(NotificationHostHealth),
+    Events(Vec<NotificationEvent>),
     Rejected(String),
 }
 

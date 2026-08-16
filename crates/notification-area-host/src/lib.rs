@@ -14,6 +14,7 @@ pub struct NotificationRegistry {
     clients: BTreeSet<String>,
     icons: BTreeMap<IconKey, RegisteredIcon>,
     generation: u64,
+    events: NotificationEventQueue,
 }
 
 impl NotificationRegistry {
@@ -77,6 +78,22 @@ impl NotificationRegistry {
                 let before = self.icons.len();
                 self.icons.retain(|key, _| key.client_id != client_id);
                 self.accepted(client || before != self.icons.len())
+            }
+            NotificationMutation::Event { event } => {
+                if !self.icons.contains_key(&event.key) {
+                    return NotificationHostResponse::Rejected("event-icon-not-registered".into());
+                }
+                if self.events.push(event) {
+                    self.accepted(false)
+                } else {
+                    NotificationHostResponse::Rejected("event-capacity".into())
+                }
+            }
+            NotificationMutation::DrainEvents { client_id } => {
+                if !self.clients.contains(&client_id) {
+                    return NotificationHostResponse::Rejected("client-not-registered".into());
+                }
+                NotificationHostResponse::Events(self.events.drain_client(&client_id))
             }
             NotificationMutation::Snapshot => NotificationHostResponse::Snapshot(self.snapshot()),
             NotificationMutation::Health => {
@@ -164,6 +181,20 @@ impl NotificationEventQueue {
     pub fn is_empty(&self) -> bool {
         self.events.is_empty()
     }
+
+    pub fn drain_client(&mut self, client_id: &str) -> Vec<NotificationEvent> {
+        let mut retained = VecDeque::with_capacity(self.events.len());
+        let mut drained = Vec::new();
+        while let Some(event) = self.events.pop_front() {
+            if event.key.client_id == client_id {
+                drained.push(event);
+            } else {
+                retained.push_back(event);
+            }
+        }
+        self.events = retained;
+        drained
+    }
 }
 
 #[cfg(test)]
@@ -205,5 +236,41 @@ mod tests {
             client_id: "client".into(),
         });
         assert!(registry.snapshot().icons.is_empty());
+    }
+
+    #[test]
+    fn protected_events_round_trip_only_to_the_owning_client() {
+        let mut registry = NotificationRegistry::default();
+        registry.apply(NotificationMutation::RegisterClient {
+            client_id: "client".into(),
+        });
+        registry.apply(NotificationMutation::Add { icon: icon(1) });
+        let event = NotificationEvent {
+            correlation_id: "activation".into(),
+            key: IconKey {
+                client_id: "client".into(),
+                icon_id: 1,
+            },
+            kind: NotificationEventKind::Activate,
+            admitted_unix_ms: 42,
+        };
+        assert!(matches!(
+            registry.apply(NotificationMutation::Event {
+                event: event.clone()
+            }),
+            NotificationHostResponse::Accepted { changed: false, .. }
+        ));
+        assert_eq!(
+            registry.apply(NotificationMutation::DrainEvents {
+                client_id: "client".into()
+            }),
+            NotificationHostResponse::Events(vec![event])
+        );
+        assert!(matches!(
+            registry.apply(NotificationMutation::DrainEvents {
+                client_id: "unknown".into()
+            }),
+            NotificationHostResponse::Rejected(_)
+        ));
     }
 }

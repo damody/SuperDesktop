@@ -1,12 +1,15 @@
 use std::rc::Rc;
 
 use gpui::{
-    App, Context, FocusHandle, InteractiveElement, IntoElement, ParentElement, Render,
+    App, AppContext, Context, FocusHandle, InteractiveElement, IntoElement, ParentElement, Render,
     StatefulInteractiveElement, Styled, Window, div, linear_color_stop, linear_gradient,
     prelude::FluentBuilder as _, px, rgb, svg,
 };
 
-use crate::{AccessibleTask, StatusRegion, TaskbarLayout};
+use crate::{
+    AccessibleTask, NotificationAreaModel, NotificationPlacement, StatusRegion, TaskbarLayout,
+};
+use shell_provider_protocol::{IconKey, NotificationEventKind};
 
 pub struct TaskbarView {
     pub accessible_root_name: String,
@@ -14,11 +17,29 @@ pub struct TaskbarView {
     pub tasks: Vec<AccessibleTask>,
     pub fixed_name: String,
     pub status: StatusRegion,
+    pub notification_area: NotificationAreaModel,
     pub callbacks: Option<TaskbarCallbacks>,
     pub keyboard_focus: Option<FocusHandle>,
 }
 
 pub type TaskCallback = Rc<dyn Fn(&str, &mut App)>;
+pub type NotificationCallback = Rc<dyn Fn(&IconKey, NotificationEventKind)>;
+
+struct NotificationTooltip {
+    text: String,
+}
+
+impl Render for NotificationTooltip {
+    fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+        div()
+            .px_2()
+            .py_1()
+            .rounded_md()
+            .bg(rgb(0x20242b))
+            .text_color(rgb(0xffffff))
+            .child(self.text.clone())
+    }
+}
 
 #[derive(Clone)]
 pub struct TaskbarCallbacks {
@@ -26,6 +47,7 @@ pub struct TaskbarCallbacks {
     pub task_view: Rc<dyn Fn(&mut App)>,
     pub fixed: Rc<dyn Fn()>,
     pub task: TaskCallback,
+    pub notification: NotificationCallback,
     pub rendered: Rc<dyn Fn()>,
 }
 
@@ -38,11 +60,28 @@ impl Render for TaskbarView {
             .map(|value| Rc::clone(&value.task_view));
         let fixed = self.callbacks.as_ref().map(|value| Rc::clone(&value.fixed));
         let task_callback = self.callbacks.as_ref().map(|value| Rc::clone(&value.task));
+        let notification_callback = self
+            .callbacks
+            .as_ref()
+            .map(|value| Rc::clone(&value.notification));
         let start_key = start.clone();
         let task_view_key = task_view.clone();
         let fixed_key = fixed.clone();
         let root_fixed_key = fixed.clone();
         let keyboard_focus = self.keyboard_focus.clone();
+        let overflow_open = self.notification_area.overflow_open();
+        let notification_nodes = self.notification_area.accessible_nodes();
+        let visible_notifications = notification_nodes
+            .iter()
+            .filter(|node| node.placement == NotificationPlacement::Visible)
+            .cloned()
+            .collect::<Vec<_>>();
+        let overflow_notifications = notification_nodes
+            .iter()
+            .filter(|node| node.placement == NotificationPlacement::Overflow)
+            .cloned()
+            .collect::<Vec<_>>();
+        let has_overflow = !overflow_notifications.is_empty();
         let high_contrast = std::env::var("SUPERDESKTOP_THEME").as_deref() == Ok("high-contrast");
         let start_color = if high_contrast {
             rgb(0xffff00)
@@ -93,6 +132,110 @@ impl Render for TaskbarView {
             })
             .when(high_contrast, |element| element.bg(rgb(0x000000)))
             .text_size(px(14.))
+            .child(
+                div()
+                    .id("notification-area")
+                    .role(gpui::Role::Group)
+                    .aria_label("Notification area")
+                    .h(px(80.))
+                    .flex_none()
+                    .relative()
+                    .flex()
+                    .items_center()
+                    .children(visible_notifications.into_iter().map(|node| {
+                        let callback = notification_callback.clone();
+                        let context_callback = notification_callback.clone();
+                        let key = node.key.clone();
+                        let context_key = node.key.clone();
+                        let tooltip = node.name.clone();
+                        div()
+                            .id(node.stable_id)
+                            .role(gpui::Role::Button)
+                            .aria_label(node.name.clone())
+                            .tooltip(move |_, cx| {
+                                let text = tooltip.clone();
+                                cx.new(|_| NotificationTooltip { text }).into()
+                            })
+                            .tab_index(0)
+                            .w(px(36.))
+                            .h(px(36.))
+                            .rounded_md()
+                            .flex()
+                            .items_center()
+                            .justify_center()
+                            .when(node.focused, |element| element.bg(rgb(0x285b8f)))
+                            .on_click(move |_, _, _| {
+                                if let Some(callback) = &callback {
+                                    callback(&key, NotificationEventKind::Activate);
+                                }
+                            })
+                            .on_mouse_down(gpui::MouseButton::Right, move |_, _, _| {
+                                if let Some(callback) = &context_callback {
+                                    callback(&context_key, NotificationEventKind::Context);
+                                }
+                            })
+                            .child("•")
+                    }))
+                    .when(has_overflow, |area| {
+                        area.child(
+                            div()
+                                .id("notification-overflow-control")
+                                .role(gpui::Role::Button)
+                                .aria_label("Show hidden icons")
+                                .tab_index(0)
+                                .w(px(32.))
+                                .h(px(36.))
+                                .flex()
+                                .items_center()
+                                .justify_center()
+                                .on_click(_cx.listener(|this, _, _, cx| {
+                                    if this.notification_area.overflow_open() {
+                                        this.notification_area.dismiss_overflow();
+                                    } else {
+                                        this.notification_area.open_overflow();
+                                    }
+                                    cx.notify();
+                                }))
+                                .child("⌃"),
+                        )
+                    })
+                    .when(overflow_open, |area| {
+                        area.child(
+                            div()
+                                .id("notification-overflow")
+                                .role(gpui::Role::Dialog)
+                                .aria_label("Hidden notification icons")
+                                .absolute()
+                                .bottom(px(80.))
+                                .right_0()
+                                .p_2()
+                                .flex()
+                                .flex_wrap()
+                                .w(px(220.))
+                                .bg(rgb(0x20242b))
+                                .children(overflow_notifications.into_iter().map(|node| {
+                                    let callback = notification_callback.clone();
+                                    let key = node.key.clone();
+                                    div()
+                                        .id(node.stable_id)
+                                        .role(gpui::Role::Button)
+                                        .aria_label(node.name.clone())
+                                        .tab_index(0)
+                                        .w(px(40.))
+                                        .h(px(40.))
+                                        .flex()
+                                        .items_center()
+                                        .justify_center()
+                                        .on_click(move |_, _, _| {
+                                            if let Some(callback) = &callback {
+                                                callback(&key, NotificationEventKind::Activate);
+                                            }
+                                        })
+                                        .child("•")
+                                })),
+                        )
+                    }),
+            )
             .child(
                 div()
                     .id("start-control")

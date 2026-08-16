@@ -13,6 +13,7 @@ pub enum NotificationPlacement {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct NotificationAccessibleNode {
+    pub key: IconKey,
     pub stable_id: String,
     pub name: String,
     pub role: &'static str,
@@ -41,15 +42,20 @@ impl NotificationAreaModel {
         if snapshot.generation < self.generation || snapshot.validate().is_err() {
             return false;
         }
-        self.generation = snapshot.generation;
-        self.icons = snapshot
+        let next_generation = snapshot.generation;
+        let next_icons = snapshot
             .icons
             .into_iter()
             .map(|icon| (icon.key.clone(), icon))
             .collect();
+        let changed = !self.provider_available
+            || self.generation != next_generation
+            || self.icons != next_icons;
+        self.generation = next_generation;
+        self.icons = next_icons;
         self.provider_available = true;
         self.relayout(visible_capacity);
-        true
+        changed
     }
 
     pub fn provider_unavailable(&mut self) {
@@ -69,6 +75,9 @@ impl NotificationAreaModel {
     }
     pub fn overflow(&self) -> &[IconKey] {
         &self.overflow
+    }
+    pub fn overflow_open(&self) -> bool {
+        self.overflow_open
     }
 
     pub fn open_overflow(&mut self) {
@@ -125,6 +134,7 @@ impl NotificationAreaModel {
             .filter_map(|(key, placement)| {
                 let icon = self.icons.get(key)?;
                 Some(NotificationAccessibleNode {
+                    key: key.clone(),
                     stable_id: format!("notification:{}:{}", key.client_id, key.icon_id),
                     name: icon.icon.tooltip.clone(),
                     role: "button",

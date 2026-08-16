@@ -6,6 +6,7 @@ compile_error!("SuperDesktop is supported only on Windows targets.");
 mod composition;
 mod identity;
 mod lifecycle;
+mod notification_client;
 mod provider_client;
 mod surface_runtime;
 
