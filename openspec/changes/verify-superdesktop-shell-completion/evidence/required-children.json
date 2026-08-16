@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "children": [
+    "add-superdesktop-desktop-file-operations",
+    "add-superdesktop-notification-area-host",
+    "add-superdesktop-shell-context-menu-host",
+    "add-superdesktop-shell-installer",
+    "add-superdesktop-start-search",
+    "add-superdesktop-taskbar-advanced-interactions",
+    "add-superdesktop-virtual-desktops",
+    "extend-superdesktop-shell-contracts"
+  ]
+}

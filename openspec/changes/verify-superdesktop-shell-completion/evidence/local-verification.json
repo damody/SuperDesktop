@@ -1,0 +1,33 @@
+{
+  "change": "verify-superdesktop-shell-completion",
+  "result": "local_passed_external_pending",
+  "captured_at_utc": "2026-08-16T16:45:26.5757801Z",
+  "commands": {
+    "cargo_fmt": "passed",
+    "cargo_check_workspace_offline": "passed",
+    "cargo_clippy_workspace_all_targets_deny_warnings": "passed",
+    "cargo_test_workspace_offline": "passed",
+    "rollup_schema_validation": "passed",
+    "completion_children_openspec_strict": "passed",
+    "verification_tasks_structure": "passed",
+    "installer_live_dry_run_non_mutation": "passed"
+  },
+  "local_gates": {
+    "G-A11Y-I18N": "passed",
+    "G-ARCH": "passed",
+    "G-DESKTOP": "passed",
+    "G-DPI-MONITOR-VIRTUAL": "passed",
+    "G-PERF": "passed",
+    "G-SAFETY": "passed",
+    "G-TASKBAR": "passed",
+    "G-TRACE": "passed"
+  },
+  "external_gates": {
+    "G-DPI-MONITOR-PHYSICAL": "external_pending",
+    "G-GUARDIAN-RECOVERY": "external_pending",
+    "G-INSTALL-ROLLBACK": "external_pending",
+    "G-REVIEW": "external_pending",
+    "G-SHELL-TAKEOVER": "external_pending"
+  },
+  "release_allowed": false
+}

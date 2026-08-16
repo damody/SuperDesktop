@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://superdesktop.local/schemas/shell-completion-rollup-v1.json",
+  "title": "SuperDesktop shell completion roll-up",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "generated_at_utc", "sources", "gates", "limitations", "commands", "decision"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "generated_at_utc": { "type": "string", "format": "date-time" },
+    "sources": {
+      "type": "object",
+      "minProperties": 8,
+      "maxProperties": 8,
+      "propertyNames": {
+        "enum": [
+          "add-superdesktop-desktop-file-operations",
+          "add-superdesktop-notification-area-host",
+          "add-superdesktop-shell-context-menu-host",
+          "add-superdesktop-shell-installer",
+          "add-superdesktop-start-search",
+          "add-superdesktop-taskbar-advanced-interactions",
+          "add-superdesktop-virtual-desktops",
+          "extend-superdesktop-shell-contracts"
+        ]
+      },
+      "additionalProperties": { "$ref": "#/$defs/source" }
+    },
+    "gates": {
+      "type": "object",
+      "minProperties": 13,
+      "maxProperties": 13,
+      "propertyNames": {
+        "enum": [
+          "G-A11Y-I18N", "G-ARCH", "G-DESKTOP", "G-DPI-MONITOR-PHYSICAL",
+          "G-DPI-MONITOR-VIRTUAL", "G-GUARDIAN-RECOVERY", "G-INSTALL-ROLLBACK",
+          "G-PERF", "G-REVIEW", "G-SAFETY", "G-SHELL-TAKEOVER", "G-TASKBAR", "G-TRACE"
+        ]
+      },
+      "additionalProperties": { "enum": ["passed", "external_pending", "failed"] }
+    },
+    "limitations": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/limitation" }
+    },
+    "commands": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "decision": { "$ref": "#/$defs/decision" }
+  },
+  "$defs": {
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["change", "relative_path", "sha256", "local_result"],
+      "properties": {
+        "change": { "type": "string", "minLength": 1 },
+        "relative_path": { "type": "string", "pattern": "^openspec/changes/" },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "local_result": { "const": "passed" }
+      }
+    },
+    "limitation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["capability", "disposition", "reason"],
+      "properties": {
+        "capability": { "type": "string", "minLength": 1 },
+        "disposition": { "type": "string", "minLength": 1 },
+        "reason": { "type": "string", "minLength": 1 }
+      }
+    },
+    "decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["release_allowed", "disposition", "blockers"],
+      "properties": {
+        "release_allowed": { "type": "boolean" },
+        "disposition": { "enum": ["passed", "blocked"] },
+        "blockers": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } }
+      }
+    }
+  }
+}

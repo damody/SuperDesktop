@@ -3772,6 +3772,7 @@ name = "superdesktop-test-support"
 version = "0.1.0"
 dependencies = [
  "jsonschema",
+ "serde",
  "serde_json",
  "settings-store",
  "shell-core",

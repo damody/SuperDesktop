@@ -1,0 +1,99 @@
+{
+  "schema_version": 1,
+  "generated_at_utc": "2026-08-16T16:45:26.5757801Z",
+  "sources": {
+    "add-superdesktop-desktop-file-operations": {
+      "change": "add-superdesktop-desktop-file-operations",
+      "relative_path": "openspec/changes/add-superdesktop-desktop-file-operations/evidence/verification.json",
+      "sha256": "aed1e2356d4251b262074b1ba57680b0677b971b9c8f93ece6ff9c8fe00d5037",
+      "local_result": "passed"
+    },
+    "add-superdesktop-notification-area-host": {
+      "change": "add-superdesktop-notification-area-host",
+      "relative_path": "openspec/changes/add-superdesktop-notification-area-host/evidence/verification.json",
+      "sha256": "01029468b9b6f065e630a26ecc9fc137fff0acf60144176939bd551a0f389d88",
+      "local_result": "passed"
+    },
+    "add-superdesktop-shell-context-menu-host": {
+      "change": "add-superdesktop-shell-context-menu-host",
+      "relative_path": "openspec/changes/add-superdesktop-shell-context-menu-host/evidence/verification.json",
+      "sha256": "52b9f50007ce37438bffc19a9c6ad160c17bc1f27bf620de17492400bb25b8e8",
+      "local_result": "passed"
+    },
+    "add-superdesktop-shell-installer": {
+      "change": "add-superdesktop-shell-installer",
+      "relative_path": "openspec/changes/add-superdesktop-shell-installer/evidence/verification.json",
+      "sha256": "5c1553dcb85598671853212b8346633ef84a8b2b7b19eba5725018282b8abe26",
+      "local_result": "passed"
+    },
+    "add-superdesktop-start-search": {
+      "change": "add-superdesktop-start-search",
+      "relative_path": "openspec/changes/add-superdesktop-start-search/evidence/verification.json",
+      "sha256": "c824a9efdc196299670a5aea9319c7eb4e7d8e011433b62064ef38c0ac7e48a4",
+      "local_result": "passed"
+    },
+    "add-superdesktop-taskbar-advanced-interactions": {
+      "change": "add-superdesktop-taskbar-advanced-interactions",
+      "relative_path": "openspec/changes/add-superdesktop-taskbar-advanced-interactions/evidence/verification.json",
+      "sha256": "12837399a31977d1e17bb829f119baf23c597d91670382c5f0ad71aeeebbd099",
+      "local_result": "passed"
+    },
+    "add-superdesktop-virtual-desktops": {
+      "change": "add-superdesktop-virtual-desktops",
+      "relative_path": "openspec/changes/add-superdesktop-virtual-desktops/evidence/verification.json",
+      "sha256": "d494726bd8e528998e516ae4967d917a2ecac3f808ddffa4ee3ba8e2b4a476bf",
+      "local_result": "passed"
+    },
+    "extend-superdesktop-shell-contracts": {
+      "change": "extend-superdesktop-shell-contracts",
+      "relative_path": "openspec/changes/extend-superdesktop-shell-contracts/evidence/verification.json",
+      "sha256": "290844ebe8cf525172696ba5ab2d1b9fe85abb43443b3c9e4ec91d33d0d487e1",
+      "local_result": "passed"
+    }
+  },
+  "gates": {
+    "G-A11Y-I18N": "passed",
+    "G-ARCH": "passed",
+    "G-DESKTOP": "passed",
+    "G-DPI-MONITOR-PHYSICAL": "external_pending",
+    "G-DPI-MONITOR-VIRTUAL": "passed",
+    "G-GUARDIAN-RECOVERY": "external_pending",
+    "G-INSTALL-ROLLBACK": "external_pending",
+    "G-PERF": "passed",
+    "G-REVIEW": "external_pending",
+    "G-SAFETY": "passed",
+    "G-SHELL-TAKEOVER": "external_pending",
+    "G-TASKBAR": "passed",
+    "G-TRACE": "passed"
+  },
+  "limitations": [
+    {
+      "capability": "legacy-explorer-notification-protocol",
+      "disposition": "not-claimed",
+      "reason": "implemented host uses the owned versioned provider protocol"
+    },
+    {
+      "capability": "virtual-desktop-undocumented-operations",
+      "disposition": "unavailable",
+      "reason": "documented IVirtualDesktopManager adapter exposes query and move only"
+    }
+  ],
+  "commands": [
+    "cargo fmt --all -- --check",
+    "cargo check --workspace --offline",
+    "cargo clippy --workspace --all-targets --offline -- -D warnings",
+    "cargo test --workspace --offline",
+    "openspec validate --all --strict"
+  ],
+  "decision": {
+    "release_allowed": false,
+    "disposition": "blocked",
+    "blockers": [
+      "g-dpi-monitor-physical:external_pending",
+      "g-guardian-recovery:external_pending",
+      "g-install-rollback:external_pending",
+      "g-review:external_pending",
+      "g-shell-takeover:external_pending"
+    ]
+  }
+}
