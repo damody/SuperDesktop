@@ -98,6 +98,7 @@ pub struct VirtualDesktop {
 #[serde(rename_all = "kebab-case")]
 pub enum ProviderCapability {
     ContextMenu,
+    JumpList,
     SearchApplications,
     SearchFiles,
     SearchSettings,

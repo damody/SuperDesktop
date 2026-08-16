@@ -2,9 +2,14 @@
 
 use std::ffi::c_void;
 
-use windows::Win32::Foundation::HWND;
-use windows::Win32::Graphics::Dwm::DwmIsCompositionEnabled;
+use windows::Win32::Foundation::{HWND, RECT};
+use windows::Win32::Graphics::Dwm::{
+    DWM_THUMBNAIL_PROPERTIES, DWM_TNP_OPACITY, DWM_TNP_RECTDESTINATION,
+    DWM_TNP_SOURCECLIENTAREAONLY, DWM_TNP_VISIBLE, DwmIsCompositionEnabled, DwmRegisterThumbnail,
+    DwmUnregisterThumbnail, DwmUpdateThumbnailProperties,
+};
 use windows::Win32::UI::WindowsAndMessaging::IsWindow;
+use windows::core::BOOL;
 
 pub const PREVIEW_DEADLINE_MS: u64 = 500;
 
@@ -21,6 +26,74 @@ pub enum PreviewUnavailable {
 pub enum PreviewAdmission {
     Available { hwnd_value: isize },
     Unavailable(PreviewUnavailable),
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct ThumbnailRect {
+    pub left: i32,
+    pub top: i32,
+    pub right: i32,
+    pub bottom: i32,
+}
+
+#[derive(Debug)]
+pub struct LiveThumbnail {
+    handle: isize,
+}
+
+impl LiveThumbnail {
+    pub fn register(destination: isize, source: isize) -> Result<Self, PreviewUnavailable> {
+        if destination == source || destination == 0 || source == 0 {
+            return Err(PreviewUnavailable::InvalidWindow);
+        }
+        let destination = HWND(destination as *mut c_void);
+        let source = HWND(source as *mut c_void);
+        // SAFETY: Observation and registration use live opaque HWND values. DWM
+        // owns the returned thumbnail resource until our Drop implementation
+        // unregisters it; neither window handle is owned or retained by Rust.
+        if !unsafe { IsWindow(Some(destination)).as_bool() }
+            || !unsafe { IsWindow(Some(source)).as_bool() }
+        {
+            return Err(PreviewUnavailable::InvalidWindow);
+        }
+        let handle = unsafe { DwmRegisterThumbnail(destination, source) }
+            .map_err(|_| PreviewUnavailable::ProbeFailed)?;
+        Ok(Self { handle })
+    }
+
+    pub fn update_destination(&self, destination: ThumbnailRect) -> Result<(), PreviewUnavailable> {
+        if destination.right <= destination.left || destination.bottom <= destination.top {
+            return Err(PreviewUnavailable::InvalidWindow);
+        }
+        let properties = DWM_THUMBNAIL_PROPERTIES {
+            dwFlags: DWM_TNP_RECTDESTINATION
+                | DWM_TNP_VISIBLE
+                | DWM_TNP_OPACITY
+                | DWM_TNP_SOURCECLIENTAREAONLY,
+            rcDestination: RECT {
+                left: destination.left,
+                top: destination.top,
+                right: destination.right,
+                bottom: destination.bottom,
+            },
+            opacity: u8::MAX,
+            fVisible: BOOL(1),
+            fSourceClientAreaOnly: BOOL(1),
+            ..Default::default()
+        };
+        // SAFETY: The resource is live for self's lifetime and the packed
+        // properties value remains valid for the synchronous DWM call.
+        unsafe { DwmUpdateThumbnailProperties(self.handle, &raw const properties) }
+            .map_err(|_| PreviewUnavailable::ProbeFailed)
+    }
+}
+
+impl Drop for LiveThumbnail {
+    fn drop(&mut self) {
+        // SAFETY: The thumbnail handle was returned by DwmRegisterThumbnail and
+        // is unregistered exactly once by this owning Drop implementation.
+        let _ = unsafe { DwmUnregisterThumbnail(self.handle) };
+    }
 }
 
 pub fn admit_live_preview(
@@ -65,6 +138,10 @@ mod tests {
         assert_eq!(
             admit_live_preview(1, false, 0, 501),
             PreviewAdmission::Unavailable(PreviewUnavailable::DeadlineExpired)
+        );
+        assert_eq!(
+            LiveThumbnail::register(0, 0).unwrap_err(),
+            PreviewUnavailable::InvalidWindow
         );
     }
 }

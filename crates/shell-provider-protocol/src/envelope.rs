@@ -1,11 +1,12 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    MAX_COLLECTION_ITEMS, MenuContext, MenuEnumeration, MenuInvocation, MenuInvocationResult,
-    ProviderCapability, SearchBatch, SearchQuery, Validate, ValidationError,
+    JumpListRequest, JumpListResponse, MAX_COLLECTION_ITEMS, MenuContext, MenuEnumeration,
+    MenuInvocation, MenuInvocationResult, ProviderCapability, SearchBatch, SearchQuery, Validate,
+    ValidationError,
 };
 
-pub const CURRENT_PROTOCOL: ProtocolVersion = ProtocolVersion { major: 1, minor: 0 };
+pub const CURRENT_PROTOCOL: ProtocolVersion = ProtocolVersion { major: 1, minor: 1 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ProtocolVersion {
@@ -65,6 +66,7 @@ pub enum ProviderRequest {
     ContextMenuEnumerate(MenuContext),
     ContextMenuInvoke(MenuInvocation),
     Search(SearchQuery),
+    JumpList(JumpListRequest),
 }
 
 impl Validate for ProviderRequest {
@@ -87,6 +89,7 @@ impl Validate for ProviderRequest {
             Self::ContextMenuEnumerate(context) => context.validate()?,
             Self::ContextMenuInvoke(invocation) => invocation.validate()?,
             Self::Search(query) => query.validate()?,
+            Self::JumpList(request) => request.validate()?,
             _ => {}
         }
         Ok(())
@@ -129,6 +132,7 @@ pub enum ResponseBody {
     Menu(MenuEnumeration),
     MenuInvocation(MenuInvocationResult),
     Search(Vec<SearchBatch>),
+    JumpList(JumpListResponse),
     Message(String),
     Empty,
 }

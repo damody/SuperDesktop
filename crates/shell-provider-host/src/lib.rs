@@ -46,6 +46,7 @@ impl Dispatcher {
             max_active,
             capabilities: vec![
                 ProviderCapability::ContextMenu,
+                ProviderCapability::JumpList,
                 ProviderCapability::SearchApplications,
                 ProviderCapability::SearchFiles,
                 ProviderCapability::SearchSettings,
@@ -158,6 +159,14 @@ impl Dispatcher {
                 &request,
                 TerminalKind::Success,
                 ResponseBody::Search(dispatch_search(query)),
+            ),
+            ProviderRequest::JumpList(jump_request) => response(
+                &request,
+                TerminalKind::Success,
+                ResponseBody::JumpList(platform_win::common::jump_list::enumerate(
+                    &jump_request.application_id,
+                    20,
+                )),
             ),
             ProviderRequest::Cancel { .. } => unreachable!("cancel returns before dispatch"),
         };
@@ -420,5 +429,31 @@ mod tests {
                 .iter()
                 .any(|result| result.title == "Display settings")
         );
+    }
+
+    #[test]
+    fn jump_list_is_provider_backed_bounded_and_actionable() {
+        let mut dispatcher = Dispatcher::default();
+        let application_id = std::env::current_exe()
+            .unwrap()
+            .canonicalize()
+            .unwrap()
+            .to_string_lossy()
+            .into_owned();
+        let response = dispatcher.dispatch(
+            request(
+                "jump-list",
+                ProviderRequest::JumpList(shell_provider_protocol::JumpListRequest {
+                    application_id,
+                }),
+            ),
+            1_000,
+        );
+        let ResponseBody::JumpList(list) = response.body else {
+            panic!()
+        };
+        assert!(list.recent.len() <= 20);
+        assert_eq!(list.tasks.len(), 1);
+        assert!(list.tasks[0].id.0.starts_with("jump:launch:"));
     }
 }

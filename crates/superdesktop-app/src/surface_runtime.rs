@@ -24,16 +24,16 @@ use platform_win::common::{
 };
 use raw_window_handle::{HasWindowHandle, RawWindowHandle};
 use shell_provider_protocol::{
-    CURRENT_PROTOCOL, CommandDescriptor, CommandId, CommandRisk, Envelope, IconKey, MenuContext,
-    MenuEnumeration, MenuInvocation, NotificationEvent, NotificationEventKind,
-    NotificationHostResponse, NotificationMutation, ProviderRequest, ResponseBody, SearchBatch,
-    SearchQuery, TerminalKind,
+    CURRENT_PROTOCOL, CommandDescriptor, CommandId, CommandRisk, Envelope, IconKey,
+    JumpListRequest, MenuContext, MenuEnumeration, MenuInvocation, NotificationEvent,
+    NotificationEventKind, NotificationHostResponse, NotificationMutation, ProviderRequest,
+    ResponseBody, SearchBatch, SearchQuery, TerminalKind,
 };
 use taskbar_ui::{
-    AccessibleTask, ClockLocale, CoreStatus, FlyoutAction, NotificationAreaModel, PreviewCard,
-    ProviderState, StartActions, StartPowerAction, StartSnapshot, StartView, StatusRegion,
-    TaskAction, TaskFlyoutView, TaskViewModel, TaskViewSurface, TaskbarCallbacks, TaskbarLayout,
-    TaskbarView, TestClock,
+    AccessibleTask, ClockLocale, CoreStatus, FlyoutAction, JumpListModel, JumpListView,
+    NotificationAreaModel, PreviewCard, ProviderState, StartActions, StartPowerAction,
+    StartSnapshot, StartView, StatusRegion, TaskAction, TaskFlyoutView, TaskViewModel,
+    TaskViewSurface, TaskbarCallbacks, TaskbarLayout, TaskbarView, TestClock,
 };
 
 use crate::{notification_client::NotificationClient, provider_client::ProviderClient};
@@ -454,6 +454,43 @@ fn search_start(provider: &Rc<RefCell<ProviderClient>>, query: SearchQuery) -> V
         .unwrap_or_default()
 }
 
+fn query_jump_list(
+    provider: &Rc<RefCell<ProviderClient>>,
+    application_id: &str,
+    local: Vec<CommandDescriptor>,
+) -> JumpListModel {
+    let request = provider_request(
+        ProviderRequest::JumpList(JumpListRequest {
+            application_id: application_id.into(),
+        }),
+        2_000,
+    );
+    let response = provider
+        .borrow_mut()
+        .request(&request, Duration::from_millis(500))
+        .ok()
+        .and_then(|response| {
+            (response.terminal == TerminalKind::Success)
+                .then_some(response.body)
+                .and_then(|body| match body {
+                    ResponseBody::JumpList(list) => Some(list),
+                    _ => None,
+                })
+        })
+        .unwrap_or_default();
+    JumpListModel::compose(response.recent, response.frequent, response.tasks, local)
+}
+
+fn activate_jump_command(command: &CommandDescriptor) -> bool {
+    let id = command.id.0.as_str();
+    let path = id
+        .strip_prefix("jump:open:")
+        .or_else(|| id.strip_prefix("jump:launch:"));
+    path.is_some_and(|path| {
+        platform_win::common::desktop::launch_association(Path::new(path)).is_ok()
+    })
+}
+
 fn send_notification_event(
     client: &Rc<RefCell<NotificationClient>>,
     key: &IconKey,
@@ -705,19 +742,42 @@ fn group_window_ids(stable_id: &str) -> Vec<isize> {
         .collect()
 }
 
-fn visible_tasks() -> Result<Vec<AccessibleTask>, &'static str> {
+fn visible_tasks(
+    pin_order: &[String],
+    combine_groups: bool,
+) -> Result<Vec<AccessibleTask>, &'static str> {
     snapshot_task_windows()
         .map_err(|_| "task-window-snapshot")
         .map(|windows| {
-            let mut groups = BTreeMap::<String, Vec<_>>::new();
+            let mut grouped = BTreeMap::<String, Vec<_>>::new();
             for window in windows.into_iter().filter(|window| {
                 window.visible && !window.tool_window && !window.cloaked && !window.owned_transient
             }) {
-                groups
+                grouped
                     .entry(window.application_identity.clone())
                     .or_default()
                     .push(window);
             }
+            let mut groups = if combine_groups {
+                grouped.into_iter().collect::<Vec<_>>()
+            } else {
+                grouped
+                    .into_iter()
+                    .flat_map(|(application, windows)| {
+                        windows
+                            .into_iter()
+                            .map(move |window| (application.clone(), vec![window]))
+                    })
+                    .collect::<Vec<_>>()
+            };
+            groups.sort_by(|(left, _), (right, _)| {
+                let left_pin = pin_order.iter().position(|pin| pin == left);
+                let right_pin = pin_order.iter().position(|pin| pin == right);
+                left_pin
+                    .unwrap_or(usize::MAX)
+                    .cmp(&right_pin.unwrap_or(usize::MAX))
+                    .then_with(|| left.cmp(right))
+            });
             groups
                 .into_iter()
                 .take(16)
@@ -803,11 +863,16 @@ fn hwnd(window: &gpui::Window) -> Result<isize, &'static str> {
     Ok(handle.hwnd.get())
 }
 
-fn options(monitor: &MonitorRecord, taskbar: bool, interactive: bool) -> WindowOptions {
+fn options(
+    monitor: &MonitorRecord,
+    taskbar: bool,
+    interactive: bool,
+    taskbar_rows: u8,
+) -> WindowOptions {
     let scale = monitor.dpi_x as f32 / 96.0;
     let width = (monitor.bounds.right - monitor.bounds.left) as f32 / scale;
     let height = if taskbar {
-        80.0
+        40.0 * f32::from(taskbar_rows.clamp(1, 3))
     } else if interactive {
         (monitor.work_area.bottom - monitor.work_area.top) as f32 / scale
     } else {
@@ -878,6 +943,32 @@ fn task_flyout_options(monitor: &MonitorRecord, card_count: usize) -> WindowOpti
     let scale = monitor.dpi_x as f32 / 96.0;
     let width = (card_count.clamp(1, 4) as f32 * 228.0 + 16.0).min(928.0);
     let height = 260.0;
+    let monitor_width = (monitor.work_area.right - monitor.work_area.left) as f32 / scale;
+    let left = monitor.work_area.left as f32 / scale + (monitor_width - width).max(0.0) / 2.0;
+    WindowOptions {
+        window_bounds: Some(WindowBounds::Windowed(Bounds {
+            origin: point(
+                px(left),
+                px(monitor.work_area.bottom as f32 / scale - height),
+            ),
+            size: size(px(width), px(height)),
+        })),
+        titlebar: None,
+        focus: true,
+        show: true,
+        kind: WindowKind::PopUp,
+        is_movable: false,
+        is_resizable: false,
+        is_minimizable: false,
+        window_background: WindowBackgroundAppearance::Opaque,
+        ..Default::default()
+    }
+}
+
+fn jump_list_options(monitor: &MonitorRecord) -> WindowOptions {
+    let scale = monitor.dpi_x as f32 / 96.0;
+    let width = 360.0;
+    let height = 480.0_f32.min((monitor.work_area.bottom - monitor.work_area.top) as f32 / scale);
     let monitor_width = (monitor.work_area.right - monitor.work_area.left) as f32 / scale;
     let left = monitor.work_area.left as f32 / scale + (monitor_width - width).max(0.0) / 2.0;
     WindowOptions {
@@ -992,11 +1083,21 @@ fn fixed_node(monitor: &str) -> AccessibleNode {
 pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> {
     enable_per_monitor_v2()?;
     let snapshot = snapshot_real_monitors()?;
+    let (mut settings_store, settings_target) =
+        platform_win::common::settings_file::production_settings_store()
+            .map_err(|_| "settings-store-init")?;
+    let persisted_settings = settings_store
+        .load(&settings_target)
+        .map_err(|_| "settings-store-load")?
+        .settings;
     let state_matrix = std::env::var_os("SUPERDESKTOP_VERIFICATION_STATE_MATRIX").is_some();
     let initial_tasks = if state_matrix {
         verification_state_tasks()
     } else {
-        visible_tasks()?
+        visible_tasks(
+            &persisted_settings.taskbar.pins,
+            persisted_settings.taskbar.combine_groups,
+        )?
     };
     let wallpaper = std::env::var_os("SUPERDESKTOP_WALLPAPER_PATH")
         .map(std::path::PathBuf::from)
@@ -1008,13 +1109,6 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
     let desktop_operations = Rc::new(RefCell::new(DesktopOperationController::default()));
     let provider_client = Rc::new(RefCell::new(ProviderClient::adjacent()?));
     let notification_client = Rc::new(RefCell::new(NotificationClient::adjacent()?));
-    let (mut settings_store, settings_target) =
-        platform_win::common::settings_file::production_settings_store()
-            .map_err(|_| "settings-store-init")?;
-    let persisted_settings = settings_store
-        .load(&settings_target)
-        .map_err(|_| "settings-store-load")?
-        .settings;
     let settings_store = Rc::new(RefCell::new(settings_store));
     let settings_target = Rc::new(settings_target);
     let persisted_settings = Rc::new(RefCell::new(persisted_settings));
@@ -1036,7 +1130,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                     let desktop_namespace_for_view = Rc::clone(&desktop_namespace);
                     let desktop_operations_for_view = Rc::clone(&desktop_operations);
                     let provider_client_for_view = Rc::clone(&provider_client);
-                    let desktop = cx.open_window(options(&monitor, false, interactive), move |window, cx| {
+                    let desktop = cx.open_window(options(&monitor, false, interactive, 2), move |window, cx| {
                         if interactive {
                             window.activate_window();
                         }
@@ -1168,6 +1262,9 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                 if verification_surface.as_deref() == Some("desktop") {
                     continue;
                 }
+                if !persisted_settings.borrow().taskbar.all_monitors && !monitor.primary {
+                    continue;
+                }
                 let taskbar_monitor = monitor.clone();
                 let taskbar_tasks = initial_tasks.clone();
                 let taskbar_error = Rc::clone(&init_error);
@@ -1183,18 +1280,37 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                     Rc::new(RefCell::new(None::<gpui::WindowHandle<TaskFlyoutView>>));
                 let flyout_window_for_taskbar = Rc::clone(&flyout_window);
                 let flyout_monitor = taskbar_monitor.clone();
+                let jump_list_window =
+                    Rc::new(RefCell::new(None::<gpui::WindowHandle<JumpListView>>));
+                let jump_list_window_for_taskbar = Rc::clone(&jump_list_window);
+                let jump_list_monitor = taskbar_monitor.clone();
+                let jump_list_provider = Rc::clone(&provider_client);
+                let jump_settings_store = Rc::clone(&settings_store);
+                let jump_settings_target = Rc::clone(&settings_target);
+                let jump_persisted_settings = Rc::clone(&persisted_settings);
                 let task_view_window =
                     Rc::new(RefCell::new(None::<gpui::WindowHandle<TaskViewSurface>>));
                 let task_view_window_for_taskbar = Rc::clone(&task_view_window);
                 let task_view_monitor = taskbar_monitor.clone();
                 let notification_client_for_taskbar = Rc::clone(&notification_client);
-                let taskbar = cx.open_window(options(&monitor, true, interactive), move |window, cx| {
+                let production_taskbar_settings = persisted_settings.borrow().taskbar.clone();
+                let taskbar = cx.open_window(
+                    options(
+                        &monitor,
+                        true,
+                        interactive,
+                        production_taskbar_settings.rows,
+                    ),
+                    move |window, cx| {
                     if interactive {
                         window.activate_window();
                     }
                     let scale = taskbar_monitor.dpi_x as f32 / 96.0;
                     let width = taskbar_monitor.bounds.right - taskbar_monitor.bounds.left;
-                    let height = (80.0 * scale).round() as i32;
+                    let height = (40.0
+                        * f32::from(production_taskbar_settings.rows.clamp(1, 3))
+                        * scale)
+                        .round() as i32;
                     let bottom = if shell {
                         taskbar_monitor.bounds.bottom
                     } else {
@@ -1242,10 +1358,23 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                         if let Some(handle) = &focus_handle {
                             window.focus(handle, cx);
                         }
+                        let taskbar_overlays = taskbar_tasks
+                            .iter()
+                            .filter(|task| task.attention)
+                            .map(|task| {
+                                (
+                                    task.stable_id.clone(),
+                                    taskbar_ui::TaskOverlay {
+                                        attention: true,
+                                        ..taskbar_ui::TaskOverlay::default()
+                                    },
+                                )
+                            })
+                            .collect();
                         TaskbarView {
                         accessible_root_name: "SuperTaskbar".into(),
                         layout: TaskbarLayout::calculate(
-                            2,
+                            production_taskbar_settings.rows,
                             taskbar_monitor.dpi_x,
                             width as f32,
                             &[],
@@ -1255,6 +1384,8 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                         fixed_name: fixed_label().into(),
                         status: status(),
                         notification_area: NotificationAreaModel::default(),
+                        overlays: taskbar_overlays,
+                        show_labels: production_taskbar_settings.show_labels,
                         callbacks: Some(TaskbarCallbacks {
                             start: Rc::new(move |app| {
                                 trace_action("start");
@@ -1419,7 +1550,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                     .filter(|window| group_ids.contains(&window.hwnd_identity))
                                     .filter_map(|window| {
                                         let window_id = shell_core::WindowId::new(window.window_identity).ok()?;
-                                        let preview_available = matches!(
+                                        let preview_available = production_taskbar_settings.previews_enabled && matches!(
                                             platform_win::common::taskbar_preview::admit_live_preview(
                                                 window.hwnd_identity,
                                                 false,
@@ -1437,6 +1568,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                             },
                                             minimized: window.minimized,
                                             preview_available,
+                                            preview_source: preview_available.then_some(window.hwnd_identity),
                                         })
                                     })
                                     .collect::<Vec<_>>();
@@ -1448,11 +1580,127 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                     task_flyout_options(&flyout_monitor, cards.len()),
                                     move |window, cx| {
                                         window.activate_window();
+                                        let destination_hwnd = hwnd(window).unwrap_or_default();
                                         let dismiss_slot = Rc::clone(&dismiss_slot);
                                         cx.new(move |cx| {
                                             TaskFlyoutView::new(
                                                 cards,
                                                 Rc::new(apply_flyout_action),
+                                                Rc::new(move |window, _| {
+                                                    window.remove_window();
+                                                    *dismiss_slot.borrow_mut() = None;
+                                                }),
+                                                destination_hwnd,
+                                                cx,
+                                            )
+                                        })
+                                    },
+                                );
+                                if let Ok(handle) = opened {
+                                    *flyout_window_for_taskbar.borrow_mut() = Some(handle);
+                                }
+                            }),
+                            task_context: Rc::new(move |stable_id, app| {
+                                if let Some(existing) = *jump_list_window_for_taskbar.borrow() {
+                                    if existing
+                                        .update(app, |_, window, _| window.remove_window())
+                                        .is_ok()
+                                    {
+                                        *jump_list_window_for_taskbar.borrow_mut() = None;
+                                        return;
+                                    }
+                                    *jump_list_window_for_taskbar.borrow_mut() = None;
+                                }
+                                let Ok(windows) = snapshot_task_windows() else {
+                                    return;
+                                };
+                                let selected_ids = {
+                                    let group = group_window_ids(stable_id);
+                                    if group.is_empty() {
+                                        task_hwnd(stable_id).into_iter().collect::<Vec<_>>()
+                                    } else {
+                                        group
+                                    }
+                                };
+                                let Some(application_id) = windows
+                                    .iter()
+                                    .find(|window| selected_ids.contains(&window.hwnd_identity))
+                                    .map(|window| window.application_identity.clone())
+                                else {
+                                    return;
+                                };
+                                let application_windows = windows
+                                    .iter()
+                                    .filter(|window| window.application_identity == application_id)
+                                    .map(|window| window.hwnd_identity)
+                                    .collect::<Vec<_>>();
+                                let pinned = jump_persisted_settings
+                                    .borrow()
+                                    .taskbar
+                                    .pins
+                                    .contains(&application_id);
+                                let local = vec![
+                                    CommandDescriptor {
+                                        id: CommandId("local:taskbar-pin".into()),
+                                        label: if pinned { "Unpin from taskbar" } else { "Pin to taskbar" }.into(),
+                                        enabled: true,
+                                        risk: CommandRisk::Normal,
+                                        children: Vec::new(),
+                                    },
+                                    CommandDescriptor {
+                                        id: CommandId("local:taskbar-close-all".into()),
+                                        label: "Close all windows".into(),
+                                        enabled: !application_windows.is_empty(),
+                                        risk: CommandRisk::Destructive,
+                                        children: Vec::new(),
+                                    },
+                                ];
+                                let model = query_jump_list(&jump_list_provider, &application_id, local);
+                                let dismiss_slot = Rc::clone(&jump_list_window_for_taskbar);
+                                let invoke_store = Rc::clone(&jump_settings_store);
+                                let invoke_target = Rc::clone(&jump_settings_target);
+                                let invoke_settings = Rc::clone(&jump_persisted_settings);
+                                let invoke_application = application_id.clone();
+                                let opened = app.open_window(
+                                    jump_list_options(&jump_list_monitor),
+                                    move |window, cx| {
+                                        window.activate_window();
+                                        let dismiss_slot = Rc::clone(&dismiss_slot);
+                                        cx.new(move |cx| {
+                                            JumpListView::new(
+                                                model,
+                                                Rc::new(move |command| {
+                                                    let completed = match command.id.0.as_str() {
+                                                        "local:taskbar-pin" => {
+                                                            let mut settings = invoke_settings.borrow().clone();
+                                                            if pinned {
+                                                                settings.taskbar.pins.retain(|pin| pin != &invoke_application);
+                                                            } else if !settings.taskbar.pins.contains(&invoke_application) {
+                                                                settings.taskbar.pins.push(invoke_application.clone());
+                                                            }
+                                                            match invoke_store.borrow_mut().save(&invoke_target, &settings) {
+                                                                Ok(saved) => {
+                                                                    *invoke_settings.borrow_mut() = saved;
+                                                                    true
+                                                                }
+                                                                Err(_) => false,
+                                                            }
+                                                        }
+                                                        "local:taskbar-close-all" => application_windows.iter().all(|hwnd| {
+                                                            platform_win::common::taskbar::apply_window_action(
+                                                                *hwnd,
+                                                                platform_win::common::taskbar::WindowAction::Close,
+                                                            )
+                                                            .is_ok()
+                                                        }),
+                                                        _ => activate_jump_command(command),
+                                                    };
+                                                    trace_action(if completed {
+                                                        "taskbar:jump-list-action-succeeded"
+                                                    } else {
+                                                        "taskbar:jump-list-action-rejected"
+                                                    });
+                                                }),
                                                 Rc::new(move |window, _| {
                                                     window.remove_window();
                                                     *dismiss_slot.borrow_mut() = None;
@@ -1463,7 +1711,8 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                     },
                                 );
                                 if let Ok(handle) = opened {
-                                    *flyout_window_for_taskbar.borrow_mut() = Some(handle);
+                                    *jump_list_window_for_taskbar.borrow_mut() = Some(handle);
+                                    trace_action("taskbar:jump-list-opened");
                                 }
                             }),
                             notification: Rc::new(move |key, kind| {
@@ -1507,12 +1756,17 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                 let refresh_foreground = cx.foreground_executor().clone();
                 let refresh_app = cx.to_async();
                 let refresh_notification_client = Rc::clone(&notification_client);
+                let refresh_settings = Rc::clone(&persisted_settings);
                 refresh_foreground
                     .spawn(async move {
                         let mut notification_tick = 0u8;
                         loop {
                             refresh_background.timer(Duration::from_millis(50)).await;
-                            let Ok(tasks) = visible_tasks() else {
+                            let taskbar_settings = refresh_settings.borrow().taskbar.clone();
+                            let Ok(tasks) = visible_tasks(
+                                &taskbar_settings.pins,
+                                taskbar_settings.combine_groups,
+                            ) else {
                                 continue;
                             };
                             notification_tick = notification_tick.wrapping_add(1);
@@ -1539,6 +1793,19 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                             alive = true;
                                             if view.tasks != tasks {
                                                 view.tasks = tasks.clone();
+                                                let live = tasks
+                                                    .iter()
+                                                    .map(|task| task.stable_id.as_str())
+                                                    .collect::<std::collections::BTreeSet<_>>();
+                                                view.overlays
+                                                    .retain(|stable_id, _| live.contains(stable_id.as_str()));
+                                                for task in &tasks {
+                                                    let overlay = view
+                                                        .overlays
+                                                        .entry(task.stable_id.clone())
+                                                        .or_default();
+                                                    overlay.attention = task.attention;
+                                                }
                                                 trace_action("shell-event");
                                                 cx.notify();
                                             }

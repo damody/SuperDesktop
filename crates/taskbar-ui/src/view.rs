@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{collections::BTreeMap, rc::Rc};
 
 use gpui::{
     App, AppContext, Context, FocusHandle, InteractiveElement, IntoElement, ParentElement, Render,
@@ -7,7 +7,8 @@ use gpui::{
 };
 
 use crate::{
-    AccessibleTask, NotificationAreaModel, NotificationPlacement, StatusRegion, TaskbarLayout,
+    AccessibleTask, NotificationAreaModel, NotificationPlacement, ProgressState, StatusRegion,
+    TaskOverlay, TaskbarLayout,
 };
 use shell_provider_protocol::{IconKey, NotificationEventKind};
 
@@ -18,6 +19,8 @@ pub struct TaskbarView {
     pub fixed_name: String,
     pub status: StatusRegion,
     pub notification_area: NotificationAreaModel,
+    pub overlays: BTreeMap<String, TaskOverlay>,
+    pub show_labels: bool,
     pub callbacks: Option<TaskbarCallbacks>,
     pub keyboard_focus: Option<FocusHandle>,
 }
@@ -47,12 +50,14 @@ pub struct TaskbarCallbacks {
     pub task_view: Rc<dyn Fn(&mut App)>,
     pub fixed: Rc<dyn Fn()>,
     pub task: TaskCallback,
+    pub task_context: TaskCallback,
     pub notification: NotificationCallback,
     pub rendered: Rc<dyn Fn()>,
 }
 
 impl Render for TaskbarView {
-    fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+        let bar_height = px(self.layout.height / window.scale_factor());
         let start = self.callbacks.as_ref().map(|value| Rc::clone(&value.start));
         let task_view = self
             .callbacks
@@ -60,6 +65,12 @@ impl Render for TaskbarView {
             .map(|value| Rc::clone(&value.task_view));
         let fixed = self.callbacks.as_ref().map(|value| Rc::clone(&value.fixed));
         let task_callback = self.callbacks.as_ref().map(|value| Rc::clone(&value.task));
+        let task_context_callback = self
+            .callbacks
+            .as_ref()
+            .map(|value| Rc::clone(&value.task_context));
+        let overlays = self.overlays.clone();
+        let show_labels = self.show_labels;
         let notification_callback = self
             .callbacks
             .as_ref()
@@ -137,7 +148,7 @@ impl Render for TaskbarView {
                     .id("notification-area")
                     .role(gpui::Role::Group)
                     .aria_label("Notification area")
-                    .h(px(80.))
+                    .h(bar_height)
                     .flex_none()
                     .relative()
                     .flex()
@@ -206,7 +217,7 @@ impl Render for TaskbarView {
                                 .role(gpui::Role::Dialog)
                                 .aria_label("Hidden notification icons")
                                 .absolute()
-                                .bottom(px(80.))
+                                .bottom(bar_height)
                                 .right_0()
                                 .p_2()
                                 .flex()
@@ -243,7 +254,7 @@ impl Render for TaskbarView {
                     .aria_label("Start")
                     .tab_index(0)
                     .w(px(48.))
-                    .h(px(80.))
+                    .h(bar_height)
                     .flex_none()
                     .relative()
                     .flex()
@@ -306,7 +317,7 @@ impl Render for TaskbarView {
                     .aria_label("Task View")
                     .tab_index(0)
                     .w(px(44.))
-                    .h(px(80.))
+                    .h(bar_height)
                     .flex_none()
                     .flex()
                     .items_center()
@@ -362,9 +373,19 @@ impl Render for TaskbarView {
                     .children(self.tasks.iter().map(move |task| {
                         let callback = task_callback.clone();
                         let key_callback = callback.clone();
+                        let context_callback = task_context_callback.clone();
                         let stable_id = task.stable_id.clone();
                         let key_stable_id = stable_id.clone();
+                        let context_stable_id = stable_id.clone();
                         let available = task.available;
+                        let overlay =
+                            overlays
+                                .get(&task.stable_id)
+                                .cloned()
+                                .unwrap_or_else(|| TaskOverlay {
+                                    attention: task.attention,
+                                    ..TaskOverlay::default()
+                                });
                         let state = if !available {
                             "unavailable".to_owned()
                         } else if task.attention {
@@ -379,10 +400,12 @@ impl Render for TaskbarView {
                             "available".to_owned()
                         };
                         let accessible_name = format!("{} [{state}]", task.name);
-                        let display_name = if task.group_size > 1 {
+                        let display_name = if show_labels && task.group_size > 1 {
                             format!("{} ({})", task.name, task.group_size)
-                        } else {
+                        } else if show_labels {
                             task.name.clone()
+                        } else {
+                            task.name.chars().next().unwrap_or('?').to_string()
                         };
                         let underline = if !available {
                             rgb(0x6b6b6b)
@@ -406,6 +429,7 @@ impl Render for TaskbarView {
                             .h(px(40.))
                             .flex_none()
                             .px_2()
+                            .relative()
                             .flex()
                             .items_center()
                             .cursor_pointer()
@@ -428,15 +452,55 @@ impl Render for TaskbarView {
                                             callback(&key_stable_id, cx);
                                         }
                                     })
+                                    .on_mouse_down(gpui::MouseButton::Right, move |_, _, cx| {
+                                        if let Some(callback) = &context_callback {
+                                            callback(&context_stable_id, cx);
+                                        }
+                                    })
                             })
                             .child(display_name)
+                            .when_some(overlay.badge.clone(), |element, badge| {
+                                element.child(
+                                    div()
+                                        .ml_auto()
+                                        .px_1()
+                                        .rounded_md()
+                                        .bg(rgb(0x8b1a1a))
+                                        .text_color(rgb(0xffffff))
+                                        .child(badge),
+                                )
+                            })
+                            .when(overlay.progress != ProgressState::None, |element| {
+                                let (fraction, color) = match overlay.progress {
+                                    ProgressState::None => (0.0, rgb(0x1683d8)),
+                                    ProgressState::Indeterminate => (1.0, rgb(0x1683d8)),
+                                    ProgressState::Normal(value) => {
+                                        (f32::from(value.min(1000)) / 1000.0, rgb(0x1683d8))
+                                    }
+                                    ProgressState::Paused(value) => {
+                                        (f32::from(value.min(1000)) / 1000.0, rgb(0xffb900))
+                                    }
+                                    ProgressState::Error(value) => {
+                                        (f32::from(value.min(1000)) / 1000.0, rgb(0xd13438))
+                                    }
+                                };
+                                element.child(
+                                    div()
+                                        .absolute()
+                                        .left_0()
+                                        .bottom_0()
+                                        .h(px(3.))
+                                        .w(px(190.0 * fraction))
+                                        .bg(color),
+                                )
+                            })
                     })),
             )
             .child(
                 div()
                     .ml_auto()
                     .w(px(300.))
-                    .h(px(80.))
+                    .h(bar_height)
                     .flex_none()
                     .px_2()
                     .flex()

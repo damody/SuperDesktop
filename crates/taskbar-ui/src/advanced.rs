@@ -1,12 +1,14 @@
 use std::{
+    cell::RefCell,
     collections::{BTreeMap, BTreeSet},
     rc::Rc,
 };
 
 use gpui::{
     Context, FocusHandle, InteractiveElement, IntoElement, ParentElement, Render,
-    StatefulInteractiveElement, Styled, Window, div, prelude::FluentBuilder as _, px, rgb,
+    StatefulInteractiveElement, Styled, Window, canvas, div, prelude::FluentBuilder as _, px, rgb,
 };
+use platform_win::common::taskbar_preview::{LiveThumbnail, ThumbnailRect};
 
 use settings_store::TaskbarSettings;
 use shell_core::{ApplicationId, WindowId};
@@ -21,6 +23,7 @@ pub struct PreviewCard {
     pub title: String,
     pub minimized: bool,
     pub preview_available: bool,
+    pub preview_source: Option<isize>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -39,12 +42,15 @@ pub struct FlyoutModel {
 
 pub type FlyoutWindowAction = Rc<dyn Fn(FlyoutAction)>;
 pub type FlyoutDismissAction = Rc<dyn Fn(&mut Window, &mut gpui::App)>;
+pub type JumpListInvokeAction = Rc<dyn Fn(&CommandDescriptor)>;
 
 pub struct TaskFlyoutView {
     pub model: FlyoutModel,
     action: FlyoutWindowAction,
     dismiss: FlyoutDismissAction,
     focus: FocusHandle,
+    destination_hwnd: isize,
+    thumbnails: Rc<RefCell<BTreeMap<WindowId, LiveThumbnail>>>,
 }
 
 impl TaskFlyoutView {
@@ -52,6 +58,7 @@ impl TaskFlyoutView {
         cards: Vec<PreviewCard>,
         action: FlyoutWindowAction,
         dismiss: FlyoutDismissAction,
+        destination_hwnd: isize,
         cx: &mut Context<Self>,
     ) -> Self {
         let mut model = FlyoutModel::default();
@@ -62,6 +69,8 @@ impl TaskFlyoutView {
             action,
             dismiss,
             focus: cx.focus_handle(),
+            destination_hwnd,
+            thumbnails: Rc::new(RefCell::new(BTreeMap::new())),
         }
     }
 }
@@ -71,6 +80,7 @@ impl Render for TaskFlyoutView {
         window.focus(&self.focus, cx);
         let action_for_key = self.action.clone();
         let dismiss_for_key = self.dismiss.clone();
+        let scale_factor = window.scale_factor();
         div()
             .id("task-group-flyout")
             .role(gpui::Role::Dialog)
@@ -121,6 +131,10 @@ impl Render for TaskFlyoutView {
                 let close_dismiss = self.dismiss.clone();
                 let activate_effect = FlyoutAction::Activate(card.window_id.clone());
                 let close_effect = FlyoutAction::Close(card.window_id.clone());
+                let preview_source = card.preview_source;
+                let preview_window = card.window_id.clone();
+                let destination_hwnd = self.destination_hwnd;
+                let thumbnails = Rc::clone(&self.thumbnails);
                 div()
                     .id(format!("flyout-card-{index}"))
                     .role(gpui::Role::Button)
@@ -143,15 +157,61 @@ impl Render for TaskFlyoutView {
                     .child(
                         div()
                             .flex_1()
+                            .relative()
                             .rounded_md()
                             .bg(rgb(0x2a343e))
                             .flex()
                             .items_center()
                             .justify_center()
-                            .child(if card.preview_available {
-                                "Live preview available"
-                            } else {
-                                "Preview unavailable"
+                            .when_some(preview_source, move |element, source| {
+                                element.child(
+                                    canvas(
+                                        |bounds, _, _| bounds,
+                                        move |bounds, _, _, _| {
+                                            let rect = ThumbnailRect {
+                                                left: (bounds.origin.x.as_f32() * scale_factor)
+                                                    .round()
+                                                    as i32,
+                                                top: (bounds.origin.y.as_f32() * scale_factor)
+                                                    .round()
+                                                    as i32,
+                                                right: ((bounds.origin.x + bounds.size.width)
+                                                    .as_f32()
+                                                    * scale_factor)
+                                                    .round()
+                                                    as i32,
+                                                bottom: ((bounds.origin.y + bounds.size.height)
+                                                    .as_f32()
+                                                    * scale_factor)
+                                                    .round()
+                                                    as i32,
+                                            };
+                                            let mut thumbnails = thumbnails.borrow_mut();
+                                            if !thumbnails.contains_key(&preview_window)
+                                                && let Ok(thumbnail) = LiveThumbnail::register(
+                                                    destination_hwnd,
+                                                    source,
+                                                )
+                                            {
+                                                thumbnails
+                                                    .insert(preview_window.clone(), thumbnail);
+                                            }
+                                            let failed = thumbnails
+                                                .get(&preview_window)
+                                                .is_some_and(|thumbnail| {
+                                                    thumbnail.update_destination(rect).is_err()
+                                                });
+                                            if failed {
+                                                thumbnails.remove(&preview_window);
+                                            }
+                                        },
+                                    )
+                                    .absolute()
+                                    .inset_0(),
+                                )
+                            })
+                            .when(!card.preview_available, |element| {
+                                element.child("Preview unavailable")
                             }),
                     )
                     .child(card.title.clone())
@@ -324,6 +384,134 @@ impl JumpListModel {
             .filter(|command| command.enabled)
             .cloned()
     }
+
+    pub fn entries(&self) -> Vec<(JumpListGroup, usize, &CommandDescriptor)> {
+        self.groups
+            .iter()
+            .flat_map(|(group, commands)| {
+                commands
+                    .iter()
+                    .enumerate()
+                    .map(move |(index, command)| (*group, index, command))
+            })
+            .collect()
+    }
+}
+
+pub struct JumpListView {
+    pub model: JumpListModel,
+    focused: usize,
+    invoke: JumpListInvokeAction,
+    dismiss: FlyoutDismissAction,
+    focus: FocusHandle,
+}
+
+impl JumpListView {
+    pub fn new(
+        model: JumpListModel,
+        invoke: JumpListInvokeAction,
+        dismiss: FlyoutDismissAction,
+        cx: &mut Context<Self>,
+    ) -> Self {
+        Self {
+            model,
+            focused: 0,
+            invoke,
+            dismiss,
+            focus: cx.focus_handle(),
+        }
+    }
+
+    fn move_focus(&mut self, delta: i32) {
+        let length = self.model.entries().len();
+        if length > 0 {
+            self.focused = (self.focused as i32 + delta).rem_euclid(length as i32) as usize;
+        }
+    }
+
+    fn focused_command(&self) -> Option<CommandDescriptor> {
+        let (group, index, _) = self.model.entries().get(self.focused).copied()?;
+        self.model.invoke(group, index)
+    }
+}
+
+impl Render for JumpListView {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        window.focus(&self.focus, cx);
+        let invoke_for_key = self.invoke.clone();
+        let dismiss_for_key = self.dismiss.clone();
+        let entries = self
+            .model
+            .entries()
+            .into_iter()
+            .enumerate()
+            .map(|(focus_index, (group, index, command))| {
+                (focus_index, group, index, command.clone())
+            })
+            .collect::<Vec<_>>();
+        div()
+            .id("task-jump-list")
+            .role(gpui::Role::Menu)
+            .aria_label("Jump List")
+            .tab_index(0)
+            .track_focus(&self.focus)
+            .size_full()
+            .p_2()
+            .flex()
+            .flex_col()
+            .gap_1()
+            .bg(rgb(0x182028))
+            .text_color(rgb(0xf4f7fa))
+            .on_key_down(
+                cx.listener(move |this, event: &gpui::KeyDownEvent, window, cx| {
+                    match event.keystroke.key.as_str() {
+                        "up" => this.move_focus(-1),
+                        "down" => this.move_focus(1),
+                        "enter" => {
+                            if let Some(command) = this.focused_command() {
+                                invoke_for_key(&command);
+                                dismiss_for_key(window, cx);
+                            }
+                        }
+                        "escape" => dismiss_for_key(window, cx),
+                        _ => return,
+                    }
+                    cx.stop_propagation();
+                    cx.notify();
+                }),
+            )
+            .children(
+                entries
+                    .into_iter()
+                    .map(|(focus_index, group, index, command)| {
+                        let invoke = self.invoke.clone();
+                        let dismiss = self.dismiss.clone();
+                        let enabled = command.enabled;
+                        let label = command.label.clone();
+                        div()
+                            .id(format!("jump-list-{group:?}-{index}"))
+                            .role(gpui::Role::MenuItem)
+                            .aria_label(label.clone())
+                            .tab_index(0)
+                            .px_3()
+                            .py_2()
+                            .rounded_md()
+                            .when(self.focused == focus_index, |element| {
+                                element.bg(rgb(0x285b8f))
+                            })
+                            .when(!enabled, |element| element.opacity(0.5))
+                            .when(enabled, |element| {
+                                element.cursor_pointer().on_click(cx.listener(
+                                    move |_, _, window, cx| {
+                                        invoke(&command);
+                                        dismiss(window, cx);
+                                    },
+                                ))
+                            })
+                            .child(label)
+                    }),
+            )
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -393,12 +581,14 @@ mod tests {
                     title: "One".into(),
                     minimized: false,
                     preview_available: false,
+                    preview_source: None,
                 },
                 PreviewCard {
                     window_id: window("two"),
                     title: "Two".into(),
                     minimized: true,
                     preview_available: true,
+                    preview_source: Some(2),
                 },
             ],
             100,

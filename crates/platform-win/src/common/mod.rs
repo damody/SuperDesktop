@@ -7,6 +7,7 @@ pub mod desktop_operations;
 pub mod explorer_recovery;
 pub mod ffi_boundary;
 pub mod guardian_lease;
+pub mod jump_list;
 pub mod monitor_dpi_start;
 pub mod native_window;
 pub mod owner_lease;

@@ -3,6 +3,7 @@
 mod context_menu;
 mod dto;
 mod envelope;
+mod jump_list;
 mod notification;
 mod search;
 mod validation;
@@ -19,6 +20,7 @@ pub use envelope::{
     CURRENT_PROTOCOL, Envelope, Handshake, HostHealth, ProtocolVersion, ProviderRequest,
     ProviderResponse, ResponseBody, TerminalKind, contract_manifest,
 };
+pub use jump_list::{JumpListRequest, JumpListResponse};
 pub use notification::{
     IconKey, NotificationEvent, NotificationEventKind, NotificationHostHealth,
     NotificationHostResponse, NotificationMutation, NotificationSnapshot, RegisteredIcon,

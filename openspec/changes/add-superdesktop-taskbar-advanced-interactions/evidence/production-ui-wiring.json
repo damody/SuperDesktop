@@ -8,17 +8,20 @@
     "single-window buttons retain activate, minimize, and restore behavior while multi-window buttons open an owned GPUI flyout",
     "flyout cards are rebuilt from a fresh authoritative snapshot and stale group members are omitted",
     "DWM composition and live-HWND preview capability is revalidated within the 500 millisecond admission budget",
+    "admitted source windows are registered with DwmRegisterThumbnail, updated to the GPUI card's DPI-scaled client rectangle, and unregistered by an owning Drop lease",
     "title/state fallback remains visible when live preview is unavailable",
     "pointer activation and close plus keyboard Left, Right, Enter, Delete, and Escape share typed FlyoutAction routes",
     "activation, restore, and WM_CLOSE are admitted only after the target HWND is revalidated",
     "flyout dialog, card, close-button, accessible labels, focus order, and visible focus state are wired",
-    "group and flyout windows use per-monitor logical placement above the taskbar"
+    "group and flyout windows use per-monitor logical placement above the taskbar",
+    "right-clicking a production task opens an owned accessible Jump List populated by the isolated provider host from bounded Windows Recent items and validated application tasks",
+    "Jump List pin or unpin and close-all commands remain local, revalidate HWNDs, atomically persist pin order, and refresh task ordering",
+    "normal, indeterminate, paused, error, badge, and attention overlays have independent production render paths",
+    "rows, pin order, combine-groups, labels, preview enablement, and multi-monitor preferences load from the versioned settings store and alter production layout/behavior"
   ],
-  "remaining_production_enrichment": [
-    "register and render the admitted DWM thumbnail inside each GPUI card; the current card reports capability and uses the required title fallback",
-    "wire provider-backed Jump Lists into a right-click production surface",
-    "consume real application progress, pause/error, badge, and attention events in the production TaskbarView",
-    "load and save advanced taskbar preference snapshots through settings-store in the production lifecycle"
+  "remaining_external_integration": [
+    "legacy third-party ITaskbarList3 progress and overlay calls still target the registered Windows taskband COM service; SuperDesktop renders all overlay states but a compatibility COM ingress requires a separately approved Windows shell-registration boundary",
+    "capture a physical shell-mode DWM thumbnail screenshot and timing artifact on the Windows 10 evidence machine"
   ],
   "commands": [
     "cargo clippy -p taskbar-ui -p platform-win -p superdesktop-app --all-targets --offline -- -D warnings",
@@ -30,7 +33,9 @@
     "clippy": "passed",
     "tests": {
       "taskbar-ui": "24 passed",
-      "platform-win": "41 passed",
+      "platform-win": "45 passed",
+      "shell-provider-protocol": "8 passed",
+      "shell-provider-host": "6 passed including process integration",
       "superdesktop-app": "7 passed"
     },
     "preview_smoke_exit_code": 0
