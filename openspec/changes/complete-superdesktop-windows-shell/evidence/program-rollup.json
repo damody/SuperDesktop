@@ -1,0 +1,121 @@
+{
+  "schema_version": 1,
+  "generated_at_utc": "2026-08-16T16:50:00Z",
+  "archived": false,
+  "ordered_changes": [
+    {
+      "order": 1,
+      "change": "extend-superdesktop-shell-contracts",
+      "commit": "a12ae9c1",
+      "tasks": { "complete": 14, "total": 14 },
+      "state": "complete",
+      "evidence": "openspec/changes/extend-superdesktop-shell-contracts/evidence/verification.json"
+    },
+    {
+      "order": 2,
+      "change": "add-superdesktop-desktop-file-operations",
+      "commit": "7cdb320d",
+      "tasks": { "complete": 13, "total": 13 },
+      "state": "complete",
+      "evidence": "openspec/changes/add-superdesktop-desktop-file-operations/evidence/verification.json"
+    },
+    {
+      "order": 3,
+      "change": "add-superdesktop-shell-context-menu-host",
+      "commit": "4b837c17",
+      "tasks": { "complete": 11, "total": 11 },
+      "state": "complete",
+      "evidence": "openspec/changes/add-superdesktop-shell-context-menu-host/evidence/verification.json"
+    },
+    {
+      "order": 4,
+      "change": "add-superdesktop-start-search",
+      "commit": "bcfe9fc9",
+      "tasks": { "complete": 12, "total": 12 },
+      "state": "complete",
+      "evidence": "openspec/changes/add-superdesktop-start-search/evidence/verification.json"
+    },
+    {
+      "order": 5,
+      "change": "add-superdesktop-taskbar-advanced-interactions",
+      "commit": "e0619cd5",
+      "tasks": { "complete": 11, "total": 11 },
+      "state": "complete",
+      "evidence": "openspec/changes/add-superdesktop-taskbar-advanced-interactions/evidence/verification.json"
+    },
+    {
+      "order": 6,
+      "change": "add-superdesktop-notification-area-host",
+      "commit": "a942e73c",
+      "tasks": { "complete": 10, "total": 10 },
+      "state": "complete",
+      "evidence": "openspec/changes/add-superdesktop-notification-area-host/evidence/verification.json"
+    },
+    {
+      "order": 7,
+      "change": "add-superdesktop-virtual-desktops",
+      "commit": "eaccbdea",
+      "tasks": { "complete": 10, "total": 10 },
+      "state": "complete",
+      "evidence": "openspec/changes/add-superdesktop-virtual-desktops/evidence/verification.json"
+    },
+    {
+      "order": 8,
+      "change": "add-superdesktop-shell-installer",
+      "commit": "d24ff0b3",
+      "tasks": { "complete": 11, "total": 11 },
+      "state": "complete",
+      "evidence": "openspec/changes/add-superdesktop-shell-installer/evidence/verification.json"
+    },
+    {
+      "order": 9,
+      "change": "verify-superdesktop-shell-completion",
+      "commit": "eeb024cb",
+      "tasks": { "complete": 10, "total": 14 },
+      "state": "local_complete_external_pending",
+      "evidence": "openspec/changes/verify-superdesktop-shell-completion/evidence/current-rollup.json"
+    }
+  ],
+  "capability_claims": {
+    "implemented": [
+      "provider-contracts-and-isolated-host",
+      "desktop-file-operations",
+      "isolated-shell-context-menu",
+      "owned-start-and-search",
+      "advanced-taskbar-interactions",
+      "documented-virtual-desktop-query-and-move",
+      "transactional-explicit-shell-installer"
+    ],
+    "implemented_owned_protocol": [
+      "notification-area-host"
+    ],
+    "unavailable": [
+      "virtual-desktop-enumerate-switch-create-remove-rename"
+    ],
+    "not_claimed": [
+      "legacy-explorer-notification-area-protocol-parity",
+      "complete-native-windows-shell-parity",
+      "release-approval-before-external-gates"
+    ]
+  },
+  "local_commands": {
+    "cargo_fmt": "passed",
+    "cargo_check_workspace_offline": "passed",
+    "cargo_clippy_workspace_all_targets_deny_warnings": "passed",
+    "cargo_test_workspace_offline": "passed",
+    "completion_rollup_schema": "passed",
+    "program_lineage_validator": "passed",
+    "openspec_all_strict": "20 passed, 0 failed",
+    "parent_detailed_tasks_validator": "passed"
+  },
+  "implementation_complete": true,
+  "local_verification_complete": true,
+  "release_allowed": false,
+  "release_blockers": [
+    "G-DPI-MONITOR-PHYSICAL",
+    "G-GUARDIAN-RECOVERY",
+    "G-INSTALL-ROLLBACK",
+    "G-REVIEW",
+    "G-SHELL-TAKEOVER"
+  ]
+}
