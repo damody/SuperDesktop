@@ -1,0 +1,18 @@
+﻿{
+    "schema":  "shell-installer-dry-run-non-mutation/v1",
+    "revision":  "11fbdd1092ef848242f952b6ec954686a8b1e440",
+    "shellBefore":  {
+                        "exists":  false,
+                        "value":  null
+                    },
+    "shellAfter":  {
+                       "exists":  false,
+                       "value":  null
+                   },
+    "shellUnchanged":  true,
+    "rollbackRecordPath":  "D:\\SuperExplorer\\SuperDesktop\\build\\reference-installer-fixture\\rollback-record.json",
+    "rollbackExistedBefore":  false,
+    "rollbackExistedAfter":  false,
+    "rollbackUnchanged":  true,
+    "capturedAtUtc":  "2026-08-17T20:33:06.8907752Z"
+}

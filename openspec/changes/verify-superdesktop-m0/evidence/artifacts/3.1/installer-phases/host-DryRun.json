@@ -1,0 +1,79 @@
+﻿{
+    "productName":  "Microsoft Windows 11 專業版",
+    "build":  26200,
+    "ubr":  9168,
+    "explorerPatcherVersion":  "26100.8457.70.3",
+    "profileFingerprint":  "sha256:2922700b9bdba621104938d03a0696f0a931fe20a17332a4fe0255c0e593e7a4",
+    "profileSources":  [
+                           {
+                               "kind":  "contract",
+                               "path":  "openspec/changes/validate-superdesktop-windows-platform/evidence/artifacts/1.1/frozen-profile-contract.json",
+                               "sha256":  "016f4564a62cf78ef361102ff09fe4b9c68d8596431dd71e6f7c9b71dd23c68c"
+                           },
+                           {
+                               "kind":  "settings",
+                               "path":  "openspec/changes/validate-superdesktop-windows-platform/evidence/artifacts/1.1/explorerpatcher-profile.json",
+                               "sha256":  "974d6da96cf48b71099d9233fc5640b0cef8cc4871a2b90a35bb8c12829ce1d2"
+                           },
+                           {
+                               "kind":  "allowlist",
+                               "path":  "openspec/changes/validate-superdesktop-windows-platform/scripts/profile-allowlist.json",
+                               "sha256":  "025c1194f70e393c6395b3effccf9b595046729ba8b924dfb2d0773805d489e7"
+                           },
+                           {
+                               "kind":  "reference-image",
+                               "path":  "openspec/changes/validate-superdesktop-windows-platform/evidence/artifacts/1.1/reference-taskbar.jpg",
+                               "sha256":  "48b5f990b9e155c5c2719d8f8b41d88ed4420a46c3b6018278511f9c349b387e"
+                           },
+                           {
+                               "kind":  "candidate",
+                               "path":  "openspec/changes/verify-superdesktop-shell-completion/evidence/release-candidate.json",
+                               "sha256":  "760cf250655a374a03487856a9f531ad488fa1c92f377dec721a4159dae12d58"
+                           }
+                       ],
+    "phase":  "DryRun",
+    "operator":  {
+                     "name":  "Damody",
+                     "organization":  "DESKTOP-906EL9Q"
+                 },
+    "revision":  "11fbdd1092ef848242f952b6ec954686a8b1e440",
+    "binaries":  [
+                     {
+                         "name":  "shell-installer",
+                         "path":  "D:\\SuperExplorer\\SuperDesktop\\build\\reference-installer-fixture\\shell-installer.exe",
+                         "sha256":  "5e91f053c93dcc8034b04bd90067e303cb2aa8baa48392555d77900b85265427"
+                     },
+                     {
+                         "name":  "superdesktop-app",
+                         "path":  "D:\\SuperExplorer\\SuperDesktop\\build\\reference-installer-fixture\\superdesktop-app.exe",
+                         "sha256":  "aff94b7502901c7273556468a049503b3b9c041b79113d474854c7bf405de26a"
+                     },
+                     {
+                         "name":  "superdesktop-guardian",
+                         "path":  "D:\\SuperExplorer\\SuperDesktop\\build\\reference-installer-fixture\\superdesktop-guardian.exe",
+                         "sha256":  "d1456d2f3b8d8da4e23fdcabe05273da102335efa56579027bbcce81e53eb655"
+                     },
+                     {
+                         "name":  "shell-provider-host",
+                         "path":  "D:\\SuperExplorer\\SuperDesktop\\build\\reference-installer-fixture\\shell-provider-host.exe",
+                         "sha256":  "f062bec31ada57bdbf03368f9567a86841d165c231bcceee686c618cef660e42"
+                     },
+                     {
+                         "name":  "notification-area-host",
+                         "path":  "D:\\SuperExplorer\\SuperDesktop\\build\\reference-installer-fixture\\notification-area-host.exe",
+                         "sha256":  "3870695abe2fdb70278f9d6e2188ac04fbbbaf3fadc08446321f29d438653a88"
+                     },
+                     {
+                         "name":  "SuperExplorer",
+                         "path":  "D:\\SuperExplorer\\SuperDesktop\\build\\reference-installer-fixture\\SuperExplorer.exe",
+                         "sha256":  "5a2cebf77e97450575ddf241adb967b8d79d223939a2abb1ca14e9e0cd013d69"
+                     }
+                 ],
+    "shellBefore":  {
+                        "exists":  false,
+                        "value":  null
+                    },
+    "rollbackRecordPath":  "D:\\SuperExplorer\\SuperDesktop\\build\\reference-installer-fixture\\rollback-record.json",
+    "rollbackRecordExistedBefore":  false,
+    "capturedAtUtc":  "2026-08-17T20:33:04.4804974Z"
+}

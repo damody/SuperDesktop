@@ -1,0 +1,35 @@
+﻿{
+  "plan": {
+    "command": "enable",
+    "target": "HKCU\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\\Shell",
+    "observed": null,
+    "desired": "\"\\\\?\\D:\\SuperExplorer\\SuperDesktop\\build\\reference-installer-fixture\\superdesktop-app.exe\" --shell --explicit-opt-in",
+    "app_path": "\\\\?\\D:\\SuperExplorer\\SuperDesktop\\build\\reference-installer-fixture\\superdesktop-app.exe",
+    "guardian_path": "\\\\?\\D:\\SuperExplorer\\SuperDesktop\\build\\reference-installer-fixture\\superdesktop-guardian.exe",
+    "rollback_record_path": "D:\\SuperExplorer\\SuperDesktop\\build\\reference-installer-fixture\\rollback-record.json",
+    "app_binary_fingerprint": "fnv1a64:c130c23c6667bf05:len:19834880",
+    "guardian_binary_fingerprint": "fnv1a64:4424d222e8ccc3a9:len:2362368",
+    "preflight": {
+      "session_name": "Console",
+      "session_supported": true,
+      "policy_allows_per_user_shell": true,
+      "guardian_recovery_admitted": true
+    },
+    "fingerprint": "fnv1a64:93c1be1c05417bf9"
+  },
+  "audit": {
+    "timestamp_unix_ms": 1786998786882,
+    "command": "enable",
+    "target": "HKCU\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\\Shell",
+    "affected_targets": [
+      "HKCU\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\\Shell",
+      "rollback_record:D:\\SuperExplorer\\SuperDesktop\\build\\reference-installer-fixture\\rollback-record.json"
+    ],
+    "fingerprint": "fnv1a64:93c1be1c05417bf9",
+    "before": null,
+    "desired": "\"\\\\?\\D:\\SuperExplorer\\SuperDesktop\\build\\reference-installer-fixture\\superdesktop-app.exe\" --shell --explicit-opt-in",
+    "after": null,
+    "disposition": "dry_run",
+    "message": "mutation authority absent"
+  }
+}
