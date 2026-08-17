@@ -1,0 +1,67 @@
+{
+  "schema": "desktop-marquee-start-parity-evidence/v1",
+  "recorded_at": "2026-08-18T12:00:00+08:00",
+  "gate": "G-DESKTOP-START-PARITY",
+  "result": "passed",
+  "records": [
+    {
+      "record_id": "automated",
+      "procedure": "Run cargo fmt, complete locked/offline all-target workspace check and tests, focused desktop/Start/placement tests, and clippy with warnings denied.",
+      "expected": "Every command exits zero and covers marquee geometry, event isolation, Start state, icon eligibility, safe power structure, and DPI-aware placement.",
+      "actual": "Formatting, workspace check, all-target tests, and clippy passed; desktop-ui 28, taskbar-ui 33, and superdesktop-app 11 focused tests passed.",
+      "exit_status": 0
+    },
+    {
+      "record_id": "headful",
+      "procedure": "At 175% host DPI, reverse-drag an empty desktop area while held, inspect selected UIA items and the visible frame, then capture Start Home and All apps through the owned production rendering route.",
+      "expected": "The marquee is visible and selects intersecting items without persisted raw names; Start shows Search, Pinned, Recommended, Account, Settings, and collapsed Power, then an icon-bearing All apps list.",
+      "actual": "Reverse marquee selected 13 items with no raw-name persistence. Start Home exposed every required section with Power collapsed; All apps exposed 75 entries and both surfaces stayed centered and inside the work area.",
+      "exit_status": 0,
+      "artifacts": [
+        { "path": "desktop-marquee.png", "sha256": "01c93ad20858e40cbd9151966f8f47a4438e85ac1d49da708b647121ccc814e1" },
+        { "path": "desktop-marquee.json", "subcheck": "reverse-drag-selected-count-13-no-raw-names" },
+        { "path": "start-home.png", "sha256": "3c0120f06565c0470028c132af5637a3bbcfeb7f13e409d813d172e8dbd425d8" },
+        { "path": "start-all-apps.png", "sha256": "8de199921c977e860c082fa0a6860efd7e60de2ef14e1157df65f8e0f0169b73" },
+        { "path": "start-production.json", "subcheck": "six-home-sections-power-collapsed-all-apps-75" }
+      ]
+    },
+    {
+      "record_id": "packaging",
+      "procedure": "Build standalone SuperDesktop and combined SuperExplorer NSIS installers without launching them.",
+      "expected": "Both installer builds exit zero and the combined build admits the exact committed SuperDesktop submodule revision.",
+      "actual": "Both NSIS builds exited zero; formal combined submodule admission matched 11f277c357af012f4535de0ef94c0ed62c3ceff4.",
+      "exit_status": 0,
+      "artifacts": [
+        { "path": "D:/SuperExplorer/dist/SuperDesktop-Test-Setup-1.2026.8.18-x64.exe", "bytes": 5307233, "sha256": "1ea1972aea9ec07e9c2813a5a2d04ffee8b3f24888d9f8e6f9219cb4b86796e7" },
+        { "path": "D:/SuperExplorer/dist/SuperExplorer-Setup-1.2026.8.18-x64.exe", "bytes": 12979642, "sha256": "92caba10ff14791fd473091be237e748335b195c9ba40dc93e113d825e6af2ba" }
+      ]
+    }
+  ],
+  "task_links": [
+    { "task_id": "1.1.1", "record_id": "automated", "subcheck": "normalized-inclusive-marquee-geometry" },
+    { "task_id": "1.1.2", "record_id": "automated", "subcheck": "transient-anchor-current-baseline-state" },
+    { "task_id": "1.1.3", "record_id": "automated", "subcheck": "normal-reverse-threshold-control-tests" },
+    { "task_id": "1.2.1", "record_id": "headful", "subcheck": "empty-space-reverse-drag-routing" },
+    { "task_id": "1.2.2", "record_id": "automated", "subcheck": "item-primary-down-isolation" },
+    { "task_id": "1.2.3", "record_id": "headful", "subcheck": "dpi-correct-visible-marquee" },
+    { "task_id": "1.2.4", "record_id": "automated", "subcheck": "selection-capture-regressions" },
+    { "task_id": "2.1.1", "record_id": "automated", "subcheck": "start-page-and-power-transitions" },
+    { "task_id": "2.1.2", "record_id": "automated", "subcheck": "bounded-deduplicated-start-slices" },
+    { "task_id": "2.1.3", "record_id": "automated", "subcheck": "start-state-persistence" },
+    { "task_id": "2.1.4", "record_id": "automated", "subcheck": "start-model-transition-suite" },
+    { "task_id": "3.1.1", "record_id": "headful", "subcheck": "shell-bc7-start-icons" },
+    { "task_id": "3.1.2", "record_id": "headful", "subcheck": "home-search-pinned-recommended" },
+    { "task_id": "3.1.3", "record_id": "headful", "subcheck": "all-apps-and-search-modes" },
+    { "task_id": "3.1.4", "record_id": "headful", "subcheck": "footer-and-collapsed-power" },
+    { "task_id": "3.1.5", "record_id": "automated", "subcheck": "start-view-contract-tests" },
+    { "task_id": "3.2.1", "record_id": "automated", "subcheck": "centered-clamped-placement" },
+    { "task_id": "3.2.2", "record_id": "headful", "subcheck": "owned-production-verification-route" },
+    { "task_id": "3.2.3", "record_id": "automated", "subcheck": "input-focus-dismissal-regressions" },
+    { "task_id": "4.1.1", "record_id": "automated", "subcheck": "workspace-quality-gate" },
+    { "task_id": "4.1.2", "record_id": "headful", "subcheck": "host-dpi-marquee-capture" },
+    { "task_id": "4.1.3", "record_id": "headful", "subcheck": "host-dpi-start-captures" },
+    { "task_id": "4.1.4", "record_id": "automated", "subcheck": "unique-evidence-and-strict-validation" },
+    { "task_id": "4.2.1", "record_id": "packaging", "subcheck": "standalone-installer" },
+    { "task_id": "4.2.2", "record_id": "packaging", "subcheck": "combined-installer" }
+  ]
+}

@@ -93,7 +93,7 @@
 - [x] 4.1.1 Run formatting, complete locked/offline workspace checks/tests, and clippy with warnings denied.
 - [x] 4.1.2 Capture and inspect an active marquee at 175% DPI with selected UIA items.
 - [x] 4.1.3 Capture and inspect Start home and All apps with icons, sections, footer, and hit targets.
-- [ ] 4.1.4 Record unique task-linked evidence and pass strict OpenSpec validation.
+- [x] 4.1.4 Record unique task-linked evidence and pass strict OpenSpec validation.
 
 ### 4.2 Installer integration
 
@@ -105,5 +105,5 @@
 **Gate/Evidence:** Installer hashes in evidence index.
 **Completion threshold:** Both installers build without launch and validate as PE artifacts.
 
-- [ ] 4.2.1 Build and hash the standalone SuperDesktop installer without launching it.
-- [ ] 4.2.2 Build and hash the combined SuperExplorer installer with formal submodule admission.
+- [x] 4.2.1 Build and hash the standalone SuperDesktop installer without launching it.
+- [x] 4.2.2 Build and hash the combined SuperExplorer installer with formal submodule admission.
