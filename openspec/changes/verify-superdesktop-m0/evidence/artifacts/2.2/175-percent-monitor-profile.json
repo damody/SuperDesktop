@@ -89,12 +89,12 @@
     "explorer_mutations":  false,
     "shell_takeover":  false,
     "resources_before":  {
-                             "process_handles":  86,
+                             "process_handles":  88,
                              "user_objects":  1,
                              "gdi_objects":  0
                          },
     "resources_after":  {
-                            "process_handles":  86,
+                            "process_handles":  88,
                             "user_objects":  1,
                             "gdi_objects":  0
                         }

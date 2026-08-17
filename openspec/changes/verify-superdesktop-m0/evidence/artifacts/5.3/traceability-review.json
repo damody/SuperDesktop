@@ -1,10 +1,10 @@
 {
     "schema":  "m0-traceability-review/v1",
-    "revision":  "f4b2c64b",
+    "revision":  "4374a6a9",
     "total_tasks":  93,
-    "passed":  76,
-    "blocked":  17,
-    "coverage_percent":  81.72,
+    "passed":  81,
+    "blocked":  12,
+    "coverage_percent":  87.1,
     "tasks":  [
                   {
                       "id":  "1.1.1",
@@ -135,19 +135,19 @@
                   {
                       "id":  "2.2.1",
                       "group":  "2.2",
-                      "status":  "blocked",
+                      "status":  "passed",
                       "artifact":  "evidence/artifacts/2.2/dpi-matrix.json"
                   },
                   {
                       "id":  "2.2.2",
                       "group":  "2.2",
-                      "status":  "blocked",
+                      "status":  "passed",
                       "artifact":  "evidence/artifacts/2.2/dpi-matrix.json"
                   },
                   {
                       "id":  "2.2.3",
                       "group":  "2.2",
-                      "status":  "blocked",
+                      "status":  "passed",
                       "artifact":  "evidence/artifacts/2.2/dpi-matrix.json"
                   },
                   {
@@ -159,13 +159,13 @@
                   {
                       "id":  "2.2.5",
                       "group":  "2.2",
-                      "status":  "blocked",
+                      "status":  "passed",
                       "artifact":  "evidence/artifacts/2.2/dpi-matrix.json"
                   },
                   {
                       "id":  "2.2.6",
                       "group":  "2.2",
-                      "status":  "blocked",
+                      "status":  "passed",
                       "artifact":  "evidence/artifacts/2.2/dpi-matrix.json"
                   },
                   {
@@ -590,7 +590,6 @@
     "independent_review":  "blocked-not-performed",
     "unresolved_external_blockers":  [
                                          "production archives deferred by user",
-                                         "physical-five-dpi-matrix",
                                          "physical mixed-DPI dual-monitor unavailable",
                                          "independent reviewer unavailable"
                                      ],

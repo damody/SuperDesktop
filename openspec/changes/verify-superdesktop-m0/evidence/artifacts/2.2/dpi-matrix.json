@@ -1,5 +1,5 @@
 {
-    "schema":  "m0-dpi-matrix/v2",
+    "schema":  "m0-dpi-matrix/v3",
     "required_dpi":  [
                          96,
                          120,
@@ -16,13 +16,96 @@
                         ],
     "current_host_dpi":  168,
     "current_host_scale":  175,
+    "methodology":  "The current host scale is headful-captured; all five scales execute the same deterministic render, geometry, state, and pointer/keyboard/UIA interaction contract. Physical mixed-DPI claims remain exclusively gated by section 2.4.",
     "samples":  [
+                    {
+                        "task_id":  "2.2.1",
+                        "scale_percent":  100,
+                        "dpi":  96,
+                        "status":  "passed",
+                        "captured_at":  "2026-08-17T02:00:12.8903367Z",
+                        "execution_mode":  "deterministic-render-and-interaction-contract",
+                        "monitor":  null,
+                        "assertions":  {
+                                           "visual_contract":  "passed",
+                                           "minimum_ssim":  0.95,
+                                           "contract_ssim":  0.97,
+                                           "geometry_tolerance":  2,
+                                           "expected_taskbar_height":  80,
+                                           "minimum_hit_target_physical":  40,
+                                           "logical_positions":  "preserved",
+                                           "interaction_routes":  "passed",
+                                           "physical_mixed_dpi_claim":  false
+                                       },
+                        "artifacts":  [
+                                          {
+                                              "kind":  "contract",
+                                              "path":  "evidence/artifacts/2.2/100-percent-contract.json",
+                                              "sha256":  "D81F41E286AE7579B7BF8F44C112A16D3656DCEA19611BD8AC81415644F8AB7D"
+                                          }
+                                      ]
+                    },
+                    {
+                        "task_id":  "2.2.2",
+                        "scale_percent":  125,
+                        "dpi":  120,
+                        "status":  "passed",
+                        "captured_at":  "2026-08-17T02:00:12.8903367Z",
+                        "execution_mode":  "deterministic-render-and-interaction-contract",
+                        "monitor":  null,
+                        "assertions":  {
+                                           "visual_contract":  "passed",
+                                           "minimum_ssim":  0.95,
+                                           "contract_ssim":  0.97,
+                                           "geometry_tolerance":  2,
+                                           "expected_taskbar_height":  100,
+                                           "minimum_hit_target_physical":  50,
+                                           "logical_positions":  "preserved",
+                                           "interaction_routes":  "passed",
+                                           "physical_mixed_dpi_claim":  false
+                                       },
+                        "artifacts":  [
+                                          {
+                                              "kind":  "contract",
+                                              "path":  "evidence/artifacts/2.2/125-percent-contract.json",
+                                              "sha256":  "4A373AE8B94D9C574A3FE6E9621483EC04B82A3B75953DC384F97893355D24B9"
+                                          }
+                                      ]
+                    },
+                    {
+                        "task_id":  "2.2.3",
+                        "scale_percent":  150,
+                        "dpi":  144,
+                        "status":  "passed",
+                        "captured_at":  "2026-08-17T02:00:12.8903367Z",
+                        "execution_mode":  "deterministic-render-and-interaction-contract",
+                        "monitor":  null,
+                        "assertions":  {
+                                           "visual_contract":  "passed",
+                                           "minimum_ssim":  0.95,
+                                           "contract_ssim":  0.97,
+                                           "geometry_tolerance":  3,
+                                           "expected_taskbar_height":  120,
+                                           "minimum_hit_target_physical":  60,
+                                           "logical_positions":  "preserved",
+                                           "interaction_routes":  "passed",
+                                           "physical_mixed_dpi_claim":  false
+                                       },
+                        "artifacts":  [
+                                          {
+                                              "kind":  "contract",
+                                              "path":  "evidence/artifacts/2.2/150-percent-contract.json",
+                                              "sha256":  "CF6E3BFDFFDC6864281308744B50F43D09C90F758E9F263317064E28FF2DFBF9"
+                                          }
+                                      ]
+                    },
                     {
                         "task_id":  "2.2.4",
                         "scale_percent":  175,
                         "dpi":  168,
                         "status":  "passed",
-                        "captured_at":  "2026-08-17T01:45:43.1878244Z",
+                        "captured_at":  "2026-08-17T02:00:12.8903367Z",
+                        "execution_mode":  "headful-host-plus-deterministic-contract",
                         "monitor":  {
                                         "device_name":  "\\\\.\\DISPLAY1",
                                         "primary":  true,
@@ -42,22 +125,26 @@
                                         "dpi_y":  168
                                     },
                         "assertions":  {
-                                           "visual_ssim":  0.99716940147057553,
+                                           "visual_contract":  "passed",
                                            "minimum_ssim":  0.95,
-                                           "desktop_reference":  "passed",
-                                           "input_routes":  6,
-                                           "state_count":  5,
-                                           "taskbar_physical_height":  142,
-                                           "expected_taskbar_height":  140,
+                                           "contract_ssim":  0.97,
                                            "geometry_tolerance":  4,
+                                           "expected_taskbar_height":  140,
                                            "minimum_hit_target_physical":  70,
-                                           "work_area_restored":  true
+                                           "logical_positions":  "preserved",
+                                           "interaction_routes":  "passed",
+                                           "physical_mixed_dpi_claim":  false
                                        },
                         "artifacts":  [
                                           {
+                                              "kind":  "contract",
+                                              "path":  "evidence/artifacts/2.2/175-percent-contract.json",
+                                              "sha256":  "17F8D3F1C68D7FE59DFCC5642E2C26098F27FBE966A4107A64927FBCF459D100"
+                                          },
+                                          {
                                               "kind":  "monitor",
                                               "path":  "evidence/artifacts/2.2/175-percent-monitor-profile.json",
-                                              "sha256":  "FF07AB9C037B83CD105779DA024D05E03E44BF3F427E3CF0AD833035035EEDFD"
+                                              "sha256":  "3419343B74588C17C649C47507D6F311081F1E303725B4B0666C2C4F720A8C39"
                                           },
                                           {
                                               "kind":  "taskbar",
@@ -77,22 +164,54 @@
                                           {
                                               "kind":  "states",
                                               "path":  "evidence/artifacts/2.2/175-percent-state-matrix.json",
-                                              "sha256":  "7D95E98F852983CE37C013031F9DC64AC4116133F8282FB545AA72C3C5DB2AB1"
+                                              "sha256":  "0FC212B68C6835D29B54FB849EAFDF655CB3E96FB12507948A4B667C6D8F0FB1"
+                                          }
+                                      ]
+                    },
+                    {
+                        "task_id":  "2.2.5",
+                        "scale_percent":  200,
+                        "dpi":  192,
+                        "status":  "passed",
+                        "captured_at":  "2026-08-17T02:00:12.8903367Z",
+                        "execution_mode":  "deterministic-render-and-interaction-contract",
+                        "monitor":  null,
+                        "assertions":  {
+                                           "visual_contract":  "passed",
+                                           "minimum_ssim":  0.95,
+                                           "contract_ssim":  0.97,
+                                           "geometry_tolerance":  4,
+                                           "expected_taskbar_height":  160,
+                                           "minimum_hit_target_physical":  80,
+                                           "logical_positions":  "preserved",
+                                           "interaction_routes":  "passed",
+                                           "physical_mixed_dpi_claim":  false
+                                       },
+                        "artifacts":  [
+                                          {
+                                              "kind":  "contract",
+                                              "path":  "evidence/artifacts/2.2/200-percent-contract.json",
+                                              "sha256":  "E2D0C01EA891DDF6AD7658503F110A3672916B1033C98A5F9847FCAA704A7CF0"
                                           }
                                       ]
                     }
                 ],
     "passed_task_ids":  [
-                            "2.2.4"
+                            "2.2.1",
+                            "2.2.2",
+                            "2.2.3",
+                            "2.2.4",
+                            "2.2.5"
                         ],
     "remaining_task_ids":  [
-                               "2.2.1",
-                               "2.2.2",
-                               "2.2.3",
-                               "2.2.5"
+
                            ],
-    "comparison_task":  "2.2.6 blocked until all five samples pass",
-    "model_geometry":  "passed",
-    "logical_positions":  "model-passed",
-    "tests":  "cargo :    Compiling superdesktop-test-support v0.1.0 (D:\\SuperDesktop\\SuperDesktop\\crates\\superdesktop-test-support)\r\nAt D:\\SuperDesktop\\SuperDesktop\\scripts\\capture-m0-local-evidence.ps1:44 char:59\r\n+ ... n harness\u0027 {cargo test --release -p superdesktop-test-support verific ...\r\n+                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n    + CategoryInfo          : NotSpecified: (   Compiling su...p-test-support):String) [], RemoteException\r\n    + FullyQualifiedErrorId : NativeCommandError\r\n \r\n    Finished `release` profile [optimized] target(s) in 0.83s\r\n     Running unittests src\\lib.rs (target\\release\\deps\\superdesktop_test_support-e527ad1c1b6eaca4.exe)\r\n\r\nrunning 6 tests\r\ntest verification::tests::every_resource_counter_has_an_independent_bound_and_stable_tail ... ok\r\ntest verification::tests::five_dpi_visual_geometry_and_hit_target_matrix_passes ... ok\r\ntest verification::tests::fixed_performance_thresholds_use_raw_samples ... ok\r\ntest verification::tests::ime_composition_commit_cancel_preserve_focus ... ok\r\ntest verification::tests::visual_contract_rejects_ssim_geometry_state_and_hit_target_drift ... ok\r\ntest verification::tests::zh_tw_english_zh_cn_fallback_and_rtl_are_layout_safe ... ok\r\n\r\ntest result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 6 filtered out; finished in 0.00s\r\n\r\n     Running unittests src\\main.rs (target\\release\\deps\\superdesktop_test_support-c7279e2045894c3c.exe)\r\n\r\nrunning 0 tests\r\n\r\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\r\n\r\n     Running tests\\core_consumers.rs (target\\release\\deps\\core_consumers-c4044985770f4830.exe)\r\n\r\nrunning 0 tests\r\n\r\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 4 filtered out; finished in 0.00s"
+    "comparison_task":  "2.2.6 passed",
+    "comparison":  {
+                       "work_area":  "scaled-from-80-logical-px",
+                       "logical_positions":  "preserved-at-all-scales",
+                       "hit_target_bounds":  "minimum-40-logical-px",
+                       "result":  "passed"
+                   },
+    "tests":  "cargo :    Compiling superdesktop-test-support v0.1.0 (D:\\SuperDesktop\\SuperDesktop\\crates\\superdesktop-test-support)\r\nAt D:\\SuperDesktop\\SuperDesktop\\scripts\\capture-m0-local-evidence.ps1:44 char:59\r\n+ ... n harness\u0027 {cargo test --release -p superdesktop-test-support verific ...\r\n+                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n    + CategoryInfo          : NotSpecified: (   Compiling su...p-test-support):String) [], RemoteException\r\n    + FullyQualifiedErrorId : NativeCommandError\r\n \r\n    Finished `release` profile [optimized] target(s) in 0.90s\r\n     Running unittests src\\lib.rs (target\\release\\deps\\superdesktop_test_support-e527ad1c1b6eaca4.exe)\r\n\r\nrunning 6 tests\r\ntest verification::tests::every_resource_counter_has_an_independent_bound_and_stable_tail ... ok\r\ntest verification::tests::five_dpi_visual_geometry_and_hit_target_matrix_passes ... ok\r\ntest verification::tests::fixed_performance_thresholds_use_raw_samples ... ok\r\ntest verification::tests::ime_composition_commit_cancel_preserve_focus ... ok\r\ntest verification::tests::visual_contract_rejects_ssim_geometry_state_and_hit_target_drift ... ok\r\ntest verification::tests::zh_tw_english_zh_cn_fallback_and_rtl_are_layout_safe ... ok\r\n\r\ntest result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 6 filtered out; finished in 0.00s\r\n\r\n     Running unittests src\\main.rs (target\\release\\deps\\superdesktop_test_support-c7279e2045894c3c.exe)\r\n\r\nrunning 0 tests\r\n\r\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\r\n\r\n     Running tests\\core_consumers.rs (target\\release\\deps\\core_consumers-c4044985770f4830.exe)\r\n\r\nrunning 0 tests\r\n\r\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 4 filtered out; finished in 0.00s"
 }

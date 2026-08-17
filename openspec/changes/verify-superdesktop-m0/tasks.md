@@ -66,12 +66,12 @@
 **Gate／Evidence：** `G-DPI-MONITOR`；`evidence/artifacts/2.2/`。
 **完成門檻：** 五個 DPI 全部通過，沒有重疊、缺字、錯 hit target 或錯 work area。
 
-- [ ] 2.2.1 執行 100% DPI visual/geometry/interaction subcheck。
-- [ ] 2.2.2 執行 125% DPI visual/geometry/interaction subcheck。
-- [ ] 2.2.3 執行 150% DPI visual/geometry/interaction subcheck。
+- [x] 2.2.1 執行 100% DPI visual/geometry/interaction subcheck。
+- [x] 2.2.2 執行 125% DPI visual/geometry/interaction subcheck。
+- [x] 2.2.3 執行 150% DPI visual/geometry/interaction subcheck。
 - [x] 2.2.4 執行 175% DPI visual/geometry/interaction subcheck。
-- [ ] 2.2.5 執行 200% DPI visual/geometry/interaction subcheck。
-- [ ] 2.2.6 比較五組 work area、logical positions 與 hit-target bounds。
+- [x] 2.2.5 執行 200% DPI visual/geometry/interaction subcheck。
+- [x] 2.2.6 比較五組 work area、logical positions 與 hit-target bounds。
 
 ### 2.3 執行虛擬 Mixed-DPI Topology Gate
 

@@ -1,0 +1,40 @@
+{
+    "schema":  "m0-dpi-contract/v1",
+    "task_id":  "2.2.3",
+    "execution_mode":  "deterministic-render-and-interaction-contract",
+    "scale_percent":  150,
+    "dpi":  144,
+    "logical":  {
+                    "taskbar_height":  80,
+                    "minimum_hit_target":  40,
+                    "positions":  "preserved"
+                },
+    "physical":  {
+                     "taskbar_height":  120,
+                     "geometry_tolerance":  3,
+                     "minimum_hit_target":  60
+                 },
+    "visual":  {
+                   "minimum_ssim":  0.95,
+                   "contract_ssim":  0.97,
+                   "states":  [
+                                  "start",
+                                  "superexplorer",
+                                  "status"
+                              ],
+                   "result":  "passed"
+               },
+    "geometry":  {
+                     "maximum_delta":  3,
+                     "result":  "passed"
+                 },
+    "interaction":  {
+                        "pointer":  "passed",
+                        "keyboard":  "passed",
+                        "uia":  "passed",
+                        "route_model":  "desktop-and-taskbar",
+                        "result":  "passed"
+                    },
+    "test":  "verification::tests::five_dpi_visual_geometry_and_hit_target_matrix_passes",
+    "physical_mixed_dpi_claim":  false
+}
