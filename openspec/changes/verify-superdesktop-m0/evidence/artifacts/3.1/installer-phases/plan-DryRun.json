@@ -18,7 +18,7 @@
     "fingerprint": "fnv1a64:93c1be1c05417bf9"
   },
   "audit": {
-    "timestamp_unix_ms": 1786998786882,
+    "timestamp_unix_ms": 1786999695251,
     "command": "enable",
     "target": "HKCU\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\\Shell",
     "affected_targets": [

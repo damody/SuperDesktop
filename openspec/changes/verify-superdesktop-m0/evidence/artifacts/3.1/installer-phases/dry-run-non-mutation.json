@@ -1,6 +1,6 @@
 ﻿{
     "schema":  "shell-installer-dry-run-non-mutation/v1",
-    "revision":  "11fbdd1092ef848242f952b6ec954686a8b1e440",
+    "revision":  "843d2c119f1815e8f7d927223be80c1912f30755",
     "shellBefore":  {
                         "exists":  false,
                         "value":  null
@@ -14,5 +14,5 @@
     "rollbackExistedBefore":  false,
     "rollbackExistedAfter":  false,
     "rollbackUnchanged":  true,
-    "capturedAtUtc":  "2026-08-17T20:33:06.8907752Z"
+    "capturedAtUtc":  "2026-08-17T20:48:15.2735018Z"
 }

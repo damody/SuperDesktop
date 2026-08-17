@@ -1,8 +1,8 @@
 {
     "schema":  "m0-reference-profile-gate/v1",
     "status":  "passed",
-    "recorded_at":  "2026-08-17T20:20:33.1790001Z",
-    "revision":  "11fbdd10",
+    "recorded_at":  "2026-08-17T20:46:55.0665974Z",
+    "revision":  "843d2c11",
     "host":  {
                  "caption":  "Microsoft Windows 11 專業版",
                  "build":  26200,
@@ -10,7 +10,7 @@
                  "explorerpatcher_version":  "26100.8457.70.3",
                  "session_id":  1,
                  "interactive":  true,
-                 "profile_fingerprint":  "sha256:2922700b9bdba621104938d03a0696f0a931fe20a17332a4fe0255c0e593e7a4",
+                 "profile_fingerprint":  "sha256:094029d37d245cd0f6313d5bc3f7541c5664f6970301693d5135dbaf1f46ea03",
                  "profile_sources":  [
                                          {
                                              "kind":  "contract",
@@ -35,7 +35,7 @@
                                          {
                                              "kind":  "candidate",
                                              "path":  "openspec/changes/verify-superdesktop-shell-completion/evidence/release-candidate.json",
-                                             "sha256":  "760cf250655a374a03487856a9f531ad488fa1c92f377dec721a4159dae12d58"
+                                             "sha256":  "988508f16675133ac4dd1d0c9c15abe7684fc2072e0bde98ca715ce9f6f25625"
                                          }
                                      ]
              },
@@ -101,14 +101,14 @@
                     },
     "forced_crash":  {
                          "deadline_ms":  10000,
-                         "max_elapsed_ms":  406.597,
+                         "max_elapsed_ms":  374.295,
                          "runs":  [
                                       {
                                           "run":  1,
-                                          "ready_elapsed_ms":  379.877,
+                                          "ready_elapsed_ms":  374.295,
                                           "explorer_before":  1,
                                           "explorer_after":  1,
-                                          "guardian_pid":  52008,
+                                          "guardian_pid":  17928,
                                           "unique_terminal_count":  1,
                                           "parent_terminal_observed":  true,
                                           "recovery_verified":  true,
@@ -121,10 +121,10 @@
                                       },
                                       {
                                           "run":  2,
-                                          "ready_elapsed_ms":  352.3,
+                                          "ready_elapsed_ms":  351.413,
                                           "explorer_before":  1,
                                           "explorer_after":  1,
-                                          "guardian_pid":  21760,
+                                          "guardian_pid":  51496,
                                           "unique_terminal_count":  1,
                                           "parent_terminal_observed":  true,
                                           "recovery_verified":  true,
@@ -137,10 +137,10 @@
                                       },
                                       {
                                           "run":  3,
-                                          "ready_elapsed_ms":  354.076,
+                                          "ready_elapsed_ms":  354.746,
                                           "explorer_before":  1,
                                           "explorer_after":  1,
-                                          "guardian_pid":  50136,
+                                          "guardian_pid":  49448,
                                           "unique_terminal_count":  1,
                                           "parent_terminal_observed":  true,
                                           "recovery_verified":  true,
@@ -153,10 +153,10 @@
                                       },
                                       {
                                           "run":  4,
-                                          "ready_elapsed_ms":  341.213,
+                                          "ready_elapsed_ms":  358.208,
                                           "explorer_before":  1,
                                           "explorer_after":  1,
-                                          "guardian_pid":  37448,
+                                          "guardian_pid":  23564,
                                           "unique_terminal_count":  1,
                                           "parent_terminal_observed":  true,
                                           "recovery_verified":  true,
@@ -169,10 +169,10 @@
                                       },
                                       {
                                           "run":  5,
-                                          "ready_elapsed_ms":  352.275,
+                                          "ready_elapsed_ms":  352.758,
                                           "explorer_before":  1,
                                           "explorer_after":  1,
-                                          "guardian_pid":  41484,
+                                          "guardian_pid":  29404,
                                           "unique_terminal_count":  1,
                                           "parent_terminal_observed":  true,
                                           "recovery_verified":  true,
@@ -185,10 +185,10 @@
                                       },
                                       {
                                           "run":  6,
-                                          "ready_elapsed_ms":  406.597,
+                                          "ready_elapsed_ms":  346.319,
                                           "explorer_before":  1,
                                           "explorer_after":  1,
-                                          "guardian_pid":  39460,
+                                          "guardian_pid":  39552,
                                           "unique_terminal_count":  1,
                                           "parent_terminal_observed":  true,
                                           "recovery_verified":  true,
@@ -201,10 +201,10 @@
                                       },
                                       {
                                           "run":  7,
-                                          "ready_elapsed_ms":  386.584,
+                                          "ready_elapsed_ms":  371.54,
                                           "explorer_before":  1,
                                           "explorer_after":  1,
-                                          "guardian_pid":  33752,
+                                          "guardian_pid":  36260,
                                           "unique_terminal_count":  1,
                                           "parent_terminal_observed":  true,
                                           "recovery_verified":  true,
@@ -217,10 +217,10 @@
                                       },
                                       {
                                           "run":  8,
-                                          "ready_elapsed_ms":  356.858,
+                                          "ready_elapsed_ms":  351.728,
                                           "explorer_before":  1,
                                           "explorer_after":  1,
-                                          "guardian_pid":  27116,
+                                          "guardian_pid":  43888,
                                           "unique_terminal_count":  1,
                                           "parent_terminal_observed":  true,
                                           "recovery_verified":  true,
@@ -233,10 +233,10 @@
                                       },
                                       {
                                           "run":  9,
-                                          "ready_elapsed_ms":  348.868,
+                                          "ready_elapsed_ms":  341.713,
                                           "explorer_before":  1,
                                           "explorer_after":  1,
-                                          "guardian_pid":  11152,
+                                          "guardian_pid":  15508,
                                           "unique_terminal_count":  1,
                                           "parent_terminal_observed":  true,
                                           "recovery_verified":  true,
@@ -249,10 +249,10 @@
                                       },
                                       {
                                           "run":  10,
-                                          "ready_elapsed_ms":  357.584,
+                                          "ready_elapsed_ms":  352.369,
                                           "explorer_before":  1,
                                           "explorer_after":  1,
-                                          "guardian_pid":  44536,
+                                          "guardian_pid":  17908,
                                           "unique_terminal_count":  1,
                                           "parent_terminal_observed":  true,
                                           "recovery_verified":  true,

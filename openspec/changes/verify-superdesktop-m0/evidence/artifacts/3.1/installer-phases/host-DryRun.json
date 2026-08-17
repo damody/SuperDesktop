@@ -3,7 +3,7 @@
     "build":  26200,
     "ubr":  9168,
     "explorerPatcherVersion":  "26100.8457.70.3",
-    "profileFingerprint":  "sha256:2922700b9bdba621104938d03a0696f0a931fe20a17332a4fe0255c0e593e7a4",
+    "profileFingerprint":  "sha256:094029d37d245cd0f6313d5bc3f7541c5664f6970301693d5135dbaf1f46ea03",
     "profileSources":  [
                            {
                                "kind":  "contract",
@@ -28,7 +28,7 @@
                            {
                                "kind":  "candidate",
                                "path":  "openspec/changes/verify-superdesktop-shell-completion/evidence/release-candidate.json",
-                               "sha256":  "760cf250655a374a03487856a9f531ad488fa1c92f377dec721a4159dae12d58"
+                               "sha256":  "988508f16675133ac4dd1d0c9c15abe7684fc2072e0bde98ca715ce9f6f25625"
                            }
                        ],
     "phase":  "DryRun",
@@ -36,7 +36,7 @@
                      "name":  "Damody",
                      "organization":  "DESKTOP-906EL9Q"
                  },
-    "revision":  "11fbdd1092ef848242f952b6ec954686a8b1e440",
+    "revision":  "843d2c119f1815e8f7d927223be80c1912f30755",
     "binaries":  [
                      {
                          "name":  "shell-installer",
@@ -75,5 +75,9 @@
                     },
     "rollbackRecordPath":  "D:\\SuperExplorer\\SuperDesktop\\build\\reference-installer-fixture\\rollback-record.json",
     "rollbackRecordExistedBefore":  false,
-    "capturedAtUtc":  "2026-08-17T20:33:04.4804974Z"
+    "boot":  {
+                 "lastBootUpUtc":  "2026-08-16T16:20:13.5005580+00:00",
+                 "uptimeSeconds":  102479
+             },
+    "capturedAtUtc":  "2026-08-17T20:48:12.9954091Z"
 }
