@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "reviewed_revision": "2ea81ab2cfa9c2cf4bf206691846532ae8e8d137",
-  "frozen_at_utc": "2026-08-17T02:11:09.6873545Z",
+  "reviewed_revision": "db6ffd1b37f8ddc55ceaea94f507c2aed28a3f68",
+  "frozen_at_utc": "2026-08-17T19:53:45.9014537Z",
   "purpose": "Immutable implementation and verification-harness revision for exact Windows 11 ExplorerPatcher lifecycle/installer, physical mixed-DPI, and independent review evidence."
 }

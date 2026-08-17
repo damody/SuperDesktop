@@ -15,6 +15,7 @@
     "attributable lifecycle and installer operator continuity across reboot phases",
     "derived external gate recomputation",
     "incremental external artifact admission with missing gates preserved as pending",
+    "post-candidate tracked production and verification-tool drift rejection",
     "fail-closed incomplete external evidence handling",
     "production Shell forced-crash binding with authenticated guardian completion terminal"
   ],
@@ -29,6 +30,7 @@
     "incremental_external_inventory": "passed_missing_artifacts_remain_pending",
     "malformed_external_admission": "rejected_without_output",
     "unknown_external_json_admission": "rejected_without_output",
+    "post_candidate_production_drift": "rejected_without_output",
     "external_tasks_marked_complete": false
   },
   "reason_external_tasks_remain_pending": "Exact 26200.9168 profile admission passed; no physical mixed-DPI topology, mutation-bearing lifecycle/reboot rollback, or attributable independent review was supplied. Windows 10 is not claimed."
