@@ -1,4 +1,11 @@
-use std::{collections::BTreeMap, path::PathBuf, rc::Rc};
+use std::{
+    cell::RefCell,
+    collections::{BTreeMap, VecDeque},
+    hash::{DefaultHasher, Hash, Hasher},
+    path::PathBuf,
+    rc::Rc,
+    sync::Arc,
+};
 
 use gpui::{
     AppContext, Context, DragMoveEvent, FocusHandle, InteractiveElement, IntoElement, MouseButton,
@@ -7,7 +14,77 @@ use gpui::{
 };
 
 use crate::{AccessibleNode, MenuModel};
-use shell_provider_protocol::MenuInvocation;
+use shell_provider_protocol::{IconData, MenuInvocation};
+
+thread_local! {
+    static ICON_RENDER_CACHE: RefCell<VecDeque<(u64, IconData, Arc<gpui::RenderImage>)>> = const { RefCell::new(VecDeque::new()) };
+}
+
+const ICON_RENDER_CACHE_LIMIT: usize = 2_048;
+
+fn icon_hash(icon: &IconData) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    icon.width.hash(&mut hasher);
+    icon.height.hash(&mut hasher);
+    icon.rgba.hash(&mut hasher);
+    hasher.finish()
+}
+
+fn bc7_render_image(icon: &IconData) -> Option<Arc<gpui::RenderImage>> {
+    let raster = platform_win::common::icon::encode_bc7(icon)?;
+    gpui::RenderImage::new_bc7_srgb(gpui::CompressedRaster {
+        kind: gpui::CompressedRasterKind::Icon,
+        width: raster.width,
+        height: raster.height,
+        padded_width: raster.padded_width,
+        padded_height: raster.padded_height,
+        row_pitch: raster.row_pitch,
+        blocks: Arc::from(raster.blocks),
+    })
+    .map(Arc::new)
+}
+
+fn uncached_icon_render_image(icon: &IconData) -> Option<Arc<gpui::RenderImage>> {
+    if !platform_win::common::icon::valid_icon_data(icon) {
+        return None;
+    }
+    if gpui::compressed_gpu_cache_stats().0.supported == Some(true)
+        && let Some(image) = bc7_render_image(icon)
+    {
+        return Some(image);
+    }
+    // GPUI's Windows polychrome atlas consumes BGRA bytes.
+    let mut bgra = icon.rgba.clone();
+    for pixel in bgra.chunks_exact_mut(4) {
+        pixel.swap(0, 2);
+    }
+    let buffer = image::RgbaImage::from_raw(icon.width, icon.height, bgra)?;
+    Some(Arc::new(gpui::RenderImage::new(vec![image::Frame::new(
+        buffer,
+    )])))
+}
+
+fn icon_render_image(icon: &IconData) -> Option<Arc<gpui::RenderImage>> {
+    if !platform_win::common::icon::valid_icon_data(icon) {
+        return None;
+    }
+    let key = icon_hash(icon);
+    ICON_RENDER_CACHE.with(|cache| {
+        let mut cache = cache.borrow_mut();
+        if let Some((_, _, image)) = cache
+            .iter()
+            .find(|(candidate_key, candidate, _)| *candidate_key == key && candidate == icon)
+        {
+            return Some(Arc::clone(image));
+        }
+        let image = uncached_icon_render_image(icon)?;
+        if cache.len() == ICON_RENDER_CACHE_LIMIT {
+            cache.pop_front();
+        }
+        cache.push_back((key, icon.clone(), Arc::clone(&image)));
+        Some(image)
+    })
+}
 
 type ItemAction = Rc<dyn Fn(&str)>;
 type ItemRecycleAction = Rc<dyn Fn(&str) -> bool>;
@@ -559,6 +636,8 @@ impl Render for DesktopView {
                         } else {
                             display_name.clone()
                         };
+                        let render_icon = item.icon.as_ref().and_then(icon_render_image);
+                        let has_render_icon = render_icon.is_some();
                         let default_column = index / 8;
                         let default_row = index % 8;
                         let (item_x, item_y) = item_positions.get(&stable_id).copied().unwrap_or((
@@ -742,7 +821,25 @@ impl Render for DesktopView {
                                     }
                                 },
                             ))
-                            .child(div().text_size(px(32.)).child("▣"))
+                            .child(
+                                div()
+                                    .w(px(52.))
+                                    .h(px(52.))
+                                    .flex()
+                                    .items_center()
+                                    .justify_center()
+                                    .when_some(render_icon, |element, icon| {
+                                        element.child(
+                                            img(icon)
+                                                .w(px(48.))
+                                                .h(px(48.))
+                                                .object_fit(ObjectFit::Contain),
+                                        )
+                                    })
+                                    .when(!has_render_icon, |element| {
+                                        element.child(div().text_size(px(32.)).child("▣"))
+                                    }),
+                            )
                             .child(
                                 div()
                                     .text_center()
@@ -772,6 +869,7 @@ mod tests {
         AccessibleNode {
             stable_id: id.into(),
             name: id.into(),
+            icon: None,
             role: "button",
             selected: false,
             focused: false,
@@ -797,6 +895,37 @@ mod tests {
                 .iter()
                 .all(|item| !item.selected && !item.focused)
         );
+    }
+
+    #[test]
+    fn desktop_icon_pixels_are_validated_as_rgba() {
+        let image = icon_render_image(&IconData {
+            width: 1,
+            height: 1,
+            rgba: vec![0, 128, 255, 255],
+        })
+        .unwrap();
+        assert_eq!(image.as_bytes(0), Some([255, 128, 0, 255].as_slice()));
+        assert!(
+            icon_render_image(&IconData {
+                width: 1,
+                height: 1,
+                rgba: vec![0; 2],
+            })
+            .is_none()
+        );
+    }
+
+    #[test]
+    fn bc7_desktop_icon_payload_is_directly_renderable() {
+        let icon = IconData {
+            width: 4,
+            height: 4,
+            rgba: vec![128; 4 * 4 * 4],
+        };
+        let image = bc7_render_image(&icon).unwrap();
+        assert!(image.compressed_raster().is_some());
+        assert_eq!(image.as_bytes(0).unwrap().len(), 16);
     }
 
     #[test]

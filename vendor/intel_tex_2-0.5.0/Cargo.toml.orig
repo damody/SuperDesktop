@@ -1,0 +1,42 @@
+[package]
+name = "intel_tex_2"
+version = "0.5.0"
+authors = ["Traverse Research <opensource@traverseresearch.nl>", "Graham Wihlidal <graham@wihlidal.ca>"]
+description = "Rust bindings for Intel's ISPC texture compressor."
+homepage = "https://github.com/Traverse-Research/intel-tex-rs-2"
+repository = "https://github.com/Traverse-Research/intel-tex-rs-2"
+documentation = "https://docs.rs/intel_tex_2"
+readme = "README.md"
+keywords = ["texture", "image", "compress", "intel", "ispc"]
+categories = ["rendering", "rendering::engine", ]
+license = "MIT/Apache-2.0"
+build = "build.rs"
+include = [
+    "/src/",
+    "/LICENSE-*",
+    "/build.rs",
+]
+edition = "2021"
+
+[badges]
+maintenance = { status = "actively-developed" }
+
+[dependencies]
+ispc_rt = "2"
+
+[build-dependencies]
+ispc_compile = { version = "2.0.1", optional = true }
+cc = { version = "1", optional = true }
+ispc_rt = "2"
+
+[features]
+ispc = ["ispc_compile", "cc"]
+
+[dev-dependencies]
+ddsfile = "0.5.0"
+image = "0.25.1"
+
+[profile.release]
+lto = true
+opt-level = 3
+codegen-units = 1

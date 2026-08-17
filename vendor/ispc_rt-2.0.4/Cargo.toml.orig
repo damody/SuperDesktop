@@ -1,0 +1,29 @@
+[package]
+name = "ispc_rt"
+version = "2.0.4"
+edition = "2021"
+authors = ["Will Usher <will@willusher.io>"]
+homepage = "https://github.com/Twinklebear/ispc-rs"
+documentation = "https://docs.rs/ispc_rt/"
+repository = "https://github.com/Twinklebear/ispc-rs"
+readme = "../README.md"
+license = "MIT"
+description = """
+A runtime dependency for linking Rust code with pre-built ISPC binaries
+and Rust bindings. These modules and bindings should be built with
+ispc_compile.
+"""
+keywords = ["build-dependencies", "ispc", "simd"]
+
+exclude = [
+	".travis.yml",
+	"*.png",
+	".gitignore",
+	".github",
+	"scripts/*",
+	"examples/*"
+]
+
+[dependencies]
+libc = "0.2"
+num_cpus = "1.17"

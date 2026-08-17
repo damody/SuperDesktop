@@ -4,6 +4,7 @@ use shell_core::{
     ApplicationId, BridgeLaunchRequest, BridgeLaunchSource, BridgeTerminal, CorrelationId,
     MessageKey, RequestId, WindowId,
 };
+use shell_provider_protocol::IconData;
 
 use crate::TaskGroup;
 
@@ -37,6 +38,7 @@ pub enum TaskAction {
 pub struct AccessibleTask {
     pub stable_id: String,
     pub name: String,
+    pub icon: Option<IconData>,
     pub role: &'static str,
     pub active: bool,
     pub minimized: bool,
@@ -167,6 +169,7 @@ impl TaskInteraction {
         AccessibleTask {
             stable_id: format!("taskbar:{}", group.application_id),
             name: title.into(),
+            icon: None,
             role: "button",
             active,
             minimized,

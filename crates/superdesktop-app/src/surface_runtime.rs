@@ -28,7 +28,7 @@ use platform_win::common::{
 use raw_window_handle::{HasWindowHandle, RawWindowHandle};
 use settings_store::{DesktopSortDirection, DesktopSortKey};
 use shell_provider_protocol::{
-    CURRENT_PROTOCOL, CommandDescriptor, CommandId, CommandRisk, Envelope, IconKey,
+    CURRENT_PROTOCOL, CommandDescriptor, CommandId, CommandRisk, Envelope, IconData, IconKey,
     JumpListRequest, MenuContext, MenuEnumeration, MenuInvocation, NotificationEvent,
     NotificationEventKind, NotificationHostResponse, NotificationMutation, ProviderRequest,
     ResponseBody, SearchBatch, SearchQuery, TerminalKind,
@@ -43,6 +43,17 @@ use taskbar_ui::{
 use crate::{notification_client::NotificationClient, provider_client::ProviderClient};
 
 static NEXT_PROVIDER_REQUEST: AtomicU64 = AtomicU64::new(1);
+const ICON_CACHE_LIMIT: usize = 2_048;
+
+fn prune_icon_cache(
+    cache: &mut BTreeMap<String, Option<IconData>>,
+    live: &std::collections::BTreeSet<String>,
+) {
+    cache.retain(|key, _| live.contains(key));
+    while cache.len() > ICON_CACHE_LIMIT {
+        cache.pop_first();
+    }
+}
 
 #[derive(Clone, Debug, Default)]
 struct ProductionTransferSnapshot {
@@ -168,6 +179,14 @@ fn trace_action(action: &str) {
     }
 }
 
+fn trace_rendered_frame() {
+    trace_action("frame-visible");
+    let (icons, _) = gpui::compressed_gpu_cache_stats();
+    if icons.uploads > 0 {
+        trace_action("icon:bc7-gpu-uploaded");
+    }
+}
+
 fn launch_superexplorer() {
     launch_superexplorer_at(None);
 }
@@ -215,6 +234,7 @@ struct DesktopNamespaceRuntime {
     items: BTreeMap<String, DesktopItem>,
     allowed_roots: Vec<PathBuf>,
     user_root: Option<PathBuf>,
+    icon_cache: BTreeMap<String, Option<IconData>>,
 }
 
 fn desktop_item_key(item: &DesktopItem) -> String {
@@ -227,12 +247,35 @@ fn refresh_desktop_namespace(
     sort_key: DesktopSortKey,
     sort_direction: DesktopSortDirection,
 ) -> Vec<AccessibleNode> {
-    let mut nodes = vec![fixed_node(monitor)];
+    let mut icon_cache = std::mem::take(&mut runtime.borrow_mut().icon_cache);
+    let fixed_path = superexplorer_executable();
+    let fixed_key = fixed_path.as_ref().map_or_else(
+        || "fixed:superexplorer".to_owned(),
+        |path| format!("fixed:{}", path.to_string_lossy().to_lowercase()),
+    );
+    let fixed_icon = icon_cache
+        .entry(fixed_key.clone())
+        .or_insert_with(|| {
+            fixed_path
+                .as_deref()
+                .and_then(|path| platform_win::common::icon::shell_icon_for_path(path, 48))
+        })
+        .clone();
+    trace_action(if fixed_icon.is_some() {
+        "superexplorer:icon-resolved"
+    } else {
+        "superexplorer:icon-unavailable"
+    });
+    let mut nodes = vec![fixed_node(monitor, fixed_icon)];
     let Ok((user_root, public_root)) = platform_win::common::desktop::known_desktop_roots() else {
+        prune_icon_cache(&mut icon_cache, &std::iter::once(fixed_key).collect());
+        runtime.borrow_mut().icon_cache = icon_cache;
         trace_action("desktop:root-resolution-failed");
         return nodes;
     };
     let Ok(entries) = platform_win::common::desktop::enumerate_known_desktops() else {
+        prune_icon_cache(&mut icon_cache, &std::iter::once(fixed_key).collect());
+        runtime.borrow_mut().icon_cache = icon_cache;
         trace_action("desktop:enumeration-failed");
         return nodes;
     };
@@ -252,9 +295,20 @@ fn refresh_desktop_namespace(
             continue;
         }
         let key = desktop_item_key(&item);
+        let icon_key = item.icon.source_key.to_lowercase();
+        let icon = icon_cache
+            .entry(icon_key.clone())
+            .or_insert_with(|| {
+                platform_win::common::icon::shell_icon_for_path(
+                    Path::new(&item.activation_token),
+                    48,
+                )
+            })
+            .clone();
         nodes.push(AccessibleNode {
             stable_id: key.clone(),
             name: item.display_name.clone(),
+            icon,
             role: "button",
             selected: false,
             focused: false,
@@ -304,10 +358,17 @@ fn refresh_desktop_namespace(
         };
         primary.then_with(|| left.stable_id.cmp(&right.stable_id))
     });
+    let live_icon_keys = items
+        .values()
+        .map(|item| item.icon.source_key.to_lowercase())
+        .chain(std::iter::once(fixed_key))
+        .collect::<std::collections::BTreeSet<_>>();
+    prune_icon_cache(&mut icon_cache, &live_icon_keys);
     *runtime.borrow_mut() = DesktopNamespaceRuntime {
         items,
         allowed_roots,
         user_root: Some(user_root),
+        icon_cache,
     };
     trace_action("desktop:refreshed");
     nodes
@@ -925,6 +986,7 @@ fn group_window_ids(stable_id: &str) -> Vec<isize> {
 fn visible_tasks(
     pin_order: &[String],
     combine_groups: bool,
+    icon_cache: &mut BTreeMap<String, Option<IconData>>,
 ) -> Result<Vec<AccessibleTask>, &'static str> {
     snapshot_task_windows()
         .map_err(|_| "task-window-snapshot")
@@ -958,7 +1020,7 @@ fn visible_tasks(
                     .cmp(&right_pin.unwrap_or(usize::MAX))
                     .then_with(|| left.cmp(right))
             });
-            groups
+            let tasks = groups
                 .into_iter()
                 .take(16)
                 .map(|(application, windows)| {
@@ -984,9 +1046,22 @@ fn visible_tasks(
                             .unwrap_or(&application)
                             .to_owned()
                     };
+                    let icon = icon_cache
+                        .entry(stable_id.clone())
+                        .or_insert_with(|| {
+                            platform_win::common::icon::window_icon(
+                                windows[0].hwnd_identity,
+                                Path::new(&application)
+                                    .is_file()
+                                    .then(|| Path::new(&application)),
+                                32,
+                            )
+                        })
+                        .clone();
                     AccessibleTask {
                         stable_id,
                         name,
+                        icon,
                         role: "button",
                         active: windows.iter().any(|window| window.foreground),
                         minimized: windows.iter().all(|window| window.minimized),
@@ -1002,7 +1077,14 @@ fn visible_tasks(
                         ],
                     }
                 })
-                .collect()
+                .collect::<Vec<_>>();
+            let live = tasks
+                .iter()
+                .map(|task| task.stable_id.as_str())
+                .collect::<std::collections::BTreeSet<_>>();
+            let live = live.into_iter().map(str::to_owned).collect();
+            prune_icon_cache(icon_cache, &live);
+            tasks
         })
 }
 
@@ -1019,6 +1101,7 @@ fn verification_state_tasks() -> Vec<AccessibleTask> {
         |(state, active, minimized, attention, group_size, available)| AccessibleTask {
             stable_id: format!("verification-state:{state}"),
             name: format!("State {state}"),
+            icon: None,
             role: "button",
             active,
             minimized,
@@ -1254,11 +1337,37 @@ fn fixed_label() -> &'static str {
     }
 }
 
-fn fixed_node(monitor: &str) -> AccessibleNode {
+fn fixed_node(monitor: &str, icon: Option<IconData>) -> AccessibleNode {
     let selected = std::env::var_os("SUPERDESKTOP_VERIFICATION_DESKTOP_SELECTED").is_some();
     let mut node = AccessibleNode::fixed_superexplorer(monitor, selected, selected);
     node.name = fixed_label().into();
+    node.icon = icon;
     node
+}
+
+fn superexplorer_executable() -> Option<PathBuf> {
+    let mut candidates = Vec::new();
+    if let Some(path) = std::env::var_os("SUPEREXPLORER_PATH") {
+        candidates.push(PathBuf::from(path));
+    }
+    if let Ok(current) = std::env::current_exe() {
+        if let Some(parent) = current.parent() {
+            candidates.push(parent.join("SuperExplorer.exe"));
+        }
+        if let Some(parent_workspace) = current
+            .ancestors()
+            .find(|ancestor| {
+                ancestor
+                    .file_name()
+                    .is_some_and(|name| name == "SuperDesktop")
+            })
+            .and_then(Path::parent)
+        {
+            candidates.push(parent_workspace.join("target/release/SuperExplorer.exe"));
+            candidates.push(parent_workspace.join("target/debug/SuperExplorer.exe"));
+        }
+    }
+    candidates.into_iter().find(|path| path.is_file())
 }
 
 pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> {
@@ -1272,12 +1381,14 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
         .map_err(|_| "settings-store-load")?
         .settings;
     let state_matrix = std::env::var_os("SUPERDESKTOP_VERIFICATION_STATE_MATRIX").is_some();
+    let task_icon_cache = Rc::new(RefCell::new(BTreeMap::new()));
     let initial_tasks = if state_matrix {
         verification_state_tasks()
     } else {
         visible_tasks(
             &persisted_settings.taskbar.pins,
             persisted_settings.taskbar.combine_groups,
+            &mut task_icon_cache.borrow_mut(),
         )?
     };
     let wallpaper = std::env::var_os("SUPERDESKTOP_WALLPAPER_PATH")
@@ -1523,7 +1634,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                     desktop.sort_direction,
                                 )
                             }))
-                            .with_rendered_action(Rc::new(|| trace_action("frame-visible")));
+                            .with_rendered_action(Rc::new(trace_rendered_frame));
                             if let Some(path) = desktop_wallpaper.clone() {
                                 view = view.with_wallpaper(path);
                             }
@@ -1666,6 +1777,9 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                         ),
                         tasks: taskbar_tasks,
                         fixed_name: fixed_label().into(),
+                        fixed_icon: superexplorer_executable().and_then(|path| {
+                            platform_win::common::icon::shell_icon_for_path(&path, 32)
+                        }),
                         status: status(),
                         notification_area: NotificationAreaModel::default(),
                         overlays: taskbar_overlays,
@@ -2007,7 +2121,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                     kind,
                                 )
                             }),
-                            rendered: Rc::new(|| trace_action("frame-visible")),
+                            rendered: Rc::new(trace_rendered_frame),
                         }),
                         keyboard_focus: focus_handle,
                     }
@@ -2083,6 +2197,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                 let refresh_app = cx.to_async();
                 let refresh_notification_client = Rc::clone(&notification_client);
                 let refresh_settings = Rc::clone(&persisted_settings);
+                let refresh_task_icons = Rc::clone(&task_icon_cache);
                 refresh_foreground
                     .spawn(async move {
                         let mut notification_tick = 0u8;
@@ -2092,6 +2207,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                             let Ok(tasks) = visible_tasks(
                                 &taskbar_settings.pins,
                                 taskbar_settings.combine_groups,
+                                &mut refresh_task_icons.borrow_mut(),
                             ) else {
                                 continue;
                             };
@@ -2207,6 +2323,10 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
 
 #[cfg(test)]
 mod live_parity_tests {
+    use super::{ICON_CACHE_LIMIT, prune_icon_cache};
+    use std::collections::{BTreeMap, BTreeSet};
+    use std::path::Path;
+
     #[test]
     fn production_status_uses_platform_clock_and_refreshes_changed_values() {
         let source = include_str!("surface_runtime.rs");
@@ -2214,5 +2334,40 @@ mod live_parity_tests {
         assert!(source.contains("if view.status != current_status"));
         assert!(source.contains("view.status = current_status.clone()"));
         assert!(!source.contains("year: 2026,\n            month: 8,\n            day: 14,"));
+    }
+
+    #[test]
+    fn icon_cache_reuses_live_entries_prunes_stale_and_stays_bounded() {
+        let mut cache = (0..ICON_CACHE_LIMIT + 4)
+            .map(|index| (format!("icon:{index:04}"), None))
+            .collect::<BTreeMap<_, _>>();
+        let live = cache.keys().cloned().collect::<BTreeSet<_>>();
+        prune_icon_cache(&mut cache, &live);
+        assert_eq!(cache.len(), ICON_CACHE_LIMIT);
+        let retained = cache.keys().next().unwrap().clone();
+        prune_icon_cache(&mut cache, &std::iter::once(retained.clone()).collect());
+        assert_eq!(cache.keys().cloned().collect::<Vec<_>>(), vec![retained]);
+    }
+
+    #[test]
+    fn development_superexplorer_icon_source_is_discoverable_when_present() {
+        let development_binary = std::env::current_exe().ok().and_then(|path| {
+            path.ancestors()
+                .find(|ancestor| {
+                    ancestor
+                        .file_name()
+                        .is_some_and(|name| name == "SuperDesktop")
+                })
+                .and_then(Path::parent)
+                .map(|root| root.join("target/release/SuperExplorer.exe"))
+        });
+        if development_binary.is_some_and(|path| path.is_file()) {
+            let resolved = super::superexplorer_executable().unwrap();
+            assert!(
+                platform_win::common::icon::shell_icon_for_path(&resolved, 48).is_some(),
+                "missing icon for {}",
+                resolved.display()
+            );
+        }
     }
 }

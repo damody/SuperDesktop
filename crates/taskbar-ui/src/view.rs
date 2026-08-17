@@ -1,4 +1,10 @@
-use std::{collections::BTreeMap, rc::Rc, sync::Arc};
+use std::{
+    cell::RefCell,
+    collections::{BTreeMap, VecDeque},
+    hash::{DefaultHasher, Hash, Hasher},
+    rc::Rc,
+    sync::Arc,
+};
 
 use gpui::{
     App, AppContext, Context, FocusHandle, InteractiveElement, IntoElement, ObjectFit,
@@ -12,13 +18,73 @@ use crate::{
 };
 use shell_provider_protocol::{IconData, IconKey, NotificationEventKind};
 
-fn notification_render_image(icon: &IconData) -> Option<Arc<RenderImage>> {
+thread_local! {
+    static ICON_RENDER_CACHE: RefCell<VecDeque<(u64, IconData, Arc<RenderImage>)>> = const { RefCell::new(VecDeque::new()) };
+}
+
+const ICON_RENDER_CACHE_LIMIT: usize = 2_048;
+
+fn icon_hash(icon: &IconData) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    icon.width.hash(&mut hasher);
+    icon.height.hash(&mut hasher);
+    icon.rgba.hash(&mut hasher);
+    hasher.finish()
+}
+
+fn bc7_render_image(icon: &IconData) -> Option<Arc<RenderImage>> {
+    let raster = platform_win::common::icon::encode_bc7(icon)?;
+    RenderImage::new_bc7_srgb(gpui::CompressedRaster {
+        kind: gpui::CompressedRasterKind::Icon,
+        width: raster.width,
+        height: raster.height,
+        padded_width: raster.padded_width,
+        padded_height: raster.padded_height,
+        row_pitch: raster.row_pitch,
+        blocks: Arc::from(raster.blocks),
+    })
+    .map(Arc::new)
+}
+
+fn uncached_icon_render_image(icon: &IconData) -> Option<Arc<RenderImage>> {
+    if !platform_win::common::icon::valid_icon_data(icon) {
+        return None;
+    }
+    if gpui::compressed_gpu_cache_stats().0.supported == Some(true)
+        && let Some(image) = bc7_render_image(icon)
+    {
+        return Some(image);
+    }
+    // GPUI's RenderImage upload contract is BGRA on Windows even though the
+    // backing image crate type is named RgbaImage.
     let mut bgra = icon.rgba.clone();
     for pixel in bgra.chunks_exact_mut(4) {
         pixel.swap(0, 2);
     }
     let buffer = image::RgbaImage::from_raw(icon.width, icon.height, bgra)?;
     Some(Arc::new(RenderImage::new(vec![image::Frame::new(buffer)])))
+}
+
+fn icon_render_image(icon: &IconData) -> Option<Arc<RenderImage>> {
+    if !platform_win::common::icon::valid_icon_data(icon) {
+        return None;
+    }
+    let key = icon_hash(icon);
+    ICON_RENDER_CACHE.with(|cache| {
+        let mut cache = cache.borrow_mut();
+        if let Some((_, _, image)) = cache
+            .iter()
+            .find(|(candidate_key, candidate, _)| *candidate_key == key && candidate == icon)
+        {
+            return Some(Arc::clone(image));
+        }
+        let image = uncached_icon_render_image(icon)?;
+        if cache.len() == ICON_RENDER_CACHE_LIMIT {
+            cache.pop_front();
+        }
+        cache.push_back((key, icon.clone(), Arc::clone(&image)));
+        Some(image)
+    })
 }
 
 fn task_display_label(
@@ -47,6 +113,7 @@ pub struct TaskbarView {
     pub layout: TaskbarLayout,
     pub tasks: Vec<AccessibleTask>,
     pub fixed_name: String,
+    pub fixed_icon: Option<IconData>,
     pub status: StatusRegion,
     pub notification_area: NotificationAreaModel,
     pub overlays: BTreeMap<String, TaskOverlay>,
@@ -189,7 +256,7 @@ impl Render for TaskbarView {
                         let key = node.key.clone();
                         let context_key = node.key.clone();
                         let tooltip = node.name.clone();
-                        let icon = node.icon.as_ref().and_then(notification_render_image);
+                        let icon = node.icon.as_ref().and_then(icon_render_image);
                         let has_native_icon = icon.is_some();
                         div()
                             .id(node.stable_id)
@@ -267,8 +334,7 @@ impl Render for TaskbarView {
                                 .children(overflow_notifications.into_iter().map(|node| {
                                     let callback = notification_callback.clone();
                                     let key = node.key.clone();
-                                    let icon =
-                                        node.icon.as_ref().and_then(notification_render_image);
+                                    let icon = node.icon.as_ref().and_then(icon_render_image);
                                     let has_native_icon = icon.is_some();
                                     div()
                                         .id(node.stable_id)
@@ -419,6 +485,19 @@ impl Render for TaskbarView {
                                     callback();
                                 }
                             })
+                            .when_some(
+                                self.fixed_icon.as_ref().and_then(icon_render_image),
+                                |element, icon| {
+                                    element.child(
+                                        img(icon)
+                                            .w(px(24.))
+                                            .h(px(24.))
+                                            .mr_2()
+                                            .flex_none()
+                                            .object_fit(ObjectFit::Contain),
+                                    )
+                                },
+                            )
                             .child(self.fixed_name.clone()),
                     )
                     .children(self.tasks.iter().map(move |task| {
@@ -451,11 +530,13 @@ impl Render for TaskbarView {
                             "available".to_owned()
                         };
                         let accessible_name = format!("{} [{state}]", task.name);
-                        // AccessibleTask does not yet carry a renderable icon. A disabled label
-                        // preference therefore falls back to truthful text instead of inventing a
-                        // pseudo-icon from the first character of the window title.
-                        let display_name =
-                            task_display_label(&task.name, task.group_size, show_labels, false);
+                        let icon = task.icon.as_ref().and_then(icon_render_image);
+                        let display_name = task_display_label(
+                            &task.name,
+                            task.group_size,
+                            show_labels,
+                            icon.is_some(),
+                        );
                         let underline = if !available {
                             rgb(0x6b6b6b)
                         } else if task.attention {
@@ -506,6 +587,16 @@ impl Render for TaskbarView {
                                             callback(&context_stable_id, cx);
                                         }
                                     })
+                            })
+                            .when_some(icon, |element, icon| {
+                                element.child(
+                                    img(icon)
+                                        .w(px(24.))
+                                        .h(px(24.))
+                                        .mr_2()
+                                        .flex_none()
+                                        .object_fit(ObjectFit::Contain),
+                                )
                             })
                             .child(
                                 div()
@@ -573,7 +664,8 @@ impl Render for TaskbarView {
 
 #[cfg(test)]
 mod tests {
-    use super::task_display_label;
+    use super::{bc7_render_image, icon_render_image, task_display_label};
+    use shell_provider_protocol::IconData;
 
     #[test]
     fn no_icon_always_uses_readable_english_and_traditional_chinese_labels() {
@@ -593,12 +685,44 @@ mod tests {
     }
 
     #[test]
+    fn task_icon_pixels_are_validated_as_rgba() {
+        let image = icon_render_image(&IconData {
+            width: 1,
+            height: 1,
+            rgba: vec![255, 0, 0, 255],
+        })
+        .unwrap();
+        assert_eq!(image.as_bytes(0), Some([0, 0, 255, 255].as_slice()));
+        assert!(
+            icon_render_image(&IconData {
+                width: 1,
+                height: 1,
+                rgba: vec![0; 3],
+            })
+            .is_none()
+        );
+    }
+
+    #[test]
+    fn bc7_task_icon_payload_is_directly_renderable() {
+        let icon = IconData {
+            width: 4,
+            height: 4,
+            rgba: vec![255; 4 * 4 * 4],
+        };
+        let image = bc7_render_image(&icon).unwrap();
+        assert!(image.compressed_raster().is_some());
+        assert_eq!(image.as_bytes(0).unwrap().len(), 16);
+    }
+
+    #[test]
     fn task_label_source_contract_keeps_truthful_fallback_and_ellipsis_container() {
         let source = include_str!("view.rs");
         let forbidden = ["task.name", ".chars()", ".next()"].concat();
         assert!(!source.contains(&forbidden));
         for required in [
-            "task_display_label(&task.name, task.group_size, show_labels, false)",
+            "task.icon.as_ref().and_then(icon_render_image)",
+            ".w(px(24.))",
             ".flex_1()",
             ".min_w_0()",
             ".overflow_hidden()",

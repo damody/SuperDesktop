@@ -10,7 +10,7 @@
                   "src/destination_list.rs":  "2f9bfdb5e7fdfdb2f72e4e150683677538b38dc4087390e916df765fab46a6e4",
                   "src/direct_manipulation.rs":  "a147dc94857f7028b2772b26ece50db308d066c6b41130d8bc6dec1d1c3a2af8",
                   "src/direct_write.rs":  "c7de83cbf29b590e002e5f1be6e96f7f66d521f87d8b98f22958644d033fa8f5",
-                  "src/directx_atlas.rs":  "0f6c0c300c8581a96212fa74aadd95d78a815fde7aacbc37f083cf984335a2cd",
+                  "src/directx_atlas.rs":  "ced91dda8344cbd757fe99a315012c119924c68de33188933a8439c77a73642d",
                   "src/directx_devices.rs":  "5c1caedc4345e373e9f587ea488229217b53cf60a64e1a76a79dd77a4c66bcc0",
                   "src/directx_renderer.rs":  "b17f027ce057d3e19e19b098c5a47beef87013c107d8d531a02147fcb7ea903b",
                   "src/dispatcher.rs":  "bb2204fd8e04201b54e9c646b79105975824aafeea1d623ed0372eab03f1abc8",

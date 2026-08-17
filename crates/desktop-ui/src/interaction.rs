@@ -4,6 +4,7 @@ use shell_core::{
     BridgeLaunchRequest, BridgeLaunchSource, BridgeTerminal, CorrelationId, MessageKey, RequestId,
     ShellItemId,
 };
+use shell_provider_protocol::IconData;
 use shell_provider_protocol::{CURRENT_PROTOCOL, Envelope, MenuContext, ProviderRequest};
 
 use crate::DesktopItem;
@@ -216,6 +217,7 @@ pub enum AccessibleAction {
 pub struct AccessibleNode {
     pub stable_id: String,
     pub name: String,
+    pub icon: Option<IconData>,
     pub role: &'static str,
     pub selected: bool,
     pub focused: bool,
@@ -228,6 +230,7 @@ impl AccessibleNode {
         Self {
             stable_id: format!("desktop:{monitor_key}:superexplorer"),
             name: "SuperExplorer".into(),
+            icon: None,
             role: "button",
             selected,
             focused,

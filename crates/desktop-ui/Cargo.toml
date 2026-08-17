@@ -10,6 +10,7 @@ workspace = true
 
 [dependencies]
 gpui.workspace = true
+image.workspace = true
 platform-win = { path = "../platform-win" }
 shell-core = { path = "../shell-core" }
 shell-provider-protocol = { path = "../shell-provider-protocol" }
