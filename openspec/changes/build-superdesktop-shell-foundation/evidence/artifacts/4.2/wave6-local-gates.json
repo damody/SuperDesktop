@@ -1,6 +1,6 @@
 {
     "schema":  "foundation-wave6-local-gates/v1",
-    "recorded_at":  "2026-08-14T10:52:03.8772222Z",
+    "recorded_at":  "2026-08-17T02:18:52.3009146Z",
     "verification_change":  "verify-superdesktop-m0",
     "strict_validation":  {
                               "status":  "passed",
@@ -8,7 +8,7 @@
                           },
     "detailed_tasks_validator":  {
                                      "status":  "passed",
-                                     "output":  "Evidence validation passed: 68 records, 93 task coverage mappings."
+                                     "output":  "Evidence validation passed: 82 records, 93 task coverage mappings."
                                  },
     "gates":  {
                   "G-DESKTOP":  "passed",
@@ -19,46 +19,46 @@
                   "G-SAFETY":  "passed",
                   "G-ARCH":  "passed",
                   "G-TRACE":  "passed",
-                  "G-SHELL-TAKEOVER":  "blocked",
-                  "G-GUARDIAN-RECOVERY":  "blocked",
+                  "G-SHELL-TAKEOVER":  "passed",
+                  "G-GUARDIAN-RECOVERY":  "passed",
                   "G-DPI-MONITOR":  "blocked"
               },
     "independent_review":  "blocked",
     "source_artifacts":  [
                              {
-                                 "sha256":  "ABBE8AF1C70768B3DFC0E5294B67B6C918099B2B63E23CB8DD8BB04B9CDBB9EB",
+                                 "sha256":  "77247C3F98DA22FD60D4EA891A5E1B69D03803857D6DFD982870D5018EF1ADCA",
                                  "path":  "verify-superdesktop-m0/evidence/artifacts/2.1/reference-ui-matrix.json"
                              },
                              {
-                                 "sha256":  "A4AD944697E67A79CD809B2EBA6E7B28EA9628D45131897636FE6BB0A15622B0",
+                                 "sha256":  "76B930FEC1EE4B2A1DD3B6C6657085647A3CB4E0C24E9D4FC16299E7D8551B95",
                                  "path":  "verify-superdesktop-m0/evidence/artifacts/4.1/accessibility-input.json"
                              },
                              {
-                                 "sha256":  "8D7E817E46F8593FEFFB4CF7542B5812C378A2EBCC62072FFA8A28D2178145F4",
+                                 "sha256":  "73227013C99E24C76ED73C1821D93B52C87CBAC8F252542D0F99E04FCFFD2B99",
                                  "path":  "verify-superdesktop-m0/evidence/artifacts/4.2/localization-ime.json"
                              },
                              {
-                                 "sha256":  "838DBEBED01062D1990EB450D7ABA38640AB03F18BD4C988A8D1B6F77F541159",
+                                 "sha256":  "D153607140B1960F826BBBDC13F588D8FF95507B6B12DE92E37D21BEB7823002",
                                  "path":  "verify-superdesktop-m0/evidence/artifacts/5.1/performance.json"
                              },
                              {
-                                 "sha256":  "BE8D243C6A0F4E2AF8C9486555CE77249E0D42D7261B8576E2B8666FF2703411",
+                                 "sha256":  "F863136D07F92E8AD11F92AF152DC14E2C97A91460ED75792DF74E1E866D471C",
                                  "path":  "verify-superdesktop-m0/evidence/artifacts/5.2/safety-license-source.json"
                              },
                              {
-                                 "sha256":  "7BF344281BE1BE1F6968683E0F76970DDFBC227B92CAA13C2A41CF91542FDB15",
+                                 "sha256":  "D717B0C6AFAEC33E45F01B8094F48E6539A38080DB043DE1B1ACEEA5F6AA1F90",
                                  "path":  "verify-superdesktop-m0/evidence/artifacts/1.2/build-offline-gate.json"
                              },
                              {
-                                 "sha256":  "A1D09F0EDB5CFAB5614844526EDE99615042C19534797006FD93A4F3BB1216C4",
+                                 "sha256":  "7E109F621E0B62050B5D1A676A851034190FF9FCE8608624DAE788BD15134E09",
                                  "path":  "verify-superdesktop-m0/evidence/artifacts/2.2/dpi-matrix.json"
                              },
                              {
-                                 "sha256":  "880275B280A289182AAE3228811718F8BE22B2689A7DE568E5E21AA042F92DDD",
+                                 "sha256":  "CE1785DA26A2DB527422ABCFB9F2C439797C402E07F9446358A4B1E568E7B1F8",
                                  "path":  "verify-superdesktop-m0/evidence/artifacts/5.3/traceability-review.json"
                              },
                              {
-                                 "sha256":  "3EDCDAB6EC84CB06D5818F1D35DE1E0D33D91BE9704F7B755F381639839A5F89",
+                                 "sha256":  "76E343F1F2AB45E494B4E063756BF7B4F414537DA5AFD3CFB2F9FF8BB8565819",
                                  "path":  "verify-superdesktop-m0/evidence/blocked-disposition.json"
                              },
                              {
@@ -66,14 +66,16 @@
                                  "path":  "verify-superdesktop-m0/evidence/coverage.json"
                              },
                              {
-                                 "sha256":  "44616A7E8F8588B6CF0A3A60095A908953C7A20554907629966003F74DB85F7C",
+                                 "sha256":  "E6E9538C384C993A6B14673D495B31FE48E74A8F361BA1D514CD277D97FF15C5",
                                  "path":  "verify-superdesktop-m0/evidence/adjustments.jsonl"
+                             },
+                             {
+                                 "sha256":  "12DD467A43768F4F21FA7148284DC2656E1C8AC99CEEA520C8D8F1F4F8FD0309",
+                                 "path":  "verify-superdesktop-m0/evidence/artifacts/3.1/reference-profile-gate.json"
                              }
                          ],
     "unresolved":  [
-                       "physical-five-dpi-matrix",
                        "physical-mixed-dpi-dual-monitor",
-                       "windows-10-22h2",
                        "independent-final-review",
                        "archive-deferred-by-user"
                    ]
