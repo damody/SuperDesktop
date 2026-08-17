@@ -1,0 +1,42 @@
+{
+  "schema": "windows11-reference-release-candidate-handoff/v1",
+  "candidate_revision": "1176cee92fb43afb1fec17d0f186e227ad461e53",
+  "candidate_manifest": "openspec/changes/verify-superdesktop-shell-completion/evidence/release-candidate.json",
+  "migration_change": "adopt-superdesktop-windows11-reference-release",
+  "migration_adjustment": "C-W11-REFERENCE-001",
+  "package": {
+    "path": "build/SuperDesktop-package-1176cee9",
+    "schema": "superdesktop-package/v1",
+    "tracked": false,
+    "non_overwriting_output": true,
+    "binaries": [
+      { "name": "superdesktop-app.exe", "sha256": "d8035f04628a294b4207f5b5dce9a8ff69a121e39adb1a8759e0b77185d0b99d" },
+      { "name": "superdesktop-guardian.exe", "sha256": "fbb4d75e4442412d1c54e2aa1d5902e0a8b64aef21db49a4ddebb3d61c41ed26" },
+      { "name": "shell-installer.exe", "sha256": "d74b007720679052188374e0c7e15e3817ab2ee14d778a80dab4bb95d8c7fc29" },
+      { "name": "shell-provider-host.exe", "sha256": "cc5f4b61e2074a0c974fecefeba84ea8b3bc4fbe3997b14fb607c5bc8bdcddac" },
+      { "name": "notification-area-host.exe", "sha256": "9295bcf1cff67c3d92bec476ab27543e5a2c3669f544aaf93895ffc65e33add4" },
+      { "name": "SuperExplorer.exe", "sha256": "bf3298dc4c26f0085edcc54ed7066f072232ec9bc6e77a773e50ed95a3016dc3" }
+    ],
+    "manifest_hashes": "passed"
+  },
+  "installer_dry_run": {
+    "disposition": "dry_run",
+    "registry_unchanged": true,
+    "rollback_record_created": false
+  },
+  "rollups": {
+    "implementation_complete": true,
+    "release_allowed": false,
+    "verification_commit": "1176cee9",
+    "windows_10_compatibility": "not-claimed",
+    "blockers": [
+      "G-DPI-MONITOR-PHYSICAL",
+      "G-GUARDIAN-RECOVERY",
+      "G-INSTALL-ROLLBACK",
+      "G-REVIEW",
+      "G-SHELL-TAKEOVER"
+    ]
+  },
+  "active_unarchived": true,
+  "archive_mutation": false
+}

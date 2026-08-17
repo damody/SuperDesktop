@@ -27,7 +27,13 @@
     { "task_id": "4.1.3", "status": "passed", "evidence": "workspace format, 197 tests, and clippy -D warnings passed" },
     { "task_id": "4.1.4", "status": "passed", "evidence": "migration, foundation, and M0 detailed task validators passed" },
     { "task_id": "4.1.5", "status": "passed", "evidence": "21 OpenSpec items strict-valid and mandatory Windows 10 scan empty" },
-    { "task_id": "4.1.6", "status": "passed", "evidence": "Registry and rollback metadata unchanged; no reboot, archive, or external mutation" }
+    { "task_id": "4.1.6", "status": "passed", "evidence": "Registry and rollback metadata unchanged; no reboot, archive, or external mutation" },
+    { "task_id": "4.2.1", "status": "passed", "evidence": "migration implementation commit 1176cee92fb43afb1fec17d0f186e227ad461e53" },
+    { "task_id": "4.2.2", "status": "passed", "evidence": "release-candidate manifest binds full migration revision" },
+    { "task_id": "4.2.3", "status": "passed", "evidence": "non-overwriting six-binary package manifest hashes passed" },
+    { "task_id": "4.2.4", "status": "passed", "evidence": "packaged installer returned dry_run with exact zero mutation" },
+    { "task_id": "4.2.5", "status": "passed", "evidence": "completion and program roll-ups refreshed with truthful five-gate blocker set" },
+    { "task_id": "4.2.6", "status": "passed", "evidence": "all changes remain active and unarchived" }
   ],
   "blocked": [
     { "task_id": "2.1.6", "reason": "approved 26200.8875 profile drifted to 26200.9168" },

@@ -164,9 +164,9 @@
 **Gate／Evidence：** `G-TRACE`, `G-SAFETY`; `evidence/candidate-handoff.json`.
 **完成門檻：** Candidate revision contains the migrated harness, package hashes pass, installer dry-run is zero-mutation, and only physical/reviewer or separately authorized reboot evidence remains pending.
 
-- [ ] 4.2.1 Commit the migrated implementation and resolve its full immutable revision.
-- [ ] 4.2.2 Freeze release-candidate purpose and revision to the migrated harness commit.
-- [ ] 4.2.3 Build a non-overwriting six-binary release package and verify every manifest SHA-256.
-- [ ] 4.2.4 Run packaged installer dry-run and verify exact zero mutation.
-- [ ] 4.2.5 Refresh completion/program lineage and publish the truthful post-migration blocker set.
-- [ ] 4.2.6 Leave all changes active and unarchived.
+- [x] 4.2.1 Commit the migrated implementation and resolve its full immutable revision.
+- [x] 4.2.2 Freeze release-candidate purpose and revision to the migrated harness commit.
+- [x] 4.2.3 Build a non-overwriting six-binary release package and verify every manifest SHA-256.
+- [x] 4.2.4 Run packaged installer dry-run and verify exact zero mutation.
+- [x] 4.2.5 Refresh completion/program lineage and publish the truthful post-migration blocker set.
+- [x] 4.2.6 Leave all changes active and unarchived.
