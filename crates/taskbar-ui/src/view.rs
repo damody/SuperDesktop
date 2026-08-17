@@ -383,11 +383,11 @@ impl Render for TaskbarView {
             )
             .child(
                 div()
-                    .h_full()
+                    .h(bar_height)
                     .flex_1()
                     .min_w_0()
                     .flex()
-                    .flex_row()
+                    .flex_col()
                     .flex_wrap()
                     .content_start()
                     .items_start()
@@ -610,5 +610,8 @@ mod tests {
                 "missing label contract: {required}"
             );
         }
+        assert!(source.contains(
+            ".h(bar_height)\n                    .flex_1()\n                    .min_w_0()\n                    .flex()\n                    .flex_col()\n                    .flex_wrap()"
+        ));
     }
 }

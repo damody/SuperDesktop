@@ -101,6 +101,20 @@ try {
     if ($unavailable.Count -ne 1 -or $unavailable[0].invoke_available) {
         throw 'Unavailable state incorrectly exposes InvokePattern.'
     }
+    $active = @($controls | Where-Object name -eq 'State active [active]')[0]
+    $minimized = @($controls | Where-Object name -eq 'State minimized [minimized]')[0]
+    $attention = @($controls | Where-Object name -eq 'State attention [attention]')[0]
+    $group = @($controls | Where-Object name -eq 'State group [group:3]')[0]
+    $taskRows = @($controls.bounds.top | Sort-Object -Unique)
+    if ($taskRows.Count -ne 2 -or
+        $active.bounds.top -le $minimized.bounds.top -or
+        $active.bounds.left -ge $minimized.bounds.left -or
+        $minimized.bounds.left -ne $attention.bounds.left -or
+        $minimized.bounds.top -ge $attention.bounds.top -or
+        $group.bounds.left -ne $unavailable[0].bounds.left -or
+        $group.bounds.top -ge $unavailable[0].bounds.top) {
+        throw 'Two-row tasks are not packed top-to-bottom before advancing columns.'
+    }
 
     $windowBounds = $root.Current.BoundingRectangle
     $width = [math]::Max(1, [int]$windowBounds.Width)
@@ -134,6 +148,8 @@ try {
         state_count = $controls.Count
         controls = $controls
         unavailable_invoke_suppressed = $true
+        distinct_task_rows = $taskRows.Count
+        column_major_packing = $true
         frame_visible = $true
     }
     $parent = Split-Path -Parent $OutputPath

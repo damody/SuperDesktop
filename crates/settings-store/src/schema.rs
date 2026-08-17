@@ -81,7 +81,7 @@ impl Default for TaskbarSettings {
         Self {
             rows: 2,
             pins: Vec::new(),
-            combine_groups: true,
+            combine_groups: false,
             show_labels: true,
             previews_enabled: true,
             all_monitors: true,
@@ -203,7 +203,7 @@ impl SettingsV1 {
             }
             settings.taskbar.pins = take_string_array(&mut taskbar, "pins").unwrap_or_default();
             settings.taskbar.combine_groups =
-                take_bool(&mut taskbar, "combine_groups").unwrap_or(true);
+                take_bool(&mut taskbar, "combine_groups").unwrap_or(false);
             settings.taskbar.show_labels = take_bool(&mut taskbar, "show_labels").unwrap_or(true);
             settings.taskbar.previews_enabled =
                 take_bool(&mut taskbar, "previews_enabled").unwrap_or(true);
@@ -611,11 +611,14 @@ mod tests {
 
     #[test]
     fn taskbar_labels_default_to_readable_and_preserve_explicit_false() {
-        assert!(TaskbarSettings::default().show_labels);
+        let defaults = TaskbarSettings::default();
+        assert!(defaults.show_labels);
+        assert!(!defaults.combine_groups);
 
         let partial =
             SettingsV1::decode(r#"{"schema_version":1,"taskbar":{"rows":2,"pins":[]}}"#).unwrap();
         assert!(partial.settings.taskbar.show_labels);
+        assert!(!partial.settings.taskbar.combine_groups);
 
         let explicit_false = SettingsV1::decode(
             r#"{"schema_version":1,"taskbar":{"rows":2,"pins":[],"show_labels":false}}"#,
@@ -624,6 +627,19 @@ mod tests {
         assert!(!explicit_false.settings.taskbar.show_labels);
         let round_trip = SettingsV1::decode(&explicit_false.settings.encode()).unwrap();
         assert!(!round_trip.settings.taskbar.show_labels);
+
+        let explicit_grouping = SettingsV1::decode(
+            r#"{"schema_version":1,"taskbar":{"rows":2,"pins":[],"combine_groups":true}}"#,
+        )
+        .unwrap();
+        assert!(explicit_grouping.settings.taskbar.combine_groups);
+        assert!(
+            SettingsV1::decode(&explicit_grouping.settings.encode())
+                .unwrap()
+                .settings
+                .taskbar
+                .combine_groups
+        );
     }
 
     #[test]

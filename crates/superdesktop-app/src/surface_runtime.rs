@@ -1225,13 +1225,14 @@ fn observed_task_view_model() -> TaskViewModel {
 }
 
 fn status() -> StatusRegion {
+    let local = platform_win::common::taskbar_status::local_date_time();
     StatusRegion::new(
         TestClock {
-            year: 2026,
-            month: 8,
-            day: 14,
-            hour: 11,
-            minute: 22,
+            year: local.year,
+            month: local.month,
+            day: local.day,
+            hour: local.hour,
+            minute: local.minute,
         },
         ClockLocale::ZhTw,
         CoreStatus {
@@ -2110,12 +2111,18 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                         _ => None,
                                     })
                             });
+                            let current_status = status();
                             refresh_app.update(|app| {
                                 let mut alive = false;
                                 for handle in &refresh_handles {
                                     if handle
                                         .update(app, |view, _, cx| {
                                             alive = true;
+                                            if view.status != current_status {
+                                                view.status = current_status.clone();
+                                                trace_action("clock:updated");
+                                                cx.notify();
+                                            }
                                             if view.tasks != tasks {
                                                 view.tasks = tasks.clone();
                                                 let live = tasks
@@ -2196,4 +2203,16 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
             }
         });
     terminal.borrow_mut().take().unwrap_or(Ok(()))
+}
+
+#[cfg(test)]
+mod live_parity_tests {
+    #[test]
+    fn production_status_uses_platform_clock_and_refreshes_changed_values() {
+        let source = include_str!("surface_runtime.rs");
+        assert!(source.contains("taskbar_status::local_date_time()"));
+        assert!(source.contains("if view.status != current_status"));
+        assert!(source.contains("view.status = current_status.clone()"));
+        assert!(!source.contains("year: 2026,\n            month: 8,\n            day: 14,"));
+    }
 }
