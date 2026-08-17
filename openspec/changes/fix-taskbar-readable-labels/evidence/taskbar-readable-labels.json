@@ -1,0 +1,62 @@
+{
+    "schema":  "m0-task-state-matrix/v1",
+    "result":  "passed",
+    "app_sha256":  "C39E7DEB715416A92EC51A49B717354F72DBE20D5EF36745FC8016CCCCF66894",
+    "screenshot":  "taskbar-readable-labels.png",
+    "screenshot_sha256":  "82DD2EC95D5205884DEA5D49133B59662048DF4E8504A147B9E69475C8F4A76B",
+    "state_count":  5,
+    "controls":  [
+                     {
+                         "name":  "State active [active]",
+                         "invoke_available":  true,
+                         "bounds":  {
+                                        "left":  423,
+                                        "top":  1874,
+                                        "width":  332,
+                                        "height":  70
+                                    }
+                     },
+                     {
+                         "name":  "State minimized [minimized]",
+                         "invoke_available":  true,
+                         "bounds":  {
+                                        "left":  755,
+                                        "top":  1874,
+                                        "width":  332,
+                                        "height":  70
+                                    }
+                     },
+                     {
+                         "name":  "State attention [attention]",
+                         "invoke_available":  true,
+                         "bounds":  {
+                                        "left":  1087,
+                                        "top":  1874,
+                                        "width":  332,
+                                        "height":  70
+                                    }
+                     },
+                     {
+                         "name":  "State group [group:3]",
+                         "invoke_available":  true,
+                         "bounds":  {
+                                        "left":  1419,
+                                        "top":  1874,
+                                        "width":  332,
+                                        "height":  70
+                                    }
+                     },
+                     {
+                         "name":  "State unavailable [unavailable]",
+                         "invoke_available":  false,
+                         "bounds":  {
+                                        "left":  1751,
+                                        "top":  1874,
+                                        "width":  332,
+                                        "height":  70
+                                    }
+                     }
+                 ],
+    "unavailable_invoke_suppressed":  true,
+    "frame_visible":  true
+}

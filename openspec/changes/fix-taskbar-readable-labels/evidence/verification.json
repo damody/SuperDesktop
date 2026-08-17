@@ -1,0 +1,37 @@
+{
+  "schema": "taskbar-readable-labels-verification/v1",
+  "recorded_at": "2026-08-17T08:16:00Z",
+  "status": "passed",
+  "root_cause": "show_labels=false rendered the first Unicode scalar because AccessibleTask supplied no renderable icon",
+  "production_sources": [
+    {"path": "crates/settings-store/src/schema.rs", "sha256": "4560079b1cab0c4611106819a36920cbe11a79a17c8389c28fac1fad3d2610d1"},
+    {"path": "crates/taskbar-ui/src/view.rs", "sha256": "8bb614aecf51270bcbd8e869597c061721718c89855cddf5f1c1c0f26ed479f3"}
+  ],
+  "collector": {
+    "path": "scripts/verify-m0-task-state-matrix.ps1",
+    "sha256": "377b83e380e47b1d1f4c39a58e1ecdc9f15ad6a21ac82355af01f1a4fef09c5f",
+    "directory_creation_before_trace": true,
+    "settle_milliseconds": 1200
+  },
+  "tests": {
+    "cargo_fmt_all_check": "passed",
+    "targeted_settings_store": "1 passed",
+    "targeted_taskbar_view": "5 passed",
+    "workspace_locked_offline_check": "passed",
+    "release_settings_store": "14 passed",
+    "release_taskbar_ui": "27 passed"
+  },
+  "headful": {
+    "dpi_percent": 175,
+    "result": "passed",
+    "state_count": 5,
+    "visible_labels": ["SuperExplorer", "State active", "State minimized", "State attention", "State group (3)", "State unavailable"],
+    "isolated_first_character_fallback": false,
+    "report": "evidence/taskbar-readable-labels.json",
+    "report_sha256": "88ef4419e7c43ce95e228bc587b0bc1820a129f2b5f1f5e514d409df33be44a0",
+    "screenshot": "evidence/taskbar-readable-labels.png",
+    "screenshot_sha256": "82dd2ec95d5205884dea5d49133b59662048df4e8504a147b9e69475c8f4a76b"
+  },
+  "gate": "G-TASKBAR-LABELS",
+  "disposition": "passed"
+}

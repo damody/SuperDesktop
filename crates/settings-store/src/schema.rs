@@ -82,7 +82,7 @@ impl Default for TaskbarSettings {
             rows: 2,
             pins: Vec::new(),
             combine_groups: true,
-            show_labels: false,
+            show_labels: true,
             previews_enabled: true,
             all_monitors: true,
         }
@@ -204,7 +204,7 @@ impl SettingsV1 {
             settings.taskbar.pins = take_string_array(&mut taskbar, "pins").unwrap_or_default();
             settings.taskbar.combine_groups =
                 take_bool(&mut taskbar, "combine_groups").unwrap_or(true);
-            settings.taskbar.show_labels = take_bool(&mut taskbar, "show_labels").unwrap_or(false);
+            settings.taskbar.show_labels = take_bool(&mut taskbar, "show_labels").unwrap_or(true);
             settings.taskbar.previews_enabled =
                 take_bool(&mut taskbar, "previews_enabled").unwrap_or(true);
             settings.taskbar.all_monitors = take_bool(&mut taskbar, "all_monitors").unwrap_or(true);
@@ -608,6 +608,23 @@ fn wallpaper_mode_name(value: WallpaperMode) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn taskbar_labels_default_to_readable_and_preserve_explicit_false() {
+        assert!(TaskbarSettings::default().show_labels);
+
+        let partial =
+            SettingsV1::decode(r#"{"schema_version":1,"taskbar":{"rows":2,"pins":[]}}"#).unwrap();
+        assert!(partial.settings.taskbar.show_labels);
+
+        let explicit_false = SettingsV1::decode(
+            r#"{"schema_version":1,"taskbar":{"rows":2,"pins":[],"show_labels":false}}"#,
+        )
+        .unwrap();
+        assert!(!explicit_false.settings.taskbar.show_labels);
+        let round_trip = SettingsV1::decode(&explicit_false.settings.encode()).unwrap();
+        assert!(!round_trip.settings.taskbar.show_labels);
+    }
 
     #[test]
     fn full_v1_round_trip_preserves_every_field_and_unknown_top_level() {

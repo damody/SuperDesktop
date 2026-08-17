@@ -29,6 +29,8 @@ $priorSurface = $env:SUPERDESKTOP_VERIFICATION_SURFACE
 $priorMatrix = $env:SUPERDESKTOP_VERIFICATION_STATE_MATRIX
 $priorTrace = $env:SUPERDESKTOP_ACTION_TRACE
 $tracePath = [IO.Path]::ChangeExtension($OutputPath, '.log')
+$traceParent = Split-Path -Parent $tracePath
+New-Item -ItemType Directory -Force $traceParent | Out-Null
 $env:SUPERDESKTOP_VERIFICATION_SURFACE = 'taskbar'
 $env:SUPERDESKTOP_VERIFICATION_STATE_MATRIX = '1'
 $env:SUPERDESKTOP_ACTION_TRACE = $tracePath
@@ -49,7 +51,7 @@ function Wait-ForWindowHandle([System.Diagnostics.Process]$Process) {
 try {
     $process = Start-Process -FilePath $appPath -ArgumentList '--verification-capture-ms', '4000' -PassThru
     $windowHandle = Wait-ForWindowHandle $process
-    Start-Sleep -Milliseconds 500
+    Start-Sleep -Milliseconds 1200
     $root = [System.Windows.Automation.AutomationElement]::FromHandle($windowHandle)
     $buttonCondition = New-Object System.Windows.Automation.PropertyCondition(
         [System.Windows.Automation.AutomationElement]::ControlTypeProperty,

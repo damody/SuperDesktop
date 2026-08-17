@@ -21,6 +21,27 @@ fn notification_render_image(icon: &IconData) -> Option<Arc<RenderImage>> {
     Some(Arc::new(RenderImage::new(vec![image::Frame::new(buffer)])))
 }
 
+fn task_display_label(
+    name: &str,
+    group_size: usize,
+    show_labels: bool,
+    has_real_icon: bool,
+) -> String {
+    if !show_labels && has_real_icon {
+        return String::new();
+    }
+    let name = if name.trim().is_empty() {
+        "Untitled"
+    } else {
+        name
+    };
+    if group_size > 1 {
+        format!("{name} ({group_size})")
+    } else {
+        name.to_owned()
+    }
+}
+
 pub struct TaskbarView {
     pub accessible_root_name: String,
     pub layout: TaskbarLayout,
@@ -430,13 +451,11 @@ impl Render for TaskbarView {
                             "available".to_owned()
                         };
                         let accessible_name = format!("{} [{state}]", task.name);
-                        let display_name = if show_labels && task.group_size > 1 {
-                            format!("{} ({})", task.name, task.group_size)
-                        } else if show_labels {
-                            task.name.clone()
-                        } else {
-                            task.name.chars().next().unwrap_or('?').to_string()
-                        };
+                        // AccessibleTask does not yet carry a renderable icon. A disabled label
+                        // preference therefore falls back to truthful text instead of inventing a
+                        // pseudo-icon from the first character of the window title.
+                        let display_name =
+                            task_display_label(&task.name, task.group_size, show_labels, false);
                         let underline = if !available {
                             rgb(0x6b6b6b)
                         } else if task.attention {
@@ -488,11 +507,20 @@ impl Render for TaskbarView {
                                         }
                                     })
                             })
-                            .child(display_name)
+                            .child(
+                                div()
+                                    .flex_1()
+                                    .min_w_0()
+                                    .overflow_hidden()
+                                    .whitespace_nowrap()
+                                    .text_ellipsis()
+                                    .child(display_name),
+                            )
                             .when_some(overlay.badge.clone(), |element, badge| {
                                 element.child(
                                     div()
                                         .ml_auto()
+                                        .flex_none()
                                         .px_1()
                                         .rounded_md()
                                         .bg(rgb(0x8b1a1a))
@@ -540,5 +568,47 @@ impl Render for TaskbarView {
                     .child(self.status.time.clone())
                     .child(self.status.date.clone()),
             )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::task_display_label;
+
+    #[test]
+    fn no_icon_always_uses_readable_english_and_traditional_chinese_labels() {
+        assert_eq!(task_display_label("Discord", 1, true, false), "Discord");
+        assert_eq!(
+            task_display_label("工作管理員", 1, false, false),
+            "工作管理員"
+        );
+        assert_eq!(task_display_label("瀏覽器", 3, false, false), "瀏覽器 (3)");
+        assert_eq!(task_display_label("", 1, false, false), "Untitled");
+    }
+
+    #[test]
+    fn labels_can_only_be_hidden_when_a_real_icon_exists() {
+        assert_eq!(task_display_label("Discord", 1, false, true), "");
+        assert_eq!(task_display_label("Discord", 1, true, true), "Discord");
+    }
+
+    #[test]
+    fn task_label_source_contract_keeps_truthful_fallback_and_ellipsis_container() {
+        let source = include_str!("view.rs");
+        let forbidden = ["task.name", ".chars()", ".next()"].concat();
+        assert!(!source.contains(&forbidden));
+        for required in [
+            "task_display_label(&task.name, task.group_size, show_labels, false)",
+            ".flex_1()",
+            ".min_w_0()",
+            ".overflow_hidden()",
+            ".whitespace_nowrap()",
+            ".text_ellipsis()",
+        ] {
+            assert!(
+                source.contains(required),
+                "missing label contract: {required}"
+            );
+        }
     }
 }
