@@ -22,7 +22,7 @@ The verifier SHALL distinguish implemented documented capabilities, owned replac
 - **THEN** the roll-up records the limitation and makes no native parity claim
 
 ### Requirement: External release gates fail closed
-The verifier SHALL require exact Windows 11 build 26200.8875＋ExplorerPatcher 26100.8457.70.3 lifecycle/reboot evidence, physical mixed-DPI evidence, and independent review before allowing release. Windows 10 compatibility SHALL be recorded as not claimed and SHALL NOT block this release.
+The verifier SHALL require exact Windows 11 build 26200.9168＋ExplorerPatcher 26100.8457.70.3 lifecycle/reboot evidence, physical mixed-DPI evidence, and independent review before allowing release. Windows 10 compatibility SHALL be recorded as not claimed and SHALL NOT block this release.
 
 #### Scenario: Only local automated evidence exists
 - **WHEN** all workspace tests pass but one or more external artifacts are absent

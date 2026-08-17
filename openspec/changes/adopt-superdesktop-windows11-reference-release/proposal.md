@@ -4,7 +4,7 @@ SuperDesktop's implemented UI already targets a frozen Windows 11 and ExplorerPa
 
 ## What Changes
 
-- **BREAKING** Replace the mandatory Windows 10 build 19045 evidence kind and admission rules with an exact Windows 11 build `26200.8875` and ExplorerPatcher `26100.8457.70.3` reference-profile contract.
+- **BREAKING** Replace the mandatory Windows 10 build 19045 evidence kind and admission rules with an exact Windows 11 build `26200.9168` and ExplorerPatcher `26100.8457.70.3` reference-profile contract.
 - Bind lifecycle, Shell takeover, guardian recovery, installer reboot/rollback, and UI evidence to the same immutable candidate and frozen profile hashes.
 - Rename active Windows 10-specific collectors, schemas, evidence kinds, blocker records, and instructions to platform-neutral reference-profile names.
 - Update the active foundation, M0 verification, shell-completion verification, and parent program artifacts so their release language and derived gates agree.

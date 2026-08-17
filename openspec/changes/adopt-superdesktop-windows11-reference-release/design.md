@@ -1,6 +1,6 @@
 ## Context
 
-The active release program has two conflicting platform contracts. UI and capability evidence is frozen to Windows 11 build `26200.8875` with ExplorerPatcher `26100.8457.70.3`, while final lifecycle and installer gates require Windows 10 build 19045. The user approved a material C-level correction: make the existing Windows 11 ExplorerPatcher profile mandatory and stop claiming Windows 10 compatibility.
+The active release program has two conflicting platform contracts. UI and capability evidence is frozen to Windows 11 build `26200.9168` with ExplorerPatcher `26100.8457.70.3`, while final lifecycle and installer gates require Windows 10 build 19045. The user approved a material C-level correction: make the existing Windows 11 ExplorerPatcher profile mandatory and stop claiming Windows 10 compatibility.
 
 The migration crosses active OpenSpec changes, PowerShell collectors, JSON schemas, evidence filenames, task state, and release-candidate lineage. No admitted Windows 10 pass artifact exists, so active evidence identifiers can change without rewriting historical archives.
 
@@ -26,7 +26,7 @@ The migration crosses active OpenSpec changes, PowerShell collectors, JSON schem
 
 ### 1. The frozen profile contract is the single platform authority
 
-Collectors read `validate-superdesktop-windows-platform/evidence/artifacts/1.1/frozen-profile-contract.json` and verify its referenced hashes. They also verify live Windows build `26200`, UBR `8875`, ExplorerPatcher version `26100.8457.70.3`, ExplorerPatcher binary hashes, settings/allowlist lineage, and reference image hash. Duplicated constants in user-facing messages are allowed only for diagnostics; admission derives from the contract.
+Collectors read `validate-superdesktop-windows-platform/evidence/artifacts/1.1/frozen-profile-contract.json` and verify its referenced hashes. They also verify live Windows build `26200`, UBR `9168`, ExplorerPatcher version `26100.8457.70.3`, ExplorerPatcher binary hashes, settings/allowlist lineage, and reference image hash. Duplicated constants in user-facing messages are allowed only for diagnostics; admission derives from the contract.
 
 Accepting any Windows 11 build was rejected because Windows updates can change Shell Hook, AppBar, ExplorerPatcher, and rendering behavior. Keeping Windows 10 as an optional active evidence kind was rejected because no current compatibility commitment requires the extra schema branch.
 

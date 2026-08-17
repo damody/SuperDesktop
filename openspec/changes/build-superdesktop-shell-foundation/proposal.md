@@ -12,7 +12,7 @@
 - 建立依參考圖設計的底部高密度雙列工作列，並支援一至三列、AppBar、多螢幕、視窗追蹤、群組、啟用、最小化、還原及釘選。
 - 建立 SuperExplorer 程序橋接；以既有 `EXPLORER_INITIAL_PATH` 合約開啟檔案系統資料夾，且在執行檔缺失或啟動失敗時提供可復原錯誤。
 - 建立版本化設定、原子寫入、損毀隔離、事件 overflow 對帳、隱私安全診斷與有序關閉。
-- 建立凍結的 Windows 11 build 26200.8875 + ExplorerPatcher 26100.8457.70.3 UI/互動與 release reference profile、虛擬/真實多螢幕、協助工具、在地化、效能、壓力與復原證據體系。
+- 建立凍結的 Windows 11 build 26200.9168 + ExplorerPatcher 26100.8457.70.3 UI/互動與 release reference profile、虛擬/真實多螢幕、協助工具、在地化、效能、壓力與復原證據體系。
 - 明確延後完整開始功能表與搜尋、完整第三方通知區、跳躍清單、縮圖、桌面重新命名、桌面檔案拖放、虛擬桌面、登錄安裝與完整相容性強化；這些能力各自使用後續 OpenSpec change。M0 只保留對應的型別化 unavailable 邊界，不顯示尚未實作的操作。
 
 ## Capabilities

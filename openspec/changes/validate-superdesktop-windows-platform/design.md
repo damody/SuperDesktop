@@ -1,6 +1,6 @@
 ## Context
 
-此 change 依賴 `bootstrap-superdesktop-workspace`。開發與 UI reference profile 為 Windows 11 build 26200.8875、ExplorerPatcher 26100.8457.70.3；參考圖 hash 固定。Spike 不建立完整產品 surface，也不切換 Explorer。
+此 change 依賴 `bootstrap-superdesktop-workspace`。開發與 UI reference profile 為 Windows 11 build 26200.9168、ExplorerPatcher 26100.8457.70.3；參考圖 hash 固定。Spike 不建立完整產品 surface，也不切換 Explorer。
 
 ## Goals / Non-Goals
 

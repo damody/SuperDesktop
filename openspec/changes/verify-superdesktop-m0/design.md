@@ -4,7 +4,7 @@
 
 本 change 是 SuperDesktop M0 program 的最後一道發行驗證，不新增產品功能。所有 production child changes 必須先完成，才能在凍結的 Windows 11＋ExplorerPatcher reference environment 與螢幕拓撲矩陣上執行可重現的 gate；封存仍由使用者另行決定。
 
-主要 UI／互動與 release lifecycle 環境為 Windows 11 build 26200.8875、ExplorerPatcher 26100.8457.70.3，以及 SHA-256 `48B5F990B9E155C5C2719D8F8B41D88ED4420A46C3B6018278511F9C349B387E` 的工作列截圖。Windows 10 compatibility 不在本 release claim 內。
+主要 UI／互動與 release lifecycle 環境為 Windows 11 build 26200.9168、ExplorerPatcher 26100.8457.70.3，以及 SHA-256 `48B5F990B9E155C5C2719D8F8B41D88ED4420A46C3B6018278511F9C349B387E` 的工作列截圖。Windows 10 compatibility 不在本 release claim 內。
 
 目前機器只有一個實體顯示器，因此自動化 mixed-DPI topology 以虛擬顯示器執行；真實 mixed-DPI 雙螢幕保留為 release-candidate confirmation。外部環境缺失只能標記 `blocked`，不得改成 `not-applicable` 或假造通過。
 
@@ -39,7 +39,7 @@
 
 ### 3. Exact reference profile 是 lifecycle 與 installer gate
 
-Windows 11 build 26200.8875＋ExplorerPatcher 26100.8457.70.3 必須驗證 preview 啟動、Shell mode 明確 opt-in、核心互動、正常退出回復、forced-crash guardian 回復與 installer reboot/rollback。任一 profile/hash/candidate 漂移或必要 mutation phase 未執行時，相關 leaf 保持 `blocked`，M0 不得宣告完成。
+Windows 11 build 26200.9168＋ExplorerPatcher 26100.8457.70.3 必須驗證 preview 啟動、Shell mode 明確 opt-in、核心互動、正常退出回復、forced-crash guardian 回復與 installer reboot/rollback。任一 profile/hash/candidate 漂移或必要 mutation phase 未執行時，相關 leaf 保持 `blocked`，M0 不得宣告完成。
 
 ### 4. 虛擬與實體 mixed-DPI 分開判定
 

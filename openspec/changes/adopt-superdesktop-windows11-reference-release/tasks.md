@@ -51,7 +51,7 @@
 - [x] 2.1.3 Implement release-candidate ancestry plus committed, staged, and working-tree production drift rejection.
 - [x] 2.1.4 Emit a bounded owned observation containing profile fingerprint, candidate revision, and rehashable sources.
 - [x] 2.1.5 Add negative fixture tests for every independently failing admission field and obsolete Windows 10 input.
-- [ ] 2.1.6 Run a live zero-mutation admission probe on the frozen workstation.
+- [x] 2.1.6 Run a live zero-mutation admission probe on the frozen workstation.
 
 ### 2.2 Migrate lifecycle and guardian evidence collection
 

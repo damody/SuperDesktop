@@ -27,7 +27,7 @@ $shortRevision = $revision.Substring(0, 8)
 
 $m0 = Get-Content -Raw -Encoding utf8 -LiteralPath $m0Path | ConvertFrom-Json
 if ($m0.schema -cne 'm0-reference-profile-gate/v1' -or $m0.status -cne 'passed' -or $m0.revision -cne $shortRevision) { throw 'M0 reference-profile evidence is invalid or stale.' }
-if ($m0.host.build -ne 26200 -or $m0.host.ubr -ne 8875 -or $m0.host.explorerpatcher_version -cne '26100.8457.70.3' -or
+if ($m0.host.build -ne 26200 -or $m0.host.ubr -ne 9168 -or $m0.host.explorerpatcher_version -cne '26100.8457.70.3' -or
     $m0.host.profile_fingerprint -cne $admission.profile_fingerprint) { throw 'M0 exact reference profile is required.' }
 if ([string]::IsNullOrWhiteSpace($m0.operator.name) -or [string]::IsNullOrWhiteSpace($m0.operator.organization) -or
     [string]$m0.operator.name -like 'REPLACE_WITH_*' -or [string]$m0.operator.organization -like 'REPLACE_WITH_*') { throw 'M0 reference-profile operator is not attributable.' }
@@ -62,7 +62,7 @@ $phaseHosts = [ordered]@{
 Assert-SuperDesktopInstallerHostSet -Hosts $phaseHosts -Revision $revision -ProfileFingerprint $admission.profile_fingerprint
 foreach ($name in @('host-DryRun.json','host-Enable.json','host-AfterReboot.json','host-Rollback.json')) {
     $host = $installerDocuments[$name]
-    if ($host.build -ne 26200 -or $host.ubr -ne 8875 -or $host.explorerPatcherVersion -cne '26100.8457.70.3' -or
+    if ($host.build -ne 26200 -or $host.ubr -ne 9168 -or $host.explorerPatcherVersion -cne '26100.8457.70.3' -or
         $host.profileFingerprint -cne $admission.profile_fingerprint) { throw "Installer phase is not the exact reference profile: $name" }
     if ($host.revision -cne $revision) { throw "Installer phase revision drift: $name" }
     if ([string]::IsNullOrWhiteSpace($host.operator.name) -or [string]::IsNullOrWhiteSpace($host.operator.organization) -or
@@ -159,7 +159,7 @@ $artifact = [ordered]@{
     status = 'passed'
     recorded_at_utc = [DateTime]::UtcNow.ToString('o')
     revision = $revision
-    host = [ordered]@{ build=26200;ubr=8875;explorerpatcher_version='26100.8457.70.3';profile_fingerprint=$admission.profile_fingerprint;profile_sources=$admission.sources;session_id=$m0.host.session_id;interactive=$m0.host.interactive }
+    host = [ordered]@{ build=26200;ubr=9168;explorerpatcher_version='26100.8457.70.3';profile_fingerprint=$admission.profile_fingerprint;profile_sources=$admission.sources;session_id=$m0.host.session_id;interactive=$m0.host.interactive }
     operators = [ordered]@{ lifecycle=$m0.operator;installer=$hostBaseline.operator }
     lifecycle = [ordered]@{ preview_zero_mutation=$true;normal_exit_restored=$true;production_guardian_path=$true;forced_crash_runs=10;max_recovery_ms=[double]$m0.forced_crash.max_elapsed_ms }
     installer = [ordered]@{ reboot_verified=$true;exact_rollback_verified=$true;metadata_removed=$true;prior_shell=$enablePlan.observed;enabled_shell=$enablePlan.desired }

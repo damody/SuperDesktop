@@ -103,7 +103,7 @@ if (-not [string]::IsNullOrWhiteSpace($ExternalEvidenceDirectory)) {
         }
         switch ($kind) {
             'reference-profile-lifecycle-installer' {
-                if ($document.host.build -ne 26200 -or $document.host.ubr -ne 8875 -or
+                if ($document.host.build -ne 26200 -or $document.host.ubr -ne 9168 -or
                     $document.host.explorerpatcher_version -cne '26100.8457.70.3' -or
                     [string]$document.host.profile_fingerprint -notmatch '^sha256:[0-9a-f]{64}$') {
                     throw 'Lifecycle/installer evidence host is not the exact Windows 11 ExplorerPatcher reference profile.'

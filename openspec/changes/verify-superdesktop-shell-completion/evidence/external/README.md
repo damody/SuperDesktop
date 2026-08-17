@@ -10,7 +10,7 @@ Use `scripts/m0-physical-mixed-dpi-confirmation.example.json`, `scripts/shell-co
 
 All raw M0 artifacts, installer phase files, confirmations, photos, and screenshots referenced by these normalized artifacts must remain inside the repository. Finalizers record repository-relative paths and SHA-256 values; the collector reopens and rehashes every referenced file.
 
-Capture installer evidence in this order on the exact Windows 11 build 26200.8875＋ExplorerPatcher 26100.8457.70.3 profile, using one unchanged release build and one rollback-record path:
+Capture installer evidence in this order on the exact Windows 11 build 26200.9168＋ExplorerPatcher 26100.8457.70.3 profile, using one unchanged release build and one rollback-record path:
 
 1. `DryRun` without `-Apply`; this emits the Shell/metadata non-mutation proof.
 2. `Enable -Apply -ExplicitOptIn -ConfirmPlan <fingerprint>`.

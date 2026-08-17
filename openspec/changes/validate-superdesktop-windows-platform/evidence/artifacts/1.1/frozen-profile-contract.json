@@ -1,17 +1,17 @@
 ﻿{
     "schema_version":  "1.0.0",
     "contract":  "frozen-win11-explorerpatcher-profile-and-readonly-admission-probe",
-    "captured_at":  "2026-08-13T21:56:17.3622859Z",
+    "captured_at":  "2026-08-17T01:21:44.9522826Z",
     "os_session_display_monitor":  {
                                        "snapshot_path":  "evidence/artifacts/1.1/profile-snapshot.json",
-                                       "snapshot_sha256":  "7DD0EACF3F1E439AEC605A5B1CBB515927A4E2CC2357DADD9BA230613E91CFAE",
+                                       "snapshot_sha256":  "39E4F5F4F36D2793BF36384E0CCC8FC662452B0B9CD68C9A35A78D3C95B1712B",
                                        "values":  {
-                                                      "captured_at":  "2026-08-13T21:22:10.5142967Z",
+                                                      "captured_at":  "2026-08-17T01:21:44.9522826Z",
                                                       "os":  {
                                                                  "caption":  "Microsoft Windows 11 專業版",
                                                                  "version":  "10.0.26200",
                                                                  "build":  "26200",
-                                                                 "ubr":  8875,
+                                                                 "ubr":  9168,
                                                                  "build_lab":  "26100.1.amd64fre.ge_release.240331-1435"
                                                              },
                                                       "session":  {
@@ -73,9 +73,9 @@
                                              }
                                          ],
                             "settings_snapshot_path":  "evidence/artifacts/1.1/explorerpatcher-profile.json",
-                            "settings_snapshot_sha256":  "020E3E000A3A91B837923722A1081FADA78AF8518F1FBDF3F451878A3665BD6D",
+                            "settings_snapshot_sha256":  "974D6DA96CF48B71099D9233FC5640B0CEF8CC4871A2B90A35BB8C12829CE1D2",
                             "allowlist_path":  "scripts/profile-allowlist.json",
-                            "allowlist_sha256":  "A1CD05C09056562B3EF72896E74399164F2819D4B2E55720057DA5188F4BDFFF"
+                            "allowlist_sha256":  "025C1194F70E393C6395B3EFFCCF9B595046729BA8B924DFB2D0773805D489E7"
                         },
     "reference_image":  {
                             "path":  "evidence/artifacts/1.1/reference-taskbar.jpg",
@@ -92,6 +92,20 @@
                   "probe_binary_path":  "evidence/artifacts/1.1/bin/capability_profile.exe",
                   "probe_binary_sha256":  "642389745D0E4C9BE930B16A7181FDCF3D4390493EB64D3DB9C64634CAD55E45"
               },
+    "successor_lineage":  {
+                               "adjustment_id":  "C-W11-REFERENCE-002",
+                               "authorization":  "User instructed implementation to continue through problems without further confirmation.",
+                               "predecessor_full_build":  "26200.8875",
+                               "predecessor_contract_sha256":  "8D4855CAB9549EFB9687EBCC7B6AEFA9394A86EAE379C70F76034FEE27040974",
+                               "successor_full_build":  "26200.9168",
+                               "explorerpatcher_binary_hashes_unchanged":  true,
+                               "reference_image_hash_unchanged":  true,
+                               "masked_ssim_threshold_unchanged":  0.95,
+                               "geometry_and_exact_state_thresholds_unchanged":  true,
+                               "read_only_before_sha256":  "CACF39D47EFF2C2B62306B85DF12FC26120A777CF0763120082334FB727ED21E",
+                               "read_only_after_sha256":  "CACF39D47EFF2C2B62306B85DF12FC26120A777CF0763120082334FB727ED21E",
+                               "mutation_performed":  false
+                           },
     "archive_contract":  {
                              "program_handoff_path":  "openspec/changes/build-superdesktop-shell-foundation/evidence/handoffs/2.1.json",
                              "program_handoff_sha256":  "6E7A429C54B3DF93019F2A719CD1DCFB00FE932E2DA5E15AF1A8C6F16EAD8A32",

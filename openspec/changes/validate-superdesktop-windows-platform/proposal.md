@@ -4,7 +4,7 @@ GPUI native HWND、AppBar、Shell Hook、ExplorerPatcher Start host、per-monito
 
 ## What Changes
 
-- 在凍結 Windows 11 build 26200.8875 + ExplorerPatcher 26100.8457.70.3 profile 驗證必要 Windows/GPUI 能力。
+- 在凍結 Windows 11 build 26200.9168 + ExplorerPatcher 26100.8457.70.3 profile 驗證必要 Windows/GPUI 能力。
 - 驗證 FFI no-unwind、resource cleanup、Safe Mode/unsupported session fail-closed。
 - 產生固定 source/binary/profile hashes 與 go/stop disposition。
 

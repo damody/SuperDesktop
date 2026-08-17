@@ -18,7 +18,8 @@
   ],
   "regenerated_blocker": {
     "path": "openspec/changes/verify-superdesktop-m0/evidence/blocked-disposition.json",
-    "expected_profile": "26200.8875",
+    "predecessor_profile": "26200.8875",
+    "expected_profile": "26200.9168",
     "observed_profile": "26200.9168",
     "reference_profile_status": "blocked",
     "physical_status": "blocked",

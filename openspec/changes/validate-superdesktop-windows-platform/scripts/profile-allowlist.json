@@ -14,7 +14,7 @@
         "MigratedFromOldSettings": "1",
         "Start_MaximumFrequentApps": "99999",
         "StartDocked_DisableRecommendedSection": "0",
-        "SymbolsLastNotifiedOSBuild": "10.0.26200.8875"
+        "SymbolsLastNotifiedOSBuild": "10.0.26200.9168"
       }
     },
     "HKCU:\\Software\\ExplorerPatcher\\explorer": {
@@ -22,10 +22,10 @@
       "expected": {
         "CTaskBand_CreateInstance": "0",
         "HandleFirstTimeLegacy": "0",
-        "Hash": "b9f0a971413eebbed5dafe9cadfe9a74",
+        "Hash": "7b2798bd507ec7fec0d8ddf2ebe05627",
         "ImmersiveTray::AttachWindowToTray": "0",
         "ImmersiveTray::RaiseWindow": "0",
-        "SetColorPreferenceForLogonUI": "979928",
+        "SetColorPreferenceForLogonUI": "986152",
         "TrayUI::_UpdatePearlSize": "0",
         "Version": "3"
       }
@@ -37,14 +37,14 @@
     "HKCU:\\Software\\ExplorerPatcher\\twinui.pcshell": {
       "reject_unknown_values": true,
       "expected": {
-        "CImmersiveContextMenuOwnerDrawHelper::s_ContextMenuWndProc": "7037140",
-        "CLauncherTipContextMenu::_ExecuteCommand": "1949096",
-        "CLauncherTipContextMenu::_ExecuteShutdownCommand": "6481576",
-        "CMultitaskingViewManager::_CreateDCompMTVHost": "5033676",
-        "CMultitaskingViewManager::_CreateXamlMTVHost": "2426136",
-        "Hash": "af939e0cec7996a4f70ae022798e2f9a",
-        "ImmersiveContextMenuHelper::ApplyOwnerDrawToMenu": "7043920",
-        "ImmersiveContextMenuHelper::RemoveOwnerDrawFromMenu": "7046260",
+        "CImmersiveContextMenuOwnerDrawHelper::s_ContextMenuWndProc": "7041348",
+        "CLauncherTipContextMenu::_ExecuteCommand": "1947064",
+        "CLauncherTipContextMenu::_ExecuteShutdownCommand": "6490184",
+        "CMultitaskingViewManager::_CreateDCompMTVHost": "5047068",
+        "CMultitaskingViewManager::_CreateXamlMTVHost": "2428728",
+        "Hash": "66d0dcde1777ef5f6a83d240ece4f015",
+        "ImmersiveContextMenuHelper::ApplyOwnerDrawToMenu": "7048128",
+        "ImmersiveContextMenuHelper::RemoveOwnerDrawFromMenu": "7050468",
         "Version": "2"
       }
     },

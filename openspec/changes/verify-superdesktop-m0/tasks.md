@@ -111,7 +111,7 @@
 ### 3.1 執行 exact Windows 11＋ExplorerPatcher lifecycle/installer 矩陣
 
 **目的：** 證明 exact Windows 11＋ExplorerPatcher profile 可啟動、操作、安全回復並完成 installer reboot/rollback。
-**輸入：** 凍結 Windows 11 build 26200.8875、ExplorerPatcher 26100.8457.70.3、release candidate。
+**輸入：** 凍結 Windows 11 build 26200.9168、ExplorerPatcher 26100.8457.70.3、release candidate。
 **產出：** Profile metadata、launch/interaction/recovery/installer evidence。
 **依賴：** 1.2；exact profile admission 與明確 mutation authority。
 **Owner／Wave：** Reference-profile lifecycle owner／Wave 6 external effects。

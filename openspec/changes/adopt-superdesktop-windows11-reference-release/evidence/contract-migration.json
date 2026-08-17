@@ -22,25 +22,39 @@
       "C": "Platform, build, UBR, ExplorerPatcher version, threshold, mandatory gate, permission, or release-semantic changes require new user approval."
     }
   },
+  "successor_adjustment": {
+    "id": "C-W11-REFERENCE-002",
+    "classification": "C",
+    "authorization": "User instructed implementation to continue through problems without further confirmation.",
+    "predecessor_full_build": "26200.8875",
+    "predecessor_contract_sha256": "8d4855cab9549efb9687ebcc7b6aefa9394a86eae379c70f76034fee27040974",
+    "successor_full_build": "26200.9168",
+    "explorerpatcher_version_unchanged": "26100.8457.70.3",
+    "explorerpatcher_binary_hashes_unchanged": true,
+    "reference_image_hash_unchanged": true,
+    "thresholds_and_mandatory_gates_unchanged": true,
+    "read_only_before_after_equal": true,
+    "mutation_performed": false
+  },
   "canonical_profile": {
     "contract": {
       "path": "openspec/changes/validate-superdesktop-windows-platform/evidence/artifacts/1.1/frozen-profile-contract.json",
-      "sha256": "8d4855cab9549efb9687ebcc7b6aefa9394a86eae379c70f76034fee27040974"
+      "sha256": "016f4564a62cf78ef361102ff09fe4b9c68d8596431dd71e6f7c9b71dd23c68c"
     },
     "windows": {
       "product": "Windows 11 workstation",
       "build": 26200,
-      "ubr": 8875
+      "ubr": 9168
     },
     "explorerpatcher": {
       "version": "26100.8457.70.3",
       "settings": {
         "path": "openspec/changes/validate-superdesktop-windows-platform/evidence/artifacts/1.1/explorerpatcher-profile.json",
-        "sha256": "020e3e000a3a91b837923722a1081fada78af8518f1fbdf3f451878a3665bd6d"
+        "sha256": "974d6da96cf48b71099d9233fc5640b0cef8cc4871a2b90a35bb8c12829ce1d2"
       },
       "allowlist": {
         "path": "openspec/changes/validate-superdesktop-windows-platform/scripts/profile-allowlist.json",
-        "sha256": "a1cd05c09056562b3ef72896e74399164f2819d4b2e55720057da5188f4bdfff"
+        "sha256": "025c1194f70e393c6395b3effccf9b595046729ba8b924dfb2d0773805d489e7"
       },
       "binaries": [
         { "path": "C:/Windows/dxgi.dll", "sha256": "70a7d2ce085dc0db96d00abf351e5e316572801f5d43648e2ad47fd66ba174cc" },

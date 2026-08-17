@@ -30,7 +30,7 @@
 - **THEN** 對應 gate 保持失敗，且不得以其他成功命令取代該失敗結果
 
 ### Requirement: ExplorerPatcher reference profile 必須同時約束 UI 與 release lifecycle
-系統 SHALL 以 Windows 11 build 26200.8875 + ExplorerPatcher 26100.8457.70.3 驗證 M0 UI/互動參考及可啟動、可操作、可復原與 installer rollback。參考證據必須包含 OS build/UBR、ExplorerPatcher version/binary hashes、設定摘要及 reference image hash；Windows 10 compatibility 不在 release claim 內。
+系統 SHALL 以 Windows 11 build 26200.9168 + ExplorerPatcher 26100.8457.70.3 驗證 M0 UI/互動參考及可啟動、可操作、可復原與 installer rollback。參考證據必須包含 OS build/UBR、ExplorerPatcher version/binary hashes、設定摘要及 reference image hash；Windows 10 compatibility 不在 release claim 內。
 
 #### Scenario: ExplorerPatcher reference profile 漂移
 - **WHEN** OS build、ExplorerPatcher version、設定摘要或 reference image hash 與凍結 profile 不符

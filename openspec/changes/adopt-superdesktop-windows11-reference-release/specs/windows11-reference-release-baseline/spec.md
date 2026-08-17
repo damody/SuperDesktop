@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Release evidence uses the exact frozen Windows 11 ExplorerPatcher profile
-The release verifier SHALL admit lifecycle, recovery, installer, and UI evidence only from an interactive Windows 11 workstation matching the frozen profile contract: build `26200`, UBR `8875`, ExplorerPatcher `26100.8457.70.3`, and every bound binary, settings, allowlist, and reference-image hash.
+The release verifier SHALL admit lifecycle, recovery, installer, and UI evidence only from an interactive Windows 11 workstation matching the frozen profile contract: build `26200`, UBR `9168`, ExplorerPatcher `26100.8457.70.3`, and every bound binary, settings, allowlist, and reference-image hash.
 
 #### Scenario: Exact profile is admitted
 - **WHEN** the live workstation and every referenced artifact match the frozen profile contract

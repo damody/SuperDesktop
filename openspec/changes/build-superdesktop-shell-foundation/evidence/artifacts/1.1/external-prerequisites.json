@@ -3,7 +3,7 @@
   "adjustment_id": "C-W11-REFERENCE-001",
   "reference_host": {
     "os": "Microsoft Windows 11 Pro",
-    "expected_full_build": "26200.8875",
+    "expected_full_build": "26200.9168",
     "observed_full_build": "26200.9168",
     "explorerpatcher_version": "26100.8457.70.3",
     "physical_active_display_count": 1,

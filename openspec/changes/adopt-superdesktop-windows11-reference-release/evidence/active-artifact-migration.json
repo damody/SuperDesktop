@@ -29,7 +29,7 @@
   "stable_task_ids": true,
   "archives_modified": false,
   "claims": {
-    "mandatory_platform": "Windows 11 build 26200.8875 + ExplorerPatcher 26100.8457.70.3",
+    "mandatory_platform": "Windows 11 build 26200.9168 + ExplorerPatcher 26100.8457.70.3",
     "windows_10": "not-claimed",
     "legacy_explorer_notification_protocol": "not-claimed",
     "undocumented_virtual_desktop_mutations": "unavailable"

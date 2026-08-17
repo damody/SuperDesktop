@@ -28,5 +28,5 @@
     "incomplete_external_admission": "rejected_without_output",
     "external_tasks_marked_complete": false
   },
-  "reason_external_tasks_remain_pending": "The approved 26200.8875 profile has drifted to 26200.9168; no physical mixed-DPI topology, mutation-bearing reboot rollback, or attributable independent review was supplied. Windows 10 is not claimed."
+  "reason_external_tasks_remain_pending": "Exact 26200.9168 profile admission passed; no physical mixed-DPI topology, mutation-bearing lifecycle/reboot rollback, or attributable independent review was supplied. Windows 10 is not claimed."
 }

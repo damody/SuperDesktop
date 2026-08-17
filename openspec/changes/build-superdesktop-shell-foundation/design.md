@@ -2,7 +2,7 @@
 
 SuperDesktop 是全新 Windows-only Rust 專案。原始設計位於 `docs/superpowers/specs/2026-08-13-superdesktop-windows-10-shell-design.md`；核准的 `C-W11-REFERENCE-001` 修正以 `docs/superpowers/specs/2026-08-17-superdesktop-windows11-reference-release-design.md` 覆蓋其 release platform。M0 實作全 GPUI 桌面、預設雙列工作列、SuperExplorer 程序橋接、交易式 Shell 接管、guardian 復原，以及 Windows 11 reference-profile 測試與證據架構。
 
-現有 `D:\SuperDesktop\PExplorer` 是 LGPL C++/Win32 參考實作，只能用於觀察行為與 API 流程。`D:\SuperExplorer` 已是大型 Rust/GPUI 專案且工作樹含有使用者變更，因此本 change 不修改也不以 path dependency 連結它。M0 的 UI/互動與 release 基準凍結為 Windows 11 build 26200.8875 + ExplorerPatcher 26100.8457.70.3；參考圖 SHA-256 為 `48B5F990B9E155C5C2719D8F8B41D88ED4420A46C3B6018278511F9C349B387E`。Windows 10 compatibility 為 not-claimed。
+現有 `D:\SuperDesktop\PExplorer` 是 LGPL C++/Win32 參考實作，只能用於觀察行為與 API 流程。`D:\SuperExplorer` 已是大型 Rust/GPUI 專案且工作樹含有使用者變更，因此本 change 不修改也不以 path dependency 連結它。M0 的 UI/互動與 release 基準凍結為 Windows 11 build 26200.9168 + ExplorerPatcher 26100.8457.70.3；參考圖 SHA-256 為 `48B5F990B9E155C5C2719D8F8B41D88ED4420A46C3B6018278511F9C349B387E`。Windows 10 compatibility 為 not-claimed。
 
 本 change 會影響目前使用者工作階段的桌面與工作區，因此 Shell 接管、復原、測試資料邊界與證據完整性是 blocking gate，而不是上線後才補的品質工作。
 
@@ -169,7 +169,7 @@ Blocking gates：
 
 多代理執行採 `EXECUTION.md` 的固定 ownership 與交接契約。A 級技術細化由 task owner 自主處理；B 級矛盾由 Primary integrator 同步修正 design/spec/tasks、標 stale 並建立 lineage 後繼續；只有 C 級範圍、blocking gate、平台、安全/權限或外部授權變更需要使用者核准。這避免 apply 過程把一般工程判斷反覆升級成使用者確認，同時保留已核准邊界。
 
-目前開發機就是 UI/互動與 lifecycle reference environment：Windows 11 build 26200.8875、ExplorerPatcher 26100.8457.70.3、單一使用中螢幕。虛擬顯示器可完成自動化 topology gate；真實 mixed-DPI 雙螢幕仍是 release-candidate confirmation。缺少外部環境時 production changes 仍可完成，但 confirmation leaf 保持 blocked，不能使用 `not-applicable` 或降低 threshold。
+目前開發機就是 UI/互動與 lifecycle reference environment：Windows 11 build 26200.9168、ExplorerPatcher 26100.8457.70.3、單一使用中螢幕。虛擬顯示器可完成自動化 topology gate；真實 mixed-DPI 雙螢幕仍是 release-candidate confirmation。缺少外部環境時 production changes 仍可完成，但 confirmation leaf 保持 blocked，不能使用 `not-applicable` 或降低 threshold。
 
 ## Open Questions
 

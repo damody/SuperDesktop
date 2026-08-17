@@ -1,6 +1,6 @@
 Set-StrictMode -Version Latest
 
-$script:ExpectedContractSha256 = '8d4855cab9549efb9687ebcc7b6aefa9394a86eae379c70f76034fee27040974'
+$script:ExpectedContractSha256 = '016f4564a62cf78ef361102ff09fe4b9c68d8596431dd71e6f7c9b71dd23c68c'
 $script:ReferenceChangeRelative = 'openspec/changes/validate-superdesktop-windows-platform'
 
 function Resolve-ContainedFile {
@@ -42,7 +42,7 @@ function Get-ReferenceProfileContract {
     if ($contract.schema_version -ne '1.0.0' -or $contract.contract -cne 'frozen-win11-explorerpatcher-profile-and-readonly-admission-probe') {
         throw 'REFERENCE_CONTRACT_INVALID'
     }
-    if ([int]$contract.os_session_display_monitor.values.os.build -ne 26200 -or [int]$contract.os_session_display_monitor.values.os.ubr -ne 8875) {
+    if ([int]$contract.os_session_display_monitor.values.os.build -ne 26200 -or [int]$contract.os_session_display_monitor.values.os.ubr -ne 9168) {
         throw 'REFERENCE_CONTRACT_OS_INVALID'
     }
     if ([string]$contract.explorerpatcher.expected_version -cne '26100.8457.70.3') {
@@ -163,7 +163,7 @@ function Assert-SuperDesktopInstallerHostSet {
     foreach ($phase in $required) {
         $host = $Hosts[$phase]
         if ([string]$host.revision -cne $Revision) { throw "REFERENCE_INSTALLER_REVISION_DRIFT: $phase" }
-        if ([int]$host.build -ne 26200 -or [int]$host.ubr -ne 8875 -or
+        if ([int]$host.build -ne 26200 -or [int]$host.ubr -ne 9168 -or
             [string]$host.explorerPatcherVersion -cne '26100.8457.70.3' -or
             [string]$host.profileFingerprint -cne $ProfileFingerprint) {
             throw "REFERENCE_INSTALLER_PROFILE_DRIFT: $phase"

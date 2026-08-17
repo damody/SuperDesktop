@@ -2,13 +2,13 @@
 
 ## Context
 
-SuperDesktop already uses a frozen Windows 11 and ExplorerPatcher environment as its UI and interaction reference, but the final completion program still requires Windows 10 22H2 build 19045 evidence. The available reference workstation is Windows 11 build `26200.8875` with ExplorerPatcher `26100.8457.70.3`. The Windows 10 requirement prevents the completed implementation from entering final lifecycle and installer verification even though Windows 10 is no longer a required product target.
+SuperDesktop already uses a frozen Windows 11 and ExplorerPatcher environment as its UI and interaction reference, but the final completion program still requires Windows 10 22H2 build 19045 evidence. The available reference workstation is Windows 11 build `26200.9168` with ExplorerPatcher `26100.8457.70.3`. The Windows 10 requirement prevents the completed implementation from entering final lifecycle and installer verification even though Windows 10 is no longer a required product target.
 
 This design replaces the mandatory Windows 10 compatibility gate with a revision-bound Windows 11 ExplorerPatcher reference-profile gate. It does not weaken the lifecycle, recovery, installer rollback, physical mixed-DPI, accessibility, security, or independent-review requirements.
 
 ## Goals
 
-- Make the frozen Windows 11 build `26200.8875` and ExplorerPatcher `26100.8457.70.3` profile the mandatory release environment.
+- Make the frozen Windows 11 build `26200.9168` and ExplorerPatcher `26100.8457.70.3` profile the mandatory release environment.
 - Use the existing ExplorerPatcher taskbar and Explorer UI reference image as the visual and interaction baseline.
 - Run Shell takeover, normal exit, forced-crash guardian recovery, installer enable/reboot/rollback, and UI verification against one immutable release candidate and one exact reference profile.
 - Remove Windows 10 build 19045 from mandatory blockers, artifact schemas, scripts, tasks, and release language.
@@ -42,7 +42,7 @@ Keep a non-blocking Windows 10 evidence path. This adds schema and maintenance c
 The mandatory reference profile is identified by all of the following:
 
 - Windows edition: interactive Windows 11 workstation.
-- OS build and UBR: `26200.8875`.
+- OS build and UBR: `26200.9168`.
 - ExplorerPatcher version: `26100.8457.70.3`.
 - ExplorerPatcher binary hashes from the frozen profile contract.
 - ExplorerPatcher and Explorer UI-affecting settings hash: `020E3E000A3A91B837923722A1081FADA78AF8518F1FBDF3F451878A3665BD6D`.

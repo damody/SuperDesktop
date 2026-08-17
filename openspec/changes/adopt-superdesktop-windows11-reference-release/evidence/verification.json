@@ -34,9 +34,9 @@
     { "task_id": "4.2.4", "status": "passed", "evidence": "packaged installer returned dry_run with exact zero mutation" },
     { "task_id": "4.2.5", "status": "passed", "evidence": "completion and program roll-ups refreshed with truthful five-gate blocker set" },
     { "task_id": "4.2.6", "status": "passed", "evidence": "all changes remain active and unarchived" }
+    ,{ "task_id": "2.1.6", "status": "passed", "evidence": "live 26200.9168 admission produced fingerprint e70957ee... with Registry, Explorer identity, and rollback metadata unchanged" }
   ],
   "blocked": [
-    { "task_id": "2.1.6", "reason": "approved 26200.8875 profile drifted to 26200.9168" },
     { "gate": "G-DPI-MONITOR-PHYSICAL", "reason": "one active physical monitor" },
     { "gate": "G-REVIEW", "reason": "independent reviewer evidence absent" },
     { "gate": "G-INSTALL-ROLLBACK", "reason": "mutation-bearing reboot/rollback not authorized or executed" }

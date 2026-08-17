@@ -1,41 +1,45 @@
 {
-  "captured_at": "2026-08-13T21:22:10.5142967Z",
+  "captured_at": "2026-08-17T01:21:44.9522826Z",
   "os": {
-    "caption": "Microsoft Windows 11 專業版",
+    "caption": "Microsoft Windows 11 Pro",
     "version": "10.0.26200",
     "build": "26200",
-    "ubr": 8875,
+    "ubr": 9168,
     "build_lab": "26100.1.amd64fre.ge_release.240331-1435"
   },
   "session": {"probe_process_session_id": 1},
   "display_adapters": [
+    {"name": "vorpX Virtual Display", "driver_version": "15.55.44.204", "pnp_device_id": "ROOT\\DISPLAY\\0000", "video_mode": null},
     {"name": "AMD Radeon(TM) Graphics", "driver_version": "32.0.13018.6", "pnp_device_id": "PCI\\VEN_1002&DEV_13C0&SUBSYS_D0001458&REV_C9\\4&16012499&0&0041", "video_mode": null},
-    {"name": "NVIDIA GeForce RTX 5090", "driver_version": "32.0.15.9636", "pnp_device_id": "PCI\\VEN_10DE&DEV_2B85&SUBSYS_89EC1043&REV_A1\\0CD99BFAC62DB04800", "video_mode": "3840 x 2160 x 4294967296 色彩"},
-    {"name": "vorpX Virtual Display", "driver_version": "15.55.44.204", "pnp_device_id": "ROOT\\DISPLAY\\0000", "video_mode": null}
+    {"name": "NVIDIA GeForce RTX 5090", "driver_version": "32.0.15.9636", "pnp_device_id": "PCI\\VEN_10DE&DEV_2B85&SUBSYS_89EC1043&REV_A1\\0CD99BFAC62DB04800", "video_mode": "3840 x 2160"}
   ],
   "monitors": [
     {"instance_name": "DISPLAY\\MSI3DC5\\5&1cd12157&0&UID4352_0", "manufacturer": "MSI", "product_code": "3DC5", "serial": "16843009"}
   ],
   "admission_probe": {
-    "probe": "capability-profile-read-only",
-    "safe_mode_clean_boot": 0,
+    "probe": "reference-profile-read-only-rebaseline",
     "token_session_id": 1,
     "process_session_id": 1,
-    "wts_connect_state": 0,
     "window_station": "WinSta0",
     "disposition": "admitted",
     "admitted": true,
     "mutations_attempted": false
   },
   "before": {
-    "explorer": [{"id": 59672, "start": "2026-08-13T15:14:55.5048405Z", "path": "C:\\WINDOWS\\explorer.exe"}],
+    "explorer": [{"id": 11948, "start": "2026-08-16T16:21:18.7213776Z", "path": "C:\\WINDOWS\\Explorer.EXE"}],
     "work_area": {"left": 0, "top": 0, "right": 2194, "bottom": 1153},
-    "appbar_query": {"result": 1, "edge": 3, "left": 0, "top": 2018, "right": 3840, "bottom": 2160}
+    "appbar_query": {"result": 1, "edge": 3, "left": 0, "top": 2018, "right": 3840, "bottom": 2160},
+    "shell_value_exists": false,
+    "rollback_metadata_exists": false
   },
   "after": {
-    "explorer": [{"id": 59672, "start": "2026-08-13T15:14:55.5048405Z", "path": "C:\\WINDOWS\\explorer.exe"}],
+    "explorer": [{"id": 11948, "start": "2026-08-16T16:21:18.7213776Z", "path": "C:\\WINDOWS\\Explorer.EXE"}],
     "work_area": {"left": 0, "top": 0, "right": 2194, "bottom": 1153},
-    "appbar_query": {"result": 1, "edge": 3, "left": 0, "top": 2018, "right": 3840, "bottom": 2160}
+    "appbar_query": {"result": 1, "edge": 3, "left": 0, "top": 2018, "right": 3840, "bottom": 2160},
+    "shell_value_exists": false,
+    "rollback_metadata_exists": false
   },
+  "before_sha256": "cacf39d47eff2c2b62306b85df12fc26120a777cf0763120082334fb727ed21e",
+  "after_sha256": "cacf39d47eff2c2b62306b85df12fc26120a777cf0763120082334fb727ed21e",
   "zero_mutation": true
 }

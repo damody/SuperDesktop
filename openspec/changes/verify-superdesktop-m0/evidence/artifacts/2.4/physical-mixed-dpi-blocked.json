@@ -8,7 +8,7 @@
   },
   "reference_profile_lifecycle_installer": {
     "status": "blocked",
-    "reason": "Approved profile 26200.8875 drifted to 26200.9168; mutation-bearing lifecycle and reboot/rollback evidence was not executed."
+    "reason": "Exact profile admission passed; mutation-bearing lifecycle and reboot/rollback evidence was not executed."
   },
   "windows_10_compatibility": {
     "status": "not-claimed",

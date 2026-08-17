@@ -1,10 +1,10 @@
 {
     "schema":  "m0-reference-baseline/v1",
     "frozen_before_candidates":  true,
-    "windows_build":  "26200.8875",
+    "windows_build":  "26200.9168",
     "explorerpatcher_version":  "26100.8457.70.3",
-    "profile_sha256":  "8D4855CAB9549EFB9687EBCC7B6AEFA9394A86EAE379C70F76034FEE27040974",
-    "settings_export_sha256":  "020E3E000A3A91B837923722A1081FADA78AF8518F1FBDF3F451878A3665BD6D",
+    "profile_sha256":  "016F4564A62CF78EF361102FF09FE4B9C68D8596431DD71E6F7C9B71DD23C68C",
+    "settings_export_sha256":  "974D6DA96CF48B71099D9233FC5640B0CEF8CC4871A2B90A35BB8C12829CE1D2",
     "reference_image_sha256":  "48B5F990B9E155C5C2719D8F8B41D88ED4420A46C3B6018278511F9C349B387E",
     "tolerance":  {
                       "minimum_ssim":  0.95,

@@ -92,7 +92,7 @@ $profileFingerprint = 'sha256:' + ('2' * 64)
 $baselineHost = [ordered]@{
     revision = $revision
     build = 26200
-    ubr = 8875
+    ubr = 9168
     explorerPatcherVersion = '26100.8457.70.3'
     profileFingerprint = $profileFingerprint
     operator = [ordered]@{ name='Fixture Operator';organization='Fixture Organization' }

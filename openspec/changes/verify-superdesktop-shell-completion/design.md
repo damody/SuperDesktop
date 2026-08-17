@@ -13,7 +13,7 @@ Eight completion changes now implement shared provider contracts, desktop file o
 1. Add a deterministic `CompletionRollup` model in `superdesktop-test-support`; every required child, local gate, and external gate has an explicit disposition.
 2. A PowerShell collector validates child identity/result fields and emits one JSON roll-up. Missing, malformed, duplicate, or contradictory evidence is terminal failure.
 3. Local automated verification may pass functional, accessibility/i18n fixtures, virtual DPI geometry, performance/resource bounds, safety, architecture, and traceability gates.
-4. Exact Windows 11 build 26200.8875＋ExplorerPatcher 26100.8457.70.3 shell takeover/recovery/installer reboot, physical mixed-DPI interaction, and independent review remain blocking `external_pending` gates until their artifacts exist; Windows 10 is not claimed.
+4. Exact Windows 11 build 26200.9168＋ExplorerPatcher 26100.8457.70.3 shell takeover/recovery/installer reboot, physical mixed-DPI interaction, and independent review remain blocking `external_pending` gates until their artifacts exist; Windows 10 is not claimed.
 5. `release_allowed` is derived only: every required gate must be `passed`; optional unsupported features are recorded as limitations, not failures or parity claims.
 
 ## Risks / Trade-offs
