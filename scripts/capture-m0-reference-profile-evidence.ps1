@@ -78,7 +78,7 @@ $os = $admission.observed
 if ([string]::IsNullOrWhiteSpace($OperatorName) -or [string]::IsNullOrWhiteSpace($OperatorOrganization) -or
     $OperatorName -like 'REPLACE_WITH_*' -or $OperatorOrganization -like 'REPLACE_WITH_*') { throw 'An attributable reference-profile operator name and organization are required.' }
 
-Invoke-Checked 'release workspace build' { cargo build --workspace --release --offline --manifest-path (Join-Path $Workspace 'Cargo.toml') } | Out-Null
+Invoke-Checked 'release workspace build' { cargo build --workspace --all-targets --release --locked --offline --manifest-path (Join-Path $Workspace 'Cargo.toml') } | Out-Null
 Invoke-Checked 'release monitor/DPI probe build' { cargo build -p platform-win --release --offline --example monitor_dpi_start_capability --manifest-path (Join-Path $Workspace 'Cargo.toml') } | Out-Null
 
 $app = Join-Path $Workspace 'target/release/superdesktop-app.exe'

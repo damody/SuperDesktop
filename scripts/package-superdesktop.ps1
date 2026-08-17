@@ -18,12 +18,7 @@ if (Test-Path -LiteralPath $output) {
     throw "Package output already exists: $output"
 }
 
-& cargo build --release --locked --offline --manifest-path (Join-Path $workspace 'Cargo.toml') `
-    -p superdesktop-app `
-    -p superdesktop-guardian `
-    -p shell-installer `
-    -p shell-provider-host `
-    -p notification-area-host
+& cargo build --workspace --all-targets --release --locked --offline --manifest-path (Join-Path $workspace 'Cargo.toml')
 if ($LASTEXITCODE -ne 0) { throw 'Release product build failed.' }
 
 $staging = Join-Path ([IO.Path]::GetTempPath()) ("superdesktop-package-{0}" -f [guid]::NewGuid().ToString('N'))
