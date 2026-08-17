@@ -9,8 +9,9 @@ use std::{
 
 use gpui::{
     AppContext, Context, DragMoveEvent, FocusHandle, InteractiveElement, IntoElement, MouseButton,
-    ObjectFit, ParentElement, Render, StatefulInteractiveElement, Styled, StyledImage, Window, div,
-    img, prelude::FluentBuilder as _, px, rgb,
+    MouseDownEvent, MouseMoveEvent, MouseUpEvent, ObjectFit, ParentElement, Render,
+    StatefulInteractiveElement, Styled, StyledImage, Window, div, img, prelude::FluentBuilder as _,
+    px, rgb, rgba,
 };
 
 use crate::{AccessibleNode, MenuModel};
@@ -119,6 +120,56 @@ struct DesktopDragPreview {
     label: String,
 }
 
+const DESKTOP_ITEM_WIDTH: f32 = 104.0;
+const DESKTOP_ITEM_HEIGHT: f32 = 112.0;
+const MARQUEE_THRESHOLD: f32 = 3.0;
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct MarqueeBounds {
+    left: f32,
+    top: f32,
+    width: f32,
+    height: f32,
+}
+
+impl MarqueeBounds {
+    fn between(anchor: (f32, f32), current: (f32, f32)) -> Self {
+        let left = anchor.0.min(current.0);
+        let top = anchor.1.min(current.1);
+        Self {
+            left,
+            top,
+            width: (anchor.0 - current.0).abs(),
+            height: (anchor.1 - current.1).abs(),
+        }
+    }
+
+    fn visible(self) -> bool {
+        self.width >= MARQUEE_THRESHOLD || self.height >= MARQUEE_THRESHOLD
+    }
+
+    fn intersects(self, left: f32, top: f32, width: f32, height: f32) -> bool {
+        self.left <= left + width
+            && self.left + self.width >= left
+            && self.top <= top + height
+            && self.top + self.height >= top
+    }
+}
+
+#[derive(Clone, Debug)]
+struct MarqueeGesture {
+    anchor: (f32, f32),
+    current: (f32, f32),
+    additive: bool,
+    baseline: std::collections::BTreeSet<String>,
+}
+
+impl MarqueeGesture {
+    fn bounds(&self) -> MarqueeBounds {
+        MarqueeBounds::between(self.anchor, self.current)
+    }
+}
+
 impl Render for DesktopDragPreview {
     fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
         div()
@@ -161,6 +212,7 @@ pub struct DesktopView {
     drag_position: Option<(f32, f32)>,
     drag_consumed: bool,
     transfer_status: Option<DesktopTransferStatus>,
+    marquee: Option<MarqueeGesture>,
 }
 
 impl DesktopView {
@@ -195,7 +247,66 @@ impl DesktopView {
             drag_position: None,
             drag_consumed: false,
             transfer_status: None,
+            marquee: None,
         }
+    }
+
+    fn begin_marquee(&mut self, position: (f32, f32), additive: bool) {
+        let baseline = self
+            .items
+            .iter()
+            .filter(|item| item.selected)
+            .map(|item| item.stable_id.clone())
+            .collect();
+        if !additive {
+            for item in &mut self.items {
+                item.selected = false;
+                item.focused = false;
+            }
+        }
+        self.marquee = Some(MarqueeGesture {
+            anchor: position,
+            current: position,
+            additive,
+            baseline,
+        });
+    }
+
+    fn update_marquee(&mut self, position: (f32, f32)) {
+        let Some(gesture) = self.marquee.as_mut() else {
+            return;
+        };
+        gesture.current = position;
+        let bounds = gesture.bounds();
+        let baseline = gesture.baseline.clone();
+        let additive = gesture.additive;
+        let positions = &self.item_positions;
+        let mut first_selected = None;
+        for (index, item) in self.items.iter_mut().enumerate() {
+            let default_column = index / 8;
+            let default_row = index % 8;
+            let (left, top) = positions.get(&item.stable_id).copied().unwrap_or((
+                8.0 + default_column as f32 * DESKTOP_ITEM_WIDTH,
+                8.0 + default_row as f32 * DESKTOP_ITEM_HEIGHT,
+            ));
+            let hit = bounds.visible()
+                && bounds.intersects(left, top, DESKTOP_ITEM_WIDTH, DESKTOP_ITEM_HEIGHT);
+            item.selected = hit || (additive && baseline.contains(&item.stable_id));
+            item.focused = false;
+            if item.selected && first_selected.is_none() {
+                first_selected = Some(index);
+            }
+        }
+        if let Some(index) = first_selected {
+            self.items[index].focused = true;
+        }
+    }
+
+    fn end_marquee(&mut self, position: Option<(f32, f32)>) {
+        if let Some(position) = position {
+            self.update_marquee(position);
+        }
+        self.marquee = None;
     }
 
     pub fn with_fixed_action(mut self, action: Rc<dyn Fn()>) -> Self {
@@ -425,6 +536,7 @@ impl Render for DesktopView {
         let transfer_status = self.transfer_status.clone();
         let cancel_transfer_action = self.cancel_transfer_action.clone();
         let item_positions = self.item_positions.clone();
+        let marquee_bounds = self.marquee.as_ref().map(MarqueeGesture::bounds);
         if let Some(action) = &self.rendered_action {
             action();
         }
@@ -510,6 +622,44 @@ impl Render for DesktopView {
             .aria_label(self.accessible_root_name.clone())
             .tab_index(0)
             .when_some(keyboard_focus, |element, focus| element.track_focus(&focus))
+            .on_mouse_down(
+                MouseButton::Left,
+                cx.listener(|this, event: &MouseDownEvent, _, cx| {
+                    this.context_menu = None;
+                    this.context_target = None;
+                    this.begin_marquee(
+                        (f32::from(event.position.x), f32::from(event.position.y)),
+                        event.modifiers.control,
+                    );
+                    cx.stop_propagation();
+                    cx.notify();
+                }),
+            )
+            .on_mouse_move(cx.listener(|this, event: &MouseMoveEvent, _, cx| {
+                if this.marquee.is_none() {
+                    return;
+                }
+                if !event.dragging() {
+                    this.end_marquee(None);
+                } else {
+                    this.update_marquee((f32::from(event.position.x), f32::from(event.position.y)));
+                }
+                cx.stop_propagation();
+                cx.notify();
+            }))
+            .on_mouse_up(
+                MouseButton::Left,
+                cx.listener(|this, event: &MouseUpEvent, _, cx| {
+                    if this.marquee.is_some() {
+                        this.end_marquee(Some((
+                            f32::from(event.position.x),
+                            f32::from(event.position.y),
+                        )));
+                        cx.stop_propagation();
+                        cx.notify();
+                    }
+                }),
+            )
             .on_mouse_down(
                 MouseButton::Right,
                 cx.listener(|this, _, _, cx| {
@@ -603,6 +753,23 @@ impl Render for DesktopView {
                         .object_fit(ObjectFit::Cover),
                 )
             })
+            .when_some(
+                marquee_bounds.filter(|bounds| bounds.visible()),
+                |element, bounds| {
+                    element.child(
+                        div()
+                            .id("desktop-selection-marquee")
+                            .absolute()
+                            .left(px(bounds.left))
+                            .top(px(bounds.top))
+                            .w(px(bounds.width))
+                            .h(px(bounds.height))
+                            .bg(rgba(0x0078d455))
+                            .border_2()
+                            .border_color(rgba(0x0078d4ee)),
+                    )
+                },
+            )
             .child(
                 div()
                     .absolute()
@@ -662,6 +829,10 @@ impl Render for DesktopView {
                             .justify_center()
                             .rounded_md()
                             .cursor_pointer()
+                            .on_mouse_down(
+                                MouseButton::Left,
+                                cx.listener(|_, _, _, cx| cx.stop_propagation()),
+                            )
                             .on_drag(
                                 DesktopDrag {
                                     stable_id: stable_id.clone(),
@@ -895,6 +1066,50 @@ mod tests {
                 .iter()
                 .all(|item| !item.selected && !item.focused)
         );
+    }
+
+    #[test]
+    fn marquee_normalizes_reverse_drag_and_uses_threshold() {
+        let forward = MarqueeBounds::between((10.0, 20.0), (120.0, 160.0));
+        let reverse = MarqueeBounds::between((120.0, 160.0), (10.0, 20.0));
+        assert_eq!(forward, reverse);
+        assert!(forward.visible());
+        assert!(forward.intersects(8.0, 8.0, 104.0, 112.0));
+        assert!(!MarqueeBounds::between((10.0, 10.0), (12.0, 12.0)).visible());
+    }
+
+    #[test]
+    fn marquee_recomputes_live_hits_and_ctrl_unions_baseline() {
+        let mut first = node("first");
+        first.selected = true;
+        let mut view = DesktopView::new(vec![first, node("second")], false);
+        view.begin_marquee((8.0, 120.0), true);
+        view.update_marquee((110.0, 230.0));
+        assert!(view.items.iter().all(|item| item.selected));
+        view.update_marquee((9.0, 121.0));
+        assert!(view.items[0].selected);
+        assert!(!view.items[1].selected);
+        view.end_marquee(None);
+        assert!(view.marquee.is_none());
+    }
+
+    #[test]
+    fn ordinary_empty_click_clears_and_lost_button_cancels_transient_state() {
+        let mut selected = node("selected");
+        selected.selected = true;
+        let mut view = DesktopView::new(vec![selected], false);
+        view.begin_marquee((500.0, 500.0), false);
+        assert!(!view.items[0].selected);
+        view.end_marquee(Some((501.0, 501.0)));
+        assert!(view.marquee.is_none());
+        assert!(!view.items[0].selected);
+    }
+
+    #[test]
+    fn item_primary_down_stops_background_marquee_in_source_contract() {
+        let source = include_str!("view.rs");
+        assert!(source.contains("desktop-selection-marquee"));
+        assert!(source.contains("cx.listener(|_, _, _, cx| cx.stop_propagation())"));
     }
 
     #[test]

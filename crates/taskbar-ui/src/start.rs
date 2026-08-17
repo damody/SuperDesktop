@@ -5,14 +5,20 @@ use shell_provider_protocol::{
 };
 use std::collections::{BTreeMap, BTreeSet};
 use std::ops::Range;
+use std::path::Path;
 use std::rc::Rc;
+use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use gpui::{
     AppContext, Bounds, Context, ElementInputHandler, EntityInputHandler, FocusHandle,
-    InteractiveElement, IntoElement, ParentElement, Pixels, Render, StatefulInteractiveElement,
-    Styled, UTF16Selection, Window, canvas, div, prelude::FluentBuilder as _, px, rgb,
+    InteractiveElement, IntoElement, ObjectFit, ParentElement, Pixels, Render, RenderImage,
+    StatefulInteractiveElement, Styled, StyledImage, UTF16Selection, Window, canvas, div, img,
+    prelude::FluentBuilder as _, px, rgb,
 };
+use shell_provider_protocol::{IconData, SearchCategory};
+
+use crate::view::icon_render_image;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum StartFailure {
@@ -125,11 +131,20 @@ pub struct StartSnapshot {
     pub recent_ids: Vec<String>,
 }
 
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum StartPage {
+    #[default]
+    Home,
+    AllApps,
+}
+
 #[derive(Clone, Debug, Default)]
 pub struct StartModel {
     pub open: bool,
     pub query: String,
     pub composition: String,
+    pub page: StartPage,
+    pub power_open: bool,
     pub generation: u64,
     pub focused_result: Option<usize>,
     pinned: Vec<SearchResult>,
@@ -144,13 +159,36 @@ pub struct StartModel {
 impl StartModel {
     pub fn open(&mut self) {
         self.open = true;
+        self.page = StartPage::Home;
+        self.power_open = false;
         self.focused_result = None;
     }
 
     pub fn close(&mut self) {
         self.open = false;
         self.composition.clear();
+        self.power_open = false;
         self.focused_result = None;
+    }
+
+    pub fn show_home(&mut self) {
+        self.page = StartPage::Home;
+        self.power_open = false;
+        self.focused_result = None;
+    }
+
+    pub fn show_all_apps(&mut self) {
+        self.page = StartPage::AllApps;
+        self.power_open = false;
+        self.focused_result = (!self.all_apps_results().is_empty()).then_some(0);
+    }
+
+    pub fn toggle_power(&mut self) {
+        self.power_open = !self.power_open;
+    }
+
+    pub fn dismiss_power(&mut self) -> bool {
+        std::mem::take(&mut self.power_open)
     }
 
     pub fn set_catalogs(
@@ -230,14 +268,14 @@ impl StartModel {
 
     pub fn results(&self) -> Vec<&SearchResult> {
         if self.query.trim().is_empty() {
-            let mut seen = BTreeSet::new();
-            return self
-                .pinned
-                .iter()
-                .chain(&self.recent)
-                .chain(&self.all_apps)
-                .filter(|item| seen.insert(item.id.as_str()))
-                .collect();
+            return match self.page {
+                StartPage::Home => self
+                    .home_pins()
+                    .into_iter()
+                    .chain(self.recommendations())
+                    .collect(),
+                StartPage::AllApps => self.all_apps_results(),
+            };
         }
         let mut output: Vec<_> = self.batches.values().flatten().collect();
         output.sort_by(|left, right| {
@@ -248,6 +286,46 @@ impl StartModel {
         });
         output.truncate(100);
         output
+    }
+
+    pub fn home_pins(&self) -> Vec<&SearchResult> {
+        let mut seen = BTreeSet::new();
+        self.pinned
+            .iter()
+            .filter(|item| seen.insert(item.id.as_str()))
+            .take(12)
+            .collect()
+    }
+
+    pub fn recommendations(&self) -> Vec<&SearchResult> {
+        let pinned = self
+            .pinned
+            .iter()
+            .map(|item| item.id.as_str())
+            .collect::<BTreeSet<_>>();
+        let mut seen = BTreeSet::new();
+        self.recent
+            .iter()
+            .filter(|item| !pinned.contains(item.id.as_str()))
+            .filter(|item| seen.insert(item.id.as_str()))
+            .take(6)
+            .collect()
+    }
+
+    pub fn all_apps_results(&self) -> Vec<&SearchResult> {
+        let mut apps = self
+            .all_apps
+            .iter()
+            .filter(|item| item.category == shell_provider_protocol::SearchCategory::Application)
+            .collect::<Vec<_>>();
+        apps.sort_by(|left, right| {
+            left.title
+                .to_lowercase()
+                .cmp(&right.title.to_lowercase())
+                .then_with(|| left.id.cmp(&right.id))
+        });
+        apps.truncate(100);
+        apps
     }
 
     pub fn move_focus(&mut self, delta: i32) {
@@ -360,6 +438,7 @@ pub struct StartView {
     persist: PersistStartAction,
     power: PowerAction,
     focus: FocusHandle,
+    icon_cache: BTreeMap<String, Option<IconData>>,
 }
 
 impl StartView {
@@ -371,7 +450,25 @@ impl StartView {
     ) -> Self {
         let mut model = StartModel::default();
         model.open();
-        let default_pins = catalogs.iter().take(6).cloned().collect();
+        let mut default_pins = catalogs
+            .iter()
+            .filter(|item| item.category == SearchCategory::Application)
+            .take(12)
+            .cloned()
+            .collect::<Vec<_>>();
+        if default_pins.len() < 12 {
+            let pinned = default_pins
+                .iter()
+                .map(|item| item.id.clone())
+                .collect::<BTreeSet<_>>();
+            default_pins.extend(
+                catalogs
+                    .iter()
+                    .filter(|item| !pinned.contains(&item.id))
+                    .take(12 - default_pins.len())
+                    .cloned(),
+            );
+        }
         model.set_catalogs(default_pins, Vec::new(), catalogs.clone());
         if snapshot.initialized {
             model.restore_snapshot(&snapshot, &catalogs);
@@ -384,6 +481,7 @@ impl StartView {
             persist: actions.persist,
             power: actions.power,
             focus: cx.focus_handle(),
+            icon_cache: BTreeMap::new(),
         }
     }
 
@@ -416,6 +514,610 @@ impl StartView {
         (self.activate)(&result.activation);
         self.model.record_recent(result);
         (self.persist)(&self.model.snapshot());
+    }
+
+    fn render_icons_for(
+        &mut self,
+        results: impl IntoIterator<Item = SearchResult>,
+    ) -> BTreeMap<String, Option<Arc<RenderImage>>> {
+        let results = results.into_iter().collect::<Vec<_>>();
+        let live = results
+            .iter()
+            .map(|result| result.id.clone())
+            .collect::<BTreeSet<_>>();
+        self.icon_cache.retain(|id, _| live.contains(id));
+        results
+            .into_iter()
+            .map(|result| {
+                let icon = self
+                    .icon_cache
+                    .entry(result.id.clone())
+                    .or_insert_with(|| {
+                        result_path(&result).and_then(|path| {
+                            platform_win::common::icon::shell_icon_for_path(path, 32)
+                        })
+                    })
+                    .as_ref()
+                    .and_then(icon_render_image);
+                (result.id, icon)
+            })
+            .collect()
+    }
+
+    fn render_windows11(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> gpui::Stateful<gpui::Div> {
+        window.focus(&self.focus, cx);
+        let query = self.model.query.clone();
+        let composition = self.model.composition.clone();
+        let query_active = !query.trim().is_empty();
+        let home_active = !query_active && self.model.page == StartPage::Home;
+        let all_apps_active = !query_active && self.model.page == StartPage::AllApps;
+        let pins = self
+            .model
+            .home_pins()
+            .into_iter()
+            .cloned()
+            .collect::<Vec<_>>();
+        let recommendations = self
+            .model
+            .recommendations()
+            .into_iter()
+            .cloned()
+            .collect::<Vec<_>>();
+        let list_results = if query_active {
+            self.model
+                .results()
+                .into_iter()
+                .cloned()
+                .collect::<Vec<_>>()
+        } else if all_apps_active {
+            self.model
+                .all_apps_results()
+                .into_iter()
+                .cloned()
+                .collect::<Vec<_>>()
+        } else {
+            Vec::new()
+        };
+        let icons = self.render_icons_for(
+            pins.iter()
+                .chain(&recommendations)
+                .chain(&list_results)
+                .cloned(),
+        );
+        let home_icons = icons.clone();
+        let list_icons = icons;
+        let focused_id = self.model.focused_result().map(|result| result.id);
+        let dismiss_for_key = self.dismiss.clone();
+        let input_entity = cx.entity();
+        let input_focus = self.focus.clone();
+        let account_activate = self.activate.clone();
+        let settings_activate = self.activate.clone();
+        let settings_dismiss = self.dismiss.clone();
+        let power_open = self.model.power_open;
+        let sign_out = self.power.clone();
+        let restart = self.power.clone();
+        let shut_down = self.power.clone();
+        let account_name = std::env::var("USERNAME").unwrap_or_else(|_| "User".into());
+
+        div()
+            .id("windows11-start-surface")
+            .role(gpui::Role::Dialog)
+            .aria_label("Start")
+            .tab_index(0)
+            .track_focus(&self.focus)
+            .size_full()
+            .p_4()
+            .flex()
+            .flex_col()
+            .gap_3()
+            .relative()
+            .bg(rgb(0xf2f5f9))
+            .text_color(rgb(0x172033))
+            .on_key_down(
+                cx.listener(move |this, event: &gpui::KeyDownEvent, window, cx| {
+                    match event.keystroke.key.as_str() {
+                        "escape" => {
+                            if !this.model.dismiss_power() {
+                                this.model.close();
+                                dismiss_for_key(window, cx);
+                            }
+                        }
+                        "down" | "right" => this.model.move_focus(1),
+                        "up" | "left" => this.model.move_focus(-1),
+                        "enter" => {
+                            if let Some(result) = this.model.focused_result() {
+                                this.activate_result(result);
+                                this.model.close();
+                                dismiss_for_key(window, cx);
+                            }
+                        }
+                        "p" if event.keystroke.modifiers.control => {
+                            if let Some(result) = this.model.focused_result() {
+                                this.model.toggle_pin(result);
+                                (this.persist)(&this.model.snapshot());
+                            }
+                        }
+                        "backspace" => {
+                            this.model.query.pop();
+                            this.schedule_search(cx);
+                        }
+                        _ => return,
+                    }
+                    cx.stop_propagation();
+                    cx.notify();
+                }),
+            )
+            .child(
+                div()
+                    .id("start-search-input")
+                    .role(gpui::Role::TextInput)
+                    .aria_label("Search apps, settings, and files")
+                    .h(px(44.))
+                    .px_3()
+                    .flex_none()
+                    .flex()
+                    .items_center()
+                    .rounded_lg()
+                    .bg(rgb(0xffffff))
+                    .border_1()
+                    .border_color(rgb(0xc8d3df))
+                    .text_color(rgb(0x172033))
+                    .relative()
+                    .child(
+                        canvas(
+                            |bounds, _, _| bounds,
+                            move |bounds, _, window, cx| {
+                                window.handle_input(
+                                    &input_focus,
+                                    ElementInputHandler::new(bounds, input_entity),
+                                    cx,
+                                );
+                            },
+                        )
+                        .absolute()
+                        .inset_0(),
+                    )
+                    .child(if query.is_empty() && composition.is_empty() {
+                        "Search apps, settings, and files".to_owned()
+                    } else {
+                        format!("{query}{composition}")
+                    }),
+            )
+            .when(home_active, |root| {
+                root.child(
+                    div()
+                        .id("start-home")
+                        .flex_1()
+                        .min_h_0()
+                        .overflow_y_scroll()
+                        .flex()
+                        .flex_col()
+                        .gap_3()
+                        .child(
+                            div()
+                                .flex()
+                                .items_center()
+                                .justify_between()
+                                .child(div().text_size(px(18.)).child("Pinned"))
+                                .child(
+                                    div()
+                                        .id("start-all-apps")
+                                        .role(gpui::Role::Button)
+                                        .aria_label("All apps")
+                                        .tab_index(0)
+                                        .px_3()
+                                        .py_1()
+                                        .rounded_md()
+                                        .bg(rgb(0xe3e9f0))
+                                        .cursor_pointer()
+                                        .on_click(cx.listener(|this, _, _, cx| {
+                                            this.model.show_all_apps();
+                                            cx.notify();
+                                        }))
+                                        .child("All apps  >"),
+                                ),
+                        )
+                        .child(
+                            div()
+                                .id("start-pinned-grid")
+                                .role(gpui::Role::List)
+                                .aria_label("Pinned")
+                                .flex()
+                                .flex_wrap()
+                                .children(pins.into_iter().map(|result| {
+                                    let icon = home_icons.get(&result.id).cloned().flatten();
+                                    let focused = focused_id.as_deref() == Some(result.id.as_str());
+                                    let activate_result = result.clone();
+                                    let dismiss = self.dismiss.clone();
+                                    div()
+                                        .id(format!("start:pinned:{}", result.id))
+                                        .role(gpui::Role::ListItem)
+                                        .aria_label(result.title.clone())
+                                        .tab_index(0)
+                                        .w(px(94.))
+                                        .h(px(82.))
+                                        .p_1()
+                                        .rounded_md()
+                                        .flex()
+                                        .flex_col()
+                                        .items_center()
+                                        .justify_center()
+                                        .gap_1()
+                                        .cursor_pointer()
+                                        .when(focused, |element| element.bg(rgb(0xdbe8f8)))
+                                        .on_click(cx.listener(move |this, _, window, cx| {
+                                            this.activate_result(activate_result.clone());
+                                            this.model.close();
+                                            dismiss(window, cx);
+                                        }))
+                                        .child(start_icon_tile(icon, result.category.clone(), 34.0))
+                                        .child(
+                                            div()
+                                                .w_full()
+                                                .text_center()
+                                                .text_size(px(12.))
+                                                .overflow_hidden()
+                                                .whitespace_nowrap()
+                                                .text_ellipsis()
+                                                .child(result.title),
+                                        )
+                                })),
+                        )
+                        .child(div().text_size(px(18.)).child("Recommended"))
+                        .child(
+                            div()
+                                .id("start-recommended")
+                                .role(gpui::Role::List)
+                                .aria_label("Recommended")
+                                .flex()
+                                .flex_wrap()
+                                .when(recommendations.is_empty(), |element| {
+                                    element.child(
+                                        div()
+                                            .py_3()
+                                            .text_color(rgb(0x66717d))
+                                            .child("Recent apps and files will appear here."),
+                                    )
+                                })
+                                .children(recommendations.into_iter().map(|result| {
+                                    let icon = home_icons.get(&result.id).cloned().flatten();
+                                    let activate_result = result.clone();
+                                    let dismiss = self.dismiss.clone();
+                                    div()
+                                        .id(format!("start:recommended:{}", result.id))
+                                        .role(gpui::Role::ListItem)
+                                        .aria_label(result.title.clone())
+                                        .tab_index(0)
+                                        .w(px(282.))
+                                        .h(px(54.))
+                                        .px_2()
+                                        .rounded_md()
+                                        .flex()
+                                        .items_center()
+                                        .gap_2()
+                                        .cursor_pointer()
+                                        .on_click(cx.listener(move |this, _, window, cx| {
+                                            this.activate_result(activate_result.clone());
+                                            this.model.close();
+                                            dismiss(window, cx);
+                                        }))
+                                        .child(start_icon_tile(icon, result.category.clone(), 32.0))
+                                        .child(
+                                            div().min_w_0().flex_1().child(result.title).when_some(
+                                                result.subtitle,
+                                                |element, subtitle| {
+                                                    element.child(
+                                                        div()
+                                                            .text_size(px(11.))
+                                                            .text_color(rgb(0x66717d))
+                                                            .overflow_hidden()
+                                                            .whitespace_nowrap()
+                                                            .text_ellipsis()
+                                                            .child(subtitle),
+                                                    )
+                                                },
+                                            ),
+                                        )
+                                })),
+                        ),
+                )
+            })
+            .when(!home_active, |root| {
+                root.child(
+                    div()
+                        .id(if query_active {
+                            "start-search-results"
+                        } else {
+                            "start-all-apps-page"
+                        })
+                        .flex_1()
+                        .min_h_0()
+                        .flex()
+                        .flex_col()
+                        .gap_2()
+                        .child(
+                            div()
+                                .flex()
+                                .items_center()
+                                .gap_2()
+                                .when(all_apps_active, |element| {
+                                    element.child(
+                                        div()
+                                            .id("start-back-home")
+                                            .role(gpui::Role::Button)
+                                            .aria_label("Back to pinned")
+                                            .tab_index(0)
+                                            .px_2()
+                                            .py_1()
+                                            .rounded_md()
+                                            .bg(rgb(0xe3e9f0))
+                                            .cursor_pointer()
+                                            .on_click(cx.listener(|this, _, _, cx| {
+                                                this.model.show_home();
+                                                cx.notify();
+                                            }))
+                                            .child("<"),
+                                    )
+                                })
+                                .child(div().text_size(px(18.)).child(if query_active {
+                                    "Search results"
+                                } else {
+                                    "All apps"
+                                })),
+                        )
+                        .child(
+                            div()
+                                .id("start-mode-results")
+                                .role(gpui::Role::List)
+                                .aria_label(if query_active {
+                                    "Search results"
+                                } else {
+                                    "All apps"
+                                })
+                                .flex_1()
+                                .min_h_0()
+                                .overflow_y_scroll()
+                                .children(list_results.into_iter().map(|result| {
+                                    let icon = list_icons.get(&result.id).cloned().flatten();
+                                    let focused = focused_id.as_deref() == Some(result.id.as_str());
+                                    let activate_result = result.clone();
+                                    let dismiss = self.dismiss.clone();
+                                    let subtitle =
+                                        query_active.then(|| result.subtitle.clone()).flatten();
+                                    div()
+                                        .id(format!("start:list:{}", result.id))
+                                        .role(gpui::Role::ListItem)
+                                        .aria_label(result.title.clone())
+                                        .tab_index(0)
+                                        .min_h(px(50.))
+                                        .px_3()
+                                        .py_1()
+                                        .rounded_md()
+                                        .flex()
+                                        .items_center()
+                                        .gap_3()
+                                        .cursor_pointer()
+                                        .when(focused, |element| element.bg(rgb(0xdbe8f8)))
+                                        .on_click(cx.listener(move |this, _, window, cx| {
+                                            this.activate_result(activate_result.clone());
+                                            this.model.close();
+                                            dismiss(window, cx);
+                                        }))
+                                        .child(start_icon_tile(icon, result.category.clone(), 32.0))
+                                        .child(
+                                            div().min_w_0().flex_1().child(result.title).when_some(
+                                                subtitle,
+                                                |element, subtitle| {
+                                                    element.child(
+                                                        div()
+                                                            .text_size(px(11.))
+                                                            .text_color(rgb(0x66717d))
+                                                            .overflow_hidden()
+                                                            .whitespace_nowrap()
+                                                            .text_ellipsis()
+                                                            .child(subtitle),
+                                                    )
+                                                },
+                                            ),
+                                        )
+                                })),
+                        ),
+                )
+            })
+            .child(
+                div()
+                    .id("start-footer")
+                    .h(px(52.))
+                    .px_2()
+                    .flex_none()
+                    .flex()
+                    .items_center()
+                    .justify_between()
+                    .border_t_1()
+                    .border_color(rgb(0xc8d3df))
+                    .child(
+                        div()
+                            .id("start-account")
+                            .role(gpui::Role::Button)
+                            .aria_label(format!("User account {account_name}"))
+                            .tab_index(0)
+                            .px_3()
+                            .py_2()
+                            .rounded_md()
+                            .cursor_pointer()
+                            .on_click(move |_, _, _| {
+                                account_activate(&settings_command(
+                                    "ms-settings:yourinfo",
+                                    "Account",
+                                ));
+                            })
+                            .child(account_name),
+                    )
+                    .child(
+                        div()
+                            .id("start-footer-actions")
+                            .role(gpui::Role::Group)
+                            .aria_label("Start footer actions")
+                            .flex()
+                            .gap_2()
+                            .child(
+                                div()
+                                    .id("start-settings")
+                                    .role(gpui::Role::Button)
+                                    .aria_label("Settings")
+                                    .tab_index(0)
+                                    .px_3()
+                                    .py_2()
+                                    .rounded_md()
+                                    .bg(rgb(0xe3e9f0))
+                                    .cursor_pointer()
+                                    .on_click(cx.listener(move |this, _, window, cx| {
+                                        settings_activate(&settings_command(
+                                            "ms-settings:",
+                                            "Settings",
+                                        ));
+                                        this.model.close();
+                                        settings_dismiss(window, cx);
+                                    }))
+                                    .child("Settings"),
+                            )
+                            .child(
+                                div()
+                                    .id("start-power")
+                                    .role(gpui::Role::Button)
+                                    .aria_label("Power")
+                                    .tab_index(0)
+                                    .px_3()
+                                    .py_2()
+                                    .rounded_md()
+                                    .bg(rgb(0xe3e9f0))
+                                    .cursor_pointer()
+                                    .on_click(cx.listener(|this, _, _, cx| {
+                                        this.model.toggle_power();
+                                        cx.notify();
+                                    }))
+                                    .child("Power"),
+                            ),
+                    ),
+            )
+            .when(power_open, |root| {
+                root.child(
+                    div()
+                        .id("start-power-menu")
+                        .role(gpui::Role::Menu)
+                        .aria_label("Power options")
+                        .absolute()
+                        .right(px(16.))
+                        .bottom(px(66.))
+                        .w(px(190.))
+                        .p_1()
+                        .rounded_lg()
+                        .bg(rgb(0xffffff))
+                        .border_1()
+                        .border_color(rgb(0xc8d3df))
+                        .flex()
+                        .flex_col()
+                        .child(power_menu_item(
+                            "start-sign-out",
+                            "Sign out",
+                            sign_out,
+                            StartPowerAction::SignOut,
+                            cx,
+                        ))
+                        .child(power_menu_item(
+                            "start-restart",
+                            "Restart",
+                            restart,
+                            StartPowerAction::Restart,
+                            cx,
+                        ))
+                        .child(power_menu_item(
+                            "start-shut-down",
+                            "Shut down",
+                            shut_down,
+                            StartPowerAction::ShutDown,
+                            cx,
+                        )),
+                )
+            })
+    }
+}
+
+fn result_path(result: &SearchResult) -> Option<&Path> {
+    let path = result.activation.id.0.strip_prefix("open:")?;
+    let path = Path::new(path);
+    path.is_file().then_some(path)
+}
+
+fn start_icon_tile(
+    icon: Option<Arc<RenderImage>>,
+    category: SearchCategory,
+    edge: f32,
+) -> impl IntoElement {
+    let fallback = match category {
+        SearchCategory::Application => "APP",
+        SearchCategory::Setting => "SET",
+        SearchCategory::File => "FILE",
+        SearchCategory::Command => "CMD",
+    };
+    let missing = icon.is_none();
+    div()
+        .w(px(edge))
+        .h(px(edge))
+        .flex_none()
+        .rounded_md()
+        .flex()
+        .items_center()
+        .justify_center()
+        .bg(rgb(0xe7eef8))
+        .text_color(rgb(0x245a9a))
+        .text_size(px(9.))
+        .when_some(icon, |element, icon| {
+            element.child(
+                img(icon)
+                    .w(px(edge))
+                    .h(px(edge))
+                    .object_fit(ObjectFit::Contain),
+            )
+        })
+        .when(missing, |element| element.child(fallback))
+}
+
+fn power_menu_item(
+    id: &'static str,
+    label: &'static str,
+    action: PowerAction,
+    value: StartPowerAction,
+    cx: &mut Context<StartView>,
+) -> impl IntoElement {
+    div()
+        .id(id)
+        .role(gpui::Role::MenuItem)
+        .aria_label(label)
+        .tab_index(0)
+        .px_3()
+        .py_2()
+        .rounded_md()
+        .cursor_pointer()
+        .on_click(cx.listener(move |this, _, _, cx| {
+            this.model.power_open = false;
+            action(value);
+            cx.notify();
+        }))
+        .child(label)
+}
+
+fn settings_command(uri: &str, label: &str) -> CommandDescriptor {
+    CommandDescriptor {
+        id: shell_provider_protocol::CommandId(format!("settings:{uri}")),
+        label: label.into(),
+        enabled: true,
+        risk: shell_provider_protocol::CommandRisk::Normal,
+        children: Vec::new(),
     }
 }
 
@@ -565,218 +1267,8 @@ impl EntityInputHandler for StartView {
 
 impl Render for StartView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        window.focus(&self.focus, cx);
-        let nodes = self.model.accessibility_nodes();
-        let query = self.model.query.clone();
-        let composition = self.model.composition.clone();
-        let dismiss_for_key = self.dismiss.clone();
-        let settings_activate = self.activate.clone();
-        let input_entity = cx.entity();
-        let input_focus = self.focus.clone();
-        let sign_out = self.power.clone();
-        let restart = self.power.clone();
-        let shut_down = self.power.clone();
-        div()
-            .id("superdesktop-start")
-            .role(gpui::Role::Dialog)
-            .aria_label("Start")
-            .tab_index(0)
-            .track_focus(&self.focus)
-            .size_full()
-            .p_3()
-            .flex()
-            .flex_col()
-            .gap_2()
-            .bg(rgb(0x182028))
-            .text_color(rgb(0xf4f7fa))
-            .on_key_down(
-                cx.listener(move |this, event: &gpui::KeyDownEvent, window, cx| {
-                    match event.keystroke.key.as_str() {
-                        "escape" => {
-                            this.model.close();
-                            dismiss_for_key(window, cx);
-                        }
-                        "down" => this.model.move_focus(1),
-                        "up" => this.model.move_focus(-1),
-                        "enter" => {
-                            if let Some(result) = this.model.focused_result() {
-                                this.activate_result(result);
-                                this.model.close();
-                                dismiss_for_key(window, cx);
-                            }
-                        }
-                        "p" if event.keystroke.modifiers.control => {
-                            if let Some(result) = this.model.focused_result() {
-                                this.model.toggle_pin(result);
-                                (this.persist)(&this.model.snapshot());
-                            }
-                        }
-                        "backspace" => {
-                            this.model.query.pop();
-                            this.schedule_search(cx);
-                        }
-                        _ => return,
-                    }
-                    cx.stop_propagation();
-                    cx.notify();
-                }),
-            )
-            .child(
-                div()
-                    .id("start-search-input")
-                    .role(gpui::Role::TextInput)
-                    .aria_label("Search apps, settings, and files")
-                    .h(px(44.))
-                    .px_3()
-                    .flex()
-                    .items_center()
-                    .rounded_md()
-                    .bg(rgb(0xffffff))
-                    .text_color(rgb(0x111111))
-                    .relative()
-                    .child(
-                        canvas(
-                            |bounds, _, _| bounds,
-                            move |bounds, _, window, cx| {
-                                window.handle_input(
-                                    &input_focus,
-                                    ElementInputHandler::new(bounds, input_entity),
-                                    cx,
-                                );
-                            },
-                        )
-                        .absolute()
-                        .inset_0(),
-                    )
-                    .child(if query.is_empty() && composition.is_empty() {
-                        "Search apps, settings, and files".to_owned()
-                    } else {
-                        format!("{query}{composition}")
-                    }),
-            )
-            .child(
-                div()
-                    .text_size(px(13.))
-                    .text_color(rgb(0xaab4be))
-                    .child(if query.is_empty() {
-                        "Pinned · Recent · All apps"
-                    } else {
-                        "Search results"
-                    }),
-            )
-            .child(
-                div()
-                    .id("start-results")
-                    .role(gpui::Role::List)
-                    .aria_label("Start results")
-                    .flex_1()
-                    .min_h_0()
-                    .overflow_hidden()
-                    .flex()
-                    .flex_col()
-                    .children(nodes.into_iter().enumerate().map(|(index, node)| {
-                        let dismiss = self.dismiss.clone();
-                        div()
-                            .id(node.stable_id)
-                            .role(gpui::Role::ListItem)
-                            .aria_label(node.name.clone())
-                            .tab_index(0)
-                            .px_3()
-                            .py_2()
-                            .rounded_md()
-                            .when(node.focused, |element| element.bg(rgb(0x285b8f)))
-                            .on_click(cx.listener(move |this, _, window, cx| {
-                                this.model.focused_result = Some(index);
-                                if let Some(result) =
-                                    this.model.results().get(index).map(|item| (*item).clone())
-                                {
-                                    this.activate_result(result);
-                                }
-                                this.model.close();
-                                dismiss(window, cx);
-                                cx.notify();
-                            }))
-                            .child(node.name)
-                    })),
-            )
-            .child(
-                div()
-                    .h(px(42.))
-                    .flex()
-                    .items_center()
-                    .justify_between()
-                    .border_t_1()
-                    .border_color(rgb(0x3d4852))
-                    .child(
-                        div()
-                            .id("start-settings")
-                            .role(gpui::Role::Button)
-                            .aria_label("Settings")
-                            .tab_index(0)
-                            .px_2()
-                            .py_1()
-                            .rounded_md()
-                            .cursor_pointer()
-                            .on_click(move |_, _, _| {
-                                settings_activate(&CommandDescriptor {
-                                    id: shell_provider_protocol::CommandId(
-                                        "settings:ms-settings:".into(),
-                                    ),
-                                    label: "Settings".into(),
-                                    enabled: true,
-                                    risk: shell_provider_protocol::CommandRisk::Normal,
-                                    children: Vec::new(),
-                                });
-                            })
-                            .child("Settings"),
-                    )
-                    .child(
-                        div()
-                            .id("start-power-actions")
-                            .role(gpui::Role::Group)
-                            .aria_label("Power")
-                            .flex()
-                            .gap_1()
-                            .child(power_button(
-                                "start-sign-out",
-                                "Sign out",
-                                sign_out,
-                                StartPowerAction::SignOut,
-                            ))
-                            .child(power_button(
-                                "start-restart",
-                                "Restart",
-                                restart,
-                                StartPowerAction::Restart,
-                            ))
-                            .child(power_button(
-                                "start-shut-down",
-                                "Shut down",
-                                shut_down,
-                                StartPowerAction::ShutDown,
-                            )),
-                    ),
-            )
+        self.render_windows11(window, cx)
     }
-}
-
-fn power_button(
-    id: &'static str,
-    label: &'static str,
-    action: PowerAction,
-    value: StartPowerAction,
-) -> impl IntoElement {
-    div()
-        .id(id)
-        .role(gpui::Role::Button)
-        .aria_label(label)
-        .tab_index(0)
-        .px_2()
-        .py_1()
-        .rounded_md()
-        .cursor_pointer()
-        .on_click(move |_, _, _| action(value))
-        .child(label)
 }
 fn map_reason(reason: &str) -> StartFailure {
     if reason.contains("refus") || reason.contains("input") {
@@ -869,5 +1361,86 @@ mod tests {
         assert_eq!(snapshot.recent_ids, vec!["terminal"]);
         start.close();
         assert!(!start.open);
+    }
+
+    #[test]
+    fn home_all_apps_and_power_are_bounded_sorted_and_dismissible() {
+        let catalog = (0..20)
+            .rev()
+            .map(|index| result(&format!("app-{index:02}"), &format!("App {index:02}")))
+            .collect::<Vec<_>>();
+        let mut start = StartModel::default();
+        start.open();
+        let recent = (0..8)
+            .map(|index| result(&format!("recent-{index}"), &format!("Recent {index}")))
+            .collect();
+        start.set_catalogs(catalog[..15].to_vec(), recent, catalog.clone());
+        assert_eq!(start.home_pins().len(), 12);
+        assert_eq!(start.recommendations().len(), 6);
+        start.show_all_apps();
+        assert_eq!(start.page, StartPage::AllApps);
+        let all = start.all_apps_results();
+        assert_eq!(all.len(), 20);
+        assert!(all.windows(2).all(|pair| pair[0].title <= pair[1].title));
+        start.toggle_power();
+        assert!(start.power_open);
+        assert!(start.dismiss_power());
+        assert!(!start.power_open);
+        start.show_home();
+        assert_eq!(start.page, StartPage::Home);
+    }
+
+    #[test]
+    fn query_temporarily_overrides_page_without_changing_pins() {
+        let catalog = vec![result("alpha", "Alpha"), result("beta", "Beta")];
+        let mut start = StartModel::default();
+        start.open();
+        start.set_catalogs(catalog.clone(), Vec::new(), catalog);
+        start.show_all_apps();
+        let pins = start.snapshot().pinned_ids;
+        let query = start.commit_query("alpha");
+        assert!(start.accept_batch(SearchBatch {
+            generation: query.generation,
+            provider: SearchProvider::Applications,
+            state: SearchProviderState::Complete,
+            results: vec![result("alpha", "Alpha")],
+        }));
+        assert_eq!(start.results().len(), 1);
+        start.commit_query("");
+        assert_eq!(start.page, StartPage::AllApps);
+        assert_eq!(start.snapshot().pinned_ids, pins);
+    }
+
+    #[test]
+    fn windows11_view_contract_has_sections_icons_and_collapsed_power() {
+        let source = include_str!("start.rs");
+        for required in [
+            "windows11-start-surface",
+            "start-pinned-grid",
+            "start-recommended",
+            "start-all-apps-page",
+            "start-search-results",
+            "start-account",
+            "start-settings",
+            "start-power",
+            "start-power-menu",
+            "render_icons_for",
+        ] {
+            assert!(
+                source.contains(required),
+                "missing Start contract: {required}"
+            );
+        }
+        assert!(source.contains("return self.render_windows11(window, cx)"));
+        let model = StartModel::default();
+        assert!(!model.power_open);
+    }
+
+    #[test]
+    fn path_result_is_eligible_for_native_start_icon() {
+        let executable = std::env::current_exe().unwrap();
+        let mut item = result("fixture", "Fixture");
+        item.activation.id.0 = format!("open:{}", executable.display());
+        assert_eq!(result_path(&item), Some(executable.as_path()));
     }
 }

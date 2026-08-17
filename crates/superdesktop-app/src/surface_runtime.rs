@@ -1176,19 +1176,36 @@ fn options(
     }
 }
 
-fn start_options(monitor: &MonitorRecord) -> WindowOptions {
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct StartWindowGeometry {
+    left: f32,
+    top: f32,
+    width: f32,
+    height: f32,
+}
+
+fn start_window_geometry(monitor: &MonitorRecord) -> StartWindowGeometry {
     let scale = monitor.dpi_x as f32 / 96.0;
     let monitor_width = (monitor.work_area.right - monitor.work_area.left) as f32 / scale;
     let monitor_height = (monitor.work_area.bottom - monitor.work_area.top) as f32 / scale;
-    let width = monitor_width.min(560.0);
-    let height = monitor_height.min(680.0);
+    let width = (monitor_width - 24.0).clamp(1.0, 640.0);
+    let height = (monitor_height - 12.0).clamp(1.0, 720.0);
+    let work_left = monitor.work_area.left as f32 / scale;
+    let work_top = monitor.work_area.top as f32 / scale;
+    StartWindowGeometry {
+        left: work_left + (monitor_width - width).max(0.0) / 2.0,
+        top: (monitor.work_area.bottom as f32 / scale - height - 12.0).max(work_top),
+        width,
+        height,
+    }
+}
+
+fn start_options(monitor: &MonitorRecord) -> WindowOptions {
+    let geometry = start_window_geometry(monitor);
     WindowOptions {
         window_bounds: Some(WindowBounds::Windowed(Bounds {
-            origin: point(
-                px(monitor.work_area.left as f32 / scale),
-                px(monitor.work_area.bottom as f32 / scale - height),
-            ),
-            size: size(px(width), px(height)),
+            origin: point(px(geometry.left), px(geometry.top)),
+            size: size(px(geometry.width), px(geometry.height)),
         })),
         titlebar: None,
         focus: true,
@@ -1787,7 +1804,11 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                         callbacks: Some(TaskbarCallbacks {
                             start: Rc::new(move |app| {
                                 trace_action("start");
-                                if !shell {
+                                let verification_owned_start = std::env::var_os(
+                                    "SUPERDESKTOP_VERIFICATION_OWNED_START",
+                                )
+                                .is_some();
+                                if !shell && !verification_owned_start {
                                     let _ = platform_win::common::monitor_dpi_start::invoke_start_host_controlled();
                                     return;
                                 }
@@ -2323,7 +2344,8 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
 
 #[cfg(test)]
 mod live_parity_tests {
-    use super::{ICON_CACHE_LIMIT, prune_icon_cache};
+    use super::{ICON_CACHE_LIMIT, MonitorRecord, prune_icon_cache, start_window_geometry};
+    use platform_win::common::monitor_dpi_start::ScreenRect;
     use std::collections::{BTreeMap, BTreeSet};
     use std::path::Path;
 
@@ -2369,5 +2391,42 @@ mod live_parity_tests {
                 resolved.display()
             );
         }
+    }
+
+    #[test]
+    fn start_geometry_centers_clamps_and_preserves_bottom_gap() {
+        let monitor = MonitorRecord {
+            device_name: "fixture".into(),
+            primary: true,
+            bounds: ScreenRect {
+                left: 0,
+                top: 0,
+                right: 1920,
+                bottom: 1080,
+            },
+            work_area: ScreenRect {
+                left: 0,
+                top: 0,
+                right: 1920,
+                bottom: 1000,
+            },
+            dpi_x: 168,
+            dpi_y: 168,
+        };
+        let geometry = start_window_geometry(&monitor);
+        let logical_width = 1920.0 / 1.75;
+        let logical_bottom = 1000.0 / 1.75;
+        assert_eq!(geometry.width, 640.0);
+        assert!((geometry.left - (logical_width - 640.0) / 2.0).abs() < 0.01);
+        assert!((logical_bottom - geometry.top - geometry.height - 12.0).abs() < 0.01);
+
+        let mut small = monitor;
+        small.work_area.right = 500;
+        small.work_area.bottom = 400;
+        small.dpi_x = 96;
+        small.dpi_y = 96;
+        let geometry = start_window_geometry(&small);
+        assert_eq!((geometry.left, geometry.top), (12.0, 0.0));
+        assert_eq!((geometry.width, geometry.height), (476.0, 388.0));
     }
 }

@@ -30,7 +30,7 @@ pub use notification_area::{
 };
 pub use start::{
     StartAccessibilityNode, StartActions, StartAvailability, StartControl, StartEffect,
-    StartFailure, StartModel, StartPowerAction, StartSnapshot, StartSource, StartView,
+    StartFailure, StartModel, StartPage, StartPowerAction, StartSnapshot, StartSource, StartView,
 };
 pub use status::{ClockLocale, CoreStatus, ProviderState, StatusRegion, TestClock};
 pub use surface::{

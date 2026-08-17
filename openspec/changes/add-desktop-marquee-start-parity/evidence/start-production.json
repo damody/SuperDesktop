@@ -1,0 +1,25 @@
+{
+    "schema":  "windows11-start-production/v1",
+    "result":  "passed",
+    "app_sha256":  "475D955282527621CCC0AFAA9E2A288388826E5635786B3B7E77BBD3EAE7B1D3",
+    "home_sections":  [
+                          "Search",
+                          "Pinned",
+                          "Recommended",
+                          "Account",
+                          "Settings",
+                          "Power"
+                      ],
+    "power_collapsed":  true,
+    "all_apps_count":  75,
+    "centered_home_bounds":  {
+                                 "left":  1348,
+                                 "top":  731,
+                                 "width":  1144,
+                                 "height":  1272
+                             },
+    "home_screenshot":  "start-home.png",
+    "home_sha256":  "3C0120F06565C0470028C132AF5637A3BBCFEB7F13E409D813D172E8DBD425D8",
+    "all_apps_screenshot":  "start-all-apps.png",
+    "all_apps_sha256":  "8DE199921C977E860C082FA0A6860EFD7E60DE2EF14E1157DF65F8E0F0169B73"
+}

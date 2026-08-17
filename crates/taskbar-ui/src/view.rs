@@ -65,7 +65,7 @@ fn uncached_icon_render_image(icon: &IconData) -> Option<Arc<RenderImage>> {
     Some(Arc::new(RenderImage::new(vec![image::Frame::new(buffer)])))
 }
 
-fn icon_render_image(icon: &IconData) -> Option<Arc<RenderImage>> {
+pub(crate) fn icon_render_image(icon: &IconData) -> Option<Arc<RenderImage>> {
     if !platform_win::common::icon::valid_icon_data(icon) {
         return None;
     }
