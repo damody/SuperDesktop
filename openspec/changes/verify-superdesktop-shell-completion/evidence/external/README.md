@@ -19,7 +19,7 @@ Capture installer evidence in this order on the exact Windows 11 build 26200.916
 
 Supply the same attributable `-OperatorName` and `-OperatorOrganization` to every installer phase. The reference-profile M0 collector also requires those two operator fields. Windows 10 artifacts are obsolete and rejected rather than translated.
 
-After all three normalized artifacts exist for the frozen candidate revision, run:
+Run the collector after each normalized artifact is added, or after all three exist:
 
 ```powershell
 powershell -NoProfile -File scripts/collect-shell-completion-evidence.ps1 `
@@ -27,4 +27,4 @@ powershell -NoProfile -File scripts/collect-shell-completion-evidence.ps1 `
   -OutputPath openspec/changes/verify-superdesktop-shell-completion/evidence/current-rollup.json
 ```
 
-The collector rejects wrong hosts, revisions other than the frozen candidate, production drift after the candidate, partial evidence, source/artifact hash drift, unresolved P0/P1 findings, incomplete interaction matrices, recovery slower than ten seconds, and inexact installer rollback. Evidence commits may descend from the candidate without invalidating the reviewed revision. Example confirmations are templates only and are rejected until every placeholder is replaced by attributable data.
+Each admitted artifact changes only its mapped gates to `passed`; missing artifacts remain `external_pending`, so incremental recomputation never weakens the final gate. The collector rejects unknown JSON artifacts, wrong hosts, revisions other than the frozen candidate, production drift after the candidate, malformed or internally partial evidence, source/artifact hash drift, unresolved P0/P1 findings, incomplete interaction matrices, recovery slower than ten seconds, and inexact installer rollback. Evidence commits may descend from the candidate without invalidating the reviewed revision. Example confirmations are templates only and are rejected until every placeholder is replaced by attributable data.

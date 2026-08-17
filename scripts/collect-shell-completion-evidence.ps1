@@ -76,6 +76,13 @@ if (-not [string]::IsNullOrWhiteSpace($ExternalEvidenceDirectory)) {
         'physical-mixed-dpi' = 'physical-mixed-dpi.json'
         'independent-review' = 'independent-review.json'
     }
+    $expectedExternalFiles = @($expectedExternal.Values)
+    $unexpectedExternalFiles = @(Get-ChildItem -LiteralPath $externalRoot -File -Filter '*.json' | Where-Object {
+        $_.Name -notin $expectedExternalFiles
+    })
+    if ($unexpectedExternalFiles.Count -ne 0) {
+        throw "Unexpected external evidence: $($unexpectedExternalFiles[0].Name)"
+    }
     $candidatePath = Join-Path $evidenceRoot 'release-candidate.json'
     $candidate = Get-Content -Raw -Encoding utf8 -LiteralPath $candidatePath | ConvertFrom-Json
     $revision = [string]$candidate.reviewed_revision
@@ -87,7 +94,7 @@ if (-not [string]::IsNullOrWhiteSpace($ExternalEvidenceDirectory)) {
     foreach ($kind in $expectedExternal.Keys) {
         $path = Join-Path $externalRoot $expectedExternal[$kind]
         if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
-            throw "Missing external evidence: $kind"
+            continue
         }
         $document = Get-Content -Raw -Encoding utf8 -LiteralPath $path | ConvertFrom-Json
         if ($document.schema_version -ne 1 -or $document.kind -cne $kind -or $document.status -cne 'passed') {

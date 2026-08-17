@@ -14,6 +14,7 @@
     "versioned candidate-bound M0 physical confirmation template",
     "attributable lifecycle and installer operator continuity across reboot phases",
     "derived external gate recomputation",
+    "incremental external artifact admission with missing gates preserved as pending",
     "fail-closed incomplete external evidence handling",
     "production Shell forced-crash binding with authenticated guardian completion terminal"
   ],
@@ -25,7 +26,9 @@
     "windows_powershell_5_1_path_compatibility": "passed",
     "placeholder_reviewer_admission": "rejected_without_output",
     "wrong_reference_profile_admission": "rejected_without_output",
-    "incomplete_external_admission": "rejected_without_output",
+    "incremental_external_inventory": "passed_missing_artifacts_remain_pending",
+    "malformed_external_admission": "rejected_without_output",
+    "unknown_external_json_admission": "rejected_without_output",
     "external_tasks_marked_complete": false
   },
   "reason_external_tasks_remain_pending": "Exact 26200.9168 profile admission passed; no physical mixed-DPI topology, mutation-bearing lifecycle/reboot rollback, or attributable independent review was supplied. Windows 10 is not claimed."

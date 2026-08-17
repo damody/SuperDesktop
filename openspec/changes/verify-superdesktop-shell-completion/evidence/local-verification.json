@@ -1,7 +1,7 @@
 {
   "change": "verify-superdesktop-shell-completion",
   "result": "local_passed_external_pending",
-  "captured_at_utc": "2026-08-16T17:30:00Z",
+  "captured_at_utc": "2026-08-17T19:43:00Z",
   "commands": {
     "cargo_fmt": "passed",
     "cargo_check_workspace_offline": "passed",
@@ -12,7 +12,9 @@
     "verification_tasks_structure": "passed",
     "installer_live_dry_run_non_mutation": "passed",
     "installer_external_dry_run_state_snapshot": "passed",
-    "external_incomplete_admission": "rejected_without_output",
+    "external_incremental_inventory": "passed_missing_artifacts_remain_pending",
+    "external_unknown_json_admission": "rejected_without_output",
+    "external_malformed_admission": "rejected_without_output",
     "external_placeholder_reviewer_admission": "rejected_without_output",
     "external_scripts_windows_powershell_5_1_parser": "passed"
   },
