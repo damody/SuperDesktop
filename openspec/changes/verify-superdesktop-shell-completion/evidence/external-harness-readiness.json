@@ -8,6 +8,7 @@
     "independent architecture, security, accessibility, and lineage review admission",
     "revision-bound and SHA-256-bound external source lineage",
     "same-candidate, same-profile, and same-binary binding across lifecycle and installer reboot phases",
+    "strict pre-reboot and post-reboot Windows boot identity plus phase-order binding",
     "exact rollback metadata target binding",
     "repository-contained rehashable raw evidence and media lineage",
     "attributable placeholder-resistant operator and reviewer admission",
@@ -31,6 +32,7 @@
     "malformed_external_admission": "rejected_without_output",
     "unknown_external_json_admission": "rejected_without_output",
     "post_candidate_production_drift": "rejected_without_output",
+    "installer_same_boot_reboot_claim": "rejected_without_output",
     "external_tasks_marked_complete": false
   },
   "reason_external_tasks_remain_pending": "Exact 26200.9168 profile admission passed; no physical mixed-DPI topology, mutation-bearing lifecycle/reboot rollback, or attributable independent review was supplied. Windows 10 is not claimed."

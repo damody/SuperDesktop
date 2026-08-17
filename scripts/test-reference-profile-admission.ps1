@@ -101,7 +101,14 @@ $baselineHost = [ordered]@{
 }
 function New-HostSet {
     $set = [ordered]@{}
-    foreach ($phase in @('DryRun','Enable','AfterReboot','Rollback')) { $set[$phase] = Copy-Object $baselineHost }
+    $phases = @('DryRun','Enable','AfterReboot','Rollback')
+    for ($index = 0; $index -lt $phases.Count; $index++) {
+        $phase = $phases[$index]
+        $set[$phase] = Copy-Object $baselineHost
+        $set[$phase] | Add-Member -NotePropertyName capturedAtUtc -NotePropertyValue ([DateTimeOffset]::Parse('2026-08-18T00:00:00Z').AddMinutes($index).ToString('o'))
+        $boot = if ($phase -in @('DryRun','Enable')) { '2026-08-17T00:00:00Z' } else { '2026-08-18T00:00:00Z' }
+        $set[$phase] | Add-Member -NotePropertyName boot -NotePropertyValue ([pscustomobject]@{ lastBootUpUtc=$boot;tickCount64=1000 + $index })
+    }
     return $set
 }
 $hostSet = New-HostSet
@@ -118,6 +125,12 @@ $hostSet = New-HostSet; $hostSet['Enable'].rollbackRecordPath = 'C:\fixture\othe
 Assert-Rejected 'phase-rollback-path' { Assert-SuperDesktopInstallerHostSet -Hosts $hostSet -Revision $revision -ProfileFingerprint $profileFingerprint } 'REFERENCE_INSTALLER_ROLLBACK_PATH_DRIFT: Enable'
 $hostSet = New-HostSet; $hostSet['AfterReboot'].binaries[0].sha256 = '5' * 64
 Assert-Rejected 'phase-binary' { Assert-SuperDesktopInstallerHostSet -Hosts $hostSet -Revision $revision -ProfileFingerprint $profileFingerprint } 'REFERENCE_INSTALLER_BINARY_DRIFT: AfterReboot/binary-1'
+$hostSet = New-HostSet; $hostSet['Enable'].boot.lastBootUpUtc = '2026-08-16T00:00:00Z'
+Assert-Rejected 'pre-reboot-boot-drift' { Assert-SuperDesktopInstallerHostSet -Hosts $hostSet -Revision $revision -ProfileFingerprint $profileFingerprint } 'REFERENCE_INSTALLER_PRE_REBOOT_BOOT_DRIFT: Enable'
+$hostSet = New-HostSet; $hostSet['AfterReboot'].boot.lastBootUpUtc = '2026-08-17T00:00:00Z'
+Assert-Rejected 'reboot-not-observed' { Assert-SuperDesktopInstallerHostSet -Hosts $hostSet -Revision $revision -ProfileFingerprint $profileFingerprint } 'REFERENCE_INSTALLER_REBOOT_NOT_OBSERVED'
+$hostSet = New-HostSet; $hostSet['Rollback'].boot.lastBootUpUtc = '2026-08-19T00:00:00Z'
+Assert-Rejected 'post-reboot-boot-drift' { Assert-SuperDesktopInstallerHostSet -Hosts $hostSet -Revision $revision -ProfileFingerprint $profileFingerprint } 'REFERENCE_INSTALLER_POST_REBOOT_BOOT_DRIFT: Rollback'
 
 $buildRoot = [IO.Path]::GetFullPath((Join-Path $Workspace 'build'))
 $fixtureRoot = [IO.Path]::GetFullPath((Join-Path $buildRoot "reference-profile-admission-fixture-$PID"))
@@ -143,7 +156,7 @@ try {
 [ordered]@{
     result = 'passed'
     mutation_performed = $false
-    negative_fixtures = $cases.Count + 12
+    negative_fixtures = $cases.Count + 15
     obsolete_windows10_rejected = $true
     candidate_failures_rejected = $true
     referenced_hash_drift_rejected = $true

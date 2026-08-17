@@ -204,6 +204,33 @@ function Assert-SuperDesktopInstallerHostSet {
             }
         }
     }
+    $bootTimes = @{}
+    $captureTimes = @{}
+    foreach ($phase in $required) {
+        try {
+            $bootTimes[$phase] = [DateTimeOffset]::Parse([string]$Hosts[$phase].boot.lastBootUpUtc).ToUniversalTime()
+            $captureTimes[$phase] = [DateTimeOffset]::Parse([string]$Hosts[$phase].capturedAtUtc).ToUniversalTime()
+        } catch {
+            throw "REFERENCE_INSTALLER_BOOT_IDENTITY_INVALID: $phase"
+        }
+        if ([long]$Hosts[$phase].boot.tickCount64 -lt 0) {
+            throw "REFERENCE_INSTALLER_BOOT_IDENTITY_INVALID: $phase"
+        }
+    }
+    if ($bootTimes['DryRun'] -ne $bootTimes['Enable']) {
+        throw 'REFERENCE_INSTALLER_PRE_REBOOT_BOOT_DRIFT: Enable'
+    }
+    if ($bootTimes['AfterReboot'] -le $bootTimes['Enable']) {
+        throw 'REFERENCE_INSTALLER_REBOOT_NOT_OBSERVED'
+    }
+    if ($bootTimes['Rollback'] -ne $bootTimes['AfterReboot']) {
+        throw 'REFERENCE_INSTALLER_POST_REBOOT_BOOT_DRIFT: Rollback'
+    }
+    for ($index = 1; $index -lt $required.Count; $index++) {
+        if ($captureTimes[$required[$index]] -le $captureTimes[$required[$index - 1]]) {
+            throw "REFERENCE_INSTALLER_PHASE_ORDER_INVALID: $($required[$index])"
+        }
+    }
 }
 
 function Get-SuperDesktopReferenceProfileAdmission {

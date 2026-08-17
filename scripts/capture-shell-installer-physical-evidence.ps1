@@ -52,6 +52,15 @@ function Read-ShellObservation {
     }
 }
 
+function Read-BootIdentity {
+    $lastBoot = (Get-CimInstance Win32_OperatingSystem).LastBootUpTime
+    if ($null -eq $lastBoot) { throw 'Unable to resolve the current Windows boot identity.' }
+    return [ordered]@{
+        lastBootUpUtc = ([DateTimeOffset]$lastBoot).ToUniversalTime().ToString('o')
+        tickCount64 = [Environment]::TickCount64
+    }
+}
+
 $binaryRecords = @(
     [ordered]@{ name='shell-installer';path=$installerPath;sha256=(Get-FileHash -Algorithm SHA256 -LiteralPath $installerPath).Hash.ToLowerInvariant() },
     [ordered]@{ name='superdesktop-app';path=$appPath;sha256=(Get-FileHash -Algorithm SHA256 -LiteralPath $appPath).Hash.ToLowerInvariant() },
@@ -78,6 +87,7 @@ $hostRecord = [ordered]@{
     shellBefore = $shellBefore
     rollbackRecordPath = $rollbackPath
     rollbackRecordExistedBefore = $rollbackExistedBefore
+    boot = Read-BootIdentity
     capturedAtUtc = [DateTime]::UtcNow.ToString('o')
 }
 [IO.Directory]::CreateDirectory($evidencePath) | Out-Null

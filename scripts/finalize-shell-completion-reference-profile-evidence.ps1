@@ -72,6 +72,9 @@ foreach ($name in @('host-DryRun.json','host-Enable.json','host-AfterReboot.json
         if ($records.Count -ne 1 -or [string]$records[0].sha256 -notmatch '^[0-9a-f]{64}$') { throw "Installer phase binary manifest is invalid: $name/$binaryName" }
     }
 }
+$enableBoot = [DateTimeOffset]::Parse([string]$phaseHosts.Enable.boot.lastBootUpUtc).ToUniversalTime()
+$afterRebootBoot = [DateTimeOffset]::Parse([string]$phaseHosts.AfterReboot.boot.lastBootUpUtc).ToUniversalTime()
+if ($afterRebootBoot -le $enableBoot) { throw 'Installer evidence did not cross a real Windows boot boundary.' }
 $hostBaseline = $installerDocuments['host-DryRun.json']
 foreach ($name in @('host-Enable.json','host-AfterReboot.json','host-Rollback.json')) {
     if ($installerDocuments[$name].operator.name -cne $hostBaseline.operator.name -or
@@ -162,7 +165,7 @@ $artifact = [ordered]@{
     host = [ordered]@{ build=26200;ubr=9168;explorerpatcher_version='26100.8457.70.3';profile_fingerprint=$admission.profile_fingerprint;profile_sources=$admission.sources;session_id=$m0.host.session_id;interactive=$m0.host.interactive }
     operators = [ordered]@{ lifecycle=$m0.operator;installer=$hostBaseline.operator }
     lifecycle = [ordered]@{ preview_zero_mutation=$true;normal_exit_restored=$true;production_guardian_path=$true;forced_crash_runs=10;max_recovery_ms=[double]$m0.forced_crash.max_elapsed_ms }
-    installer = [ordered]@{ reboot_verified=$true;exact_rollback_verified=$true;metadata_removed=$true;prior_shell=$enablePlan.observed;enabled_shell=$enablePlan.desired }
+    installer = [ordered]@{ reboot_verified=$true;enable_boot_utc=$enableBoot.ToString('o');after_reboot_boot_utc=$afterRebootBoot.ToString('o');exact_rollback_verified=$true;metadata_removed=$true;prior_shell=$enablePlan.observed;enabled_shell=$enablePlan.desired }
     source_hashes = $sourceHashes
     gates = [ordered]@{ 'G-SHELL-TAKEOVER'='passed';'G-GUARDIAN-RECOVERY'='passed';'G-INSTALL-ROLLBACK'='passed' }
 }
