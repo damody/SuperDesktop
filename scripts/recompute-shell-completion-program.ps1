@@ -9,21 +9,46 @@ $verificationPath = Join-Path $root 'openspec\changes\verify-superdesktop-shell-
 $program = Get-Content -Raw -Encoding utf8 -LiteralPath $programPath | ConvertFrom-Json
 $verification = Get-Content -Raw -Encoding utf8 -LiteralPath $verificationPath | ConvertFrom-Json
 $openSpec = (openspec list --json | Out-String) | ConvertFrom-Json
+$strict = (openspec validate --all --strict --json | Out-String) | ConvertFrom-Json
+if ($LASTEXITCODE -ne 0 -or $strict.summary.totals.failed -ne 0 -or $strict.summary.totals.items -lt 1) {
+    throw 'Strict OpenSpec validation failed.'
+}
 $revision = (& git -C $root rev-parse --short=8 HEAD).Trim()
 if ($LASTEXITCODE -ne 0 -or $revision -notmatch '^[0-9a-f]{8}$') { throw 'Unable to resolve current revision.' }
+
+$externalGateNames = @(
+    'G-DPI-MONITOR-PHYSICAL',
+    'G-GUARDIAN-RECOVERY',
+    'G-INSTALL-ROLLBACK',
+    'G-REVIEW',
+    'G-SHELL-TAKEOVER'
+)
+$localVerificationComplete = @($verification.gates.psobject.Properties | Where-Object {
+    $_.Name -notin $externalGateNames -and $_.Value -cne 'passed'
+}).Count -eq 0
 
 foreach ($entry in $program.ordered_changes) {
     $live = @($openSpec.changes | Where-Object name -CEQ $entry.change)
     if ($live.Count -ne 1) { throw "Missing or duplicate OpenSpec child: $($entry.change)" }
     $entry.tasks.complete = $live[0].completedTasks
     $entry.tasks.total = $live[0].totalTasks
-    $entry.state = if ($live[0].completedTasks -eq $live[0].totalTasks) { 'complete' } else { 'local_complete_external_pending' }
+    $entry.state = if ($live[0].completedTasks -eq $live[0].totalTasks) {
+        'complete'
+    } elseif ($entry.change -ceq 'verify-superdesktop-shell-completion' -and $localVerificationComplete) {
+        'local_complete_external_pending'
+    } else {
+        'incomplete'
+    }
     if ($entry.change -ceq 'verify-superdesktop-shell-completion') { $entry.commit = $revision }
 }
 $program.generated_at_utc = [DateTime]::UtcNow.ToString('o')
 $program.implementation_complete = @($program.ordered_changes | Select-Object -First 8 | Where-Object state -cne 'complete').Count -eq 0
-$program.local_verification_complete = $true
-$program.release_allowed = [bool]$verification.decision.release_allowed
-$program.release_blockers = @($verification.decision.blockers | ForEach-Object { (($_ -split ':')[0]).ToUpperInvariant() })
+$program.local_verification_complete = $localVerificationComplete
+$program.release_allowed = $program.implementation_complete -and $localVerificationComplete -and [bool]$verification.decision.release_allowed
+$blockers = @($verification.decision.blockers | ForEach-Object { (($_ -split ':')[0]).ToUpperInvariant() })
+if (-not $program.implementation_complete) { $blockers += 'G-PROGRAM-IMPLEMENTATION' }
+if (-not $localVerificationComplete) { $blockers += 'G-LOCAL-VERIFICATION' }
+$program.release_blockers = @($blockers | Sort-Object -Unique)
+$program.local_commands.openspec_all_strict = "$($strict.summary.totals.passed) passed, $($strict.summary.totals.failed) failed"
 [IO.File]::WriteAllText($programPath, (($program | ConvertTo-Json -Depth 30) + "`n"), [Text.UTF8Encoding]::new($false))
 Write-Output "Program roll-up recomputed at $programPath"
