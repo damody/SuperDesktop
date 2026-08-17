@@ -2,7 +2,7 @@
 
 This directory accepts three normalized artifacts bound to the immutable revision in `../release-candidate.json` only:
 
-- `windows10-lifecycle-installer.json`, produced by `scripts/finalize-shell-completion-windows10-evidence.ps1` after the M0 Windows 10 collector and all installer phases pass.
+- `reference-profile-lifecycle-installer.json`, produced by `scripts/finalize-shell-completion-reference-profile-evidence.ps1` after the exact Windows 11 ExplorerPatcher M0 collector and all installer phases pass.
 - `physical-mixed-dpi.json`, produced by `scripts/finalize-shell-completion-physical-mixed-dpi-evidence.ps1` after the M0 physical collector and completion feature confirmation pass.
 - `independent-review.json`, produced by `scripts/capture-shell-completion-independent-review-evidence.ps1` from an attributable independent review.
 
@@ -10,14 +10,14 @@ Use `scripts/m0-physical-mixed-dpi-confirmation.example.json`, `scripts/shell-co
 
 All raw M0 artifacts, installer phase files, confirmations, photos, and screenshots referenced by these normalized artifacts must remain inside the repository. Finalizers record repository-relative paths and SHA-256 values; the collector reopens and rehashes every referenced file.
 
-Capture installer evidence in this order on Windows 10 build 19045, using one unchanged release build and one rollback-record path:
+Capture installer evidence in this order on the exact Windows 11 build 26200.8875＋ExplorerPatcher 26100.8457.70.3 profile, using one unchanged release build and one rollback-record path:
 
 1. `DryRun` without `-Apply`; this emits the Shell/metadata non-mutation proof.
 2. `Enable -Apply -ExplicitOptIn -ConfirmPlan <fingerprint>`.
 3. Reboot, then capture `AfterReboot`.
 4. `Rollback -Apply -ExplicitOptIn -ConfirmPlan <fingerprint>`.
 
-Supply the same attributable `-OperatorName` and `-OperatorOrganization` to every installer phase. The Windows 10 M0 collector also requires those two operator fields.
+Supply the same attributable `-OperatorName` and `-OperatorOrganization` to every installer phase. The reference-profile M0 collector also requires those two operator fields. Windows 10 artifacts are obsolete and rejected rather than translated.
 
 After all three normalized artifacts exist for the frozen candidate revision, run:
 

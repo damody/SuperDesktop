@@ -72,7 +72,7 @@ if (-not [string]::IsNullOrWhiteSpace($ExternalEvidenceDirectory)) {
         throw "External evidence must be admitted from $requiredExternalRoot"
     }
     $expectedExternal = [ordered]@{
-        'windows10-lifecycle-installer' = 'windows10-lifecycle-installer.json'
+        'reference-profile-lifecycle-installer' = 'reference-profile-lifecycle-installer.json'
         'physical-mixed-dpi' = 'physical-mixed-dpi.json'
         'independent-review' = 'independent-review.json'
     }
@@ -102,24 +102,27 @@ if (-not [string]::IsNullOrWhiteSpace($ExternalEvidenceDirectory)) {
             throw "Invalid external timestamp: $kind"
         }
         switch ($kind) {
-            'windows10-lifecycle-installer' {
-                if ($document.host.build -ne 19045 -or $document.host.display_version -cne '22H2') {
-                    throw 'Windows 10 evidence host is not build 19045 22H2.'
+            'reference-profile-lifecycle-installer' {
+                if ($document.host.build -ne 26200 -or $document.host.ubr -ne 8875 -or
+                    $document.host.explorerpatcher_version -cne '26100.8457.70.3' -or
+                    [string]$document.host.profile_fingerprint -notmatch '^sha256:[0-9a-f]{64}$') {
+                    throw 'Lifecycle/installer evidence host is not the exact Windows 11 ExplorerPatcher reference profile.'
                 }
                 foreach ($operator in @($document.operators.lifecycle,$document.operators.installer)) {
                     if ([string]::IsNullOrWhiteSpace($operator.name) -or [string]::IsNullOrWhiteSpace($operator.organization) -or
-                        [string]$operator.name -like 'REPLACE_WITH_*' -or [string]$operator.organization -like 'REPLACE_WITH_*') { throw 'Windows 10 lifecycle/installer operator is not attributable.' }
+                        [string]$operator.name -like 'REPLACE_WITH_*' -or [string]$operator.organization -like 'REPLACE_WITH_*') { throw 'Reference-profile lifecycle/installer operator is not attributable.' }
                 }
                 if (-not $document.lifecycle.production_guardian_path -or $document.lifecycle.forced_crash_runs -ne 10 -or $document.lifecycle.max_recovery_ms -gt 10000) {
-                    throw 'Windows 10 recovery contract failed.'
+                    throw 'Reference-profile recovery contract failed.'
                 }
                 if (-not $document.lifecycle.preview_zero_mutation -or -not $document.lifecycle.normal_exit_restored) {
-                    throw 'Windows 10 lifecycle contract failed.'
+                    throw 'Reference-profile lifecycle contract failed.'
                 }
                 if (-not $document.installer.reboot_verified -or -not $document.installer.exact_rollback_verified -or -not $document.installer.metadata_removed) {
                     throw 'Installer reboot/rollback contract failed.'
                 }
-                Assert-HashRecords $document.source_hashes 12 'Windows 10 lifecycle/installer evidence'
+                Assert-HashRecords $document.host.profile_sources 5 'Reference-profile source evidence'
+                Assert-HashRecords $document.source_hashes 12 'Reference-profile lifecycle/installer evidence'
                 foreach ($gate in @('G-SHELL-TAKEOVER','G-GUARDIAN-RECOVERY','G-INSTALL-ROLLBACK')) {
                     if ($document.gates.$gate -cne 'passed') { throw "Missing passed $gate" }
                     $externalGates[$gate] = 'passed'
@@ -154,12 +157,16 @@ if (-not [string]::IsNullOrWhiteSpace($ExternalEvidenceDirectory)) {
                 $expectedChanges = @(
                     'extend-superdesktop-shell-contracts','add-superdesktop-desktop-file-operations','add-superdesktop-shell-context-menu-host',
                     'add-superdesktop-start-search','add-superdesktop-taskbar-advanced-interactions','add-superdesktop-notification-area-host',
-                    'add-superdesktop-virtual-desktops','add-superdesktop-shell-installer','verify-superdesktop-shell-completion','complete-superdesktop-windows-shell'
+                    'add-superdesktop-virtual-desktops','add-superdesktop-shell-installer','adopt-superdesktop-windows11-reference-release',
+                    'verify-superdesktop-shell-completion','complete-superdesktop-windows-shell'
                 )
                 $actualChanges = @($document.scope.changes | Sort-Object -Unique)
                 if ($actualChanges.Count -ne $expectedChanges.Count -or @($expectedChanges | Where-Object { $_ -notin $actualChanges }).Count -ne 0) { throw 'Independent review change scope is incomplete.' }
                 $expectedPaths = @(
                     'docs/superpowers/specs/2026-08-16-superdesktop-windows-shell-completion-design.md',
+                    'docs/superpowers/specs/2026-08-17-superdesktop-windows11-reference-release-design.md',
+                    'openspec/changes/adopt-superdesktop-windows11-reference-release/design.md',
+                    'openspec/changes/adopt-superdesktop-windows11-reference-release/specs/windows11-reference-release-baseline/spec.md',
                     'openspec/changes/complete-superdesktop-windows-shell/PROGRAM.md',
                     'openspec/changes/complete-superdesktop-windows-shell/design.md',
                     'openspec/changes/complete-superdesktop-windows-shell/specs/windows-shell-completion-program/spec.md',
@@ -221,7 +228,8 @@ $rollup = [ordered]@{
     gates = $gates
     limitations = @(
         [ordered]@{ capability = 'legacy-explorer-notification-protocol'; disposition = 'not-claimed'; reason = 'implemented host uses the owned versioned provider protocol' },
-        [ordered]@{ capability = 'virtual-desktop-undocumented-operations'; disposition = 'unavailable'; reason = 'documented IVirtualDesktopManager adapter exposes query and move only' }
+        [ordered]@{ capability = 'virtual-desktop-undocumented-operations'; disposition = 'unavailable'; reason = 'documented IVirtualDesktopManager adapter exposes query and move only' },
+        [ordered]@{ capability = 'windows-10-compatibility'; disposition = 'not-claimed'; reason = 'C-W11-REFERENCE-001 selects the exact Windows 11 ExplorerPatcher profile as the release platform' }
     )
     commands = @(
         'cargo fmt --all -- --check',

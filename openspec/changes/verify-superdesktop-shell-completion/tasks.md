@@ -52,14 +52,14 @@
 ### 3.1 Preserve physical and independent gates
 
 **目的：** Complete release evidence on the required host/hardware and through independent review.
-**輸入：** Windows 10 build 19045 host, physical mixed-DPI displays, reboot collector, independent reviewer.
+**輸入：** Exact Windows 11 ExplorerPatcher reference profile, physical mixed-DPI displays, reboot collector, independent reviewer.
 **產出：** Signed/attributable external artifacts and final derived disposition.
 **依賴：** 2.1 and external resources.
 **Owner／Wave：** Physical operator plus independent reviewer / Wave 9C.
 **Gate／Evidence：** `G-SHELL-TAKEOVER`, `G-GUARDIAN-RECOVERY`, `G-INSTALL-ROLLBACK`, `G-DPI-MONITOR-PHYSICAL`, `G-REVIEW`.
 **完成門檻：** All physical runs and independent review pass; only then is `release_allowed=true`.
 
-- [ ] 3.1.1 Capture Windows 10 build 19045 takeover, forced-crash recovery, installer enable/reboot/rollback, and normal-exit evidence.
+- [ ] 3.1.1 Capture exact Windows 11 ExplorerPatcher profile takeover, forced-crash recovery, installer enable/reboot/rollback, and normal-exit evidence.
 - [ ] 3.1.2 Capture keyboard, pointer, visual, hot-plug, and work-area behavior on a physical mixed-DPI topology.
 - [ ] 3.1.3 Obtain independent architecture/security/accessibility review with attributable disposition.
 - [ ] 3.1.4 Recompute the roll-up and publish the final release disposition.

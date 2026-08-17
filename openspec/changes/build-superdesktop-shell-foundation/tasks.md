@@ -19,7 +19,7 @@
 - [x] 1.1.3 驗證每個 shared contract/file、program artifact 與 evidence index 有唯一 writer。
 - [x] 1.1.4 驗證所有 program requirement/scenario/gate 映射到 child coverage manifest。
 - [x] 1.1.5 記錄 monolith-to-program B 級 lineage 與舊 task replacement mapping。
-- [x] 1.1.6 驗證 Windows 10 22H2 與實體 mixed-DPI 環境的 availability/schedule；缺失時預先標記 Wave 6 external blocked。
+- [x] 1.1.6 驗證 exact Windows 11＋ExplorerPatcher profile 與實體 mixed-DPI 環境的 availability/schedule；profile drift 或顯示器缺失時預先標記 Wave 6 external blocked。
 - [x] 1.1.7 由 Independent reviewer 簽署無未解 P0/P1 的 planning disposition。
 
 ## 2. Foundation Roll-up
@@ -145,7 +145,7 @@
 **依賴：** 3.2、3.3、3.4。
 **Owner／Wave：** Primary integrator／Wave 5 exit。
 **Gate／Evidence：** `G-SHELL-TAKEOVER-PROVISIONAL`、`G-GUARDIAN-RECOVERY-PROVISIONAL`、`G-SAFETY`；program `evidence/artifacts/4.1/`。
-**完成門檻：** Strict/tasks validation、mandatory evidence、三個 dispositions、handoff hash 與 archive 分項通過；final Windows 10 gates仍未判定。
+**完成門檻：** Strict/tasks validation、mandatory evidence、三個 dispositions、handoff hash 與 archive 分項通過；final reference-profile gates仍未判定。
 
 - [x] 4.1.1 記錄 child `openspec validate --strict` 成功輸出。
 - [x] 4.1.2 記錄 child 詳細 tasks validator 成功輸出。
@@ -158,19 +158,19 @@
 
 ### 4.2 驗證並封存 M0 Release Verification
 
-**目的：** Roll up reference、Windows 10、DPI、實體螢幕、a11y/i18n、stability、performance、安全與 traceability 最終結果。
-**輸入：** Verification change-local tasks/evidence、4.1 archive revision、外部 Windows 10 與實體 mixed-DPI evidence。
+**目的：** Roll up exact reference profile、DPI、實體螢幕、a11y/i18n、stability、performance、安全與 traceability 最終結果。
+**輸入：** Verification change-local tasks/evidence、4.1 archive revision、reference-profile lifecycle/installer 與實體 mixed-DPI evidence。
 **產出：** Verification archive revision 與最終 M0 release disposition。
 **依賴：** 4.1；外部 prerequisites 必須已解除 blocked。
 **Owner／Wave：** Primary integrator 接受；Independent reviewer 簽署／Wave 6 exit。
 **Gate／Evidence：** `G-ARCH`、`G-DESKTOP`、`G-TASKBAR`、`G-EXPLORER-BRIDGE`、`G-SHELL-TAKEOVER`、`G-GUARDIAN-RECOVERY`、`G-DPI-MONITOR`、`G-A11Y-I18N`、`G-PERF`、`G-SAFETY`、`G-TRACE`；program `evidence/artifacts/4.2/`。
-**完成門檻：** Strict/tasks validation與每個列名 gate 分項通過；Windows 10、實體 mixed-DPI、P0/P1、handoff、archive 皆具有效終態。
+**完成門檻：** Strict/tasks validation與每個列名 gate 分項通過；reference-profile lifecycle/installer、實體 mixed-DPI、P0/P1、handoff、archive 皆具有效終態。
 
 - [x] 4.2.1 記錄 child `openspec validate --strict` 成功輸出。
 - [x] 4.2.2 記錄 child 詳細 tasks validator 成功輸出。
 - [ ] 4.2.3 驗證 child mandatory evidence index 無 failed/blocked/stale/N/A/invalid replacement。
 - [x] 4.2.4 驗證 reference visual、`G-DESKTOP`、`G-TASKBAR` 與 `G-EXPLORER-BRIDGE` passed。
-- [ ] 4.2.5 驗證 Windows 10 `G-SHELL-TAKEOVER` 與 `G-GUARDIAN-RECOVERY` final dispositions passed。
+- [ ] 4.2.5 驗證 exact reference-profile `G-SHELL-TAKEOVER` 與 `G-GUARDIAN-RECOVERY` final dispositions passed。
 - [ ] 4.2.6 驗證虛擬與實體 `G-DPI-MONITOR` passed。
 - [x] 4.2.7 驗證 `G-A11Y-I18N` passed。
 - [x] 4.2.8 驗證 `G-PERF` passed。

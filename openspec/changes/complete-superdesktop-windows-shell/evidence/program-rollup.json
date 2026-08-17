@@ -1,6 +1,6 @@
 {
     "schema_version":  1,
-    "generated_at_utc":  "2026-08-16T19:53:45.9683825Z",
+    "generated_at_utc":  "2026-08-17T01:09:52.3853348Z",
     "archived":  false,
     "ordered_changes":  [
                             {
@@ -94,7 +94,7 @@
                             {
                                 "order":  9,
                                 "change":  "verify-superdesktop-shell-completion",
-                                "commit":  "ce107de5",
+                                "commit":  "ca8f89a7",
                                 "tasks":  {
                                               "complete":  10,
                                               "total":  14
@@ -121,6 +121,7 @@
                                               ],
                               "not_claimed":  [
                                                   "legacy-explorer-notification-area-protocol-parity",
+                                                  "windows-10-compatibility",
                                                   "complete-native-windows-shell-parity",
                                                   "release-approval-before-external-gates"
                                               ]

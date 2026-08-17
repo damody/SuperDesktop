@@ -20,7 +20,7 @@
     "activating a result dismisses the Start surface and a second Start invocation toggles an existing surface closed"
   ],
   "remaining_external_evidence": [
-    "capture a shell-mode headful first-frame and provider timing artifact on the Windows 10 evidence machine"
+    "capture a shell-mode headful first-frame and provider timing artifact on the exact Windows 11 ExplorerPatcher reference profile"
   ],
   "commands": [
     "cargo clippy -p taskbar-ui -p platform-win -p shell-provider-host -p superdesktop-app --all-targets --offline -- -D warnings",

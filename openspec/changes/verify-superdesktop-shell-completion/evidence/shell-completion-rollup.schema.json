@@ -30,7 +30,7 @@
       "type": "object",
       "maxProperties": 3,
       "propertyNames": {
-        "enum": ["windows10-lifecycle-installer", "physical-mixed-dpi", "independent-review"]
+        "enum": ["reference-profile-lifecycle-installer", "physical-mixed-dpi", "independent-review"]
       },
       "additionalProperties": { "$ref": "#/$defs/externalSource" }
     },
@@ -75,7 +75,7 @@
       "additionalProperties": false,
       "required": ["kind", "relative_path", "sha256", "status"],
       "properties": {
-        "kind": { "enum": ["windows10-lifecycle-installer", "physical-mixed-dpi", "independent-review"] },
+        "kind": { "enum": ["reference-profile-lifecycle-installer", "physical-mixed-dpi", "independent-review"] },
         "relative_path": { "type": "string", "pattern": "^openspec/changes/verify-superdesktop-shell-completion/evidence/external/" },
         "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
         "status": { "const": "passed" }

@@ -40,14 +40,14 @@
 ### 3.1 Complete external gates and final disposition
 
 **目的：** Convert the locally complete implementation into an evidence-approved release candidate.
-**輸入：** Windows 10 build 19045, mixed-DPI hardware, reboot/rollback runs, and independent reviewer.
+**輸入：** Exact Windows 11 ExplorerPatcher profile, mixed-DPI hardware, reboot/rollback runs, and independent reviewer.
 **產出：** Final verification child, recomputed program roll-up, and release disposition.
 **依賴：** 2.1 and verification tasks 3.1.1–3.1.3.
 **Owner／Wave：** Physical operator, independent reviewer, primary integrator / Program Wave P3.
 **Gate／Evidence：** `G-SHELL-TAKEOVER`, `G-GUARDIAN-RECOVERY`, `G-INSTALL-ROLLBACK`, `G-DPI-MONITOR-PHYSICAL`, `G-REVIEW`.
 **完成門檻：** All external gates pass and both child and parent derived roll-ups report release allowed.
 
-- [ ] 3.1.1 Complete all physical Windows 10, reboot rollback, and mixed-DPI evidence.
+- [ ] 3.1.1 Complete exact reference-profile lifecycle/installer reboot rollback and physical mixed-DPI evidence.
 - [ ] 3.1.2 Complete independent architecture/security/accessibility review.
 - [ ] 3.1.3 Recompute verification and parent roll-ups with `release_allowed=true`.
 - [ ] 3.1.4 Run final strict/task validation while leaving changes unarchived.

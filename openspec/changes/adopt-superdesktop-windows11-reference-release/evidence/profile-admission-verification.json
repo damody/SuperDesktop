@@ -1,0 +1,48 @@
+{
+  "schema": "windows11-reference-profile-admission-verification/v1",
+  "module": "scripts/SuperDesktop.ReferenceProfile.psm1",
+  "tests": "scripts/test-reference-profile-admission.ps1",
+  "parser": "passed",
+  "contract_loading": "passed",
+  "repository_source_hashes": "passed",
+  "live_observation": {
+    "result": "blocked_profile_drift",
+    "diagnostic": "REFERENCE_OS_UBR_DRIFT",
+    "expected": "26200.8875",
+    "observed": "26200.9168",
+    "mutation_performed": false
+  },
+  "negative_fixtures": {
+    "result": "passed",
+    "count": 24,
+    "fields": [
+      "product",
+      "build",
+      "ubr",
+      "interactive",
+      "session",
+      "product-type",
+      "explorerpatcher-version",
+      "binary-count",
+      "binary-path",
+      "binary-length",
+      "binary-file-version",
+      "binary-product-version",
+      "binary-hash",
+      "obsolete-windows10-kind",
+      "unknown-kind",
+      "missing-candidate",
+      "invalid-candidate",
+      "referenced-source-hash",
+      "installer-phase-missing",
+      "installer-phase-revision",
+      "installer-phase-profile",
+      "installer-phase-operator",
+      "installer-phase-rollback-path",
+      "installer-phase-binary"
+    ]
+  },
+  "candidate_lineage": "implemented",
+  "bounded_observation": "implemented",
+  "remaining_task": "2.1.6 requires either restoration of the approved 26200.8875 profile or a newly approved C-level rebaseline."
+}

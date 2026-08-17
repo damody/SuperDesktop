@@ -12,7 +12,7 @@
 - **THEN** `G-ARCH` 失敗，該程式碼必須移除或先取得獨立授權決策與歸屬核准
 
 ### Requirement: Production 實作前必須通過 Windows/GPUI Capability Spike
-系統 SHALL 在相依 production work package 開始前，以固定候選 GPUI-CE revision，在凍結的 Windows 11＋ExplorerPatcher reference profile 驗證最小 GPUI native HWND/message bridge、AppBar reserve/restore、Shell Hook unregister、per-monitor DPI/topology、ExplorerPatcher Start host probe/invocation 及 guardian inherited process-handle lease，並保存 source revision、binary hash、OS build、raw result 與 resource snapshot。Windows 10 22H2 的完整相容性另由 release verification gate 驗證。
+系統 SHALL 在相依 production work package 開始前，以固定候選 GPUI-CE revision，在凍結的 Windows 11＋ExplorerPatcher reference profile 驗證最小 GPUI native HWND/message bridge、AppBar reserve/restore、Shell Hook unregister、per-monitor DPI/topology、ExplorerPatcher Start host probe/invocation 及 guardian inherited process-handle lease，並保存 source revision、binary hash、OS build、raw result 與 resource snapshot。完整 lifecycle 與 installer reboot/rollback 另由 release verification gate 在同一 exact profile 驗證。
 
 #### Scenario: 所有必要 spike subcheck 通過
 - **WHEN** 每個必要 capability 在凍結的 Windows 11＋ExplorerPatcher reference profile 達成規範終態且資源 snapshot 無持續增長
@@ -29,16 +29,16 @@
 - **WHEN** 任一必要品質命令 exit status 非零
 - **THEN** 對應 gate 保持失敗，且不得以其他成功命令取代該失敗結果
 
-### Requirement: ExplorerPatcher 參考與 Windows 相容平台必須分開驗證
-系統 SHALL 以 Windows 11 build 26200.8875 + ExplorerPatcher 26100.8457.70.3 驗證 M0 UI/互動參考，並以 Windows 10 22H2 驗證可啟動、可操作與可復原相容性。參考證據必須包含 OS build、ExplorerPatcher version、設定摘要及 reference image hash。
+### Requirement: ExplorerPatcher reference profile 必須同時約束 UI 與 release lifecycle
+系統 SHALL 以 Windows 11 build 26200.8875 + ExplorerPatcher 26100.8457.70.3 驗證 M0 UI/互動參考及可啟動、可操作、可復原與 installer rollback。參考證據必須包含 OS build/UBR、ExplorerPatcher version/binary hashes、設定摘要及 reference image hash；Windows 10 compatibility 不在 release claim 內。
 
 #### Scenario: ExplorerPatcher reference profile 漂移
 - **WHEN** OS build、ExplorerPatcher version、設定摘要或 reference image hash 與凍結 profile 不符
 - **THEN** 舊 visual baseline 不得直接重用，必須建立新 profile 或先取得 B/C correction disposition
 
-#### Scenario: Windows 10 相容性完整驗證
-- **WHEN** 執行 Windows 10 22H2 compatibility gate
-- **THEN** 系統必須完成啟動、桌面/工作列互動、正常退出復原及 forced-crash guardian 復原，並保存各自可判定結果
+#### Scenario: Reference-profile lifecycle 完整驗證
+- **WHEN** 執行 exact Windows 11＋ExplorerPatcher release gate
+- **THEN** 系統必須完成啟動、桌面/工作列互動、正常退出、forced-crash guardian 復原及 installer reboot/rollback，並保存各自可判定結果
 
 ### Requirement: DPI 與多螢幕矩陣必須完整
 系統 SHALL 驗證 100%、125%、150%、175%、200% DPI，並以可控虛擬顯示器驗證至少一個混合 DPI 雙螢幕 topology 的桌面、工作列、hit target、文字截斷、hot-plug 與 work area。真實 mixed-DPI 雙螢幕為獨立 release-candidate confirmation，缺失時不得宣稱該 confirmation 完成。

@@ -2,5 +2,5 @@
   "schema_version": 1,
   "reviewed_revision": "c1f42557f25d3133bb9d6f88c9678c0b9d5230de",
   "frozen_at_utc": "2026-08-16T19:50:43.9763156Z",
-  "purpose": "Immutable implementation and verification-harness revision for Windows 10, physical mixed-DPI, installer reboot/rollback, and independent review evidence."
+  "purpose": "Immutable implementation and verification-harness revision for exact Windows 11 ExplorerPatcher lifecycle/installer, physical mixed-DPI, and independent review evidence."
 }

@@ -7,7 +7,7 @@
 - **A 級技術細化：** 只能調整 leaf 拆分、順序、owner、命令或證據收集方式；不得改範圍、requirement、public contract、gate、threshold、平台、安全/權限邊界或必要證據。Task owner 可提出並記錄，Primary integrator 驗證分類後繼續。
 - **B 級矛盾修正：** 只能在已核准範圍與公開承諾內修正錯誤假設。Primary integrator 暫停受影響分支，同步修正 design/spec/tasks、標記舊 evidence stale、建立 replacement lineage後繼續；不需逐項詢問使用者。矛盾本身不會覆蓋 C 級判準。
 - **C 級重大變更：** 任何範圍、公開承諾、blocking gate、threshold、必要證據、平台/框架、權限、外部寫入、破壞性操作或外部授權變更都優先視為 C，無論是增加、降低或聲稱在修矛盾。受影響分支停止並請使用者決定，其他無關分支可繼續。
-- 缺少 Windows 10 22H2 或實體 mixed-DPI 雙螢幕時，對應 release leaf 保持 `blocked`；不得用 N/A、虛擬結果或推測代替。
+- Exact Windows 11＋ExplorerPatcher reference profile 漂移或缺少實體 mixed-DPI 雙螢幕時，對應 release leaf 保持 `blocked`；不得用 N/A、虛擬結果或推測代替。
 
 ## 固定角色
 
@@ -72,7 +72,7 @@ Wave 6  verify-superdesktop-m0
 Program archive
 ```
 
-任一 change 只有在 `openspec validate --strict`、詳細 tasks validator、該 change mandatory tasks 與其 wave-exit dispositions 全部通過後才能封存。Wave 5 只產生 reference-profile provisional takeover/recovery dispositions；最終 `G-SHELL-TAKEOVER` 與 `G-GUARDIAN-RECOVERY` 仍須 Wave 6 Windows 10 compatibility 完成後才能 passed。下游不得只依賴「程式可編譯」；必須依賴明列的 contract hash 或 disposition。
+任一 change 只有在 `openspec validate --strict`、詳細 tasks validator、該 change mandatory tasks 與其 wave-exit dispositions 全部通過後才能封存。Wave 5 只產生 reference-profile provisional takeover/recovery dispositions；最終 `G-SHELL-TAKEOVER` 與 `G-GUARDIAN-RECOVERY` 仍須 Wave 6 在同一 exact profile 完成 lifecycle/installer confirmation 後才能 passed。下游不得只依賴「程式可編譯」；必須依賴明列的 contract hash 或 disposition。
 
 ## 每波派工方式
 
@@ -81,8 +81,8 @@ Program archive
 3. **Wave 2：** 一個 Core implementer 獨占 capability spike 與 `platform-win/common`；GO 前發布 platform-common API/ABI hash、Safe Mode/unsupported-session probe 與 FFI wrapper contract。Architecture reviewer 可在 evidence 完整後唯讀檢查。只有明確 GO 才進 Wave 3。
 4. **Wave 3：** 一個 Core implementer 獨占 `shell-core/settings-store`；Mechanical worker 可建立 fake fixtures。Public contract hash 發布後，Wave 4 才能開始。
 5. **Wave 4：** 三個 Worker 分別執行 Desktop、Taskbar、Bridge；每個只改專屬路徑，並由各 domain owner 對自己的 callbacks 套用 Wave 2 凍結的 no-unwind wrapper。Taskbar 只以 Wave 3 凍結的 bridge DTO/fake adapter 驗證 UI；真實 end-to-end 留到 Wave 5/6。需要 shared contract 變更時該分支暫停，由 Primary agent建立 corrective change；其他兩分支繼續不受影響的工作。
-6. **Wave 5：** 一個 Core implementer 執行 lifecycle/guardian與 callback inventory audit；Desktop、Taskbar、Bridge owners只處理被退回的本域 callback/production 修正。Architecture reviewer 在 recovery evidence 完整後唯讀複核。Wave 5 只發布 reference-profile provisional dispositions，不宣稱 Windows 10 final gate passed。
-7. **Wave 6：** 最多三個 verification workers 依 Display/UI、Accessibility/Localization、Reliability/Performance/Safety 分域執行；Windows 10 與實體 mixed-DPI 必須在外部環境可用時由 Primary agent 明確派工。Independent reviewer 最後複核，remediation 回原 owner。
+6. **Wave 5：** 一個 Core implementer 執行 lifecycle/guardian與 callback inventory audit；Desktop、Taskbar、Bridge owners只處理被退回的本域 callback/production 修正。Architecture reviewer 在 recovery evidence 完整後唯讀複核。Wave 5 只發布 reference-profile provisional dispositions。
+7. **Wave 6：** 最多三個 verification workers 依 Display/UI、Accessibility/Localization、Reliability/Performance/Safety 分域執行；exact reference-profile lifecycle/installer 與實體 mixed-DPI 必須由 Primary agent 明確派工。Independent reviewer 最後複核，remediation 回原 owner。
 
 每個代理一次只領取一個 L2 work package；只有前一 L2 的完成門檻與 evidence 通過，才領取同一路徑的下一個 L2。這避免把整個 change 當成單一長任務而失去可恢復交接點。
 

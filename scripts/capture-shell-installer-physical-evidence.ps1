@@ -33,21 +33,11 @@ $notificationHostPath = (Resolve-Path -LiteralPath (Join-Path $installDirectory 
 $superExplorerPath = (Resolve-Path -LiteralPath (Join-Path $installDirectory 'SuperExplorer.exe')).Path
 $rollbackPath = [IO.Path]::GetFullPath($RollbackRecord)
 $evidencePath = [IO.Path]::GetFullPath($EvidenceDirectory)
-[IO.Directory]::CreateDirectory($evidencePath) | Out-Null
 
 $candidatePath = Join-Path $workspacePath 'openspec\changes\verify-superdesktop-shell-completion\evidence\release-candidate.json'
-$candidate = Get-Content -Raw -Encoding utf8 -LiteralPath $candidatePath | ConvertFrom-Json
-$revision = [string]$candidate.reviewed_revision
-& git -C $workspacePath cat-file -e "$revision^{commit}"
-if ($candidate.schema_version -ne 1 -or $LASTEXITCODE -ne 0) { throw 'Unable to bind frozen release-candidate revision.' }
-& git -C $workspacePath merge-base --is-ancestor $revision HEAD
-if ($LASTEXITCODE -ne 0) { throw 'Current checkout does not descend from the frozen release candidate.' }
-& git -C $workspacePath diff --quiet $revision HEAD -- crates Cargo.toml Cargo.lock
-if ($LASTEXITCODE -ne 0) { throw 'Production source or dependency drift exists after the frozen release candidate.' }
-& git -C $workspacePath diff --quiet -- crates Cargo.toml Cargo.lock
-if ($LASTEXITCODE -ne 0) { throw 'Uncommitted production source or dependency drift exists.' }
-& git -C $workspacePath diff --cached --quiet -- crates Cargo.toml Cargo.lock
-if ($LASTEXITCODE -ne 0) { throw 'Staged production source or dependency drift exists.' }
+Import-Module (Join-Path $PSScriptRoot 'SuperDesktop.ReferenceProfile.psm1') -Force
+$admission = Get-SuperDesktopReferenceProfileAdmission -Workspace $workspacePath -CandidatePath $candidatePath
+$revision = [string]$admission.candidate_revision
 
 function Read-ShellObservation {
     try {
@@ -73,12 +63,14 @@ $binaryRecords = @(
 $shellBefore = Read-ShellObservation
 $rollbackExistedBefore = Test-Path -LiteralPath $rollbackPath -PathType Leaf
 
-$os = Get-ItemProperty -LiteralPath 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion'
+$os = $admission.observed
 $hostRecord = [ordered]@{
-    productName = $os.ProductName
-    displayVersion = $os.DisplayVersion
-    build = [int]$os.CurrentBuildNumber
-    ubr = [int]$os.UBR
+    productName = $os.product
+    build = [int]$os.build
+    ubr = [int]$os.ubr
+    explorerPatcherVersion = $os.explorerpatcher_version
+    profileFingerprint = $admission.profile_fingerprint
+    profileSources = $admission.sources
     phase = $Phase
     operator = [ordered]@{ name=$OperatorName;organization=$OperatorOrganization }
     revision = $revision
@@ -88,11 +80,9 @@ $hostRecord = [ordered]@{
     rollbackRecordExistedBefore = $rollbackExistedBefore
     capturedAtUtc = [DateTime]::UtcNow.ToString('o')
 }
+[IO.Directory]::CreateDirectory($evidencePath) | Out-Null
 $hostRecord | ConvertTo-Json | Set-Content -Encoding utf8 -LiteralPath (Join-Path $evidencePath "host-$Phase.json")
 
-if ($Apply -and $hostRecord.build -ne 19045) {
-    throw 'Physical mutation evidence is admitted only on the Windows 10 22H2 build 19045 test host.'
-}
 if ($Apply -and (-not $ExplicitOptIn -or [string]::IsNullOrWhiteSpace($ConfirmPlan))) {
     throw 'Mutation requires -Apply, -ExplicitOptIn, and an exact -ConfirmPlan fingerprint.'
 }

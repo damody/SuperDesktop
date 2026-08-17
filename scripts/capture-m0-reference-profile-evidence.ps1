@@ -12,7 +12,7 @@ if (-not $Workspace) {
     $Workspace = Split-Path -Parent $PSScriptRoot
 }
 if (-not $OutputPath) {
-    $OutputPath = Join-Path $Workspace 'openspec/changes/verify-superdesktop-m0/evidence/artifacts/3.1/windows10-gate.json'
+    $OutputPath = Join-Path $Workspace 'openspec/changes/verify-superdesktop-m0/evidence/artifacts/3.1/reference-profile-gate.json'
 }
 
 function Write-Json([string]$Path, $Value) {
@@ -71,28 +71,12 @@ function Monitor-Profile([string]$ProbePath) {
 
 $Workspace = (Resolve-Path -LiteralPath $Workspace).Path
 $candidatePath = Join-Path $Workspace 'openspec/changes/verify-superdesktop-shell-completion/evidence/release-candidate.json'
-$candidate = Get-Content -Raw -Encoding utf8 -LiteralPath $candidatePath | ConvertFrom-Json
-$reviewedRevision = [string]$candidate.reviewed_revision
-& git -C $Workspace cat-file -e "$reviewedRevision^{commit}"
-if ($candidate.schema_version -ne 1 -or $LASTEXITCODE -ne 0) { throw 'Unable to bind frozen release-candidate revision.' }
-& git -C $Workspace merge-base --is-ancestor $reviewedRevision HEAD
-if ($LASTEXITCODE -ne 0) { throw 'Current checkout does not descend from the frozen release candidate.' }
-& git -C $Workspace diff --quiet $reviewedRevision HEAD -- crates Cargo.toml Cargo.lock
-if ($LASTEXITCODE -ne 0) { throw 'Committed production source or dependency drift exists relative to the frozen candidate.' }
-& git -C $Workspace diff --quiet -- crates Cargo.toml Cargo.lock
-if ($LASTEXITCODE -ne 0) { throw 'Uncommitted production source or dependency drift exists relative to the frozen candidate.' }
-& git -C $Workspace diff --cached --quiet -- crates Cargo.toml Cargo.lock
-if ($LASTEXITCODE -ne 0) { throw 'Staged production source or dependency drift exists relative to the frozen candidate.' }
-$os = Get-CimInstance Win32_OperatingSystem
-$displayVersion = (Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion').DisplayVersion
-if ([int]$os.BuildNumber -ne 19045 -or $displayVersion -ne '22H2' -or [int]$os.ProductType -ne 1) {
-    throw "Windows 10 22H2 workstation required; observed $($os.Caption) build $($os.BuildNumber) DisplayVersion $displayVersion"
-}
-if (-not [Environment]::UserInteractive -or (Get-Process -Id $PID).SessionId -eq 0) {
-    throw 'An interactive non-session-0 desktop is required'
-}
+Import-Module (Join-Path $PSScriptRoot 'SuperDesktop.ReferenceProfile.psm1') -Force
+$admission = Get-SuperDesktopReferenceProfileAdmission -Workspace $Workspace -CandidatePath $candidatePath
+$reviewedRevision = [string]$admission.candidate_revision
+$os = $admission.observed
 if ([string]::IsNullOrWhiteSpace($OperatorName) -or [string]::IsNullOrWhiteSpace($OperatorOrganization) -or
-    $OperatorName -like 'REPLACE_WITH_*' -or $OperatorOrganization -like 'REPLACE_WITH_*') { throw 'An attributable Windows 10 operator name and organization are required.' }
+    $OperatorName -like 'REPLACE_WITH_*' -or $OperatorOrganization -like 'REPLACE_WITH_*') { throw 'An attributable reference-profile operator name and organization are required.' }
 
 Invoke-Checked 'release workspace build' { cargo build --workspace --release --offline --manifest-path (Join-Path $Workspace 'Cargo.toml') } | Out-Null
 Invoke-Checked 'release monitor/DPI probe build' { cargo build -p platform-win --release --offline --example monitor_dpi_start_capability --manifest-path (Join-Path $Workspace 'Cargo.toml') } | Out-Null
@@ -231,20 +215,23 @@ $monitorAfter = Monitor-Profile $monitorProbe
 $finalRegistryEqual = (($registryBefore | ConvertTo-Json -Depth 20 -Compress) -eq ($registryAfter | ConvertTo-Json -Depth 20 -Compress))
 $finalMonitorEqual = (($monitorBefore.real_profile.monitors | ConvertTo-Json -Depth 20 -Compress) -eq ($monitorAfter.real_profile.monitors | ConvertTo-Json -Depth 20 -Compress))
 if (-not $finalRegistryEqual -or -not $finalMonitorEqual -or $explorerBefore -ne (Explorer-Count)) {
-    throw 'Final Windows 10 state did not return to baseline'
+    throw 'Final reference-profile state did not return to baseline'
 }
 
 $artifact = [ordered]@{
-    schema = 'm0-windows10-gate/v1'
+    schema = 'm0-reference-profile-gate/v1'
     status = 'passed'
     recorded_at = $recordedAt
     revision = $revision
     host = [ordered]@{
-        caption = $os.Caption
-        build = [int]$os.BuildNumber
-        display_version = $displayVersion
-        session_id = (Get-Process -Id $PID).SessionId
-        interactive = [Environment]::UserInteractive
+        caption = $os.product
+        build = [int]$os.build
+        ubr = [int]$os.ubr
+        explorerpatcher_version = $os.explorerpatcher_version
+        session_id = [int]$os.session_id
+        interactive = [bool]$os.interactive
+        profile_fingerprint = $admission.profile_fingerprint
+        profile_sources = $admission.sources
     }
     operator = [ordered]@{ name=$OperatorName;organization=$OperatorOrganization }
     binaries = @(
@@ -264,11 +251,12 @@ $artifact = [ordered]@{
         @{ capability = 'desktop-taskbar'; disposition = 'implemented' },
         @{ capability = 'superexplorer-launch'; disposition = 'implemented' },
         @{ capability = 'normal-exit-recovery'; disposition = 'implemented' },
-        @{ capability = 'forced-crash-recovery'; disposition = 'implemented' }
+        @{ capability = 'forced-crash-recovery'; disposition = 'implemented' },
+        @{ capability = 'windows-10-compatibility'; disposition = 'not-claimed' }
     )
     final_baseline = @{ registry_equal = $finalRegistryEqual; explorer_equal = $true; work_areas_equal = $finalMonitorEqual }
     dispositions = @{ 'G-SHELL-TAKEOVER' = 'passed'; 'G-GUARDIAN-RECOVERY' = 'passed' }
     task_ids = @('3.1.1','3.1.2','3.1.3','3.1.4','3.1.5','3.1.6','3.1.7','3.1.8','3.1.9')
 }
 Write-Json $OutputPath $artifact
-Write-Output "Windows 10 22H2 M0 evidence captured at $OutputPath"
+Write-Output "Windows 11 ExplorerPatcher reference-profile M0 evidence captured at $OutputPath"

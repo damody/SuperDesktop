@@ -1,6 +1,6 @@
 {
     "schema_version":  1,
-    "generated_at_utc":  "2026-08-16T19:46:34.2980413Z",
+    "generated_at_utc":  "2026-08-17T01:09:51.3350983Z",
     "sources":  {
                     "add-superdesktop-desktop-file-operations":  {
                                                                      "change":  "add-superdesktop-desktop-file-operations",
@@ -23,7 +23,7 @@
                     "add-superdesktop-shell-installer":  {
                                                              "change":  "add-superdesktop-shell-installer",
                                                              "relative_path":  "openspec/changes/add-superdesktop-shell-installer/evidence/verification.json",
-                                                             "sha256":  "b7e9ac2e766538ff83fd0ad6fc9bed80410edd70b10da35c571913f320a4321c",
+                                                             "sha256":  "ad458c157dc4bf93d1b07384a6e6425d7c6c2f2157dd4d7e34a0885b4a62f78a",
                                                              "local_result":  "passed"
                                                          },
                     "add-superdesktop-start-search":  {
@@ -79,6 +79,11 @@
                             "capability":  "virtual-desktop-undocumented-operations",
                             "disposition":  "unavailable",
                             "reason":  "documented IVirtualDesktopManager adapter exposes query and move only"
+                        },
+                        {
+                            "capability":  "windows-10-compatibility",
+                            "disposition":  "not-claimed",
+                            "reason":  "C-W11-REFERENCE-001 selects the exact Windows 11 ExplorerPatcher profile as the release platform"
                         }
                     ],
     "commands":  [

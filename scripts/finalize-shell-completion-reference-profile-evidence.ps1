@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [string]$Workspace,
-    [Parameter(Mandatory)][string]$M0Windows10Evidence,
+    [Parameter(Mandatory)][string]$M0ReferenceProfileEvidence,
     [Parameter(Mandatory)][string]$InstallerEvidenceDirectory,
     [Parameter(Mandatory)][string]$RollbackRecord
 )
@@ -9,7 +9,7 @@ param(
 $ErrorActionPreference = 'Stop'
 if ([string]::IsNullOrWhiteSpace($Workspace)) { $Workspace = Split-Path -Parent $PSScriptRoot }
 $root = (Resolve-Path -LiteralPath $Workspace).Path
-$m0Path = (Resolve-Path -LiteralPath $M0Windows10Evidence).Path
+$m0Path = (Resolve-Path -LiteralPath $M0ReferenceProfileEvidence).Path
 $installerRoot = (Resolve-Path -LiteralPath $InstallerEvidenceDirectory).Path
 function Get-RepositoryRelativePath([string]$Path, [string]$Label) {
     $full = [IO.Path]::GetFullPath($Path)
@@ -17,19 +17,20 @@ function Get-RepositoryRelativePath([string]$Path, [string]$Label) {
     if (-not $full.StartsWith($prefix, [StringComparison]::OrdinalIgnoreCase)) { throw "$Label must be stored inside the repository." }
     return $full.Substring($prefix.Length).Replace('\','/')
 }
-Get-RepositoryRelativePath $m0Path 'M0 Windows 10 evidence' | Out-Null
+Get-RepositoryRelativePath $m0Path 'M0 reference-profile evidence' | Out-Null
 Get-RepositoryRelativePath $installerRoot 'Installer evidence directory' | Out-Null
-$candidate = Get-Content -Raw -Encoding utf8 -LiteralPath (Join-Path $root 'openspec\changes\verify-superdesktop-shell-completion\evidence\release-candidate.json') | ConvertFrom-Json
-$revision = [string]$candidate.reviewed_revision
+$candidatePath = Join-Path $root 'openspec\changes\verify-superdesktop-shell-completion\evidence\release-candidate.json'
+Import-Module (Join-Path $PSScriptRoot 'SuperDesktop.ReferenceProfile.psm1') -Force
+$admission = Get-SuperDesktopReferenceProfileAdmission -Workspace $root -CandidatePath $candidatePath
+$revision = [string]$admission.candidate_revision
 $shortRevision = $revision.Substring(0, 8)
-& git -C $root cat-file -e "$revision^{commit}"
-if ($candidate.schema_version -ne 1 -or $LASTEXITCODE -ne 0) { throw 'Unable to bind frozen release-candidate revision.' }
 
 $m0 = Get-Content -Raw -Encoding utf8 -LiteralPath $m0Path | ConvertFrom-Json
-if ($m0.schema -cne 'm0-windows10-gate/v1' -or $m0.status -cne 'passed' -or $m0.revision -cne $shortRevision) { throw 'M0 Windows 10 evidence is invalid or stale.' }
-if ($m0.host.build -ne 19045 -or $m0.host.display_version -cne '22H2') { throw 'Windows 10 build 19045 22H2 evidence is required.' }
+if ($m0.schema -cne 'm0-reference-profile-gate/v1' -or $m0.status -cne 'passed' -or $m0.revision -cne $shortRevision) { throw 'M0 reference-profile evidence is invalid or stale.' }
+if ($m0.host.build -ne 26200 -or $m0.host.ubr -ne 8875 -or $m0.host.explorerpatcher_version -cne '26100.8457.70.3' -or
+    $m0.host.profile_fingerprint -cne $admission.profile_fingerprint) { throw 'M0 exact reference profile is required.' }
 if ([string]::IsNullOrWhiteSpace($m0.operator.name) -or [string]::IsNullOrWhiteSpace($m0.operator.organization) -or
-    [string]$m0.operator.name -like 'REPLACE_WITH_*' -or [string]$m0.operator.organization -like 'REPLACE_WITH_*') { throw 'M0 Windows 10 operator is not attributable.' }
+    [string]$m0.operator.name -like 'REPLACE_WITH_*' -or [string]$m0.operator.organization -like 'REPLACE_WITH_*') { throw 'M0 reference-profile operator is not attributable.' }
 if ($m0.dispositions.'G-SHELL-TAKEOVER' -cne 'passed' -or $m0.dispositions.'G-GUARDIAN-RECOVERY' -cne 'passed') { throw 'M0 lifecycle gates are not passed.' }
 if (-not $m0.forced_crash.production_path -or $m0.forced_crash.run_count -ne 10 -or $m0.forced_crash.max_elapsed_ms -gt 10000) { throw 'Guardian recovery matrix is incomplete or did not exercise the production Shell path.' }
 foreach ($run in @($m0.forced_crash.runs)) {
@@ -52,9 +53,17 @@ foreach ($name in $requiredInstallerFiles) {
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "Missing installer evidence: $name" }
     $installerDocuments[$name] = Get-Content -Raw -Encoding utf8 -LiteralPath $path | ConvertFrom-Json
 }
+$phaseHosts = [ordered]@{
+    DryRun = $installerDocuments['host-DryRun.json']
+    Enable = $installerDocuments['host-Enable.json']
+    AfterReboot = $installerDocuments['host-AfterReboot.json']
+    Rollback = $installerDocuments['host-Rollback.json']
+}
+Assert-SuperDesktopInstallerHostSet -Hosts $phaseHosts -Revision $revision -ProfileFingerprint $admission.profile_fingerprint
 foreach ($name in @('host-DryRun.json','host-Enable.json','host-AfterReboot.json','host-Rollback.json')) {
     $host = $installerDocuments[$name]
-    if ($host.build -ne 19045 -or $host.displayVersion -cne '22H2') { throw "Installer phase is not Windows 10 22H2: $name" }
+    if ($host.build -ne 26200 -or $host.ubr -ne 8875 -or $host.explorerPatcherVersion -cne '26100.8457.70.3' -or
+        $host.profileFingerprint -cne $admission.profile_fingerprint) { throw "Installer phase is not the exact reference profile: $name" }
     if ($host.revision -cne $revision) { throw "Installer phase revision drift: $name" }
     if ([string]::IsNullOrWhiteSpace($host.operator.name) -or [string]::IsNullOrWhiteSpace($host.operator.organization) -or
         [string]$host.operator.name -like 'REPLACE_WITH_*' -or [string]$host.operator.organization -like 'REPLACE_WITH_*') { throw "Installer phase operator is not attributable: $name" }
@@ -66,7 +75,8 @@ foreach ($name in @('host-DryRun.json','host-Enable.json','host-AfterReboot.json
 $hostBaseline = $installerDocuments['host-DryRun.json']
 foreach ($name in @('host-Enable.json','host-AfterReboot.json','host-Rollback.json')) {
     if ($installerDocuments[$name].operator.name -cne $hostBaseline.operator.name -or
-        $installerDocuments[$name].operator.organization -cne $hostBaseline.operator.organization) { throw "Installer operator drift across phases: $name" }
+        $installerDocuments[$name].operator.organization -cne $hostBaseline.operator.organization -or
+        $installerDocuments[$name].profileFingerprint -cne $hostBaseline.profileFingerprint) { throw "Installer operator or profile drift across phases: $name" }
     foreach ($binaryName in @('shell-installer','superdesktop-app','superdesktop-guardian')) {
         $baselineHash = [string](@($hostBaseline.binaries | Where-Object name -CEQ $binaryName)[0].sha256)
         $phaseHash = [string](@($installerDocuments[$name].binaries | Where-Object name -CEQ $binaryName)[0].sha256)
@@ -137,7 +147,7 @@ if ($rollbackPlan.command -cne 'disable' -or $rollbackResult.command -cne 'disab
 if (Test-Path -LiteralPath $rollbackPath) { throw 'Rollback metadata remains after verified restore.' }
 
 $sourceHashes = @(
-    [ordered]@{ path=(Get-RepositoryRelativePath $m0Path 'M0 Windows 10 evidence');sha256=(Get-FileHash -Algorithm SHA256 -LiteralPath $m0Path).Hash.ToLowerInvariant() }
+    [ordered]@{ path=(Get-RepositoryRelativePath $m0Path 'M0 reference-profile evidence');sha256=(Get-FileHash -Algorithm SHA256 -LiteralPath $m0Path).Hash.ToLowerInvariant() }
 )
 foreach ($name in $requiredInstallerFiles) {
     $path = Join-Path $installerRoot $name
@@ -145,18 +155,18 @@ foreach ($name in $requiredInstallerFiles) {
 }
 $artifact = [ordered]@{
     schema_version = 1
-    kind = 'windows10-lifecycle-installer'
+    kind = 'reference-profile-lifecycle-installer'
     status = 'passed'
     recorded_at_utc = [DateTime]::UtcNow.ToString('o')
     revision = $revision
-    host = [ordered]@{ build=19045;display_version='22H2';session_id=$m0.host.session_id;interactive=$m0.host.interactive }
+    host = [ordered]@{ build=26200;ubr=8875;explorerpatcher_version='26100.8457.70.3';profile_fingerprint=$admission.profile_fingerprint;profile_sources=$admission.sources;session_id=$m0.host.session_id;interactive=$m0.host.interactive }
     operators = [ordered]@{ lifecycle=$m0.operator;installer=$hostBaseline.operator }
     lifecycle = [ordered]@{ preview_zero_mutation=$true;normal_exit_restored=$true;production_guardian_path=$true;forced_crash_runs=10;max_recovery_ms=[double]$m0.forced_crash.max_elapsed_ms }
     installer = [ordered]@{ reboot_verified=$true;exact_rollback_verified=$true;metadata_removed=$true;prior_shell=$enablePlan.observed;enabled_shell=$enablePlan.desired }
     source_hashes = $sourceHashes
     gates = [ordered]@{ 'G-SHELL-TAKEOVER'='passed';'G-GUARDIAN-RECOVERY'='passed';'G-INSTALL-ROLLBACK'='passed' }
 }
-$output = Join-Path $root 'openspec\changes\verify-superdesktop-shell-completion\evidence\external\windows10-lifecycle-installer.json'
+$output = Join-Path $root 'openspec\changes\verify-superdesktop-shell-completion\evidence\external\reference-profile-lifecycle-installer.json'
 [IO.Directory]::CreateDirectory((Split-Path -Parent $output)) | Out-Null
 [IO.File]::WriteAllText($output, (($artifact | ConvertTo-Json -Depth 20) + "`n"), [Text.UTF8Encoding]::new($false))
-Write-Output "Windows 10 completion evidence finalized at $output"
+Write-Output "Reference-profile completion evidence finalized at $output"

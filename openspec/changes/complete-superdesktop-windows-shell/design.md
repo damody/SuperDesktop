@@ -1,6 +1,6 @@
 ## Context
 
-The completion program spans eight implementation changes plus one verification change layered over the existing M0 shell foundation. Production implementation is locally complete, but physical Windows 10, mixed-DPI, reboot rollback, and independent-review gates are not available on this workstation. The parent change must distinguish implementation completion from release approval.
+The completion program spans eight implementation changes plus one verification change layered over the existing M0 shell foundation. Approved C-level adjustment `C-W11-REFERENCE-001` makes exact Windows 11 ExplorerPatcher lifecycle/installer evidence the platform gate; production implementation is locally complete, while physical mixed-DPI and independent review remain external. The parent change must distinguish implementation completion from release approval and record Windows 10 as not claimed.
 
 ## Goals / Non-Goals
 

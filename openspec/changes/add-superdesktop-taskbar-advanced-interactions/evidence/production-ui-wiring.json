@@ -21,7 +21,7 @@
   ],
   "remaining_external_integration": [
     "legacy third-party ITaskbarList3 progress and overlay calls still target the registered Windows taskband COM service; SuperDesktop renders all overlay states but a compatibility COM ingress requires a separately approved Windows shell-registration boundary",
-    "capture a physical shell-mode DWM thumbnail screenshot and timing artifact on the Windows 10 evidence machine"
+    "capture a physical shell-mode DWM thumbnail screenshot and timing artifact on the exact Windows 11 ExplorerPatcher reference profile"
   ],
   "commands": [
     "cargo clippy -p taskbar-ui -p platform-win -p superdesktop-app --all-targets --offline -- -D warnings",

@@ -1,0 +1,52 @@
+{
+  "schema": "windows11-reference-active-artifact-migration/v1",
+  "adjustment_id": "C-W11-REFERENCE-001",
+  "result": "passed",
+  "migrated_changes": [
+    {
+      "change": "build-superdesktop-shell-foundation",
+      "scope": ["proposal", "design", "EXECUTION", "tasks", "shell-foundation-verification", "gpui-taskbar-window-management"],
+      "strict_validation": "passed",
+      "detailed_tasks_validation": "passed"
+    },
+    {
+      "change": "verify-superdesktop-m0",
+      "scope": ["proposal", "design", "tasks", "shell-foundation-verification", "blocked-disposition"],
+      "strict_validation": "passed",
+      "detailed_tasks_validation": "passed"
+    },
+    {
+      "change": "verify-superdesktop-shell-completion",
+      "scope": ["proposal", "design", "tasks", "shell-completion-verification"],
+      "strict_validation": "passed"
+    },
+    {
+      "change": "complete-superdesktop-windows-shell",
+      "scope": ["design", "tasks", "windows-shell-completion-program", "PROGRAM"],
+      "strict_validation": "passed"
+    }
+  ],
+  "stable_task_ids": true,
+  "archives_modified": false,
+  "claims": {
+    "mandatory_platform": "Windows 11 build 26200.8875 + ExplorerPatcher 26100.8457.70.3",
+    "windows_10": "not-claimed",
+    "legacy_explorer_notification_protocol": "not-claimed",
+    "undocumented_virtual_desktop_mutations": "unavailable"
+  },
+  "mandatory_gates_preserved": [
+    "G-DPI-MONITOR-PHYSICAL",
+    "G-REVIEW",
+    "G-SHELL-TAKEOVER",
+    "G-GUARDIAN-RECOVERY",
+    "G-INSTALL-ROLLBACK"
+  ],
+  "active_path_scan": {
+    "script": "scripts/test-no-mandatory-windows10-release.ps1",
+    "obsolete_files_absent": 3,
+    "obsolete_operational_identifiers": 0,
+    "mandatory_release_statements": 0,
+    "not_claimed_contracts": 4,
+    "archives_scanned_or_modified": false
+  }
+}

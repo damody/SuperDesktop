@@ -1,17 +1,23 @@
 {
-  "recorded_at": "2026-08-14T02:05:26+08:00",
+  "recorded_at": "2026-08-17T03:00:00+08:00",
+  "adjustment_id": "C-W11-REFERENCE-001",
   "reference_host": {
     "os": "Microsoft Windows 11 Pro",
-    "version": "10.0.26200",
-    "build": "26200",
+    "expected_full_build": "26200.8875",
+    "observed_full_build": "26200.9168",
+    "explorerpatcher_version": "26100.8457.70.3",
     "physical_active_display_count": 1,
     "primary_resolution": "3840x2160"
   },
-  "windows_10_22h2": {
+  "reference_profile_lifecycle_installer": {
     "status": "blocked",
-    "reason": "No Windows 10 22H2 x64 physical host or formal VM is currently available.",
+    "reason": "The live UBR differs from the approved frozen reference profile and mutation-bearing reboot/rollback evidence has not run.",
     "affected_wave": 6,
     "not_applicable_allowed": false
+  },
+  "windows_10_compatibility": {
+    "status": "not-claimed",
+    "reason": "The approved release platform is the exact Windows 11 ExplorerPatcher profile."
   },
   "physical_mixed_dpi_dual_monitor": {
     "status": "blocked",

@@ -1,0 +1,19 @@
+{
+  "schema": "reference-profile-normalization-verification/v1",
+  "finalizer": "scripts/finalize-shell-completion-reference-profile-evidence.ps1",
+  "kind": "reference-profile-lifecycle-installer",
+  "output": "openspec/changes/verify-superdesktop-shell-completion/evidence/external/reference-profile-lifecycle-installer.json",
+  "rollup_schema": "openspec/changes/verify-superdesktop-shell-completion/evidence/shell-completion-rollup.schema.json",
+  "collector": "scripts/collect-shell-completion-evidence.ps1",
+  "operator_readme": "updated",
+  "candidate_purpose": "updated",
+  "independent_review_scope_includes_migration": true,
+  "obsolete_windows10_kind": "rejected",
+  "partial_and_mismatched_phase_fixtures": "rejected",
+  "local_derivation": {
+    "release_allowed": false,
+    "physical_mixed_dpi": "external_pending",
+    "independent_review": "external_pending",
+    "windows_10_compatibility": "not-claimed"
+  }
+}

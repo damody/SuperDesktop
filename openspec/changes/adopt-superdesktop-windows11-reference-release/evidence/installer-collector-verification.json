@@ -1,0 +1,20 @@
+{
+  "schema": "reference-profile-installer-collector-verification/v1",
+  "collector": "scripts/capture-shell-installer-physical-evidence.ps1",
+  "phases": ["DryRun", "Enable", "AfterReboot", "Rollback"],
+  "shared_admission_before_evidence_output": true,
+  "build_19045_check_removed": true,
+  "profile_fields_recorded": ["profileFingerprint", "profileSources", "build", "ubr", "explorerPatcherVersion"],
+  "mutation_controls_preserved": ["apply", "explicit-opt-in", "exact-plan-fingerprint", "immutable-rollback-record", "exact-absence-restoration"],
+  "packaged_dry_run": {
+    "disposition": "dry_run",
+    "registry_unchanged": true,
+    "rollback_record_created": false
+  },
+  "wrong_profile_probe": {
+    "diagnostic": "REFERENCE_OS_UBR_DRIFT",
+    "evidence_directory_created": false
+  },
+  "negative_phase_fixtures": ["missing", "revision", "profile", "operator", "rollback-path", "binary"],
+  "mutation_performed": false
+}

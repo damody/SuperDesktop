@@ -79,7 +79,7 @@ Guardian SHALL 先移除 SuperDesktop AppBars、恢復每個 monitor 的 work ar
 
 #### Scenario: 十次皆通過
 - **WHEN** 每次保存 T0/ready/work-area/process identity
-- **THEN** reference-profile `G-GUARDIAN-RECOVERY-PROVISIONAL` 通過；Windows 10 final gate 尚未判定
+- **THEN** reference-profile `G-GUARDIAN-RECOVERY-PROVISIONAL` 通過；completion final gate 尚未判定
 
 #### Scenario: 任一次超時
 - **WHEN** 任一 run 超過 10 秒或未恢復
@@ -107,7 +107,7 @@ Guardian SHALL 先移除 SuperDesktop AppBars、恢復每個 monitor 的 work ar
 - **THEN** 原登入 Shell 設定不變
 
 ### Requirement: Reference Lifecycle 只能發布 Provisional Disposition
-本 change 在凍結 Windows 11＋ExplorerPatcher reference profile 的全部 mandatory lifecycle subchecks 通過後，SHALL 分別發布 `G-SHELL-TAKEOVER-PROVISIONAL` 與 `G-GUARDIAN-RECOVERY-PROVISIONAL`；MUST NOT 發布 Windows 10 final gates。
+本 change 在凍結 Windows 11＋ExplorerPatcher reference profile 的全部 mandatory lifecycle subchecks 通過後，SHALL 分別發布 `G-SHELL-TAKEOVER-PROVISIONAL` 與 `G-GUARDIAN-RECOVERY-PROVISIONAL`；MUST NOT 未經 completion verifier 的 candidate-bound lifecycle/installer evidence 就發布 final gates。
 
 #### Scenario: Reference lifecycle 全部通過
 - **WHEN** takeover failpoints、normal shutdown、10-run crash recovery、safety 與 evidence lineage 全部 passed

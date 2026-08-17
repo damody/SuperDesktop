@@ -48,7 +48,7 @@
 - **WHEN** task 的標題或圖示在短時間內多次變更
 - **THEN** 顯示內容更新但 task/group 順序保持不變
 
-### Requirement: Task 按鈕必須執行 Windows 10 基本切換語意
+### Requirement: Task 按鈕必須執行 Windows 基本切換語意
 系統 SHALL 在點擊 task 時啟用非前景視窗、還原已最小化視窗、最小化目前前景視窗，並在 pinned application 沒有視窗時啟動它。
 
 #### Scenario: 點擊目前前景視窗

@@ -6,7 +6,7 @@ The completed shell feature set requires one release decision that proves functi
 
 - Add end-to-end verification for all completion-program capabilities.
 - Add automated evidence capture, schema validation, coverage roll-up, and performance budgets.
-- Preserve fail-closed external gates for Windows 10, physical mixed-DPI, and independent review.
+- Preserve fail-closed external gates for exact Windows 11 ExplorerPatcher lifecycle/installer evidence, physical mixed-DPI, and independent review; classify Windows 10 as not claimed.
 
 ## Capabilities
 

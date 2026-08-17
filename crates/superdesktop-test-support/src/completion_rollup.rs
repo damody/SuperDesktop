@@ -331,5 +331,15 @@ mod tests {
         assert_eq!(rollup.schema_version, 1);
         assert!(rollup.verify_derived_decision());
         assert!(!rollup.decision.release_allowed);
+        assert!(
+            rollup
+                .external_sources
+                .keys()
+                .all(|kind| kind != "windows10-lifecycle-installer")
+        );
+        assert!(rollup.limitations.iter().any(|limitation| {
+            limitation.capability == "windows-10-compatibility"
+                && limitation.disposition == "not-claimed"
+        }));
     }
 }

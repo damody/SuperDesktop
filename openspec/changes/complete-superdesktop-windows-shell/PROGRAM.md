@@ -31,7 +31,8 @@ Limitations and non-claims:
 
 - Legacy Explorer notification-area protocol compatibility is not claimed; the implementation uses the owned provider protocol.
 - Virtual-desktop enumerate/switch/create/remove/rename is unavailable because the documented adapter exposes query/move only.
-- Release approval is not claimed until Windows 10 build 19045, physical mixed-DPI, reboot rollback, and independent review gates pass.
+- Windows 10 compatibility is not claimed by this release.
+- Release approval is not claimed until exact Windows 11 ExplorerPatcher lifecycle/installer reboot rollback, physical mixed-DPI, and independent review gates pass.
 
 ## Invariants no child may weaken
 

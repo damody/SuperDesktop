@@ -106,27 +106,27 @@
 - [ ] 2.4.4 驗證 primary change 與實體 hot-plug recovery。
 - [ ] 2.4.5 保存照片/screenshots/raw geometry 並簽署 confirmation disposition。
 
-## 3. Windows 10 相容性與 Lifecycle Gate
+## 3. Windows 11 Reference Profile Lifecycle Gate
 
-### 3.1 執行 Windows 10 22H2 相容性矩陣
+### 3.1 執行 exact Windows 11＋ExplorerPatcher lifecycle/installer 矩陣
 
-**目的：** 證明 Windows 10 22H2 可啟動、操作並安全回復，而非作為視覺 baseline。
-**輸入：** Windows 10 22H2 x64 環境、release candidate。
-**產出：** OS metadata、launch/interaction/recovery evidence。
-**依賴：** 1.2；外部 Windows 10 環境。
-**Owner／Wave：** Compatibility owner／Wave 6 external。
+**目的：** 證明 exact Windows 11＋ExplorerPatcher profile 可啟動、操作、安全回復並完成 installer reboot/rollback。
+**輸入：** 凍結 Windows 11 build 26200.8875、ExplorerPatcher 26100.8457.70.3、release candidate。
+**產出：** Profile metadata、launch/interaction/recovery/installer evidence。
+**依賴：** 1.2；exact profile admission 與明確 mutation authority。
+**Owner／Wave：** Reference-profile lifecycle owner／Wave 6 external effects。
 **Gate／Evidence：** `G-ARCH`、`G-DESKTOP`、`G-TASKBAR`、`G-SHELL-TAKEOVER`、`G-GUARDIAN-RECOVERY`；`evidence/artifacts/3.1/`。
 **完成門檻：** Preview、Shell opt-in、desktop/taskbar/bridge、normal recovery、forced-crash recovery 全數通過，並結合 Wave 5 provisional lineage 發布兩個 final dispositions；缺環境保持 blocked。
 
-- [ ] 3.1.1 記錄 Windows 10 22H2 build、session、display 與 binary hashes。
+- [ ] 3.1.1 記錄 Windows 11 build/UBR、ExplorerPatcher profile、session、display 與 binary hashes。
 - [ ] 3.1.2 驗證 preview launch 與 zero-mutation。
 - [ ] 3.1.3 驗證明確 Shell opt-in 與 desktop/taskbar interaction。
 - [ ] 3.1.4 驗證 SuperExplorer default 與 folder launch。
 - [ ] 3.1.5 驗證正常退出後 Explorer/work-area recovery。
 - [ ] 3.1.6 執行 forced-crash 並驗證十秒 guardian recovery contract。
-- [ ] 3.1.7 產生 Windows 10 implemented/deferred/unavailable capability matrix，禁止 placeholder 或未實作控制算 passed。
-- [ ] 3.1.8 結合 Wave 5 provisional takeover lineage 與 Windows 10 takeover/normal-exit evidence，發布 final `G-SHELL-TAKEOVER` disposition。
-- [ ] 3.1.9 結合 Wave 5 provisional recovery lineage 與 Windows 10 forced-crash evidence，發布 final `G-GUARDIAN-RECOVERY` disposition。
+- [ ] 3.1.7 產生 reference-profile implemented/owned/unavailable/not-claimed capability matrix，明列 Windows 10 not-claimed，禁止 placeholder 或未實作控制算 passed。
+- [ ] 3.1.8 結合 Wave 5 provisional takeover lineage 與 reference-profile takeover/normal-exit/installer evidence，發布 final `G-SHELL-TAKEOVER` disposition。
+- [ ] 3.1.9 結合 Wave 5 provisional recovery lineage 與 reference-profile forced-crash evidence，發布 final `G-GUARDIAN-RECOVERY` disposition。
 
 ### 3.2 執行 Reference OS Lifecycle Regression
 
@@ -252,5 +252,5 @@
 - [ ] 5.3.4 由 Primary integrator 分派 P0/P1 給原 gate owner 並同步修正 design/spec/tasks。
 - [ ] 5.3.5 由原 gate owner 重跑所有受影響且標 stale 的 gates。
 - [ ] 5.3.6 由 Independent reviewer 複核 remediation lineage 與重跑結果。
-- [ ] 5.3.7 驗證 Windows 10 與實體 mixed-DPI mandatory leaves 均已 passed。
+- [ ] 5.3.7 驗證 exact reference-profile lifecycle/installer 與實體 mixed-DPI mandatory leaves 均已 passed。
 - [ ] 5.3.8 發布無 P0/P1、無 blocked/stale/N/A 的 M0 release disposition。

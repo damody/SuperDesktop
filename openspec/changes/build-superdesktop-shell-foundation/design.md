@@ -1,8 +1,8 @@
 ## Context
 
-SuperDesktop 是全新 Windows-only Rust 專案。核准設計位於 `docs/superpowers/specs/2026-08-13-superdesktop-windows-10-shell-design.md`，本 change 只實作其中 M0：全 GPUI 桌面、預設雙列工作列、SuperExplorer 程序橋接、交易式 Shell 接管、guardian 復原，以及支撐後續 Windows 10 相容性工作的測試與證據架構。
+SuperDesktop 是全新 Windows-only Rust 專案。原始設計位於 `docs/superpowers/specs/2026-08-13-superdesktop-windows-10-shell-design.md`；核准的 `C-W11-REFERENCE-001` 修正以 `docs/superpowers/specs/2026-08-17-superdesktop-windows11-reference-release-design.md` 覆蓋其 release platform。M0 實作全 GPUI 桌面、預設雙列工作列、SuperExplorer 程序橋接、交易式 Shell 接管、guardian 復原，以及 Windows 11 reference-profile 測試與證據架構。
 
-現有 `D:\SuperDesktop\PExplorer` 是 LGPL C++/Win32 參考實作，只能用於觀察行為與 API 流程。`D:\SuperExplorer` 已是大型 Rust/GPUI 專案且工作樹含有使用者變更，因此本 change 不修改也不以 path dependency 連結它。M0 的 UI/互動基準凍結為 Windows 11 build 26200.8875 + ExplorerPatcher 26100.8457.70.3；參考圖 SHA-256 為 `48B5F990B9E155C5C2719D8F8B41D88ED4420A46C3B6018278511F9C349B387E`。Windows 10 22H2 x64 改為相容性目標。
+現有 `D:\SuperDesktop\PExplorer` 是 LGPL C++/Win32 參考實作，只能用於觀察行為與 API 流程。`D:\SuperExplorer` 已是大型 Rust/GPUI 專案且工作樹含有使用者變更，因此本 change 不修改也不以 path dependency 連結它。M0 的 UI/互動與 release 基準凍結為 Windows 11 build 26200.8875 + ExplorerPatcher 26100.8457.70.3；參考圖 SHA-256 為 `48B5F990B9E155C5C2719D8F8B41D88ED4420A46C3B6018278511F9C349B387E`。Windows 10 compatibility 為 not-claimed。
 
 本 change 會影響目前使用者工作階段的桌面與工作區，因此 Shell 接管、復原、測試資料邊界與證據完整性是 blocking gate，而不是上線後才補的品質工作。
 
@@ -24,7 +24,7 @@ SuperDesktop 是全新 Windows-only Rust 專案。核准設計位於 `docs/super
 - 不重寫 Windows 核心、DWM、登入畫面、系統設定或內建應用程式。
 - 不複製或機械式翻譯 PExplorer 原始碼。
 - 不新增 SuperExplorer IPC，也不修改 SuperExplorer 的程式碼、建置或工作樹。
-- 不宣稱 ExplorerPatcher reference profile 等同原生 Windows 10 的每個未公開像素或內部行為。
+- 不宣稱 ExplorerPatcher reference profile 等同任何未公開 Explorer 像素或內部行為，也不宣稱 Windows 10 compatibility。
 
 ## Decisions
 
@@ -52,7 +52,7 @@ workspace 建立 `superdesktop-app`、`shell-core`、`platform-win`、`desktop-u
 
 接管前失敗只清理 SuperDesktop 自己的資源。接管後異常由 guardian 執行 idempotent recovery：解除 AppBar、恢復 work area、顯示可用 Explorer 或在缺失時啟動 `explorer.exe`。M0 不修改登入 Shell 登錄值。
 
-**Blocking gate `G-SHELL-TAKEOVER`：** Wave 5 必須在凍結 Windows 11＋ExplorerPatcher reference profile 完成每階段失敗注入、正常退出與重複復原，並只產生 provisional disposition供 Wave 6 開始驗證；Windows 10 22H2 真機或等價正式 VM 另執行啟動、核心互動、正常退出與 forced-crash compatibility confirmation。兩者都通過後最終 gate 才可標為 passed並宣稱 M0 Shell 模式完成。
+**Blocking gate `G-SHELL-TAKEOVER`：** Wave 5 必須在凍結 Windows 11＋ExplorerPatcher reference profile 完成每階段失敗注入、正常退出與重複復原並產生 provisional disposition；Wave 6 使用同一 exact profile、candidate 與 binaries 執行啟動、核心互動、正常退出、forced-crash 與 installer reboot/rollback confirmation，通過後 final gate 才可標為 passed。
 
 **Blocking gate `G-GUARDIAN-RECOVERY`：** 以 guardian 所持主程序 handle 變成 signaled 的 monotonic timestamp 為 T0；在凍結 ExplorerPatcher reference profile 進行 10 次獨立 forced-crash run，每次都必須在 T0 後 10 秒內恢復可接受 pointer/keyboard 輸入的 Explorer Shell 與正確 work area，並產生唯一 terminal result。必須保存每次 T0、Explorer-ready timestamp、work-area snapshot 與程序 identity；任一 run 超時或失敗即使 gate 失敗，並禁止發行 Shell 模式。
 
@@ -94,7 +94,7 @@ Launch admission 從 dispatcher 接受 request 的 monotonic timestamp 起算，
 
 凍結 ExplorerPatcher reference profile 的 Shell 模式在接管前探測目前 Start host、AppBar、Shell Hook、monitor/DPI 及 guardian recovery prerequisites。必要能力缺失時拒絕接管並停留於可用 Explorer。其他相容 profile 可以將相依控制顯示為 accessibly unavailable，但不得宣稱該能力完成。
 
-在 production implementation 前執行 blocking capability spike：以候選固定 GPUI-CE revision，在凍結的 Windows 11＋ExplorerPatcher reference profile 建立最小 GPUI HWND、驗證 native HWND/message bridge、AppBar reserve/restore、per-monitor DPI/topology、Shell Hook、ExplorerPatcher Start host probe/invocation 及 guardian process-handle lease。Spike 必須產生可重現 source revision、binary hash、OS build、raw result 與 resource snapshot；任一必要能力失敗時停止所有相依 work package，依 B 級修正設計/規格/任務或依 C 級取得框架/範圍變更核准。Windows 10 22H2 的完整啟動、互動與回復另由 release verification change 驗證。
+在 production implementation 前執行 blocking capability spike：以候選固定 GPUI-CE revision，在凍結的 Windows 11＋ExplorerPatcher reference profile 建立最小 GPUI HWND、驗證 native HWND/message bridge、AppBar reserve/restore、per-monitor DPI/topology、Shell Hook、ExplorerPatcher Start host probe/invocation 及 guardian process-handle lease。Spike 必須產生可重現 source revision、binary hash、OS build、raw result 與 resource snapshot；任一必要能力失敗時停止所有相依 work package，依 B 級修正設計/規格/任務或依 C 級取得框架/範圍變更核准。完整啟動、互動、回復與 installer reboot/rollback 由 release verification change 在同一 exact profile 驗證。
 
 所有 `extern "system"`/FFI callback 都是 no-unwind boundary。workspace release profile 保持可捕捉的 unwind policy；callback wrapper 使用 `catch_unwind` 將 panic 轉為 typed fatal event，進入有序停止或 guardian recovery，且不得讓 Rust unwind 穿越 Win32 ABI。Callback 的 input validation、handle ownership、重複 callback 與 shutdown race 都必須有負面測試。
 
@@ -169,8 +169,8 @@ Blocking gates：
 
 多代理執行採 `EXECUTION.md` 的固定 ownership 與交接契約。A 級技術細化由 task owner 自主處理；B 級矛盾由 Primary integrator 同步修正 design/spec/tasks、標 stale 並建立 lineage 後繼續；只有 C 級範圍、blocking gate、平台、安全/權限或外部授權變更需要使用者核准。這避免 apply 過程把一般工程判斷反覆升級成使用者確認，同時保留已核准邊界。
 
-目前開發機就是 UI/互動 reference environment：Windows 11 build 26200.8875、ExplorerPatcher 26100.8457.70.3、單一使用中螢幕。虛擬顯示器可完成自動化 topology gate；Windows 10 22H2 與真實 mixed-DPI 雙螢幕是 release-candidate confirmation。缺少外部環境時 production changes 仍可完成，但 confirmation leaf 保持 blocked，不能使用 `not-applicable` 或降低 threshold。
+目前開發機就是 UI/互動與 lifecycle reference environment：Windows 11 build 26200.8875、ExplorerPatcher 26100.8457.70.3、單一使用中螢幕。虛擬顯示器可完成自動化 topology gate；真實 mixed-DPI 雙螢幕仍是 release-candidate confirmation。缺少外部環境時 production changes 仍可完成，但 confirmation leaf 保持 blocked，不能使用 `not-applicable` 或降低 threshold。
 
 ## Open Questions
 
-沒有規格未決問題。GPUI-CE 候選已凍結為 `https://github.com/damody/gpui-ce-explorer.git` commit `8945e2981b9fd00ca887e042d8adb9acc241b168` 的乾淨來源；capability spike只驗證此候選，不引用 `D:\SuperExplorer\vendor\gpui-ce` 的未提交 patch。AppBar/Start host 的最小可行 HWND 接法與 monitor identity 細節會在已規範的 capability spike leaf 中以 B 級修正流程收斂；若需要改變框架、公開合約或 blocking gate，則升級為 C 級並請使用者核准。完整 program 開始前仍須在 Wave 0 readiness record 明列 Windows 10 22H2 與實體 mixed-DPI 環境的 availability；缺失不阻止 Wave 1–5，但必然阻止 final release。
+沒有規格未決問題。GPUI-CE 候選已凍結為 `https://github.com/damody/gpui-ce-explorer.git` commit `8945e2981b9fd00ca887e042d8adb9acc241b168` 的乾淨來源；capability spike只驗證此候選，不引用 `D:\SuperExplorer\vendor\gpui-ce` 的未提交 patch。AppBar/Start host 的最小可行 HWND 接法與 monitor identity 細節會在已規範的 capability spike leaf 中以 B 級修正流程收斂；若需要改變框架、公開合約或 blocking gate，則升級為 C 級並請使用者核准。完整 program 開始前仍須在 Wave 0 readiness record 明列 exact reference profile 與實體 mixed-DPI 環境的 availability；profile drift 或實體顯示器缺失必然阻止 final release。

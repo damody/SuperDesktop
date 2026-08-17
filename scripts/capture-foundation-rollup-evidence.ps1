@@ -116,13 +116,13 @@ if (@($coverage.tasks).Count -ne 93 -or
     throw 'G-TRACE coverage/replacement/corrective lineage roll-up is not passed'
 }
 
-$windows10Passed = $blockedDisposition.windows_10_22h2.status -eq 'passed'
+$referenceProfilePassed = $blockedDisposition.reference_profile_lifecycle_installer.status -eq 'passed'
 $physicalMixedPassed = $blockedDisposition.physical_mixed_dpi.status -eq 'passed'
 $independentReviewPassed = $blockedDisposition.independent_review.status -eq 'passed'
 $allDpiPassed = @($dpiMatrix.remaining_task_ids).Count -eq 0 -and @($dpiMatrix.passed_task_ids).Count -eq 5
 $m0EvidenceComplete = $traceability.blocked -eq 0 -and $traceability.release_disposition -eq 'passed-releasable'
 $foundationPassedTasks = @()
-if ($windows10Passed) { $foundationPassedTasks += '4.2.5' }
+if ($referenceProfilePassed) { $foundationPassedTasks += '4.2.5' }
 if ($physicalMixedPassed -and $allDpiPassed) { $foundationPassedTasks += '4.2.6' }
 if ($independentReviewPassed) { $foundationPassedTasks += '4.2.11' }
 if ($m0EvidenceComplete) { $foundationPassedTasks += '4.2.3' }
@@ -140,7 +140,7 @@ $wave6SourceArtifacts = @(
     @{ path = 'verify-superdesktop-m0/evidence/coverage.json'; sha256 = (Get-FileHash $coveragePath -Algorithm SHA256).Hash },
     @{ path = 'verify-superdesktop-m0/evidence/adjustments.jsonl'; sha256 = (Get-FileHash $adjustmentsPath -Algorithm SHA256).Hash }
 )
-foreach ($relative in @('evidence/artifacts/3.1/windows10-gate.json','evidence/artifacts/2.4/physical-mixed-dpi-gate.json','evidence/artifacts/5.3/independent-review-gate.json')) {
+foreach ($relative in @('evidence/artifacts/3.1/reference-profile-gate.json','evidence/artifacts/2.4/physical-mixed-dpi-gate.json','evidence/artifacts/5.3/independent-review-gate.json')) {
     $full = Join-Path $verificationRoot $relative
     if (Test-Path -LiteralPath $full -PathType Leaf) { $wave6SourceArtifacts += @{ path = "verify-superdesktop-m0/$relative"; sha256 = (Get-FileHash $full -Algorithm SHA256).Hash } }
 }
@@ -161,8 +161,8 @@ $wave6 = [ordered]@{
         'G-SAFETY' = 'passed'
         'G-ARCH' = 'passed'
         'G-TRACE' = 'passed'
-        'G-SHELL-TAKEOVER' = if ($windows10Passed) { 'passed' } else { 'blocked' }
-        'G-GUARDIAN-RECOVERY' = if ($windows10Passed) { 'passed' } else { 'blocked' }
+        'G-SHELL-TAKEOVER' = if ($referenceProfilePassed) { 'passed' } else { 'blocked' }
+        'G-GUARDIAN-RECOVERY' = if ($referenceProfilePassed) { 'passed' } else { 'blocked' }
         'G-DPI-MONITOR' = if ($physicalMixedPassed -and $allDpiPassed) { 'passed' } else { 'blocked' }
     }
     independent_review = if ($independentReviewPassed) { 'passed' } else { 'blocked' }
@@ -170,7 +170,7 @@ $wave6 = [ordered]@{
     unresolved = @(
         if (-not $allDpiPassed) { 'physical-five-dpi-matrix' }
         if (-not $physicalMixedPassed) { 'physical-mixed-dpi-dual-monitor' }
-        if (-not $windows10Passed) { 'windows-10-22h2' }
+        if (-not $referenceProfilePassed) { 'reference-profile-lifecycle-installer' }
         if (-not $independentReviewPassed) { 'independent-final-review' }
         'archive-deferred-by-user'
     )

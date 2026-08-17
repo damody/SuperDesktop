@@ -25,6 +25,7 @@
       "add-superdesktop-notification-area-host",
       "add-superdesktop-virtual-desktops",
       "add-superdesktop-shell-installer",
+      "adopt-superdesktop-windows11-reference-release",
       "verify-superdesktop-shell-completion",
       "complete-superdesktop-windows-shell"
     ]

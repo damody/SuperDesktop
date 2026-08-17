@@ -1,0 +1,31 @@
+{
+  "schema": "windows11-reference-rollup-verification/v1",
+  "completion_rollup": "openspec/changes/verify-superdesktop-shell-completion/evidence/current-rollup.json",
+  "program_rollup": "openspec/changes/complete-superdesktop-windows-shell/evidence/program-rollup.json",
+  "completion_schema": "passed",
+  "program_validator": "passed",
+  "superdesktop_test_support": {
+    "passed": 16,
+    "failed": 0
+  },
+  "negative_coverage": [
+    "obsolete-external-kind",
+    "missing-child",
+    "duplicate-source",
+    "unexpected-gate",
+    "invalid-source-hash",
+    "profile-source-hash-drift",
+    "contradictory-derived-decision"
+  ],
+  "implementation_complete": true,
+  "release_allowed": false,
+  "windows_10_compatibility": "not-claimed",
+  "remaining_blockers": [
+    "G-DPI-MONITOR-PHYSICAL",
+    "G-GUARDIAN-RECOVERY",
+    "G-INSTALL-ROLLBACK",
+    "G-REVIEW",
+    "G-SHELL-TAKEOVER"
+  ],
+  "invented_external_evidence": false
+}

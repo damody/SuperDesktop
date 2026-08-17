@@ -31,7 +31,8 @@ foreach ($area in @('architecture','security','accessibility','evidence_lineage'
 $requiredChanges = @(
     'extend-superdesktop-shell-contracts','add-superdesktop-desktop-file-operations','add-superdesktop-shell-context-menu-host',
     'add-superdesktop-start-search','add-superdesktop-taskbar-advanced-interactions','add-superdesktop-notification-area-host',
-    'add-superdesktop-virtual-desktops','add-superdesktop-shell-installer','verify-superdesktop-shell-completion','complete-superdesktop-windows-shell'
+    'add-superdesktop-virtual-desktops','add-superdesktop-shell-installer','adopt-superdesktop-windows11-reference-release',
+    'verify-superdesktop-shell-completion','complete-superdesktop-windows-shell'
 )
 $reviewedChanges = @($confirmation.scope.changes | Sort-Object -Unique)
 if (@($requiredChanges | Where-Object { $_ -notin $reviewedChanges }).Count -ne 0 -or @($reviewedChanges | Where-Object { $_ -notin $requiredChanges }).Count -ne 0) { throw 'Review scope must contain every completion change exactly once.' }
@@ -55,6 +56,9 @@ if ($LASTEXITCODE -ne 0) { throw 'Independent review must target a revision with
 
 $requiredPaths = @(
     'docs/superpowers/specs/2026-08-16-superdesktop-windows-shell-completion-design.md',
+    'docs/superpowers/specs/2026-08-17-superdesktop-windows11-reference-release-design.md',
+    'openspec/changes/adopt-superdesktop-windows11-reference-release/design.md',
+    'openspec/changes/adopt-superdesktop-windows11-reference-release/specs/windows11-reference-release-baseline/spec.md',
     'openspec/changes/complete-superdesktop-windows-shell/PROGRAM.md',
     'openspec/changes/complete-superdesktop-windows-shell/design.md',
     'openspec/changes/complete-superdesktop-windows-shell/specs/windows-shell-completion-program/spec.md',

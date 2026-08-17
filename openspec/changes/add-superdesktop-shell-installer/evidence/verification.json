@@ -38,7 +38,7 @@
   },
   "physical_gate": {
     "status": "external_pending",
-    "required_host": "Windows 10 22H2 build 19045",
+    "required_host": "Windows 11 build 26200.8875 + ExplorerPatcher 26100.8457.70.3 exact reference profile",
     "collector": "scripts/capture-shell-installer-physical-evidence.ps1",
     "phases": ["DryRun", "Enable", "AfterReboot", "Rollback"]
   }

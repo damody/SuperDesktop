@@ -15,7 +15,7 @@ Every completion feature SHALL preserve explicit shell opt-in, bounded owned sta
 - **THEN** it performs no shell mutation and the safety gate fails if mutation is observed
 
 ### Requirement: Capability claims are exact
-The program SHALL distinguish documented implemented functionality, owned replacement protocols, and unavailable optional compatibility behavior.
+The program SHALL distinguish documented implemented functionality, owned replacement protocols, unavailable optional compatibility behavior, and explicitly not-claimed platform compatibility including Windows 10.
 
 #### Scenario: The user asks whether every Windows desktop feature is identical
 - **WHEN** legacy Explorer notification protocols or undocumented virtual-desktop operations are not implemented

@@ -1,0 +1,38 @@
+{
+  "schema": "windows11-reference-release-verification/v1",
+  "result": "local_migration_passed_profile_and_external_gates_pending",
+  "adjustment_id": "C-W11-REFERENCE-001",
+  "commands": {
+    "powershell_parsers": { "status": "passed", "scripts": 11 },
+    "negative_probes": { "status": "passed", "fixtures": 25 },
+    "cargo_fmt": "passed",
+    "cargo_test_workspace_all_targets_offline": { "status": "passed", "tests": 197 },
+    "cargo_clippy_workspace_all_targets_deny_warnings": "passed",
+    "detailed_task_validators": { "status": "passed", "changes": 3 },
+    "openspec_all_strict": { "status": "passed", "items": 21 },
+    "program_rollup_validator": "passed",
+    "active_windows10_scan": "passed",
+    "git_diff_check": "passed"
+  },
+  "state_audit": {
+    "registry_shell_presence_and_value_unchanged": true,
+    "rollback_metadata_presence_unchanged": true,
+    "reboot_performed": false,
+    "archive_mutation": false,
+    "external_service_mutation": false
+  },
+  "subchecks": [
+    { "task_id": "4.1.1", "status": "passed", "evidence": "11 revised PowerShell files parsed without errors" },
+    { "task_id": "4.1.2", "status": "passed", "evidence": "profile, phase, obsolete-kind, candidate, and active-path negative probes passed" },
+    { "task_id": "4.1.3", "status": "passed", "evidence": "workspace format, 197 tests, and clippy -D warnings passed" },
+    { "task_id": "4.1.4", "status": "passed", "evidence": "migration, foundation, and M0 detailed task validators passed" },
+    { "task_id": "4.1.5", "status": "passed", "evidence": "21 OpenSpec items strict-valid and mandatory Windows 10 scan empty" },
+    { "task_id": "4.1.6", "status": "passed", "evidence": "Registry and rollback metadata unchanged; no reboot, archive, or external mutation" }
+  ],
+  "blocked": [
+    { "task_id": "2.1.6", "reason": "approved 26200.8875 profile drifted to 26200.9168" },
+    { "gate": "G-DPI-MONITOR-PHYSICAL", "reason": "one active physical monitor" },
+    { "gate": "G-REVIEW", "reason": "independent reviewer evidence absent" },
+    { "gate": "G-INSTALL-ROLLBACK", "reason": "mutation-bearing reboot/rollback not authorized or executed" }
+  ]
+}

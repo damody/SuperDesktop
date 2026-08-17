@@ -1,0 +1,24 @@
+{
+  "schema": "reference-profile-lifecycle-collector-verification/v1",
+  "collector": "scripts/capture-m0-reference-profile-evidence.ps1",
+  "raw_schema": "m0-reference-profile-gate/v1",
+  "default_output": "openspec/changes/verify-superdesktop-m0/evidence/artifacts/3.1/reference-profile-gate.json",
+  "shared_admission_before_effects": true,
+  "preserved_controls": [
+    "preview-zero-mutation",
+    "normal-exit-registry-explorer-work-area-restoration",
+    "ten-production-shell-forced-crash-runs",
+    "authenticated-guardian-terminal",
+    "ten-second-deadline",
+    "unique-terminal",
+    "final-baseline"
+  ],
+  "host_metadata": ["build", "ubr", "explorerpatcher_version", "profile_fingerprint", "profile_sources"],
+  "parser": "passed",
+  "wrong_profile_probe": {
+    "diagnostic": "REFERENCE_OS_UBR_DRIFT",
+    "output_created": false,
+    "registry_unchanged": true,
+    "mutation_performed": false
+  }
+}

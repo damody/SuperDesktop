@@ -3,11 +3,11 @@
   "result": "harness_ready_external_evidence_pending",
   "captured_at_utc": "2026-08-17T01:30:00+08:00",
   "implemented": [
-    "Windows 10 lifecycle and installer evidence normalization",
+    "exact Windows 11 ExplorerPatcher lifecycle and installer evidence normalization",
     "physical mixed-DPI completion-feature evidence normalization",
     "independent architecture, security, accessibility, and lineage review admission",
     "revision-bound and SHA-256-bound external source lineage",
-    "same-binary binding across Windows 10 lifecycle and installer reboot phases",
+    "same-candidate, same-profile, and same-binary binding across lifecycle and installer reboot phases",
     "exact rollback metadata target binding",
     "repository-contained rehashable raw evidence and media lineage",
     "attributable placeholder-resistant operator and reviewer admission",
@@ -24,9 +24,9 @@
     "powershell_external_scripts_parser": "passed",
     "windows_powershell_5_1_path_compatibility": "passed",
     "placeholder_reviewer_admission": "rejected_without_output",
-    "wrong_windows_host_admission": "rejected_without_output",
+    "wrong_reference_profile_admission": "rejected_without_output",
     "incomplete_external_admission": "rejected_without_output",
     "external_tasks_marked_complete": false
   },
-  "reason_external_tasks_remain_pending": "No Windows 10 build 19045 run, physical mixed-DPI topology, reboot rollback, or attributable independent review was supplied."
+  "reason_external_tasks_remain_pending": "The approved 26200.8875 profile has drifted to 26200.9168; no physical mixed-DPI topology, mutation-bearing reboot rollback, or attributable independent review was supplied. Windows 10 is not claimed."
 }

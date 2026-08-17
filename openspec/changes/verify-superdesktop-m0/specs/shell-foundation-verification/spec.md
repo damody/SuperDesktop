@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: 凍結 ExplorerPatcher 參考環境
-驗證流程 SHALL 在任何視覺比較前記錄並驗證 Windows build、ExplorerPatcher 版本與 binary hash、影響工作列的設定匯出、參考影像及其 SHA-256；M0 主要 UI／互動基準 SHALL 為 Windows 11 build 26200.8875 與 ExplorerPatcher 26100.8457.70.3，Windows 10 22H2 SHALL 作為相容性目標。
+驗證流程 SHALL 在任何視覺比較或 lifecycle effect 前記錄並驗證 Windows build/UBR、ExplorerPatcher 版本與 binary hash、影響工作列的設定匯出、參考影像及其 SHA-256；M0 UI／互動與 release lifecycle 基準 SHALL 為 Windows 11 build 26200.8875 與 ExplorerPatcher 26100.8457.70.3。Windows 10 compatibility SHALL 標為 not-claimed。
 
 #### Scenario: Reference profile 完整且相符
 - **WHEN** 驗證者載入凍結的 reference profile
@@ -39,14 +39,14 @@
 - **WHEN** 無法取得符合條件的實體 mixed-DPI 雙螢幕
 - **THEN** confirmation leaf SHALL 保持 blocked，較早 production work 可繼續，但 M0 MUST NOT 宣告可發行
 
-### Requirement: Windows 10 22H2 相容性
-驗證流程 SHALL 在 Windows 10 22H2 x64 驗證 preview 啟動、Shell mode 明確 opt-in、桌面與工作列操作、SuperExplorer 啟動、正常退出回復，以及 forced-crash guardian 回復 Explorer 與 work area。
+### Requirement: Windows 11 ExplorerPatcher reference-profile lifecycle
+驗證流程 SHALL 在 exact Windows 11 build 26200.8875＋ExplorerPatcher 26100.8457.70.3 profile 驗證 preview 啟動、Shell mode 明確 opt-in、桌面與工作列操作、SuperExplorer 啟動、正常退出回復、forced-crash guardian 回復 Explorer/work area，以及 installer reboot/rollback。
 
-#### Scenario: Windows 10 環境尚未提供
-- **WHEN** 無法取得 Windows 10 22H2 x64 驗證環境
-- **THEN** Windows 10 leaf SHALL 保持 blocked 且 M0 MUST NOT 宣告可發行
+#### Scenario: Reference profile 漂移或 mutation sequence 尚未完成
+- **WHEN** exact profile admission 失敗或 installer reboot/rollback sequence 未完整執行
+- **THEN** reference-profile leaf SHALL 保持 blocked 且 M0 MUST NOT 宣告可發行
 
-#### Scenario: Windows 10 強制崩潰回復
+#### Scenario: Reference-profile 強制崩潰回復
 - **WHEN** SuperDesktop 在 Shell mode 被強制終止
 - **THEN** guardian SHALL 在 lifecycle contract 的 deadline 內恢復可操作 Explorer 與正確 work area
 

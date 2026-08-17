@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "change": "add-superdesktop-shell-takeover-recovery",
-  "result": "local_passed_windows10_forced_crash_pending",
+  "result": "local_passed_reference_profile_finalization_pending",
   "captured_at": "2026-08-17",
   "covered": [
     "production shell lifecycle arms the adjacent restricted guardian before opening shell surfaces",
@@ -12,7 +12,7 @@
     "parent closes all controller-side process, thread, and parent handles after authenticated acceptance",
     "guardian terminal records use an absolute SuperDesktop-owned LocalAppData path",
     "production success terminal is atomically created only after Explorer recovery succeeds",
-    "Windows 10 evidence force-crashes the real admitted production Shell process rather than an evidence-only parent fixture"
+    "reference-profile completion evidence force-crashes the real admitted production Shell process rather than an evidence-only parent fixture"
   ],
   "commands": [
     "cargo test -p platform-win -p superdesktop-guardian -p superdesktop-app --offline",
@@ -20,6 +20,6 @@
   ],
   "external_gate": {
     "status": "external_pending",
-    "required": "Windows 10 build 19045 ten-run forced-crash and recovery measurement"
+    "required": "exact Windows 11 ExplorerPatcher candidate-bound ten-run forced-crash and recovery measurement"
   }
 }

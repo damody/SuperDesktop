@@ -191,7 +191,7 @@
 **依賴：** 2.2、3.4、4.1。
 **Owner／Wave：** Safety owner／Wave 5 exit。
 **Gate／Evidence：** `G-SAFETY`、`G-SHELL-TAKEOVER-PROVISIONAL`、`G-GUARDIAN-RECOVERY-PROVISIONAL`；`evidence/artifacts/4.2/`。
-**完成門檻：** Preview、正常 Shell exit、forced crash 後登入 Shell/registry/policy baseline 無永久差異；只發布 reference-profile provisional dispositions，不標記 Windows 10 final gates passed。
+**完成門檻：** Preview、正常 Shell exit、forced crash 後登入 Shell/registry/policy baseline 無永久差異；只發布 reference-profile provisional dispositions，final gates 由 completion verifier 結合 candidate-bound installer/lifecycle evidence 判定。
 
 - [x] 4.2.1 擷取登入 Shell、Explorer policy 與相關 registry baseline。
 - [x] 4.2.2 執行 preview cycle 並比較 zero permanent mutation。

@@ -26,7 +26,7 @@ M0 can take over and recover Explorer for a single run, but has no packaging-tim
 
 ## Migration Plan
 
-Ship the CLI disabled-by-default, validate dry-run and memory-registry transactions, then perform Windows 10 physical enable/reboot/rollback evidence only in final verification. Existing run-scoped shell mode remains available independently.
+Ship the CLI disabled-by-default, validate dry-run and memory-registry transactions, then perform exact Windows 11 ExplorerPatcher reference-profile enable/reboot/rollback evidence only in final verification. Existing run-scoped shell mode remains available independently; Windows 10 is not claimed.
 
 ## Open Questions
 
