@@ -114,17 +114,34 @@ function Assert-ReleaseCandidateLineage {
         [Parameter(Mandatory)][string]$Revision
     )
     if ($Revision -notmatch '^[0-9a-f]{40}$') { throw 'REFERENCE_CANDIDATE_INVALID' }
-    & git -C $Workspace cat-file -e "$Revision^{commit}" 2>$null
-    if ($LASTEXITCODE -ne 0) { throw 'REFERENCE_CANDIDATE_MISSING' }
-    & git -C $Workspace merge-base --is-ancestor $Revision HEAD 2>$null
-    if ($LASTEXITCODE -ne 0) { throw 'REFERENCE_CANDIDATE_NOT_ANCESTOR' }
+    $priorErrorAction = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        & git -C $Workspace cat-file -e "$Revision^{commit}" 2>$null
+        $candidateExit = $LASTEXITCODE
+        if ($candidateExit -eq 0) {
+            & git -C $Workspace merge-base --is-ancestor $Revision HEAD 2>$null
+            $ancestorExit = $LASTEXITCODE
+        }
+    } finally {
+        $ErrorActionPreference = $priorErrorAction
+    }
+    if ($candidateExit -ne 0) { throw 'REFERENCE_CANDIDATE_MISSING' }
+    if ($ancestorExit -ne 0) { throw 'REFERENCE_CANDIDATE_NOT_ANCESTOR' }
     foreach ($arguments in @(
         @('diff', '--quiet', $Revision, 'HEAD', '--', 'crates', 'Cargo.toml', 'Cargo.lock'),
         @('diff', '--quiet', '--', 'crates', 'Cargo.toml', 'Cargo.lock'),
         @('diff', '--cached', '--quiet', '--', 'crates', 'Cargo.toml', 'Cargo.lock')
     )) {
-        & git -C $Workspace @arguments
-        if ($LASTEXITCODE -ne 0) { throw 'REFERENCE_PRODUCTION_DRIFT' }
+        $priorErrorAction = $ErrorActionPreference
+        $ErrorActionPreference = 'Continue'
+        try {
+            & git -C $Workspace @arguments 2>$null
+            $diffExit = $LASTEXITCODE
+        } finally {
+            $ErrorActionPreference = $priorErrorAction
+        }
+        if ($diffExit -ne 0) { throw 'REFERENCE_PRODUCTION_DRIFT' }
     }
 }
 
