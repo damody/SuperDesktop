@@ -237,6 +237,60 @@ struct DesktopNamespaceRuntime {
     icon_cache: BTreeMap<String, Option<IconData>>,
 }
 
+const DESKTOP_GRID_ORIGIN: f32 = 8.0;
+const DESKTOP_GRID_CELL_WIDTH: f32 = 104.0;
+const DESKTOP_GRID_CELL_HEIGHT: f32 = 112.0;
+const DESKTOP_GRID_ROWS: usize = 8;
+
+fn desktop_items_overlap(left: (f32, f32), right: (f32, f32)) -> bool {
+    left.0 < right.0 + DESKTOP_GRID_CELL_WIDTH
+        && left.0 + DESKTOP_GRID_CELL_WIDTH > right.0
+        && left.1 < right.1 + DESKTOP_GRID_CELL_HEIGHT
+        && left.1 + DESKTOP_GRID_CELL_HEIGHT > right.1
+}
+
+fn reconcile_desktop_item_positions(
+    nodes: &[AccessibleNode],
+    persisted: &BTreeMap<String, (f32, f32)>,
+) -> BTreeMap<String, (f32, f32)> {
+    let mut occupied = Vec::with_capacity(nodes.len());
+    let mut reconciled = BTreeMap::new();
+    for (index, node) in nodes.iter().enumerate() {
+        let default = (
+            DESKTOP_GRID_ORIGIN + (index / DESKTOP_GRID_ROWS) as f32 * DESKTOP_GRID_CELL_WIDTH,
+            DESKTOP_GRID_ORIGIN + (index % DESKTOP_GRID_ROWS) as f32 * DESKTOP_GRID_CELL_HEIGHT,
+        );
+        let candidate = persisted.get(&node.stable_id).copied().unwrap_or(default);
+        let position = if occupied
+            .iter()
+            .copied()
+            .any(|other| desktop_items_overlap(candidate, other))
+        {
+            (0..)
+                .map(|slot| {
+                    (
+                        DESKTOP_GRID_ORIGIN
+                            + (slot / DESKTOP_GRID_ROWS) as f32 * DESKTOP_GRID_CELL_WIDTH,
+                        DESKTOP_GRID_ORIGIN
+                            + (slot % DESKTOP_GRID_ROWS) as f32 * DESKTOP_GRID_CELL_HEIGHT,
+                    )
+                })
+                .find(|candidate| {
+                    !occupied
+                        .iter()
+                        .copied()
+                        .any(|other| desktop_items_overlap(*candidate, other))
+                })
+                .expect("desktop grid has an unbounded number of columns")
+        } else {
+            candidate
+        };
+        occupied.push(position);
+        reconciled.insert(node.stable_id.clone(), position);
+    }
+    reconciled
+}
+
 fn desktop_item_key(item: &DesktopItem) -> String {
     format!("desktop-item:{}", item.identity.as_str())
 }
@@ -1473,7 +1527,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                 desktop_settings.sort_key,
                                 desktop_settings.sort_direction,
                             );
-                            let item_positions = desktop_settings_for_view
+                            let persisted_item_positions = desktop_settings_for_view
                                 .borrow()
                                 .desktop_positions
                                 .iter()
@@ -1485,6 +1539,10 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                     )
                                 })
                                 .collect::<BTreeMap<_, _>>();
+                            let item_positions = reconcile_desktop_item_positions(
+                                &nodes,
+                                &persisted_item_positions,
+                            );
                             let activation_namespace = Rc::clone(&desktop_namespace_for_view);
                             let recycle_namespace = Rc::clone(&desktop_namespace_for_view);
                             let recycle_operations = Rc::clone(&desktop_operations_for_view);
@@ -2344,7 +2402,11 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
 
 #[cfg(test)]
 mod live_parity_tests {
-    use super::{ICON_CACHE_LIMIT, MonitorRecord, prune_icon_cache, start_window_geometry};
+    use super::{
+        ICON_CACHE_LIMIT, MonitorRecord, prune_icon_cache, reconcile_desktop_item_positions,
+        start_window_geometry,
+    };
+    use desktop_ui::AccessibleNode;
     use platform_win::common::monitor_dpi_start::ScreenRect;
     use std::collections::{BTreeMap, BTreeSet};
     use std::path::Path;
@@ -2391,6 +2453,53 @@ mod live_parity_tests {
                 resolved.display()
             );
         }
+    }
+
+    #[test]
+    fn fixed_desktop_entry_reserves_its_cell_and_rehomes_overlapping_items() {
+        let nodes = vec![
+            AccessibleNode::fixed_superexplorer("fixture", false, false),
+            AccessibleNode {
+                stable_id: "desktop-item:overlap".into(),
+                name: "Overlap".into(),
+                icon: None,
+                role: "button",
+                selected: false,
+                focused: false,
+                actions: Vec::new(),
+                message_key: None,
+            },
+            AccessibleNode {
+                stable_id: "desktop-item:next".into(),
+                name: "Next".into(),
+                icon: None,
+                role: "button",
+                selected: false,
+                focused: false,
+                actions: Vec::new(),
+                message_key: None,
+            },
+            AccessibleNode {
+                stable_id: "desktop-item:manual".into(),
+                name: "Manual".into(),
+                icon: None,
+                role: "button",
+                selected: false,
+                focused: false,
+                actions: Vec::new(),
+                message_key: None,
+            },
+        ];
+        let persisted = BTreeMap::from([
+            ("desktop-item:overlap".into(), (10.0, 18.0)),
+            ("desktop-item:next".into(), (8.0, 120.0)),
+            ("desktop-item:manual".into(), (500.0, 64.0)),
+        ]);
+        let positions = reconcile_desktop_item_positions(&nodes, &persisted);
+        assert_eq!(positions["desktop:fixture:superexplorer"], (8.0, 8.0));
+        assert_eq!(positions["desktop-item:overlap"], (8.0, 120.0));
+        assert_eq!(positions["desktop-item:next"], (8.0, 232.0));
+        assert_eq!(positions["desktop-item:manual"], (500.0, 64.0));
     }
 
     #[test]

@@ -55,7 +55,7 @@ function Wait-ForWindowHandle([System.Diagnostics.Process]$Process) {
     throw "No interactive window appeared for PID $($Process.Id)."
 }
 
-function Wait-ForFixedControl([IntPtr]$WindowHandle) {
+function Wait-ForFixedControl([IntPtr]$WindowHandle, [string]$Surface) {
     $root = [System.Windows.Automation.AutomationElement]::FromHandle($WindowHandle)
     $condition = New-Object System.Windows.Automation.PropertyCondition(
         [System.Windows.Automation.AutomationElement]::NameProperty,
@@ -63,16 +63,21 @@ function Wait-ForFixedControl([IntPtr]$WindowHandle) {
     )
     $deadline = [DateTime]::UtcNow.AddSeconds(8)
     do {
-        $control = $root.FindFirst(
+        $controls = $root.FindAll(
             [System.Windows.Automation.TreeScope]::Descendants,
             $condition
         )
-        if ($null -ne $control) {
-            return $control
+        $matches = @($controls | Sort-Object {
+            $_.Current.BoundingRectangle.Top
+        }, {
+            $_.Current.BoundingRectangle.Left
+        })
+        if ($matches.Count -ne 0) {
+            return $matches[0]
         }
         Start-Sleep -Milliseconds 50
     } while ([DateTime]::UtcNow -lt $deadline)
-    throw 'UI Automation could not find the SuperExplorer fixed entry.'
+    throw "UI Automation could not find the SuperExplorer fixed entry for $Surface."
 }
 
 function Invoke-InputRoute([string]$Surface, [string]$Route) {
@@ -102,11 +107,12 @@ function Invoke-InputRoute([string]$Surface, [string]$Route) {
             throw "$Surface/$Route did not render a visible frame."
         }
         try {
-            $control = Wait-ForFixedControl $windowHandle
+            $control = Wait-ForFixedControl $windowHandle $Surface
         } catch {
             throw "$Surface/$Route failed to expose the SuperExplorer fixed entry: $_"
         }
         $name = $control.Current.Name
+        $automationId = $control.Current.AutomationId
         $controlType = $control.Current.ControlType.ProgrammaticName
         $bounds = $control.Current.BoundingRectangle
         $control.SetFocus()
@@ -161,6 +167,7 @@ function Invoke-InputRoute([string]$Surface, [string]$Route) {
             route = $Route
             result = 'passed'
             control_name = $name
+            automation_id = $automationId
             control_type = $controlType
             bounds = [ordered]@{
                 left = [int]$bounds.Left
@@ -173,7 +180,10 @@ function Invoke-InputRoute([string]$Surface, [string]$Route) {
         }
     } finally {
         if (-not $process.HasExited) {
-            $process.WaitForExit(7000) | Out-Null
+            if (-not $process.WaitForExit(7000)) {
+                Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+                $process.WaitForExit(5000) | Out-Null
+            }
         }
         foreach ($newId in $newIds) {
             Stop-Process -Id $newId -Force -ErrorAction SilentlyContinue
