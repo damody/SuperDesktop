@@ -1,12 +1,12 @@
 {
-    "schema":  "m0-build-gate/v1",
-    "revision":  "800a379a",
-    "all_exit_zero":  true,
-    "command_log_count":  6,
-    "app_sha256":  "",
-    "guardian_sha256":  "",
-    "cargo_lock_sha256":  "",
-    "cargo_config_sha256":  "",
-    "gpui_checksum_sha256":  "",
-    "provenance_result":  "Dependency provenance assertion passed: gpui uses https://github.com/damody/gpui-ce-explorer.git at 8945e2981b9fd00ca887e042d8adb9acc241b168 and vendor/gpui."
+  "schema": "m0-build-gate/v1",
+  "revision": "f4b2c64b",
+  "all_exit_zero": true,
+  "command_log_count": 6,
+  "app_sha256": "87FA5434977A50F6325414DA4D1EAFE855E9BCF0EA484A53CABD4DE80B8F8B66",
+  "guardian_sha256": "FBB4D75E4442412D1C54E2AA1D5902E0A8B64AEF21DB49A4DDEBB3D61C41ED26",
+  "cargo_lock_sha256": "942AE8FA8ECAAF582A66C91E261855C6C5E06117B4F09F6FD60E02E44221E9A6",
+  "cargo_config_sha256": "458CDDCEC370E29860C322D0767349E401FF35E40C5CD3E1A180E5BF27D03EDB",
+  "gpui_checksum_sha256": "558E424AB9C3B2203E0BDF052ED6123AAFFC1C5CA59F1E4DE3C027B9CA644D0B",
+  "provenance_result": "Dependency provenance assertion passed: gpui uses https://github.com/damody/gpui-ce-explorer.git at 8945e2981b9fd00ca887e042d8adb9acc241b168 and vendor/gpui."
 }

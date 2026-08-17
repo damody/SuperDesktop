@@ -118,15 +118,15 @@
 **Gate／Evidence：** `G-ARCH`、`G-DESKTOP`、`G-TASKBAR`、`G-SHELL-TAKEOVER`、`G-GUARDIAN-RECOVERY`；`evidence/artifacts/3.1/`。
 **完成門檻：** Preview、Shell opt-in、desktop/taskbar/bridge、normal recovery、forced-crash recovery 全數通過，並結合 Wave 5 provisional lineage 發布兩個 final dispositions；缺環境保持 blocked。
 
-- [ ] 3.1.1 記錄 Windows 11 build/UBR、ExplorerPatcher profile、session、display 與 binary hashes。
-- [ ] 3.1.2 驗證 preview launch 與 zero-mutation。
-- [ ] 3.1.3 驗證明確 Shell opt-in 與 desktop/taskbar interaction。
-- [ ] 3.1.4 驗證 SuperExplorer default 與 folder launch。
-- [ ] 3.1.5 驗證正常退出後 Explorer/work-area recovery。
-- [ ] 3.1.6 執行 forced-crash 並驗證十秒 guardian recovery contract。
-- [ ] 3.1.7 產生 reference-profile implemented/owned/unavailable/not-claimed capability matrix，明列 Windows 10 not-claimed，禁止 placeholder 或未實作控制算 passed。
-- [ ] 3.1.8 結合 Wave 5 provisional takeover lineage 與 reference-profile takeover/normal-exit/installer evidence，發布 final `G-SHELL-TAKEOVER` disposition。
-- [ ] 3.1.9 結合 Wave 5 provisional recovery lineage 與 reference-profile forced-crash evidence，發布 final `G-GUARDIAN-RECOVERY` disposition。
+- [x] 3.1.1 記錄 Windows 11 build/UBR、ExplorerPatcher profile、session、display 與 binary hashes。
+- [x] 3.1.2 驗證 preview launch 與 zero-mutation。
+- [x] 3.1.3 驗證明確 Shell opt-in 與 desktop/taskbar interaction。
+- [x] 3.1.4 驗證 SuperExplorer default 與 folder launch。
+- [x] 3.1.5 驗證正常退出後 Explorer/work-area recovery。
+- [x] 3.1.6 執行 forced-crash 並驗證十秒 guardian recovery contract。
+- [x] 3.1.7 產生 reference-profile implemented/owned/unavailable/not-claimed capability matrix，明列 Windows 10 not-claimed，禁止 placeholder 或未實作控制算 passed。
+- [x] 3.1.8 結合 Wave 5 provisional takeover lineage 與 reference-profile takeover/normal-exit/installer evidence，發布 final `G-SHELL-TAKEOVER` disposition。
+- [x] 3.1.9 結合 Wave 5 provisional recovery lineage 與 reference-profile forced-crash evidence，發布 final `G-GUARDIAN-RECOVERY` disposition。
 
 ### 3.2 執行 Reference OS Lifecycle Regression
 

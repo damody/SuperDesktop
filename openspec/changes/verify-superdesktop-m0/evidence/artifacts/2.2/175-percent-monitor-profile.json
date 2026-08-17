@@ -61,7 +61,7 @@
                        "host_observation":  {
                                                 "taskbar_class":  "Shell_TrayWnd",
                                                 "host_class":  "Windows.UI.Core.CoreWindow",
-                                                "pid":  60624,
+                                                "pid":  14840,
                                                 "path":  "C:\\Windows\\SystemApps\\MicrosoftWindows.Client.CBS_cw5n1h2txyewy\\SearchHost.exe"
                                             },
                        "invocation_contract":  "Win32 SendInput keyboard/Win key",
@@ -89,12 +89,12 @@
     "explorer_mutations":  false,
     "shell_takeover":  false,
     "resources_before":  {
-                             "process_handles":  88,
+                             "process_handles":  86,
                              "user_objects":  1,
                              "gdi_objects":  0
                          },
     "resources_after":  {
-                            "process_handles":  88,
+                            "process_handles":  86,
                             "user_objects":  1,
                             "gdi_objects":  0
                         }

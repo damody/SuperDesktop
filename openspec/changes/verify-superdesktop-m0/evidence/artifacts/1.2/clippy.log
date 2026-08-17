@@ -1,6 +1,9 @@
-cargo :     Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.43s
+cargo :     Checking shell-provider-host v0.1.0 (D:\SuperDesktop\SuperDesktop\crates\shell-provider-host)
 At D:\SuperDesktop\SuperDesktop\scripts\capture-m0-local-evidence.ps1:25 char:156
 + ... @('clippy',{cargo clippy --workspace --all-targets --locked --offline ...
 +                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    + CategoryInfo          : NotSpecified: (    Finished `d...get(s) in 0.43s:String) [], RemoteException
+    + CategoryInfo          : NotSpecified: (    Checking sh...-provider-host):String) [], RemoteException
     + FullyQualifiedErrorId : NativeCommandError
+
+    Checking shell-installer v0.1.0 (D:\SuperDesktop\SuperDesktop\crates\shell-installer)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.89s

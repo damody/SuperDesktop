@@ -1,5 +1,8 @@
 //! Transactional, explicit-opt-in installer contracts for the per-user shell.
 
+#[cfg(not(windows))]
+compile_error!("shell-installer is supported only on Windows targets.");
+
 use std::fs::{self, OpenOptions};
 use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};

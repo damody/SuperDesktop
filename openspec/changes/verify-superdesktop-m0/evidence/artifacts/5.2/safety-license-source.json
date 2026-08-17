@@ -8,7 +8,7 @@
     "dependency_license_inventory":  "passed",
     "pexplorer_read_only_boundary":  "passed",
     "superexplorer_repository_unchanged":  "passed",
-    "architecture":  "Architecture check passed: nine approved crates, allowlisted graph, Windows guards, and UI type boundary.",
+    "architecture":  "Architecture check passed: 13 approved crates, allowlisted graph, declared platform-neutral exemptions, Windows guards, and UI type boundary.",
     "source_boundary":  "production crate src trees contain no SuperExplorer path, PExplorer, or ReactOS source references; bridge evidence example is the explicit external-product fixture",
     "license":  "cargo metadata licenses complete; archived inventory sha256 6E16660EFB7490DB12B11C7B3F72A7A4CBB4429EEE71F1B9C6BD779E31BFC08E"
 }

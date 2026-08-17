@@ -1,5 +1,8 @@
 //! Bounded dispatcher for providers hosted outside the GPUI shell process.
 
+#[cfg(not(windows))]
+compile_error!("shell-provider-host is supported only on Windows targets.");
+
 use std::collections::{BTreeMap, BTreeSet};
 
 use platform_win::common::start_search::{

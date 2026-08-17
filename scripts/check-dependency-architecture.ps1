@@ -127,7 +127,7 @@ foreach ($crateName in $expectedNames) {
         if ($crateName -eq 'platform-win' -and $source -match '(?m)^\s*unsafe\s*\{' -and $source -notmatch '(?m)^\s*//\s*SAFETY:') { Add-Diagnostic $diagnostics 'UNSAFE_WITHOUT_SAFETY_INVARIANT' $sourceFile.FullName }
     }
 
-    if (-not $hasGuard) {
+    if (-not $hasGuard -and $crateName -notin @($allowlist.windows_guard_exempt_crates)) {
         Add-Diagnostic $diagnostics 'MISSING_WINDOWS_GUARD' "$crateName lacks cfg(not(windows)) compile_error! refusal."
     }
 }
@@ -137,4 +137,4 @@ if ($diagnostics.Count -gt 0) {
     exit 1
 }
 
-Write-Output 'Architecture check passed: nine approved crates, allowlisted graph, Windows guards, and UI type boundary.'
+Write-Output 'Architecture check passed: 13 approved crates, allowlisted graph, declared platform-neutral exemptions, Windows guards, and UI type boundary.'

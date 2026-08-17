@@ -1,29 +1,29 @@
 {
-  "schema": "m0-external-blockers/v1",
-  "host_os": "Microsoft Windows 11 Pro 26200.9168",
-  "active_physical_monitors": 1,
-  "candidate_ui": {
-    "status": "passed",
-    "reason": "The corrected frozen fixture mask produced SSIM 0.988338942794046 with exact control-state assertions retained."
-  },
-  "reference_profile_lifecycle_installer": {
-    "status": "blocked",
-    "reason": "Exact profile admission passed; mutation-bearing lifecycle and reboot/rollback evidence was not executed."
-  },
-  "windows_10_compatibility": {
-    "status": "not-claimed",
-    "reason": "C-W11-REFERENCE-001 selects the exact Windows 11 ExplorerPatcher profile as the release platform."
-  },
-  "physical_mixed_dpi": {
-    "status": "blocked",
-    "reason": "Only one active physical display is attached; virtual topology cannot substitute."
-  },
-  "archive_lineage": {
-    "status": "blocked",
-    "reason": "User explicitly deferred all OpenSpec archives until implementation work is complete."
-  },
-  "independent_review": {
-    "status": "blocked",
-    "reason": "No independent reviewer execution has been supplied in this task."
-  }
+    "schema":  "m0-external-blockers/v1",
+    "host_os":  "Microsoft Windows 11 專業版 26200.9168",
+    "active_physical_monitors":  1,
+    "candidate_ui":  {
+                         "status":  "passed",
+                         "reason":  "The corrected frozen fixture mask produced SSIM 0.997169401470576 with exact control-state assertions retained."
+                     },
+    "reference_profile_lifecycle_installer":  {
+                                                  "status":  "passed",
+                                                  "reason":  "Validated exact Windows 11 ExplorerPatcher lifecycle evidence matches the current product binaries."
+                                              },
+    "windows_10_compatibility":  {
+                                     "status":  "not-claimed",
+                                     "reason":  "C-W11-REFERENCE-001 excludes Windows 10 from this release claim."
+                                 },
+    "physical_mixed_dpi":  {
+                               "status":  "blocked",
+                               "reason":  "Only one active physical display is attached; virtual topology cannot substitute."
+                           },
+    "archive_lineage":  {
+                            "status":  "blocked",
+                            "reason":  "User explicitly deferred all OpenSpec archives until implementation work is complete."
+                        },
+    "independent_review":  {
+                               "status":  "blocked",
+                               "reason":  "No independent reviewer execution has been supplied in this task."
+                           }
 }
