@@ -55,9 +55,10 @@ function Read-ShellObservation {
 function Read-BootIdentity {
     $lastBoot = (Get-CimInstance Win32_OperatingSystem).LastBootUpTime
     if ($null -eq $lastBoot) { throw 'Unable to resolve the current Windows boot identity.' }
+    $lastBootUtc = ([DateTimeOffset]$lastBoot).ToUniversalTime()
     return [ordered]@{
-        lastBootUpUtc = ([DateTimeOffset]$lastBoot).ToUniversalTime().ToString('o')
-        tickCount64 = [Environment]::TickCount64
+        lastBootUpUtc = $lastBootUtc.ToString('o')
+        uptimeSeconds = [math]::Max(0, [math]::Floor(([DateTimeOffset]::UtcNow - $lastBootUtc).TotalSeconds))
     }
 }
 

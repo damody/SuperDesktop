@@ -107,7 +107,7 @@ function New-HostSet {
         $set[$phase] = Copy-Object $baselineHost
         $set[$phase] | Add-Member -NotePropertyName capturedAtUtc -NotePropertyValue ([DateTimeOffset]::Parse('2026-08-18T00:00:00Z').AddMinutes($index).ToString('o'))
         $boot = if ($phase -in @('DryRun','Enable')) { '2026-08-17T00:00:00Z' } else { '2026-08-18T00:00:00Z' }
-        $set[$phase] | Add-Member -NotePropertyName boot -NotePropertyValue ([pscustomobject]@{ lastBootUpUtc=$boot;tickCount64=1000 + $index })
+        $set[$phase] | Add-Member -NotePropertyName boot -NotePropertyValue ([pscustomobject]@{ lastBootUpUtc=$boot;uptimeSeconds=1000 + $index })
     }
     return $set
 }

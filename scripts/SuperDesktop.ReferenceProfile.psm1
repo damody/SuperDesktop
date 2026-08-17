@@ -213,7 +213,7 @@ function Assert-SuperDesktopInstallerHostSet {
         } catch {
             throw "REFERENCE_INSTALLER_BOOT_IDENTITY_INVALID: $phase"
         }
-        if ([long]$Hosts[$phase].boot.tickCount64 -lt 0) {
+        if ($null -eq $Hosts[$phase].boot.uptimeSeconds -or [long]$Hosts[$phase].boot.uptimeSeconds -lt 0) {
             throw "REFERENCE_INSTALLER_BOOT_IDENTITY_INVALID: $phase"
         }
     }
