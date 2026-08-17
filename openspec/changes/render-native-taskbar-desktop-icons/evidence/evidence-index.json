@@ -1,0 +1,74 @@
+{
+  "schema": "native-shell-icon-evidence/v1",
+  "recorded_at": "2026-08-18T01:41:27+08:00",
+  "gate": "G-NATIVE-ICON-PARITY",
+  "result": "passed",
+  "records": [
+    {
+      "record_id": "automated",
+      "procedure": "Run formatting, locked/offline all-target workspace check and tests, clippy with -D warnings, native extraction, BGRA byte, BC7 layout, cache, and rendering tests.",
+      "expected": "Every command exits zero; repeated extraction retains no caller-owned GDI objects; 48x48 BC7 payload is 2304 bytes.",
+      "actual": "All workspace targets passed; platform-win 55, taskbar-ui 29, desktop-ui 24, and superdesktop-app 10 tests passed; clippy reported no warnings.",
+      "exit_status": 0
+    },
+    {
+      "record_id": "headful",
+      "procedure": "Capture production taskbar and desktop surfaces at host DPI and inspect known icon identities and colors.",
+      "expected": "No placeholder-only items or red/blue inversion; fixed SuperExplorer and Shell shortcut icons are visible; BC7 uploads occur.",
+      "actual": "Taskbar has 14 real tasks across 2 rows; desktop Shell and fixed SuperExplorer icons are visible; Discord and Steam are blue, Firefox is orange/blue; both traces contain icon:bc7-gpu-uploaded.",
+      "exit_status": 0,
+      "artifacts": [
+        { "path": "taskbar-production.png", "sha256": "867055afb52efd4efbbd76c67004e4071346ae7d4d9ec4c8884dd1d0a18da9d2" },
+        { "path": "desktop-production.png", "sha256": "9fcbaafc43b4ea5cf80e09f3b25f3d35601afa2591a254be5a2d32f616ca13d5" },
+        { "path": "taskbar-production.log", "subcheck": "bc7-gpu-uploaded" },
+        { "path": "desktop-production.log", "subcheck": "bc7-gpu-uploaded-and-fixed-icon-resolved" }
+      ]
+    },
+    {
+      "record_id": "packaging",
+      "procedure": "Build standalone SuperDesktop and combined SuperExplorer NSIS installers without launching them.",
+      "expected": "Both installers validate as PE files and contain the verified SuperDesktop binaries.",
+      "actual": "Both NSIS builds exited zero and formal combined submodule identity admission matched ae1a04698315caadb2e0933e66a5d79a43f7430f.",
+      "exit_status": 0,
+      "artifacts": [
+        { "path": "D:/SuperExplorer/dist/SuperDesktop-Test-Setup-1.2026.8.18-x64.exe", "bytes": 5323926, "sha256": "6d67a26ae72a2551a1292d209f8b060cc7462165c8e87b60b807b004b045943a" },
+        { "path": "D:/SuperExplorer/dist/SuperExplorer-Setup-1.2026.8.18-x64.exe", "bytes": 12978365, "sha256": "2c9d2b7b9390202ede846ed189f0d161c1687b65c2b2838f6c18c174cf62e22a" }
+      ]
+    }
+  ],
+  "decisions": {
+    "cpu_contract": "RGBA8",
+    "gpui_fallback_contract": "BGRA8",
+    "compressed_block_layout": "BC7 4x4 texels, 16 bytes",
+    "gpu_format": "DXGI_FORMAT_BC7_UNORM",
+    "srgb_disposition": "DXGI_FORMAT_BC7_UNORM_SRGB is not selected because the current polychrome shader and UNORM render target would apply unmatched sample-time linearization and visibly darken icons."
+  },
+  "task_links": [
+    { "task_id": "1.1.1", "record_id": "automated", "subcheck": "shell-owned-hicon" },
+    { "task_id": "1.1.2", "record_id": "automated", "subcheck": "window-class-executable-fallback" },
+    { "task_id": "1.1.3", "record_id": "automated", "subcheck": "dib-rgba-alpha" },
+    { "task_id": "1.1.4", "record_id": "automated", "subcheck": "gdi-stable-tail" },
+    { "task_id": "2.1.1", "record_id": "automated", "subcheck": "task-model-icon" },
+    { "task_id": "2.1.2", "record_id": "automated", "subcheck": "task-resolution-cache" },
+    { "task_id": "2.1.3", "record_id": "automated", "subcheck": "task-cache-pruning" },
+    { "task_id": "2.2.1", "record_id": "automated", "subcheck": "task-gpui-conversion" },
+    { "task_id": "2.2.2", "record_id": "headful", "subcheck": "taskbar-native-icons" },
+    { "task_id": "2.2.3", "record_id": "automated", "subcheck": "taskbar-contract-regression" },
+    { "task_id": "3.1.1", "record_id": "automated", "subcheck": "desktop-model-icon" },
+    { "task_id": "3.1.2", "record_id": "headful", "subcheck": "desktop-shell-and-fixed-icons" },
+    { "task_id": "3.1.3", "record_id": "automated", "subcheck": "desktop-cache-pruning" },
+    { "task_id": "3.2.1", "record_id": "automated", "subcheck": "desktop-gpui-conversion" },
+    { "task_id": "3.2.2", "record_id": "headful", "subcheck": "desktop-placeholder-replacement" },
+    { "task_id": "3.2.3", "record_id": "automated", "subcheck": "desktop-interaction-regression" },
+    { "task_id": "3.3.1", "record_id": "automated", "subcheck": "rgba-bgra-byte-order" },
+    { "task_id": "3.3.2", "record_id": "automated", "subcheck": "gpui-bc7-revision" },
+    { "task_id": "3.3.3", "record_id": "automated", "subcheck": "bc7-encode-and-render-cache" },
+    { "task_id": "3.3.4", "record_id": "headful", "subcheck": "bc7-production-upload" },
+    { "task_id": "4.1.1", "record_id": "automated", "subcheck": "quality-commands" },
+    { "task_id": "4.1.2", "record_id": "automated", "subcheck": "resource-lifetime" },
+    { "task_id": "4.1.3", "record_id": "headful", "subcheck": "host-dpi-screenshots" },
+    { "task_id": "4.1.4", "record_id": "automated", "subcheck": "evidence-and-strict-validation" },
+    { "task_id": "4.2.1", "record_id": "packaging", "subcheck": "standalone-installer" },
+    { "task_id": "4.2.2", "record_id": "packaging", "subcheck": "combined-installer" }
+  ]
+}
