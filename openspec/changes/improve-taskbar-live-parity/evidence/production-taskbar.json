@@ -1,0 +1,13 @@
+{
+    "schema":  "taskbar-live-production/v1",
+    "result":  "passed",
+    "app_sha256":  "6E5216FA753B75870003B32A54F4AD8F520DEB0DBCFC823A449AE5729EA5C6BE",
+    "task_count":  8,
+    "distinct_task_rows":  2,
+    "single_character_labels":  0,
+    "fixed_superexplorer":  true,
+    "screenshot":  "production-taskbar.png",
+    "screenshot_sha256":  "A8557D0F668BFD42034F2E41DD8CBF541276193C1C35A14EA586C52051D42352",
+    "raw_titles_persisted":  false,
+    "frame_visible":  true
+}

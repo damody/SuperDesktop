@@ -12,7 +12,8 @@
     {"path": "crates/taskbar-ui/src/view.rs", "sha256": "2329dbdfee157b68ebf3b55a52565da2394e55e8e7887bda2a6529d2fe23294a"},
     {"path": "crates/platform-win/src/common/taskbar_status.rs", "sha256": "c0c66b8244bb7a69b4b03bd16c3b6d2694cc4d9bbe0411307b3f0bea91da11e0"},
     {"path": "crates/superdesktop-app/src/surface_runtime.rs", "sha256": "1f326878aab7d005e40b89bf5305b5b74eb90987cc76fee642bfa0a98d8a88cc"},
-    {"path": "scripts/verify-m0-task-state-matrix.ps1", "sha256": "e711da1a6355521db5aad9a54e69c64236f15823272b80cd429015ef316de2d4"}
+    {"path": "scripts/verify-m0-task-state-matrix.ps1", "sha256": "e711da1a6355521db5aad9a54e69c64236f15823272b80cd429015ef316de2d4"},
+    {"path": "scripts/capture-taskbar-live-production.ps1", "sha256": "1e71c7454c7aaac4e238a956ff9488177b60df9836b17292ec6f49172761ef78"}
   ],
   "tests": {
     "format": "passed",
@@ -33,6 +34,18 @@
     "report_sha256": "0d8d45176052b0ebd814edb811c7677101afec99a873195f1e68124b6ab53b16",
     "screenshot": "evidence/taskbar-live-parity.png",
     "screenshot_sha256": "64c94ddb95abe3dcf707813423aec7886c1f3d24b85018cd54d48c77e09c64cf"
+  },
+  "production_headful": {
+    "result": "passed",
+    "task_count": 8,
+    "distinct_task_rows": 2,
+    "single_character_labels": 0,
+    "fixed_superexplorer": true,
+    "raw_titles_persisted": false,
+    "report": "evidence/production-taskbar.json",
+    "report_sha256": "eacbab610bdd65d6937acf2090732435f1216249189e108c9b517054b1d13751",
+    "screenshot": "evidence/production-taskbar.png",
+    "screenshot_sha256": "a8557d0f668bfd42034f2e41dd8cbf541276193c1c35a14ea586c52051d42352"
   },
   "gate": "G-TASKBAR-LIVE-PARITY",
   "disposition": "passed"
