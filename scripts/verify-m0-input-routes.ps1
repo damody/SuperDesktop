@@ -26,6 +26,10 @@ public static class M0PointerInput {
     [DllImport("user32.dll")]
     public static extern bool SetCursorPos(int x, int y);
     [DllImport("user32.dll")]
+    public static extern bool SetForegroundWindow(IntPtr window);
+    [DllImport("user32.dll")]
+    public static extern bool ShowWindow(IntPtr window, int command);
+    [DllImport("user32.dll")]
     public static extern void mouse_event(uint flags, uint dx, uint dy, uint data, UIntPtr extra);
 }
 '@
@@ -82,6 +86,9 @@ function Invoke-InputRoute([string]$Surface, [string]$Route) {
     $newIds = @()
     try {
         $windowHandle = Wait-ForWindowHandle $process
+        [M0PointerInput]::ShowWindow($windowHandle, 5) | Out-Null
+        [M0PointerInput]::SetForegroundWindow($windowHandle) | Out-Null
+        Start-Sleep -Milliseconds 150
         $frameDeadline = [DateTime]::UtcNow.AddSeconds(5)
         do {
             Start-Sleep -Milliseconds 50
@@ -102,6 +109,8 @@ function Invoke-InputRoute([string]$Surface, [string]$Route) {
         $name = $control.Current.Name
         $controlType = $control.Current.ControlType.ProgrammaticName
         $bounds = $control.Current.BoundingRectangle
+        $control.SetFocus()
+        Start-Sleep -Milliseconds 100
 
         switch ($Route) {
             'pointer' {
@@ -110,6 +119,11 @@ function Invoke-InputRoute([string]$Surface, [string]$Route) {
                 [M0PointerInput]::SetCursorPos($x, $y) | Out-Null
                 [M0PointerInput]::mouse_event(2, 0, 0, 0, [UIntPtr]::Zero)
                 [M0PointerInput]::mouse_event(4, 0, 0, 0, [UIntPtr]::Zero)
+                if ($Surface -eq 'desktop') {
+                    Start-Sleep -Milliseconds 100
+                    [M0PointerInput]::mouse_event(2, 0, 0, 0, [UIntPtr]::Zero)
+                    [M0PointerInput]::mouse_event(4, 0, 0, 0, [UIntPtr]::Zero)
+                }
             }
             'keyboard' {
                 [System.Windows.Forms.SendKeys]::SendWait('{ENTER}')
@@ -136,7 +150,7 @@ function Invoke-InputRoute([string]$Surface, [string]$Route) {
         } while (($trace -notmatch 'superexplorer:launched' -or $newIds.Count -eq 0) -and [DateTime]::UtcNow -lt $launchDeadline)
 
         if ($trace -notmatch 'superexplorer:launched') {
-            throw "$Surface/$Route did not emit superexplorer:launched."
+            throw "$Surface/$Route did not emit superexplorer:launched. Trace: $trace"
         }
         if ($newIds.Count -eq 0) {
             throw "$Surface/$Route did not create a SuperExplorer process."

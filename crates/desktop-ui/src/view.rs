@@ -545,6 +545,9 @@ impl Render for DesktopView {
                         let key_id = stable_id.clone();
                         let context_id = stable_id.clone();
                         let key_action = fixed_action.clone();
+                        let a11y_id = stable_id.clone();
+                        let a11y_fixed_action = fixed_action.clone();
+                        let a11y_item_action = item_action.clone();
                         let renaming = rename_target.as_deref() == Some(stable_id.as_str());
                         let display_name = if renaming {
                             rename_buffer.clone()
@@ -619,6 +622,15 @@ impl Render for DesktopView {
                                     cx.notify();
                                 }),
                             )
+                            .on_a11y_action(gpui::AccessibleAction::Click, move |_, _, _| {
+                                if a11y_id.contains(":superexplorer") {
+                                    if let Some(action) = &a11y_fixed_action {
+                                        action();
+                                    }
+                                } else if let Some(action) = &a11y_item_action {
+                                    action(&a11y_id);
+                                }
+                            })
                             .on_click(cx.listener(move |this, event: &gpui::ClickEvent, _, cx| {
                                 for candidate in &mut this.items {
                                     candidate.selected = candidate.stable_id == click_id;
