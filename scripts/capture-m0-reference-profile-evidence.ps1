@@ -133,7 +133,15 @@ $guardianRecordRoot = Join-Path $env:LOCALAPPDATA 'SuperDesktop\guardian'
 New-Item -ItemType Directory -Force -Path $guardianRecordRoot | Out-Null
 for ($run = 1; $run -le 10; $run++) {
     $before = Explorer-Count
-    $shellProcess = Start-Process -FilePath $app -ArgumentList '--verification-capture-ms','60000','--shell' -PassThru
+    $shellTrace = Join-Path $env:TEMP "superdesktop-reference-shell-$PID-$run.log"
+    Remove-Item -LiteralPath $shellTrace -ErrorAction SilentlyContinue
+    $priorActionTrace = $env:SUPERDESKTOP_ACTION_TRACE
+    try {
+        $env:SUPERDESKTOP_ACTION_TRACE = $shellTrace
+        $shellProcess = Start-Process -FilePath $app -ArgumentList '--verification-capture-ms','60000','--shell' -PassThru
+    } finally {
+        if ($null -eq $priorActionTrace) { Remove-Item Env:SUPERDESKTOP_ACTION_TRACE -ErrorAction SilentlyContinue } else { $env:SUPERDESKTOP_ACTION_TRACE = $priorActionTrace }
+    }
     $terminal = $null
     try {
         $armDeadline = [DateTime]::UtcNow.AddSeconds(10)
@@ -155,7 +163,8 @@ for ($run = 1; $run -le 10; $run++) {
             if ($shellProcess.HasExited) { throw "production Shell exited before work-area ownership on run $run" }
             $activeProfile = Monitor-Profile $monitorProbe
             $activeMonitorsJson = $activeProfile.real_profile.monitors | ConvertTo-Json -Depth 20 -Compress
-            $workAreaWasOwned = $baselineMonitorsJson -ne $activeMonitorsJson
+            $ownershipTrace = if (Test-Path -LiteralPath $shellTrace) { Get-Content -Raw -Encoding UTF8 $shellTrace } else { '' }
+            $workAreaWasOwned = $ownershipTrace -match 'taskbar:appbar-owned'
             if (-not $workAreaWasOwned) { Start-Sleep -Milliseconds 25 }
         }
         if (-not $workAreaWasOwned) { throw "production Shell did not establish work-area ownership on run $run" }
@@ -207,6 +216,7 @@ for ($run = 1; $run -le 10; $run++) {
         try { $shellProcess.Refresh() } catch { }
         if (-not $shellProcess.HasExited) { Stop-Process -Id $shellProcess.Id -Force -ErrorAction SilentlyContinue }
         if ($null -ne $terminal) { Remove-Item -LiteralPath $terminal, ($terminal + '.accepted') -ErrorAction SilentlyContinue }
+        Remove-Item -LiteralPath $shellTrace -ErrorAction SilentlyContinue
     }
 }
 

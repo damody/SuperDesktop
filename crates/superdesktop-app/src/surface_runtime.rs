@@ -1629,6 +1629,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                 )
                                 .map_err(|_| "taskbar-work-area-reserve")?;
                             taskbar_leases.borrow_mut().push(lease);
+                            trace_action("taskbar:appbar-owned");
                         }
                         Ok(())
                     }) };
