@@ -83,14 +83,29 @@ if (-not [string]::IsNullOrWhiteSpace($ExternalEvidenceDirectory)) {
     if ($unexpectedExternalFiles.Count -ne 0) {
         throw "Unexpected external evidence: $($unexpectedExternalFiles[0].Name)"
     }
-    $candidatePath = Join-Path $evidenceRoot 'release-candidate.json'
-    $candidate = Get-Content -Raw -Encoding utf8 -LiteralPath $candidatePath | ConvertFrom-Json
-    $revision = [string]$candidate.reviewed_revision
-    if ($candidate.schema_version -ne 1 -or $revision -notmatch '^[0-9a-f]{40}$') { throw 'Invalid release-candidate manifest.' }
-    & git -C $root cat-file -e "$revision^{commit}"
-    if ($LASTEXITCODE -ne 0) { throw 'Release-candidate revision is unavailable.' }
-    & git -C $root merge-base --is-ancestor $revision HEAD
-    if ($LASTEXITCODE -ne 0) { throw 'Current revision does not descend from the frozen release candidate.' }
+    $presentExternalKinds = @($expectedExternal.Keys | Where-Object {
+        Test-Path -LiteralPath (Join-Path $externalRoot $expectedExternal[$_]) -PathType Leaf
+    })
+    $revision = $null
+    if ($presentExternalKinds.Count -ne 0) {
+        $candidatePath = Join-Path $evidenceRoot 'release-candidate.json'
+        $candidate = Get-Content -Raw -Encoding utf8 -LiteralPath $candidatePath | ConvertFrom-Json
+        $revision = [string]$candidate.reviewed_revision
+        if ($candidate.schema_version -ne 1 -or $revision -notmatch '^[0-9a-f]{40}$') { throw 'Invalid release-candidate manifest.' }
+        & git -C $root cat-file -e "$revision^{commit}"
+        if ($LASTEXITCODE -ne 0) { throw 'Release-candidate revision is unavailable.' }
+        & git -C $root merge-base --is-ancestor $revision HEAD
+        if ($LASTEXITCODE -ne 0) { throw 'Current revision does not descend from the frozen release candidate.' }
+        $trackedDrift = @(& git -C $root diff --name-only $revision HEAD --)
+        if ($LASTEXITCODE -ne 0) { throw 'Unable to inspect post-candidate drift.' }
+        $invalidDrift = @($trackedDrift | Where-Object {
+            $_ -notmatch '^openspec/changes/[^/]+/evidence/' -and
+            $_ -notmatch '^openspec/changes/[^/]+/tasks\.md$'
+        })
+        if ($invalidDrift.Count -ne 0) {
+            throw "Production drift after frozen release candidate: $($invalidDrift[0])"
+        }
+    }
     foreach ($kind in $expectedExternal.Keys) {
         $path = Join-Path $externalRoot $expectedExternal[$kind]
         if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
