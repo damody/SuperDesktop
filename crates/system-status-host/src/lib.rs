@@ -188,5 +188,21 @@ mod tests {
                 ..
             })
         ));
+
+        let expired = runtime.apply(SystemStatusHostRequest::Command {
+            request: SystemStatusCommandRequest {
+                correlation_id: "expired".into(),
+                expected_host_generation: snapshot.host_generation,
+                deadline_unix_ms: unix_ms().max(1),
+                command: SystemStatusCommand::SetMute { muted: false },
+            },
+        });
+        assert!(matches!(
+            expired,
+            SystemStatusHostResponse::Terminal(SystemStatusCommandTerminal {
+                terminal: SystemStatusTerminalKind::Timeout,
+                ..
+            })
+        ));
     }
 }

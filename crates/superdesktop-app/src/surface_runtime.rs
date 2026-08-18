@@ -31,16 +31,23 @@ use shell_provider_protocol::{
     CURRENT_PROTOCOL, CommandDescriptor, CommandId, CommandRisk, Envelope, IconData, IconKey,
     JumpListRequest, MenuContext, MenuEnumeration, MenuInvocation, NotificationEvent,
     NotificationEventKind, NotificationHostResponse, NotificationMutation, ProviderRequest,
-    ResponseBody, SearchBatch, SearchQuery, TerminalKind,
+    ResponseBody, SearchBatch, SearchQuery, StatusAvailability, SystemStatusCommand,
+    SystemStatusCommandRequest, SystemStatusHostRequest, SystemStatusHostResponse,
+    SystemStatusSnapshot, TerminalKind,
 };
 use taskbar_ui::{
     AccessibleTask, ClockLocale, CoreStatus, FlyoutAction, JumpListModel, JumpListView,
     NotificationAreaModel, PreviewCard, ProviderState, StartActions, StartPowerAction,
-    StartSnapshot, StartView, StatusRegion, TaskAction, TaskFlyoutView, TaskViewEffect,
-    TaskViewModel, TaskViewSurface, TaskbarCallbacks, TaskbarLayout, TaskbarView, TestClock,
+    StartSnapshot, StartView, StatusRegion, SystemStatusAction, TaskAction, TaskFlyoutView,
+    TaskViewEffect, TaskViewModel, TaskViewSurface, TaskbarCallbacks, TaskbarLayout, TaskbarView,
+    TestClock,
 };
 
-use crate::{notification_client::NotificationClient, provider_client::ProviderClient};
+use crate::{
+    notification_client::NotificationClient,
+    provider_client::ProviderClient,
+    status_client::{StatusReconciler, SystemStatusClient},
+};
 
 static NEXT_PROVIDER_REQUEST: AtomicU64 = AtomicU64::new(1);
 const ICON_CACHE_LIMIT: usize = 2_048;
@@ -1378,8 +1385,55 @@ fn observed_task_view_model() -> TaskViewModel {
     model
 }
 
-fn status() -> StatusRegion {
+fn unavailable_status<T>() -> ProviderState<T> {
+    ProviderState::Unavailable("system-status-host-not-ready")
+}
+
+fn status(snapshot: Option<&SystemStatusSnapshot>) -> StatusRegion {
     let local = platform_win::common::taskbar_status::local_date_time();
+    let network = snapshot.map_or_else(unavailable_status, |snapshot| match &snapshot.network {
+        StatusAvailability::Available(network) => ProviderState::Available(if network.internet {
+            format!("{} (Internet)", network.display_name)
+        } else {
+            network.display_name.clone()
+        }),
+        StatusAvailability::NotPresent => ProviderState::Unavailable("network-not-present"),
+        StatusAvailability::Unavailable { .. } => unavailable_status(),
+    });
+    let (volume, muted) = snapshot.map_or_else(
+        || (unavailable_status(), unavailable_status()),
+        |snapshot| match &snapshot.audio {
+            StatusAvailability::Available(audio) => (
+                ProviderState::Available(audio.volume_percent),
+                ProviderState::Available(audio.muted),
+            ),
+            StatusAvailability::NotPresent => (
+                ProviderState::Unavailable("audio-not-present"),
+                ProviderState::Unavailable("audio-not-present"),
+            ),
+            StatusAvailability::Unavailable { .. } => (unavailable_status(), unavailable_status()),
+        },
+    );
+    let input_language =
+        snapshot.map_or_else(unavailable_status, |snapshot| match &snapshot.input {
+            StatusAvailability::Available(input) => input
+                .profiles
+                .iter()
+                .find(|profile| profile.id == input.active_profile_id)
+                .map_or_else(unavailable_status, |profile| {
+                    ProviderState::Available(profile.language_tag.clone())
+                }),
+            StatusAvailability::NotPresent => ProviderState::Unavailable("input-not-present"),
+            StatusAvailability::Unavailable { .. } => unavailable_status(),
+        });
+    let battery = snapshot.map_or_else(unavailable_status, |snapshot| match &snapshot.power {
+        StatusAvailability::Available(power) => power.battery_percent.map_or(
+            ProviderState::Unavailable("battery-not-present"),
+            ProviderState::Available,
+        ),
+        StatusAvailability::NotPresent => ProviderState::Unavailable("battery-not-present"),
+        StatusAvailability::Unavailable { .. } => unavailable_status(),
+    });
     StatusRegion::new(
         TestClock {
             year: local.year,
@@ -1390,11 +1444,11 @@ fn status() -> StatusRegion {
         },
         ClockLocale::ZhTw,
         CoreStatus {
-            network: ProviderState::Unavailable("system-status-host-not-ready"),
-            volume: ProviderState::Unavailable("system-status-host-not-ready"),
-            muted: ProviderState::Unavailable("system-status-host-not-ready"),
-            input_language: ProviderState::Unavailable("system-status-host-not-ready"),
-            battery: ProviderState::Unavailable("system-status-host-not-ready"),
+            network,
+            volume,
+            muted,
+            input_language,
+            battery,
             notifications: ProviderState::Unavailable("notification-provider-not-ready"),
         },
     )
@@ -1473,6 +1527,14 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
     let desktop_transfers = ProductionTransferRuntime::default();
     let provider_client = Rc::new(RefCell::new(ProviderClient::adjacent()?));
     let notification_client = Rc::new(RefCell::new(NotificationClient::adjacent()?));
+    let status_client = Rc::new(RefCell::new(SystemStatusClient::adjacent()?));
+    let status_reconciler = Rc::new(RefCell::new(StatusReconciler::default()));
+    if let Ok(response) = status_client.borrow_mut().request(
+        &SystemStatusHostRequest::Snapshot,
+        Duration::from_millis(750),
+    ) {
+        status_reconciler.borrow_mut().apply(response);
+    }
     let settings_store = Rc::new(RefCell::new(settings_store));
     let settings_target = Rc::new(settings_target);
     let persisted_settings = Rc::new(RefCell::new(persisted_settings));
@@ -1762,6 +1824,9 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                 let task_view_window_for_taskbar = Rc::clone(&task_view_window);
                 let task_view_monitor = taskbar_monitor.clone();
                 let notification_client_for_taskbar = Rc::clone(&notification_client);
+                let status_for_taskbar = Rc::clone(&status_reconciler);
+                let status_client_for_taskbar = Rc::clone(&status_client);
+                let status_commands_for_taskbar = Rc::clone(&status_reconciler);
                 let production_taskbar_settings = persisted_settings.borrow().taskbar.clone();
                 let taskbar = cx.open_window(
                     options(
@@ -1855,7 +1920,9 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                         fixed_icon: superexplorer_executable().and_then(|path| {
                             platform_win::common::icon::shell_icon_for_path(&path, 32)
                         }),
-                        status: status(),
+                        status: status(status_for_taskbar.borrow().snapshot()),
+                        system_snapshot: status_for_taskbar.borrow().snapshot().cloned(),
+                        system_flyout: None,
                         notification_area: NotificationAreaModel::default(),
                         overlays: taskbar_overlays,
                         show_labels: production_taskbar_settings.show_labels,
@@ -2192,6 +2259,63 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                     kind,
                                 )
                             }),
+                            system_status: Rc::new(move |action| {
+                                let Some(expected_host_generation) = status_commands_for_taskbar
+                                    .borrow()
+                                    .snapshot()
+                                    .map(|snapshot| snapshot.host_generation)
+                                else {
+                                    trace_action("status:command-provider-unavailable");
+                                    return;
+                                };
+                                let command = match action {
+                                    SystemStatusAction::ActivateInputProfile(profile_id) => {
+                                        SystemStatusCommand::ActivateInputProfile { profile_id }
+                                    }
+                                    SystemStatusAction::SetVolume(volume_percent) => {
+                                        SystemStatusCommand::SetVolume { volume_percent }
+                                    }
+                                    SystemStatusAction::SetMute(muted) => {
+                                        SystemStatusCommand::SetMute { muted }
+                                    }
+                                };
+                                let correlation_id = format!(
+                                    "system-status-{}",
+                                    NEXT_PROVIDER_REQUEST.fetch_add(1, Ordering::Relaxed)
+                                );
+                                let request = SystemStatusHostRequest::Command {
+                                    request: SystemStatusCommandRequest {
+                                        correlation_id,
+                                        expected_host_generation,
+                                        deadline_unix_ms: unix_time_ms().saturating_add(1_000),
+                                        command,
+                                    },
+                                };
+                                let response = status_client_for_taskbar
+                                    .borrow_mut()
+                                    .request(&request, Duration::from_millis(1_000));
+                                match response {
+                                    Ok(response @ SystemStatusHostResponse::Terminal(_)) => {
+                                        status_commands_for_taskbar.borrow_mut().apply(response);
+                                        if let Ok(snapshot @ SystemStatusHostResponse::Snapshot(_)) =
+                                            status_client_for_taskbar.borrow_mut().request(
+                                                &SystemStatusHostRequest::Snapshot,
+                                                Duration::from_millis(500),
+                                            )
+                                        {
+                                            status_commands_for_taskbar.borrow_mut().apply(snapshot);
+                                        }
+                                        trace_action("status:command-terminal");
+                                    }
+                                    Ok(_) => trace_action("status:command-invalid-response"),
+                                    Err(_) => {
+                                        status_commands_for_taskbar
+                                            .borrow_mut()
+                                            .provider_unavailable();
+                                        trace_action("status:command-provider-failed");
+                                    }
+                                }
+                            }),
                             rendered: Rc::new(trace_rendered_frame),
                         }),
                         keyboard_focus: focus_handle,
@@ -2267,6 +2391,8 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                 let refresh_foreground = cx.foreground_executor().clone();
                 let refresh_app = cx.to_async();
                 let refresh_notification_client = Rc::clone(&notification_client);
+                let refresh_status_client = Rc::clone(&status_client);
+                let refresh_status_reconciler = Rc::clone(&status_reconciler);
                 let refresh_settings = Rc::clone(&persisted_settings);
                 let refresh_task_icons = Rc::clone(&task_icon_cache);
                 refresh_foreground
@@ -2298,7 +2424,27 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                         _ => None,
                                     })
                             });
-                            let current_status = status();
+                            if notification_tick.is_multiple_of(10) {
+                                match refresh_status_client.borrow_mut().request(
+                                    &SystemStatusHostRequest::Snapshot,
+                                    Duration::from_millis(250),
+                                ) {
+                                    Ok(response @ SystemStatusHostResponse::Snapshot(_)) => {
+                                        refresh_status_reconciler.borrow_mut().apply(response);
+                                    }
+                                    Ok(_) => {}
+                                    Err(_) => {
+                                        let mut reconciler = refresh_status_reconciler.borrow_mut();
+                                        reconciler.provider_unavailable();
+                                        if !reconciler.restart_allowed() {
+                                            trace_action("status:restart-capacity-exhausted");
+                                        }
+                                    }
+                                }
+                            }
+                            let current_status = status(refresh_status_reconciler.borrow().snapshot());
+                            let current_system_snapshot =
+                                refresh_status_reconciler.borrow().snapshot().cloned();
                             refresh_app.update(|app| {
                                 let mut alive = false;
                                 for handle in &refresh_handles {
@@ -2308,6 +2454,11 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                             if view.status != current_status {
                                                 view.status = current_status.clone();
                                                 trace_action("clock:updated");
+                                                cx.notify();
+                                            }
+                                            if view.system_snapshot != current_system_snapshot {
+                                                view.system_snapshot = current_system_snapshot.clone();
+                                                trace_action("status:snapshot-updated");
                                                 cx.notify();
                                             }
                                             if view.tasks != tasks {
@@ -2439,7 +2590,7 @@ mod live_parity_tests {
 
     #[test]
     fn unavailable_status_providers_remain_independent() {
-        let region = super::status();
+        let region = super::status(None);
         assert!(matches!(
             region.core.network,
             taskbar_ui::ProviderState::Unavailable(_)
@@ -2469,10 +2620,13 @@ mod live_parity_tests {
     #[test]
     fn product_start_source_is_exclusively_owned_in_every_mode() {
         let source = include_str!("surface_runtime.rs");
+        let composition = include_str!("lib.rs");
         let production = source.split("#[cfg(test)]").next().unwrap_or(source);
         assert!(product_start_composition_is_owned(source));
         assert_eq!(production.matches("StartView::new").count(), 1);
         assert!(!production.contains("if !shell"));
+        assert!(!composition.contains("invoke_start_host_controlled"));
+        assert!(!composition.contains("start-host-unavailable"));
     }
 
     #[test]

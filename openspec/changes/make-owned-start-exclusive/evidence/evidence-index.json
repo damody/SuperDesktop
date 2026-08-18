@@ -2,7 +2,8 @@
   "schema": "owned-start-exclusive-evidence/v1",
   "recorded_at": "2026-08-18T04:00:00+08:00",
   "gate": "G-OWNED-START",
-  "result": "passed",
+  "result": "stale",
+  "stale_reason": "Product audit found a remaining system Start-host admission probe in superdesktop-app/src/lib.rs; final binary, headful and packaging evidence must be recaptured after its removal.",
   "records": [
     {
       "record_id": "automated",

@@ -32,7 +32,10 @@ pub use start::{
     StartAccessibilityNode, StartActions, StartAvailability, StartControl, StartEffect,
     StartFailure, StartModel, StartPage, StartPowerAction, StartSnapshot, StartSource, StartView,
 };
-pub use status::{ClockLocale, CoreStatus, ProviderState, StatusRegion, TestClock};
+pub use status::{
+    ClockLocale, CoreStatus, ProviderState, StatusRegion, SystemFlyoutKind, SystemStatusAction,
+    TestClock,
+};
 pub use surface::{
     AppBarEffect, AppBarMode, AppBarRegistry, MonitorBar, MonitorGeometry, SurfaceChange,
 };

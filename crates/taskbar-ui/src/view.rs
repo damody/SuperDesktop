@@ -14,9 +14,11 @@ use gpui::{
 
 use crate::{
     AccessibleTask, NotificationAreaModel, NotificationPlacement, ProgressState, StatusRegion,
-    TaskOverlay, TaskbarLayout,
+    SystemFlyoutKind, SystemStatusAction, TaskOverlay, TaskbarLayout,
 };
-use shell_provider_protocol::{IconData, IconKey, NotificationEventKind};
+use shell_provider_protocol::{
+    IconData, IconKey, NotificationEventKind, StatusAvailability, SystemStatusSnapshot,
+};
 
 thread_local! {
     static ICON_RENDER_CACHE: RefCell<VecDeque<(u64, IconData, Arc<RenderImage>)>> = const { RefCell::new(VecDeque::new()) };
@@ -108,6 +110,13 @@ fn task_display_label(
     }
 }
 
+fn toggled_system_flyout(
+    current: Option<SystemFlyoutKind>,
+    requested: SystemFlyoutKind,
+) -> Option<SystemFlyoutKind> {
+    (current != Some(requested)).then_some(requested)
+}
+
 pub struct TaskbarView {
     pub accessible_root_name: String,
     pub layout: TaskbarLayout,
@@ -115,6 +124,8 @@ pub struct TaskbarView {
     pub fixed_name: String,
     pub fixed_icon: Option<IconData>,
     pub status: StatusRegion,
+    pub system_snapshot: Option<SystemStatusSnapshot>,
+    pub system_flyout: Option<SystemFlyoutKind>,
     pub notification_area: NotificationAreaModel,
     pub overlays: BTreeMap<String, TaskOverlay>,
     pub show_labels: bool,
@@ -124,6 +135,7 @@ pub struct TaskbarView {
 
 pub type TaskCallback = Rc<dyn Fn(&str, &mut App)>;
 pub type NotificationCallback = Rc<dyn Fn(&IconKey, NotificationEventKind)>;
+pub type SystemStatusCallback = Rc<dyn Fn(SystemStatusAction)>;
 
 struct NotificationTooltip {
     text: String,
@@ -149,6 +161,7 @@ pub struct TaskbarCallbacks {
     pub task: TaskCallback,
     pub task_context: TaskCallback,
     pub notification: NotificationCallback,
+    pub system_status: SystemStatusCallback,
     pub rendered: Rc<dyn Fn()>,
 }
 
@@ -172,6 +185,15 @@ impl Render for TaskbarView {
             .callbacks
             .as_ref()
             .map(|value| Rc::clone(&value.notification));
+        let system_status_callback = self
+            .callbacks
+            .as_ref()
+            .map(|value| Rc::clone(&value.system_status));
+        let volume_callback = system_status_callback.clone();
+        let mute_callback = system_status_callback.clone();
+        let input_callback = system_status_callback.clone();
+        let system_snapshot = self.system_snapshot.clone();
+        let system_flyout = self.system_flyout;
         let start_key = start.clone();
         let task_view_key = task_view.clone();
         let fixed_key = fixed.clone();
@@ -209,7 +231,11 @@ impl Render for TaskbarView {
             .aria_label(self.accessible_root_name.clone())
             .tab_index(0)
             .when_some(keyboard_focus, |element, focus| element.track_focus(&focus))
-            .on_key_down(move |event, _, cx| {
+            .on_key_down(_cx.listener(move |this, event: &gpui::KeyDownEvent, _, cx| {
+                if event.keystroke.key == "escape" && this.system_flyout.take().is_some() {
+                    cx.notify();
+                    return;
+                }
                 if event.keystroke.key == "tab" && event.keystroke.modifiers.platform {
                     if let Some(callback) = &task_view_key {
                         callback(cx);
@@ -221,7 +247,7 @@ impl Render for TaskbarView {
                 {
                     callback();
                 }
-            })
+            }))
             .size_full()
             .flex()
             .flex_row()
@@ -648,23 +674,233 @@ impl Render for TaskbarView {
             .child(
                 div()
                     .ml_auto()
-                    .w(px(300.))
+                    .id("system-status-region")
+                    .role(gpui::Role::Group)
+                    .aria_label("System status")
+                    .w(px(520.))
                     .h(bar_height)
                     .flex_none()
                     .px_2()
+                    .relative()
                     .flex()
-                    .flex_col()
                     .items_center()
-                    .justify_center()
-                    .child(self.status.time.clone())
-                    .child(self.status.date.clone()),
+                    .justify_end()
+                    .child(
+                        div()
+                            .id("network-power-control")
+                            .role(gpui::Role::Button)
+                            .aria_label(match &self.status.core.network {
+                                crate::ProviderState::Available(value) => {
+                                    format!("Network {value}")
+                                }
+                                crate::ProviderState::Unavailable(reason) => {
+                                    format!("Network unavailable {reason}")
+                                }
+                            })
+                            .tab_index(0)
+                            .px_2()
+                            .h(px(36.))
+                            .flex()
+                            .items_center()
+                            .cursor_pointer()
+                            .on_click(_cx.listener(|this, _, _, cx| {
+                                this.system_flyout = toggled_system_flyout(
+                                    this.system_flyout,
+                                    SystemFlyoutKind::NetworkPower,
+                                );
+                                cx.notify();
+                            }))
+                            .child(match &self.status.core.network {
+                                crate::ProviderState::Available(_) => "Network",
+                                crate::ProviderState::Unavailable(_) => "Network —",
+                            }),
+                    )
+                    .child(
+                        div()
+                            .id("volume-control")
+                            .role(gpui::Role::Button)
+                            .aria_label(match (&self.status.core.volume, &self.status.core.muted) {
+                                (crate::ProviderState::Available(volume), crate::ProviderState::Available(true)) => format!("Volume {volume} percent muted"),
+                                (crate::ProviderState::Available(volume), _) => format!("Volume {volume} percent"),
+                                _ => "Volume unavailable".into(),
+                            })
+                            .tab_index(0)
+                            .px_2()
+                            .h(px(36.))
+                            .flex()
+                            .items_center()
+                            .cursor_pointer()
+                            .on_click(_cx.listener(|this, _, _, cx| {
+                                this.system_flyout = toggled_system_flyout(
+                                    this.system_flyout,
+                                    SystemFlyoutKind::Volume,
+                                );
+                                cx.notify();
+                            }))
+                            .child(match (&self.status.core.volume, &self.status.core.muted) {
+                                (crate::ProviderState::Available(volume), crate::ProviderState::Available(true)) => format!("Muted {volume}%"),
+                                (crate::ProviderState::Available(volume), _) => format!("Volume {volume}%"),
+                                _ => "Volume —".into(),
+                            }),
+                    )
+                    .child(
+                        div()
+                            .id("input-language-control")
+                            .role(gpui::Role::Button)
+                            .aria_label(match &self.status.core.input_language {
+                                crate::ProviderState::Available(value) => {
+                                    format!("Input language {value}")
+                                }
+                                crate::ProviderState::Unavailable(reason) => {
+                                    format!("Input language unavailable {reason}")
+                                }
+                            })
+                            .tab_index(0)
+                            .px_2()
+                            .h(px(36.))
+                            .flex()
+                            .items_center()
+                            .cursor_pointer()
+                            .on_click(_cx.listener(|this, _, _, cx| {
+                                this.system_flyout = toggled_system_flyout(
+                                    this.system_flyout,
+                                    SystemFlyoutKind::Input,
+                                );
+                                cx.notify();
+                            }))
+                            .child(match &self.status.core.input_language {
+                                crate::ProviderState::Available(value) => value.clone(),
+                                crate::ProviderState::Unavailable(_) => "Input —".into(),
+                            }),
+                    )
+                    .child(
+                        div()
+                            .id("clock-calendar-control")
+                            .role(gpui::Role::Button)
+                            .aria_label(format!("{} {}", self.status.time, self.status.date))
+                            .tab_index(0)
+                            .w(px(120.))
+                            .h(bar_height)
+                            .flex()
+                            .flex_col()
+                            .items_center()
+                            .justify_center()
+                            .cursor_pointer()
+                            .on_click(_cx.listener(|this, _, _, cx| {
+                                this.system_flyout = toggled_system_flyout(
+                                    this.system_flyout,
+                                    SystemFlyoutKind::Calendar,
+                                );
+                                cx.notify();
+                            }))
+                            .child(self.status.time.clone())
+                            .child(self.status.date.clone()),
+                    )
+                    .when_some(system_flyout, |region, flyout| {
+                        region.child(
+                            div()
+                                .id("system-status-flyout")
+                                .role(gpui::Role::Dialog)
+                                .aria_label(match flyout {
+                                    SystemFlyoutKind::Input => "Input languages",
+                                    SystemFlyoutKind::Volume => "Volume",
+                                    SystemFlyoutKind::NetworkPower => "Network and power",
+                                    SystemFlyoutKind::Calendar => "Calendar",
+                                })
+                                .absolute()
+                                .right_0()
+                                .bottom(bar_height)
+                                .w(px(360.))
+                                .p_3()
+                                .rounded_md()
+                                .bg(rgb(0xf3f6fb))
+                                .shadow_lg()
+                                .flex()
+                                .flex_col()
+                                .gap_2()
+                                .children(match flyout {
+                                    SystemFlyoutKind::Input => system_snapshot
+                                        .as_ref()
+                                        .and_then(|snapshot| match &snapshot.input {
+                                            StatusAvailability::Available(input) => Some(
+                                                input.profiles
+                                                    .iter()
+                                                    .map(|profile| {
+                                                        let callback = input_callback.clone();
+                                                        let id = profile.id.clone();
+                                                        div()
+                                                            .id(format!("input-profile-{}", profile.id))
+                                                            .role(gpui::Role::Button)
+                                                            .aria_label(format!(
+                                                                "{}{}",
+                                                                profile.display_name,
+                                                                if profile.id == input.active_profile_id {
+                                                                    " active"
+                                                                } else {
+                                                                    ""
+                                                                }
+                                                            ))
+                                                            .tab_index(0)
+                                                            .p_2()
+                                                            .rounded_md()
+                                                            .when(
+                                                                profile.id == input.active_profile_id,
+                                                                |element| element.bg(rgb(0xd6e8ff)),
+                                                            )
+                                                            .on_click(move |_, _, _| {
+                                                                if let Some(callback) = &callback {
+                                                                    callback(SystemStatusAction::ActivateInputProfile(id.clone()));
+                                                                }
+                                                            })
+                                                            .child(profile.display_name.clone())
+                                                    })
+                                                    .collect::<Vec<_>>(),
+                                            ),
+                                            _ => None,
+                                        })
+                                        .unwrap_or_else(|| {
+                                            vec![div()
+                                                .id("input-profiles-unavailable")
+                                                .child("Input profiles unavailable")]
+                                        }),
+                                    SystemFlyoutKind::Volume => {
+                                        match (&self.status.core.volume, &self.status.core.muted) {
+                                            (crate::ProviderState::Available(current), crate::ProviderState::Available(muted)) => {
+                                                let current = *current;
+                                                let muted = *muted;
+                                                let lower_callback = volume_callback.clone();
+                                                let higher_callback = volume_callback.clone();
+                                                let mute_callback = mute_callback.clone();
+                                                vec![
+                                                    div().id("volume-value").child(format!("Volume {current}%")),
+                                                    div().id("volume-actions").flex().gap_2()
+                                                        .child(div().id("volume-lower").role(gpui::Role::Button).aria_label("Lower volume").tab_index(0).p_2().on_click(move |_,_,_| { if let Some(callback)=&lower_callback { callback(SystemStatusAction::SetVolume(current.saturating_sub(10))); } }).child("-"))
+                                                        .child(div().id("volume-mute").role(gpui::Role::Button).aria_label(if muted {"Unmute"} else {"Mute"}).tab_index(0).p_2().on_click(move |_,_,_| { if let Some(callback)=&mute_callback { callback(SystemStatusAction::SetMute(!muted)); } }).child(if muted {"Unmute"} else {"Mute"}))
+                                                        .child(div().id("volume-higher").role(gpui::Role::Button).aria_label("Raise volume").tab_index(0).p_2().on_click(move |_,_,_| { if let Some(callback)=&higher_callback { callback(SystemStatusAction::SetVolume(current.saturating_add(10).min(100))); } }).child("+")),
+                                                ]
+                                            }
+                                            _ => vec![div().id("volume-unavailable").child("Volume unavailable")],
+                                        }
+                                    }
+                                    SystemFlyoutKind::NetworkPower => vec![
+                                        div().id("network-value").child(match &self.status.core.network { crate::ProviderState::Available(value)=>format!("Network: {value}"), crate::ProviderState::Unavailable(_)=>"Network unavailable".into() }),
+                                        div().id("power-value").child(match &self.status.core.battery { crate::ProviderState::Available(value)=>format!("Battery: {value}%"), crate::ProviderState::Unavailable(_)=>"Battery not present or unavailable".into() }),
+                                    ],
+                                    SystemFlyoutKind::Calendar => vec![
+                                        div().id("calendar-value").child(format!("{} {}", self.status.date, self.status.time)),
+                                        div().id("calendar-zone").child(system_snapshot.as_ref().and_then(|snapshot| match &snapshot.clock { StatusAvailability::Available(clock)=>Some(format!("{} · {}",clock.locale,clock.time_zone)), _=>None }).unwrap_or_else(|| "Calendar provider unavailable".into())),
+                                    ],
+                                }),
+                        )
+                    }),
             )
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{bc7_render_image, icon_render_image, task_display_label};
+    use super::{bc7_render_image, icon_render_image, task_display_label, toggled_system_flyout};
+    use crate::SystemFlyoutKind;
     use shell_provider_protocol::IconData;
 
     #[test]
@@ -682,6 +918,40 @@ mod tests {
     fn labels_can_only_be_hidden_when_a_real_icon_exists() {
         assert_eq!(task_display_label("Discord", 1, false, true), "");
         assert_eq!(task_display_label("Discord", 1, true, true), "Discord");
+    }
+
+    #[test]
+    fn system_flyouts_are_exclusive_and_rapid_switches_are_deterministic() {
+        let current = toggled_system_flyout(None, SystemFlyoutKind::Input);
+        assert_eq!(current, Some(SystemFlyoutKind::Input));
+        let current = toggled_system_flyout(current, SystemFlyoutKind::Volume);
+        assert_eq!(current, Some(SystemFlyoutKind::Volume));
+        assert_eq!(
+            toggled_system_flyout(current, SystemFlyoutKind::Volume),
+            None
+        );
+    }
+
+    #[test]
+    fn system_status_source_contract_keeps_accessible_owned_controls_and_safe_unavailable_ui() {
+        let source = include_str!("view.rs");
+        for required in [
+            "network-power-control",
+            "volume-control",
+            "input-language-control",
+            "clock-calendar-control",
+            "system-status-flyout",
+            "SystemStatusAction::ActivateInputProfile",
+            "SystemStatusAction::SetVolume",
+            "SystemStatusAction::SetMute",
+            "volume-unavailable",
+            "event.keystroke.key == \"escape\"",
+        ] {
+            assert!(
+                source.contains(required),
+                "missing system UI contract: {required}"
+            );
+        }
     }
 
     #[test]

@@ -93,10 +93,10 @@
 **Gate／Evidence：** `G-STATUS-ISOLATION`; client/restart tests.
 **完成門檻：** Crash clears state, restart accepts one new full generation and late pre-restart data is rejected.
 
-- [ ] 3.2.1 Add adjacent-binary resolution, process launch, handshake and clean shutdown.
-- [ ] 3.2.2 Apply only monotonic full/incremental snapshot generations.
-- [ ] 3.2.3 Route commands with deadlines, cancellation and exactly-one terminal result.
-- [ ] 3.2.4 Add crash, restart, stale snapshot, duplicate terminal and bounded-retry tests.
+- [x] 3.2.1 Add adjacent-binary resolution, process launch, handshake and clean shutdown.
+- [x] 3.2.2 Apply only monotonic full/incremental snapshot generations.
+- [x] 3.2.3 Route commands with deadlines, cancellation and exactly-one terminal result.
+- [x] 3.2.4 Add crash, restart, stale snapshot, duplicate terminal and bounded-retry tests.
 
 ## 4. Taskbar Status and Owned Flyouts
 
@@ -110,10 +110,10 @@
 **Gate／Evidence：** `G-STATUS-REAL`, `G-STATUS-A11Y`; model/view tests.
 **完成門檻：** No product fixed values remain; each provider state updates independently with stable control order.
 
-- [ ] 4.1.1 Replace CoreStatus fixture construction with snapshot conversion.
-- [ ] 4.1.2 Render real input label, volume/mute, network, power and clock/calendar states.
-- [ ] 4.1.3 Render localized independent unavailable/not-present states without fake actions.
-- [ ] 4.1.4 Add stable ordering, accessible name/state/action and stale-update tests.
+- [x] 4.1.1 Replace CoreStatus fixture construction with snapshot conversion.
+- [x] 4.1.2 Render real input label, volume/mute, network, power and clock/calendar states.
+- [x] 4.1.3 Render localized independent unavailable/not-present states without fake actions.
+- [x] 4.1.4 Add stable ordering, accessible name/state/action and stale-update tests.
 
 ### 4.2 Add owned GPUI system flyouts
 
@@ -125,10 +125,10 @@
 **Gate／Evidence：** `G-IME-SWITCH`, `G-STATUS-A11Y`; UI tests and headful captures.
 **完成門檻：** One flyout at a time, pointer/keyboard/UIA actions work, Escape/outside dismissal returns focus and unavailable controls are safe.
 
-- [ ] 4.2.1 Add shared single-system-flyout window/toggle/dismissal coordination.
-- [ ] 4.2.2 Add input-profile list with active mark and typed switch actions.
-- [ ] 4.2.3 Add volume slider/mute state and typed audio actions.
-- [ ] 4.2.4 Add truthful network/power summary and clock/calendar views.
+- [x] 4.2.1 Add shared single-system-flyout window/toggle/dismissal coordination.
+- [x] 4.2.2 Add input-profile list with active mark and typed switch actions.
+- [x] 4.2.3 Add volume slider/mute state and typed audio actions.
+- [x] 4.2.4 Add truthful network/power summary and clock/calendar views.
 - [ ] 4.2.5 Add pointer, keyboard, UIA, focus-return, unavailable and rapid-switch tests.
 
 ### 4.3 Integrate snapshots, commands and Start IME stability
@@ -141,8 +141,8 @@
 **Gate／Evidence：** `G-STATUS-REAL`, `G-IME-SWITCH`, `G-STATUS-A11Y`.
 **完成門檻：** Live ticks reconcile, commands confirm, broker failure is truthful and Start IME composition/focus survives a profile switch.
 
-- [ ] 4.3.1 Start/supervise the host and apply initial/live status snapshots.
-- [ ] 4.3.2 Route input/audio flyout actions and observed terminal state back to views.
+- [x] 4.3.1 Start/supervise the host and apply initial/live status snapshots.
+- [x] 4.3.2 Route input/audio flyout actions and observed terminal state back to views.
 - [ ] 4.3.3 Preserve Start IME composition and focus during taskbar profile changes.
 - [ ] 4.3.4 Add end-to-end provider unavailable/restart and mode-independent integration tests.
 

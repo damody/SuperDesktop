@@ -39,6 +39,21 @@ pub enum ProviderState<T> {
     Unavailable(&'static str),
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum SystemFlyoutKind {
+    Input,
+    Volume,
+    NetworkPower,
+    Calendar,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum SystemStatusAction {
+    ActivateInputProfile(String),
+    SetVolume(u8),
+    SetMute(bool),
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CoreStatus {
     pub network: ProviderState<String>,

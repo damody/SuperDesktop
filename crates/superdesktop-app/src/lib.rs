@@ -8,6 +8,7 @@ mod identity;
 mod lifecycle;
 mod notification_client;
 mod provider_client;
+mod status_client;
 mod surface_runtime;
 
 pub use composition::{CompositionRoot, RouteSource, RoutedTerminal};
@@ -35,19 +36,6 @@ fn admit_shell(
         let owner = platform_win::common::owner_lease::SessionOwnerMutex::acquire()?;
         owner.revalidate()?;
         platform_win::common::explorer_recovery::TrustedExplorer::resolve()?;
-        let start_available = (0..3).any(|_| {
-            let available = matches!(
-                platform_win::common::monitor_dpi_start::invoke_start_host_controlled(),
-                platform_win::common::monitor_dpi_start::StartHostProbe::Available { .. }
-            );
-            if !available {
-                std::thread::sleep(std::time::Duration::from_millis(150));
-            }
-            available
-        });
-        if !start_available {
-            return Err("start-host-unavailable");
-        }
         return Ok(Some(owner));
     }
     Ok(None)
