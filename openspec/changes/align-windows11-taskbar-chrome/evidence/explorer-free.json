@@ -1,0 +1,26 @@
+{
+    "schema":  "explorer-free-notifyicon/v1",
+    "result":  "passed",
+    "explorer_absent_during_measurement":  true,
+    "explorer_pids_before":  [
+                                 41792
+                             ],
+    "explorer_pids_after":  [
+
+                            ],
+    "shell_pid":  33164,
+    "fixture_pid":  4436,
+    "host_pids_before":  [
+                             32336
+                         ],
+    "host_pids_after":  [
+                            31788
+                        ],
+    "host_restart_verified":  true,
+    "app_sha256":  "0C922D7ECC7A58DBCBED47D2371DABDA38FA5521285ACA3A504D753778C11379",
+    "fixture_sha256":  "DEBF4D59E08B59B063761D5DA48F577BC6FC9D7024A9C7D27CE16FB9E69A6C26",
+    "icon_name":  "SuperDesktop compatibility fixture modified",
+    "callback_trace":  "fixture-ready pid=4436 hwnd=2427534 icon_id=7001\ncallback wparam=0 lparam=458818560\ncallback wparam=0 lparam=458817659\ntaskbar-created\nfixture-reregistered\ncallback wparam=0 lparam=458818560\nfixture-complete",
+    "screenshot":  "taskbar-explorer-free.png",
+    "screenshot_sha256":  "CB96D44E56592466F7BF42E9A4D9A07451295297520BDB51843CC52BE4058A2D"
+}

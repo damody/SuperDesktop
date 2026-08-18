@@ -123,6 +123,76 @@ fn activates_button(key: &str) -> bool {
     matches!(key, "enter" | "space")
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+struct TaskbarChromeTokens {
+    panel: u32,
+    border: u32,
+    text: u32,
+    secondary_text: u32,
+    hover: u32,
+    pressed: u32,
+    focus: u32,
+    active: u32,
+    attention: u32,
+}
+
+impl TaskbarChromeTokens {
+    const fn new(high_contrast: bool) -> Self {
+        if high_contrast {
+            Self {
+                panel: 0x000000,
+                border: 0xffffff,
+                text: 0xffffff,
+                secondary_text: 0xffffff,
+                hover: 0x1f1f1f,
+                pressed: 0x333333,
+                focus: 0xffff00,
+                active: 0x000000,
+                attention: 0x000000,
+            }
+        } else {
+            Self {
+                panel: 0xf3f3f3,
+                border: 0xd8d8d8,
+                text: 0x202020,
+                secondary_text: 0x616161,
+                hover: 0xe5e5e5,
+                pressed: 0xd7d7d7,
+                focus: 0x0067c0,
+                active: 0xe9e9e9,
+                attention: 0xffd28a,
+            }
+        }
+    }
+}
+
+fn taskbar_search_label(locale: Option<&str>) -> &'static str {
+    if locale.is_some_and(|locale| locale.eq_ignore_ascii_case("zh-TW")) {
+        "搜尋"
+    } else {
+        "Search"
+    }
+}
+
+fn compact_input_language(locale: &str) -> String {
+    let normalized = locale.trim().replace('_', "-").to_ascii_lowercase();
+    if normalized.starts_with("zh-") || normalized == "zh" {
+        return "中".into();
+    }
+    if normalized.starts_with("en-") || normalized == "en" {
+        return "ENG".into();
+    }
+    normalized
+        .split('-')
+        .next()
+        .filter(|value| !value.is_empty())
+        .unwrap_or("?")
+        .chars()
+        .take(3)
+        .flat_map(char::to_uppercase)
+        .collect()
+}
+
 pub struct TaskbarView {
     pub accessible_root_name: String,
     pub layout: TaskbarLayout,
@@ -200,6 +270,7 @@ impl Render for TaskbarView {
             .map(|value| Rc::clone(&value.taskbar_context));
         let overlays = self.overlays.clone();
         let show_labels = self.show_labels;
+        let row_count = self.layout.rows.get();
         let search_mode = self.search_mode;
         let show_task_view = self.show_task_view;
         let alignment = self.alignment;
@@ -256,6 +327,12 @@ impl Render for TaskbarView {
             .collect::<Vec<_>>();
         let has_overflow = !overflow_notifications.is_empty();
         let high_contrast = std::env::var("SUPERDESKTOP_THEME").as_deref() == Ok("high-contrast");
+        let tokens = TaskbarChromeTokens::new(high_contrast);
+        let locale = std::env::var("SUPERDESKTOP_LOCALE")
+            .ok()
+            .or_else(platform_win::common::taskbar_status::user_locale_name);
+        let search_label = taskbar_search_label(locale.as_deref());
+        let zh_tw = search_label == "搜尋";
         let reduced_motion = std::env::var("SUPERDESKTOP_REDUCED_MOTION").as_deref() == Ok("1");
         let start_color = if high_contrast {
             rgb(0xffff00)
@@ -305,24 +382,28 @@ impl Render for TaskbarView {
             .flex()
             .flex_row()
             .items_stretch()
-            .bg(rgb(0xf3f3f3))
+            .bg(rgb(tokens.panel))
             .border_t_1()
-            .border_color(rgb(0xd8d8d8))
-            .text_color(if high_contrast {
-                rgb(0xffffff)
-            } else {
-                rgb(0x182220)
-            })
-            .when(high_contrast, |element| element.bg(rgb(0x000000)))
-            .text_size(px(14.))
+            .border_color(rgb(tokens.border))
+            .text_color(rgb(tokens.text))
+            .text_size(px(13.))
+            .children((1..row_count).map(|row| {
+                div()
+                    .absolute()
+                    .left_0()
+                    .right_0()
+                    .top(px(40.0 * f32::from(row)))
+                    .h(px(1.))
+                    .bg(rgb(tokens.border))
+            }))
             .child(
                 div()
                     .id("notification-area")
                     .role(gpui::Role::Group)
-                    .aria_label("Notification area")
+                    .aria_label(if zh_tw { "通知區域" } else { "Notification area" })
                     .h(bar_height)
                     .absolute()
-                    .right(px(230.))
+                    .right(px(210.))
                     .flex()
                     .items_center()
                     .children(visible_notifications.into_iter().map(|node| {
@@ -349,6 +430,11 @@ impl Render for TaskbarView {
                             .items_center()
                             .justify_center()
                             .when(node.focused, |element| element.bg(rgb(0x285b8f)))
+                            .hover(move |style| style.bg(rgb(tokens.hover)))
+                            .active(move |style| style.bg(rgb(tokens.pressed)))
+                            .focus_visible(move |style| {
+                                style.border_2().border_color(rgb(tokens.focus))
+                            })
                             .on_click(move |_, _, _| {
                                 if let Some(callback) = &callback {
                                     callback(&key, NotificationEventKind::Activate);
@@ -382,6 +468,11 @@ impl Render for TaskbarView {
                                 .items_center()
                                 .justify_center()
                                 .text_size(px(0.))
+                                .hover(move |style| style.bg(rgb(tokens.hover)))
+                                .active(move |style| style.bg(rgb(tokens.pressed)))
+                                .focus_visible(move |style| {
+                                    style.border_2().border_color(rgb(tokens.focus))
+                                })
                                 .on_click(_cx.listener(move |this, _, _, cx| {
                                     if this.notification_area.overflow_open() {
                                         this.notification_area.dismiss_overflow();
@@ -480,9 +571,9 @@ impl Render for TaskbarView {
                 div()
                     .id("start-control")
                     .role(gpui::Role::Button)
-                    .aria_label("Start")
+                    .aria_label(if search_label == "搜尋" { "開始" } else { "Start" })
                     .tab_index(0)
-                    .w(px(48.))
+                    .w(px(44.))
                     .h(bar_height)
                     .flex_none()
                     .relative()
@@ -490,8 +581,10 @@ impl Render for TaskbarView {
                     .items_center()
                     .justify_center()
                     .cursor_pointer()
-                    .when(high_contrast, |element| {
-                        element.border_2().border_color(rgb(0xffff00))
+                    .hover(move |style| style.bg(rgb(tokens.hover)))
+                    .active(move |style| style.bg(rgb(tokens.pressed)))
+                    .focus_visible(move |style| {
+                        style.border_2().border_color(rgb(tokens.focus))
                     })
                     .on_click(move |_, _, cx| {
                         if let Some(callback) = &start {
@@ -511,8 +604,8 @@ impl Render for TaskbarView {
                                 env!("CARGO_MANIFEST_DIR"),
                                 "/assets/windows-start.svg"
                             ))
-                            .w(px(14.))
-                            .h(px(14.))
+                            .w(px(16.))
+                            .h(px(16.))
                             .text_color(start_color),
                     ),
             )
@@ -522,7 +615,7 @@ impl Render for TaskbarView {
                     div()
                         .id("taskbar-search-control")
                         .role(gpui::Role::Button)
-                        .aria_label("Search")
+                        .aria_label(search_label)
                         .tab_index(0)
                         .h(bar_height)
                         .w(px(if search_mode == TaskbarSearchMode::Box { 168.0 } else { 44.0 }))
@@ -533,18 +626,23 @@ impl Render for TaskbarView {
                         .justify_center()
                         .gap(px(8.))
                         .cursor_pointer()
+                        .hover(move |style| style.bg(rgb(tokens.hover)))
+                        .active(move |style| style.bg(rgb(tokens.pressed)))
+                        .focus_visible(move |style| {
+                            style.border_2().border_color(rgb(tokens.focus))
+                        })
                         .on_click(move |_, _, cx| {
                             if let Some(callback) = &search { callback(cx); }
                         })
                         .child("⌕")
-                        .when(search_mode == TaskbarSearchMode::Box, |element| element.child("Search")),
+                        .when(search_mode == TaskbarSearchMode::Box, |element| element.child(search_label)),
                 )
             })
             .when(show_task_view, |element| element.child(
                 div()
                     .id("task-view-control")
                     .role(gpui::Role::Button)
-                    .aria_label("Task View")
+                    .aria_label(if zh_tw { "工作檢視" } else { "Task View" })
                     .tab_index(0)
                     .w(px(44.))
                     .h(bar_height)
@@ -553,6 +651,11 @@ impl Render for TaskbarView {
                     .items_center()
                     .justify_center()
                     .cursor_pointer()
+                    .hover(move |style| style.bg(rgb(tokens.hover)))
+                    .active(move |style| style.bg(rgb(tokens.pressed)))
+                    .focus_visible(move |style| {
+                        style.border_2().border_color(rgb(tokens.focus))
+                    })
                     .on_click(move |_, _, cx| {
                         if let Some(callback) = &task_view {
                             callback(cx);
@@ -578,7 +681,7 @@ impl Render for TaskbarView {
                             .role(gpui::Role::Button)
                             .aria_label(self.fixed_name.clone())
                             .tab_index(0)
-                            .w(px(150.))
+                            .w(px(160.))
                             .h(px(40.))
                             .flex_none()
                             .px_2()
@@ -586,6 +689,11 @@ impl Render for TaskbarView {
                             .flex()
                             .items_center()
                             .cursor_pointer()
+                            .hover(move |style| style.bg(rgb(tokens.hover)))
+                            .active(move |style| style.bg(rgb(tokens.pressed)))
+                            .focus_visible(move |style| {
+                                style.border_2().border_color(rgb(tokens.focus))
+                            })
                             .on_click(move |_, _, _| {
                                 if let Some(callback) = &fixed {
                                     callback();
@@ -611,13 +719,21 @@ impl Render for TaskbarView {
                                     )
                                 },
                             )
-                            .child(self.fixed_name.clone())
+                            .child(
+                                div()
+                                    .flex_1()
+                                    .min_w_0()
+                                    .overflow_hidden()
+                                    .whitespace_nowrap()
+                                    .text_ellipsis()
+                                    .child(self.fixed_name.clone()),
+                            )
                             .child(
                                 div()
                                     .absolute()
                                     .left(px(8.))
                                     .bottom_0()
-                                    .w(px(134.))
+                                    .w(px(144.))
                                     .h(px(3.))
                                     .rounded_full()
                                     .bg(rgb(if high_contrast { 0x00ffff } else { 0x5b8db8 })),
@@ -673,14 +789,16 @@ impl Render for TaskbarView {
                             show_labels,
                             icon.is_some(),
                         );
+                        let labeled_button = show_labels || icon.is_none();
+                        let task_width = if labeled_button { 160.0 } else { 44.0 };
                         let indicator_width =
-                            visual.indicator_width_for(show_labels || icon.is_none(), 190.0);
+                            visual.indicator_width_for(labeled_button, task_width);
                         div()
                             .id(task.stable_id.clone())
                             .role(gpui::Role::Button)
                             .aria_label(accessible_name)
                             .tab_index(0)
-                            .w(px(190.))
+                            .w(px(task_width))
                             .h(px(40.))
                             .flex_none()
                             .px_2()
@@ -688,18 +806,23 @@ impl Render for TaskbarView {
                             .flex()
                             .items_center()
                             .cursor_pointer()
+                            .hover(move |style| style.bg(rgb(tokens.hover)))
+                            .active(move |style| style.bg(rgb(tokens.pressed)))
+                            .focus_visible(move |style| {
+                                style.border_2().border_color(rgb(tokens.focus))
+                            })
                             .overflow_hidden()
                             .whitespace_nowrap()
                             .when(task.active && !visual.attention_surface, |element| {
-                                element.bg(if high_contrast { rgb(0x000000) } else { rgb(0xe5e5e5) })
+                                element.bg(rgb(tokens.active))
                             })
                             .when(visual.attention_surface, |element| {
-                                element.bg(if high_contrast { rgb(0x000000) } else { rgb(0xffd28a) })
+                                element.bg(rgb(tokens.attention))
                             })
                             .when_some(visual.progress_color, |element, color| {
                                 let fraction = visual.progress_fraction.unwrap_or(0.0);
-                                let width = if visual.progress_indeterminate && !reduced_motion { 42.0 } else { 190.0 * fraction };
-                                let left = if visual.progress_indeterminate && !reduced_motion { (190.0 - width) * visual.progress_offset } else { 0.0 };
+                                let width = if visual.progress_indeterminate && !reduced_motion { 42.0_f32.min(task_width) } else { task_width * fraction };
+                                let left = if visual.progress_indeterminate && !reduced_motion { (task_width - width) * visual.progress_offset } else { 0.0 };
                                 element.child(
                                     div()
                                         .absolute()
@@ -767,7 +890,7 @@ impl Render for TaskbarView {
                             .child(
                                 div()
                                     .absolute()
-                                    .left(px((190.0 - indicator_width) / 2.0))
+                                    .left(px((task_width - indicator_width) / 2.0))
                                     .bottom_0()
                                     .w(px(indicator_width))
                                     .h(px(visual.indicator_height))
@@ -779,7 +902,7 @@ impl Render for TaskbarView {
                                 element.child(
                                     div()
                                         .absolute()
-                                        .left(px((190.0 - indicator_width) / 2.0 + 2.0))
+                                        .left(px((task_width - indicator_width) / 2.0 + 2.0))
                                         .bottom(px(4.))
                                         .w(px((indicator_width - 4.0).max(6.0)))
                                         .h(px(1.))
@@ -795,11 +918,11 @@ impl Render for TaskbarView {
                     .ml_auto()
                     .id("system-status-region")
                     .role(gpui::Role::Group)
-                    .aria_label("System status")
-                    .w(px(230.))
+                    .aria_label(if zh_tw { "系統狀態" } else { "System status" })
+                    .w(px(210.))
                     .h(bar_height)
                     .flex_none()
-                    .px_2()
+                    .px_1()
                     .relative()
                     .flex()
                     .items_center()
@@ -824,6 +947,11 @@ impl Render for TaskbarView {
                             .justify_center()
                             .text_size(px(0.))
                             .cursor_pointer()
+                            .hover(move |style| style.bg(rgb(tokens.hover)))
+                            .active(move |style| style.bg(rgb(tokens.pressed)))
+                            .focus_visible(move |style| {
+                                style.border_2().border_color(rgb(tokens.focus))
+                            })
                             .on_click(_cx.listener(move |this, _, _, cx| {
                                 this.system_flyout = toggled_system_flyout(
                                     this.system_flyout,
@@ -856,7 +984,7 @@ impl Render for TaskbarView {
                                     ))
                                     .w(px(18.))
                                     .h(px(18.))
-                                    .text_color(rgb(0x202020)),
+                                    .text_color(rgb(tokens.text)),
                             )
                             .child(match &self.status.core.network {
                                 crate::ProviderState::Available(_) => "Network",
@@ -880,6 +1008,11 @@ impl Render for TaskbarView {
                             .justify_center()
                             .text_size(px(0.))
                             .cursor_pointer()
+                            .hover(move |style| style.bg(rgb(tokens.hover)))
+                            .active(move |style| style.bg(rgb(tokens.pressed)))
+                            .focus_visible(move |style| {
+                                style.border_2().border_color(rgb(tokens.focus))
+                            })
                             .on_click(_cx.listener(move |this, _, _, cx| {
                                 this.system_flyout = toggled_system_flyout(
                                     this.system_flyout,
@@ -912,7 +1045,7 @@ impl Render for TaskbarView {
                                     ))
                                     .w(px(18.))
                                     .h(px(18.))
-                                    .text_color(rgb(0x202020)),
+                                    .text_color(rgb(tokens.text)),
                             )
                             .child(match (&self.status.core.volume, &self.status.core.muted) {
                                 (crate::ProviderState::Available(volume), crate::ProviderState::Available(true)) => format!("Muted {volume}%"),
@@ -933,12 +1066,18 @@ impl Render for TaskbarView {
                                 }
                             })
                             .tab_index(0)
-                            .w(px(54.))
+                            .w(px(44.))
                             .h(px(36.))
                             .flex()
                             .items_center()
                             .justify_center()
+                            .text_size(px(12.))
                             .cursor_pointer()
+                            .hover(move |style| style.bg(rgb(tokens.hover)))
+                            .active(move |style| style.bg(rgb(tokens.pressed)))
+                            .focus_visible(move |style| {
+                                style.border_2().border_color(rgb(tokens.focus))
+                            })
                             .on_click(_cx.listener(move |this, _, _, cx| {
                                 this.system_flyout = toggled_system_flyout(
                                     this.system_flyout,
@@ -964,7 +1103,7 @@ impl Render for TaskbarView {
                                 },
                             ))
                             .child(match &self.status.core.input_language {
-                                crate::ProviderState::Available(value) => value.clone(),
+                                crate::ProviderState::Available(value) => compact_input_language(value),
                                 crate::ProviderState::Unavailable(_) => "Input —".into(),
                             }),
                     )
@@ -974,13 +1113,18 @@ impl Render for TaskbarView {
                             .role(gpui::Role::Button)
                             .aria_label(format!("{} {}", self.status.time, self.status.date))
                             .tab_index(0)
-                            .w(px(88.))
+                            .w(px(82.))
                             .h(bar_height)
                             .flex()
                             .flex_col()
                             .items_center()
                             .justify_center()
                             .cursor_pointer()
+                            .hover(move |style| style.bg(rgb(tokens.hover)))
+                            .active(move |style| style.bg(rgb(tokens.pressed)))
+                            .focus_visible(move |style| {
+                                style.border_2().border_color(rgb(tokens.focus))
+                            })
                             .on_click(_cx.listener(move |this, _, _, cx| {
                                 this.system_flyout = toggled_system_flyout(
                                     this.system_flyout,
@@ -1005,8 +1149,13 @@ impl Render for TaskbarView {
                                     }
                                 },
                             ))
-                            .child(self.status.time.clone())
-                            .child(self.status.date.clone()),
+                            .child(div().text_size(px(12.)).child(self.status.time.clone()))
+                            .child(
+                                div()
+                                    .text_size(px(11.))
+                                    .text_color(rgb(tokens.secondary_text))
+                                    .child(self.status.date.clone()),
+                            ),
                     )
                     .when_some(system_flyout, |region, flyout| {
                         region.child(
@@ -1128,8 +1277,8 @@ impl Render for TaskbarView {
 #[cfg(test)]
 mod tests {
     use super::{
-        activates_button, bc7_render_image, icon_render_image, task_display_label,
-        toggled_system_flyout,
+        TaskbarChromeTokens, activates_button, bc7_render_image, compact_input_language,
+        icon_render_image, task_display_label, taskbar_search_label, toggled_system_flyout,
     };
     use crate::SystemFlyoutKind;
     use shell_provider_protocol::IconData;
@@ -1193,7 +1342,7 @@ mod tests {
         let source = include_str!("view.rs");
         for required in [
             "TaskVisualState::compose",
-            "(190.0 - visual.indicator_width) / 2.0",
+            "(task_width - indicator_width) / 2.0",
             "visual.second_indicator",
             "visual.progress_fraction",
             "visual.progress_indeterminate",
@@ -1211,6 +1360,45 @@ mod tests {
             .and_then(|tail| tail.split("system-status-region").next())
             .expect("task visual render source");
         assert!(!task_render.contains(".border_b_1()"));
+    }
+
+    #[test]
+    fn taskbar_chrome_tokens_and_compact_locale_labels_are_deterministic() {
+        let light = TaskbarChromeTokens::new(false);
+        let contrast = TaskbarChromeTokens::new(true);
+        assert_ne!(light.panel, light.hover);
+        assert_ne!(light.hover, light.pressed);
+        assert_eq!(contrast.panel, 0x000000);
+        assert_eq!(contrast.border, 0xffffff);
+        assert_eq!(contrast.focus, 0xffff00);
+        assert_eq!(taskbar_search_label(Some("zh-TW")), "搜尋");
+        assert_eq!(taskbar_search_label(Some("en-US")), "Search");
+        assert_eq!(compact_input_language("zh-TW"), "中");
+        assert_eq!(compact_input_language("zh_CN"), "中");
+        assert_eq!(compact_input_language("en-US"), "ENG");
+        assert_eq!(compact_input_language("ja-JP"), "JA");
+        assert_eq!(compact_input_language(""), "?");
+    }
+
+    #[test]
+    fn taskbar_chrome_source_uses_shared_interaction_and_system_geometry() {
+        let source = include_str!("view.rs");
+        for required in [
+            "TaskbarChromeTokens::new",
+            ".hover(move |style|",
+            ".active(move |style|",
+            ".focus_visible(move |style|",
+            "let task_width = if labeled_button { 160.0 } else { 44.0 }",
+            ".w(px(210.))",
+            "compact_input_language(value)",
+            ".text_size(px(12.))",
+            ".text_size(px(11.))",
+        ] {
+            assert!(
+                source.contains(required),
+                "missing taskbar chrome: {required}"
+            );
+        }
     }
 
     #[test]

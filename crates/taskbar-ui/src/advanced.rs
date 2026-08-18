@@ -801,11 +801,11 @@ mod tests {
     fn labeled_buttons_use_long_reference_indicator_and_icon_only_stays_short() {
         let visual =
             TaskVisualState::compose(true, false, false, 1, &TaskOverlay::default(), false, false);
-        assert_eq!(visual.indicator_width_for(true, 190.0), 174.0);
-        assert_eq!(visual.indicator_width_for(false, 190.0), 6.0);
+        assert_eq!(visual.indicator_width_for(true, 160.0), 144.0);
+        assert_eq!(visual.indicator_width_for(false, 44.0), 6.0);
         let grouped =
             TaskVisualState::compose(true, false, false, 3, &TaskOverlay::default(), false, false);
-        assert_eq!(grouped.indicator_width_for(true, 190.0), 174.0);
+        assert_eq!(grouped.indicator_width_for(true, 160.0), 144.0);
     }
 
     #[test]

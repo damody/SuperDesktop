@@ -1,0 +1,64 @@
+{
+    "schema":  "m0-task-state-matrix/v1",
+    "result":  "passed",
+    "app_sha256":  "0C922D7ECC7A58DBCBED47D2371DABDA38FA5521285ACA3A504D753778C11379",
+    "screenshot":  "taskbar-light.png",
+    "screenshot_sha256":  "B9E1081086A727D312E9278B37BA8E8F0BFF43944F4C63CE22D03721207B8BAB",
+    "state_count":  5,
+    "controls":  [
+                     {
+                         "name":  "State active [active, normal progress 42 percent]",
+                         "invoke_available":  true,
+                         "bounds":  {
+                                        "left":  154,
+                                        "top":  1944,
+                                        "width":  280,
+                                        "height":  70
+                                    }
+                     },
+                     {
+                         "name":  "State minimized [minimized, paused progress 65 percent]",
+                         "invoke_available":  true,
+                         "bounds":  {
+                                        "left":  434,
+                                        "top":  1874,
+                                        "width":  280,
+                                        "height":  70
+                                    }
+                     },
+                     {
+                         "name":  "State attention [attention, error progress 30 percent, requires attention]",
+                         "invoke_available":  true,
+                         "bounds":  {
+                                        "left":  434,
+                                        "top":  1944,
+                                        "width":  280,
+                                        "height":  70
+                                    }
+                     },
+                     {
+                         "name":  "State group [group:3, indeterminate progress]",
+                         "invoke_available":  true,
+                         "bounds":  {
+                                        "left":  714,
+                                        "top":  1874,
+                                        "width":  280,
+                                        "height":  70
+                                    }
+                     },
+                     {
+                         "name":  "State unavailable [unavailable]",
+                         "invoke_available":  false,
+                         "bounds":  {
+                                        "left":  714,
+                                        "top":  1944,
+                                        "width":  280,
+                                        "height":  70
+                                    }
+                     }
+                 ],
+    "unavailable_invoke_suppressed":  true,
+    "distinct_task_rows":  2,
+    "column_major_packing":  true,
+    "frame_visible":  true
+}

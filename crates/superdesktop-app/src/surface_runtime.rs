@@ -3743,6 +3743,14 @@ mod live_parity_tests {
         }
         assert!(!production.contains("ms-settings:taskbar"));
         assert!(!production.contains("Shell_TrayWnd"));
+        for forbidden in [
+            "explorer.exe",
+            "StartMenuExperienceHost",
+            "SearchHost",
+            "ShellExperienceHost",
+        ] {
+            assert!(!production.contains(forbidden));
+        }
         assert!(include_str!("../../taskbar-ui/src/view.rs").contains("cx.stop_propagation();"));
     }
 }

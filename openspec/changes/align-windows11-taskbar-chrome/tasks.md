@@ -12,9 +12,9 @@
 **Gate／Evidence：** `G-TASKBAR-CHROME`, `G-TASKBAR-A11Y`; automated record.
 **完成門檻：** Panel, border, text, hover, pressed, focus and attention tokens are explicit.
 
-- [ ] 1.1.1 Define complete light taskbar chrome tokens.
-- [ ] 1.1.2 Define high-contrast tokens with non-color focus geometry.
-- [ ] 1.1.3 Add token/source tests preventing unstyled taskbar controls.
+- [x] 1.1.1 Define complete light taskbar chrome tokens.
+- [x] 1.1.2 Define high-contrast tokens with non-color focus geometry.
+- [x] 1.1.3 Add token/source tests preventing unstyled taskbar controls.
 
 ### 1.2 Add localized compact presentation helpers
 
@@ -26,9 +26,9 @@
 **Gate／Evidence：** `G-TASKBAR-LOCALE`, `G-TASKBAR-A11Y`; locale tests.
 **完成門檻：** `zh-TW`, `zh-CN`, English and unknown locales produce bounded visible text and full UIA identity.
 
-- [ ] 1.2.1 Add Traditional Chinese/English taskbar Search presentation.
-- [ ] 1.2.2 Map known input locales to `中` or `ENG` with bounded fallback.
-- [ ] 1.2.3 Add locale fallback and accessible-name tests.
+- [x] 1.2.1 Add Traditional Chinese/English taskbar Search presentation.
+- [x] 1.2.2 Map known input locales to `中` or `ENG` with bounded fallback.
+- [x] 1.2.3 Add locale fallback and accessible-name tests.
 
 ## 2. Taskbar Surface
 
@@ -42,9 +42,9 @@
 **Gate／Evidence：** `G-TASKBAR-CHROME`; light/high-contrast capture.
 **完成門檻：** Every row stays 40px and core controls expose consistent state styling.
 
-- [ ] 2.1.1 Apply panel, top border and row-separation tokens.
-- [ ] 2.1.2 Align Start, Search and Task View dimensions and state styles.
-- [ ] 2.1.3 Preserve pointer, keyboard and UIA typed routes.
+- [x] 2.1.1 Apply panel, top border and row-separation tokens.
+- [x] 2.1.2 Align Start, Search and Task View dimensions and state styles.
+- [x] 2.1.3 Preserve pointer, keyboard and UIA typed routes.
 
 ### 2.2 Align fixed and running task buttons
 
@@ -56,9 +56,9 @@
 **Gate／Evidence：** `G-TASKBAR-CHROME`, `G-TASKBAR-A11Y`; state-matrix evidence.
 **完成門檻：** Labels ellipsize accessibly; progress, attention, grouping and long/short indicators remain correct.
 
-- [ ] 2.2.1 Align fixed entry padding, icon, label and indicator.
-- [ ] 2.2.2 Align running labeled/icon-only button widths and state styles.
-- [ ] 2.2.3 Reverify progress, attention, grouped and unavailable overlays.
+- [x] 2.2.1 Align fixed entry padding, icon, label and indicator.
+- [x] 2.2.2 Align running labeled/icon-only button widths and state styles.
+- [x] 2.2.3 Reverify progress, attention, grouped and unavailable overlays.
 
 ### 2.3 Align notification and system region
 
@@ -70,9 +70,9 @@
 **Gate／Evidence：** `G-TASKBAR-CHROME`, `G-TASKBAR-LOCALE`, `G-TASKBAR-A11Y`; system-region evidence.
 **完成門檻：** Region fits 210px, clock is two-line, IME is compact and unavailable providers stay independent.
 
-- [ ] 2.3.1 Align notification/overflow cells and hover/focus states.
-- [ ] 2.3.2 Align network, volume and compact IME controls.
-- [ ] 2.3.3 Align two-line clock/date typography and accessible bounds.
+- [x] 2.3.1 Align notification/overflow cells and hover/focus states.
+- [x] 2.3.2 Align network, volume and compact IME controls.
+- [x] 2.3.3 Align two-line clock/date typography and accessible bounds.
 
 ### 2.4 Preserve Explorer-free ownership
 
@@ -84,9 +84,9 @@
 **Gate／Evidence：** `G-SHELL-NONINTERFERENCE`; automated source record.
 **完成門檻：** All visible controls remain owned and every callback path remains typed.
 
-- [ ] 2.4.1 Preserve task, fixed, notification and system typed callbacks.
-- [ ] 2.4.2 Reject Explorer, Shell_TrayWnd and system Start-host presentation calls.
-- [ ] 2.4.3 Preserve independent truthful unavailable states.
+- [x] 2.4.1 Preserve task, fixed, notification and system typed callbacks.
+- [x] 2.4.2 Reject Explorer, Shell_TrayWnd and system Start-host presentation calls.
+- [x] 2.4.3 Preserve independent truthful unavailable states.
 
 ## 3. Verification and Packaging
 
@@ -100,9 +100,9 @@
 **Gate／Evidence：** `G-TASKBAR-CHROME`, `G-TASKBAR-LOCALE`, `G-TASKBAR-A11Y`, `G-SHELL-NONINTERFERENCE`; `evidence/headful.json`.
 **完成門檻：** Two-row labeled/icon-only, progress/attention, tray, IME and clock fit without Explorer delegation.
 
-- [ ] 3.1.1 Run fmt, locked/offline workspace tests and clippy warnings-as-errors.
-- [ ] 3.1.2 Capture light and high-contrast taskbar at host 175% DPI.
-- [ ] 3.1.3 Verify UIA routes, representative states and Explorer-free process evidence.
+- [x] 3.1.1 Run fmt, locked/offline workspace tests and clippy warnings-as-errors.
+- [x] 3.1.2 Capture light and high-contrast taskbar at host 175% DPI.
+- [x] 3.1.3 Verify UIA routes, representative states and Explorer-free process evidence.
 
 ### 3.2 Validate traceability and installers
 
@@ -114,6 +114,6 @@
 **Gate／Evidence：** `G-TRACE`, `G-PACKAGE`; evidence/package records.
 **完成門檻：** Every leaf has unique evidence; strict validation and both installer builds pass without launch.
 
-- [ ] 3.2.1 Build release binaries and record hashes.
+- [x] 3.2.1 Build release binaries and record hashes.
 - [ ] 3.2.2 Build standalone and combined installers without launch.
 - [ ] 3.2.3 Create unique evidence index and pass detailed/strict validation.
