@@ -12,11 +12,11 @@
 **Gate／Evidence：** `G-STATUS-ISOLATION`, `G-TRACE`; automated evidence index.
 **完成門檻：** Every frame/field has bounds, generations and deterministic round-trip/negative tests.
 
-- [ ] 1.1.1 Add provider availability, health and generation DTOs.
-- [ ] 1.1.2 Add network, audio, power and clock/calendar snapshot DTOs.
-- [ ] 1.1.3 Add stable input-profile identity/list/active-state DTOs.
-- [ ] 1.1.4 Add set-volume, toggle-mute and activate-profile command/terminal DTOs.
-- [ ] 1.1.5 Add size, count, deadline, duplicate and malformed serialization tests.
+- [x] 1.1.1 Add provider availability, health and generation DTOs.
+- [x] 1.1.2 Add network, audio, power and clock/calendar snapshot DTOs.
+- [x] 1.1.3 Add stable input-profile identity/list/active-state DTOs.
+- [x] 1.1.4 Add set-volume, toggle-mute and activate-profile command/terminal DTOs.
+- [x] 1.1.5 Add size, count, deadline, duplicate and malformed serialization tests.
 
 ### 1.2 Add no-fixed-status source guards
 
@@ -28,9 +28,9 @@
 **Gate／Evidence：** `G-STATUS-REAL`; source-guard record.
 **完成門檻：** Guard rejects fixed online/40/unmuted/zh-TW product status and allows deterministic test fixtures.
 
-- [ ] 1.2.1 Add a production-source scanner for fixed system-status values.
-- [ ] 1.2.2 Add negative fixtures for fixed network/audio/input substitutions.
-- [ ] 1.2.3 Add a contract test requiring each product provider to expose available or unavailable state.
+- [x] 1.2.1 Add a production-source scanner for fixed system-status values.
+- [x] 1.2.2 Add negative fixtures for fixed network/audio/input substitutions.
+- [x] 1.2.3 Add a contract test requiring each product provider to expose available or unavailable state.
 
 ## 2. Windows Platform Adapters
 

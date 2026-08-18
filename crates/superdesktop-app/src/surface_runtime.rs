@@ -1390,12 +1390,12 @@ fn status() -> StatusRegion {
         },
         ClockLocale::ZhTw,
         CoreStatus {
-            network: ProviderState::Available("online".into()),
-            volume: ProviderState::Available(40),
-            muted: ProviderState::Available(false),
-            input_language: ProviderState::Available("zh-TW".into()),
-            battery: ProviderState::Unavailable("desktop"),
-            notifications: ProviderState::Available(0),
+            network: ProviderState::Unavailable("system-status-host-not-ready"),
+            volume: ProviderState::Unavailable("system-status-host-not-ready"),
+            muted: ProviderState::Unavailable("system-status-host-not-ready"),
+            input_language: ProviderState::Unavailable("system-status-host-not-ready"),
+            battery: ProviderState::Unavailable("system-status-host-not-ready"),
+            notifications: ProviderState::Unavailable("notification-provider-not-ready"),
         },
     )
 }
@@ -2410,6 +2410,60 @@ mod live_parity_tests {
             && production.contains("start:closed")
             && !production.contains("invoke_start_host_controlled")
             && !production.contains("SUPERDESKTOP_VERIFICATION_OWNED_START")
+    }
+
+    fn product_status_has_no_fixed_provider_values(source: &str) -> bool {
+        let production = source.split("#[cfg(test)]").next().unwrap_or(source);
+        !production.contains("ProviderState::Available(\"online\"")
+            && !production.contains("ProviderState::Available(40)")
+            && !production.contains("ProviderState::Available(false)")
+            && !production.contains("ProviderState::Available(\"zh-TW\"")
+            && production.contains("system-status-host-not-ready")
+    }
+
+    #[test]
+    fn product_status_source_rejects_fixed_provider_values() {
+        assert!(product_status_has_no_fixed_provider_values(include_str!(
+            "surface_runtime.rs"
+        )));
+        let fixed_fixture = r#"
+            CoreStatus {
+                network: ProviderState::Available("online".into()),
+                volume: ProviderState::Available(40),
+                muted: ProviderState::Available(false),
+                input_language: ProviderState::Available("zh-TW".into()),
+            }
+        "#;
+        assert!(!product_status_has_no_fixed_provider_values(fixed_fixture));
+    }
+
+    #[test]
+    fn unavailable_status_providers_remain_independent() {
+        let region = super::status();
+        assert!(matches!(
+            region.core.network,
+            taskbar_ui::ProviderState::Unavailable(_)
+        ));
+        assert!(matches!(
+            region.core.volume,
+            taskbar_ui::ProviderState::Unavailable(_)
+        ));
+        assert!(matches!(
+            region.core.muted,
+            taskbar_ui::ProviderState::Unavailable(_)
+        ));
+        assert!(matches!(
+            region.core.input_language,
+            taskbar_ui::ProviderState::Unavailable(_)
+        ));
+        assert!(matches!(
+            region.core.battery,
+            taskbar_ui::ProviderState::Unavailable(_)
+        ));
+        assert!(matches!(
+            region.core.notifications,
+            taskbar_ui::ProviderState::Unavailable(_)
+        ));
     }
 
     #[test]

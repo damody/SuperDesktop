@@ -6,6 +6,7 @@ mod envelope;
 mod jump_list;
 mod notification;
 mod search;
+mod system_status;
 mod validation;
 
 pub use context_menu::{
@@ -27,6 +28,11 @@ pub use notification::{
 };
 pub use search::{
     SearchBatch, SearchProvider, SearchProviderState, SearchQuery, rank_search_results,
+};
+pub use system_status::{
+    AudioStatus, ClockCalendarStatus, InputProfile, InputStatus, MAX_INPUT_PROFILES, NetworkStatus,
+    PowerStatus, StatusAvailability, SystemStatusCommand, SystemStatusCommandRequest,
+    SystemStatusCommandTerminal, SystemStatusSnapshot, SystemStatusTerminalKind,
 };
 pub use validation::{
     MAX_COLLECTION_ITEMS, MAX_FRAME_BYTES, MAX_ICON_BYTES, MAX_TEXT_BYTES, Validate,
