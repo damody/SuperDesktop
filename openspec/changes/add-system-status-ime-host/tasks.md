@@ -174,5 +174,5 @@
 **Gate／Evidence：** `G-STATUS-ISOLATION`, `G-TRACE`; packaging record.
 **完成門檻：** Both installers contain `system-status-host.exe`, build without launch and pass exact submodule admission.
 
-- [ ] 5.2.1 Add `system-status-host.exe` to release/package/NSIS manifests and uninstall cleanup.
+- [x] 5.2.1 Add `system-status-host.exe` to release/package/NSIS manifests and uninstall cleanup.
 - [ ] 5.2.2 Build and hash standalone and combined installers without launching them.

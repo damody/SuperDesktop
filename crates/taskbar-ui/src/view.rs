@@ -9,7 +9,7 @@ use std::{
 use gpui::{
     App, AppContext, Context, FocusHandle, InteractiveElement, IntoElement, ObjectFit,
     ParentElement, Render, RenderImage, StatefulInteractiveElement, Styled, StyledImage, Window,
-    div, img, linear_color_stop, linear_gradient, prelude::FluentBuilder as _, px, rgb, svg,
+    div, img, prelude::FluentBuilder as _, px, rgb, svg,
 };
 
 use crate::{
@@ -276,13 +276,9 @@ impl Render for TaskbarView {
             .flex()
             .flex_row()
             .items_stretch()
-            .bg(linear_gradient(
-                90.,
-                linear_color_stop(rgb(0xd8edc0), 0.),
-                linear_color_stop(rgb(0xc3efef), 1.),
-            ))
+            .bg(rgb(0xf3f3f3))
             .border_t_1()
-            .border_color(rgb(0xe4f4d0))
+            .border_color(rgb(0xd8d8d8))
             .text_color(if high_contrast {
                 rgb(0xffffff)
             } else {
@@ -296,8 +292,8 @@ impl Render for TaskbarView {
                     .role(gpui::Role::Group)
                     .aria_label("Notification area")
                     .h(bar_height)
-                    .flex_none()
-                    .relative()
+                    .absolute()
+                    .right(px(230.))
                     .flex()
                     .items_center()
                     .children(visible_notifications.into_iter().map(|node| {
@@ -430,29 +426,6 @@ impl Render for TaskbarView {
                     .cursor_pointer()
                     .when(high_contrast, |element| {
                         element.border_2().border_color(rgb(0xffff00))
-                    })
-                    .when(!high_contrast, |element| {
-                        element
-                            .child(div().absolute().top_0().left_0().w_full().h(px(40.)).bg(
-                                linear_gradient(
-                                    90.,
-                                    linear_color_stop(rgb(0xd9efbd), 0.),
-                                    linear_color_stop(rgb(0xd7edc1), 1.),
-                                ),
-                            ))
-                            .child(
-                                div()
-                                    .absolute()
-                                    .top(px(40.))
-                                    .left_0()
-                                    .w_full()
-                                    .h(px(40.))
-                                    .bg(linear_gradient(
-                                        90.,
-                                        linear_color_stop(rgb(0xd8ecb6), 0.),
-                                        linear_color_stop(rgb(0xd8edb8), 1.),
-                                    )),
-                            )
                     })
                     .on_click(move |_, _, cx| {
                         if let Some(callback) = &start {
@@ -701,7 +674,7 @@ impl Render for TaskbarView {
                     .id("system-status-region")
                     .role(gpui::Role::Group)
                     .aria_label("System status")
-                    .w(px(520.))
+                    .w(px(230.))
                     .h(bar_height)
                     .flex_none()
                     .px_2()
@@ -722,10 +695,12 @@ impl Render for TaskbarView {
                                 }
                             })
                             .tab_index(0)
-                            .px_2()
+                            .w(px(36.))
                             .h(px(36.))
                             .flex()
                             .items_center()
+                            .justify_center()
+                            .text_size(px(0.))
                             .cursor_pointer()
                             .on_click(_cx.listener(move |this, _, _, cx| {
                                 this.system_flyout = toggled_system_flyout(
@@ -751,6 +726,16 @@ impl Render for TaskbarView {
                                     }
                                 },
                             ))
+                            .child(
+                                svg()
+                                    .external_path(concat!(
+                                        env!("CARGO_MANIFEST_DIR"),
+                                        "/assets/network-status.svg"
+                                    ))
+                                    .w(px(18.))
+                                    .h(px(18.))
+                                    .text_color(rgb(0x202020)),
+                            )
                             .child(match &self.status.core.network {
                                 crate::ProviderState::Available(_) => "Network",
                                 crate::ProviderState::Unavailable(_) => "Network —",
@@ -766,10 +751,12 @@ impl Render for TaskbarView {
                                 _ => "Volume unavailable".into(),
                             })
                             .tab_index(0)
-                            .px_2()
+                            .w(px(36.))
                             .h(px(36.))
                             .flex()
                             .items_center()
+                            .justify_center()
+                            .text_size(px(0.))
                             .cursor_pointer()
                             .on_click(_cx.listener(move |this, _, _, cx| {
                                 this.system_flyout = toggled_system_flyout(
@@ -795,6 +782,16 @@ impl Render for TaskbarView {
                                     }
                                 },
                             ))
+                            .child(
+                                svg()
+                                    .external_path(concat!(
+                                        env!("CARGO_MANIFEST_DIR"),
+                                        "/assets/volume-status.svg"
+                                    ))
+                                    .w(px(18.))
+                                    .h(px(18.))
+                                    .text_color(rgb(0x202020)),
+                            )
                             .child(match (&self.status.core.volume, &self.status.core.muted) {
                                 (crate::ProviderState::Available(volume), crate::ProviderState::Available(true)) => format!("Muted {volume}%"),
                                 (crate::ProviderState::Available(volume), _) => format!("Volume {volume}%"),
@@ -814,10 +811,11 @@ impl Render for TaskbarView {
                                 }
                             })
                             .tab_index(0)
-                            .px_2()
+                            .w(px(54.))
                             .h(px(36.))
                             .flex()
                             .items_center()
+                            .justify_center()
                             .cursor_pointer()
                             .on_click(_cx.listener(move |this, _, _, cx| {
                                 this.system_flyout = toggled_system_flyout(
@@ -854,7 +852,7 @@ impl Render for TaskbarView {
                             .role(gpui::Role::Button)
                             .aria_label(format!("{} {}", self.status.time, self.status.date))
                             .tab_index(0)
-                            .w(px(120.))
+                            .w(px(88.))
                             .h(bar_height)
                             .flex()
                             .flex_col()

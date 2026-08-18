@@ -1,0 +1,62 @@
+{
+    "schema":  "system-status-resilience/v1",
+    "result":  "passed",
+    "host_crash_isolated":  true,
+    "bounded_restart_observed":  true,
+    "stale_state_cleared_by_reconciler_test":  true,
+    "callback_panic_fenced_by_host_test":  true,
+    "handle_delta":  2,
+    "thread_delta":  0,
+    "before":  {
+                   "app_pid":  14224,
+                   "host_pid":  33768,
+                   "samples":  [
+                                   {
+                                       "handles":  844,
+                                       "threads":  120,
+                                       "working_set_bytes":  74076160
+                                   },
+                                   {
+                                       "handles":  844,
+                                       "threads":  120,
+                                       "working_set_bytes":  73449472
+                                   },
+                                   {
+                                       "handles":  844,
+                                       "threads":  120,
+                                       "working_set_bytes":  73580544
+                                   },
+                                   {
+                                       "handles":  844,
+                                       "threads":  120,
+                                       "working_set_bytes":  73613312
+                                   }
+                               ]
+               },
+    "after":  {
+                  "app_alive":  true,
+                  "host_pid":  33300,
+                  "samples":  [
+                                  {
+                                      "handles":  846,
+                                      "threads":  120,
+                                      "working_set_bytes":  73797632
+                                  },
+                                  {
+                                      "handles":  846,
+                                      "threads":  120,
+                                      "working_set_bytes":  73883648
+                                  },
+                                  {
+                                      "handles":  846,
+                                      "threads":  120,
+                                      "working_set_bytes":  73883648
+                                  },
+                                  {
+                                      "handles":  846,
+                                      "threads":  120,
+                                      "working_set_bytes":  73535488
+                                  }
+                              ]
+              }
+}

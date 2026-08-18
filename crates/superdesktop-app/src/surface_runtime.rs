@@ -1306,14 +1306,19 @@ fn task_flyout_options(monitor: &MonitorRecord, card_count: usize) -> WindowOpti
     }
 }
 
-fn system_flyout_options(monitor: &MonitorRecord, kind: SystemFlyoutKind) -> WindowOptions {
+fn system_flyout_options(
+    monitor: &MonitorRecord,
+    kind: SystemFlyoutKind,
+    input_profile_count: usize,
+) -> WindowOptions {
     let scale = monitor.dpi_x as f32 / 96.0;
     let width = 380.0;
     let available_height = (monitor.work_area.bottom - monitor.work_area.top) as f32 / scale;
     let height = match kind {
-        SystemFlyoutKind::Input => 420.0_f32,
-        SystemFlyoutKind::Volume => 220.0,
-        SystemFlyoutKind::NetworkPower | SystemFlyoutKind::Calendar => 280.0,
+        SystemFlyoutKind::Input => 92.0 + input_profile_count.clamp(1, 6) as f32 * 52.0,
+        SystemFlyoutKind::Volume => 190.0,
+        SystemFlyoutKind::NetworkPower => 250.0,
+        SystemFlyoutKind::Calendar => 420.0,
     }
     .min(available_height);
     let right = monitor.work_area.right as f32 / scale;
@@ -2393,13 +2398,26 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                 }
                                 let snapshot = system_flyout_status.borrow().snapshot().cloned();
                                 let flyout_status = status(snapshot.as_ref());
+                                let input_profile_count = snapshot
+                                    .as_ref()
+                                    .and_then(|snapshot| match &snapshot.input {
+                                        StatusAvailability::Available(input) => {
+                                            Some(input.profiles.len())
+                                        }
+                                        _ => None,
+                                    })
+                                    .unwrap_or(1);
                                 let action_client = Rc::clone(&system_flyout_client);
                                 let action_status = Rc::clone(&system_flyout_status);
                                 let action_start = Rc::clone(&system_flyout_start);
                                 let dismiss_slot =
                                     Rc::clone(&system_flyout_window_for_taskbar);
                                 let opened = app.open_window(
-                                    system_flyout_options(&system_flyout_monitor, kind),
+                                    system_flyout_options(
+                                        &system_flyout_monitor,
+                                        kind,
+                                        input_profile_count,
+                                    ),
                                     move |window, cx| {
                                         window.activate_window();
                                         let dismiss_slot = Rc::clone(&dismiss_slot);
