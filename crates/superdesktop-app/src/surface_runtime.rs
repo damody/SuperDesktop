@@ -38,9 +38,9 @@ use shell_provider_protocol::{
 use taskbar_ui::{
     AccessibleTask, ClockLocale, CoreStatus, FlyoutAction, JumpListModel, JumpListView,
     NotificationAreaModel, PreviewCard, ProviderState, StartActions, StartPowerAction,
-    StartSnapshot, StartView, StatusRegion, SystemStatusAction, TaskAction, TaskFlyoutView,
-    TaskViewEffect, TaskViewModel, TaskViewSurface, TaskbarCallbacks, TaskbarLayout, TaskbarView,
-    TestClock,
+    StartSnapshot, StartView, StatusRegion, SystemFlyoutKind, SystemFlyoutView, SystemStatusAction,
+    TaskAction, TaskFlyoutView, TaskViewEffect, TaskViewModel, TaskViewSurface, TaskbarCallbacks,
+    TaskbarLayout, TaskbarView, TestClock,
 };
 
 use crate::{
@@ -1306,6 +1306,37 @@ fn task_flyout_options(monitor: &MonitorRecord, card_count: usize) -> WindowOpti
     }
 }
 
+fn system_flyout_options(monitor: &MonitorRecord, kind: SystemFlyoutKind) -> WindowOptions {
+    let scale = monitor.dpi_x as f32 / 96.0;
+    let width = 380.0;
+    let available_height = (monitor.work_area.bottom - monitor.work_area.top) as f32 / scale;
+    let height = match kind {
+        SystemFlyoutKind::Input => 420.0_f32,
+        SystemFlyoutKind::Volume => 220.0,
+        SystemFlyoutKind::NetworkPower | SystemFlyoutKind::Calendar => 280.0,
+    }
+    .min(available_height);
+    let right = monitor.work_area.right as f32 / scale;
+    WindowOptions {
+        window_bounds: Some(WindowBounds::Windowed(Bounds {
+            origin: point(
+                px((right - width).max(monitor.work_area.left as f32 / scale)),
+                px(monitor.work_area.bottom as f32 / scale - height),
+            ),
+            size: size(px(width), px(height)),
+        })),
+        titlebar: None,
+        focus: true,
+        show: true,
+        kind: WindowKind::PopUp,
+        is_movable: false,
+        is_resizable: false,
+        is_minimizable: false,
+        window_background: WindowBackgroundAppearance::Opaque,
+        ..Default::default()
+    }
+}
+
 fn jump_list_options(monitor: &MonitorRecord) -> WindowOptions {
     let scale = monitor.dpi_x as f32 / 96.0;
     let width = 360.0;
@@ -1454,6 +1485,74 @@ fn status(snapshot: Option<&SystemStatusSnapshot>) -> StatusRegion {
     )
 }
 
+fn apply_system_status_action(
+    action: SystemStatusAction,
+    app: &mut App,
+    client: &Rc<RefCell<SystemStatusClient>>,
+    reconciler: &Rc<RefCell<StatusReconciler>>,
+    start_window: &Rc<RefCell<Option<gpui::WindowHandle<StartView>>>>,
+) {
+    let restore_start_focus = matches!(&action, SystemStatusAction::ActivateInputProfile(_));
+    let Some(expected_host_generation) = reconciler
+        .borrow()
+        .snapshot()
+        .map(|snapshot| snapshot.host_generation)
+    else {
+        trace_action("status:command-provider-unavailable");
+        return;
+    };
+    let command = match action {
+        SystemStatusAction::ActivateInputProfile(profile_id) => {
+            SystemStatusCommand::ActivateInputProfile { profile_id }
+        }
+        SystemStatusAction::SetVolume(volume_percent) => {
+            SystemStatusCommand::SetVolume { volume_percent }
+        }
+        SystemStatusAction::SetMute(muted) => SystemStatusCommand::SetMute { muted },
+    };
+    let correlation_id = format!(
+        "system-status-{}",
+        NEXT_PROVIDER_REQUEST.fetch_add(1, Ordering::Relaxed)
+    );
+    let request = SystemStatusHostRequest::Command {
+        request: SystemStatusCommandRequest {
+            correlation_id,
+            expected_host_generation,
+            deadline_unix_ms: unix_time_ms().saturating_add(1_000),
+            command,
+        },
+    };
+    let response = client
+        .borrow_mut()
+        .request(&request, Duration::from_millis(1_000));
+    match response {
+        Ok(response @ SystemStatusHostResponse::Terminal(_)) => {
+            reconciler.borrow_mut().apply(response);
+            if let Ok(snapshot @ SystemStatusHostResponse::Snapshot(_)) =
+                client.borrow_mut().request(
+                    &SystemStatusHostRequest::Snapshot,
+                    Duration::from_millis(500),
+                )
+            {
+                reconciler.borrow_mut().apply(snapshot);
+            }
+            trace_action("status:command-terminal");
+        }
+        Ok(_) => trace_action("status:command-invalid-response"),
+        Err(_) => {
+            reconciler.borrow_mut().provider_unavailable();
+            trace_action("status:command-provider-failed");
+        }
+    }
+    if restore_start_focus && let Some(start) = *start_window.borrow() {
+        let _ = start.update(app, |_, window, cx| {
+            window.activate_window();
+            cx.notify();
+        });
+        trace_action("start:ime-focus-restored");
+    }
+}
+
 fn fixed_label() -> &'static str {
     match std::env::var("SUPERDESKTOP_LOCALE").as_deref() {
         Ok("zh-CN") => "超级资源管理器",
@@ -1546,6 +1645,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
         .run(move |cx: &mut App| {
             let mut desktop_handles = Vec::new();
             let mut taskbar_handles = Vec::new();
+            let mut system_flyout_windows = Vec::new();
             let leases = Rc::new(RefCell::new(Vec::<ControlledShellCapability>::new()));
             let init_error = Rc::new(RefCell::new(None::<&'static str>));
             for monitor in snapshot.monitors.clone() {
@@ -1828,6 +1928,16 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                 let status_for_taskbar = Rc::clone(&status_reconciler);
                 let status_client_for_taskbar = Rc::clone(&status_client);
                 let status_commands_for_taskbar = Rc::clone(&status_reconciler);
+                let system_flyout_window = Rc::new(RefCell::new(None::<(
+                    SystemFlyoutKind,
+                    gpui::WindowHandle<SystemFlyoutView>,
+                )>));
+                system_flyout_windows.push(Rc::clone(&system_flyout_window));
+                let system_flyout_window_for_taskbar = Rc::clone(&system_flyout_window);
+                let system_flyout_monitor = taskbar_monitor.clone();
+                let system_flyout_status = Rc::clone(&status_reconciler);
+                let system_flyout_client = Rc::clone(&status_client);
+                let system_flyout_start = Rc::clone(&start_window);
                 let production_taskbar_settings = persisted_settings.borrow().taskbar.clone();
                 let taskbar = cx.open_window(
                     options(
@@ -2261,73 +2371,67 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                 )
                             }),
                             system_status: Rc::new(move |action, app| {
-                                let restore_start_focus = matches!(
-                                    &action,
-                                    SystemStatusAction::ActivateInputProfile(_)
+                                apply_system_status_action(
+                                    action,
+                                    app,
+                                    &status_client_for_taskbar,
+                                    &status_commands_for_taskbar,
+                                    &start_window_for_status,
                                 );
-                                let Some(expected_host_generation) = status_commands_for_taskbar
-                                    .borrow()
-                                    .snapshot()
-                                    .map(|snapshot| snapshot.host_generation)
-                                else {
-                                    trace_action("status:command-provider-unavailable");
-                                    return;
-                                };
-                                let command = match action {
-                                    SystemStatusAction::ActivateInputProfile(profile_id) => {
-                                        SystemStatusCommand::ActivateInputProfile { profile_id }
-                                    }
-                                    SystemStatusAction::SetVolume(volume_percent) => {
-                                        SystemStatusCommand::SetVolume { volume_percent }
-                                    }
-                                    SystemStatusAction::SetMute(muted) => {
-                                        SystemStatusCommand::SetMute { muted }
-                                    }
-                                };
-                                let correlation_id = format!(
-                                    "system-status-{}",
-                                    NEXT_PROVIDER_REQUEST.fetch_add(1, Ordering::Relaxed)
-                                );
-                                let request = SystemStatusHostRequest::Command {
-                                    request: SystemStatusCommandRequest {
-                                        correlation_id,
-                                        expected_host_generation,
-                                        deadline_unix_ms: unix_time_ms().saturating_add(1_000),
-                                        command,
-                                    },
-                                };
-                                let response = status_client_for_taskbar
-                                    .borrow_mut()
-                                    .request(&request, Duration::from_millis(1_000));
-                                match response {
-                                    Ok(response @ SystemStatusHostResponse::Terminal(_)) => {
-                                        status_commands_for_taskbar.borrow_mut().apply(response);
-                                        if let Ok(snapshot @ SystemStatusHostResponse::Snapshot(_)) =
-                                            status_client_for_taskbar.borrow_mut().request(
-                                                &SystemStatusHostRequest::Snapshot,
-                                                Duration::from_millis(500),
-                                            )
-                                        {
-                                            status_commands_for_taskbar.borrow_mut().apply(snapshot);
-                                        }
-                                        trace_action("status:command-terminal");
-                                    }
-                                    Ok(_) => trace_action("status:command-invalid-response"),
-                                    Err(_) => {
-                                        status_commands_for_taskbar
-                                            .borrow_mut()
-                                            .provider_unavailable();
-                                        trace_action("status:command-provider-failed");
+                            }),
+                            system_flyout: Rc::new(move |kind, app| {
+                                if let Some((open_kind, handle)) =
+                                    system_flyout_window_for_taskbar.borrow_mut().take()
+                                {
+                                    let _ = handle.update(app, |_, window, _| {
+                                        window.remove_window();
+                                    });
+                                    if open_kind == kind {
+                                        trace_action("status:flyout-closed");
+                                        return;
                                     }
                                 }
-                                if restore_start_focus
-                                    && let Some(start) = *start_window_for_status.borrow()
-                                {
-                                    let _ = start.update(app, |_, window, cx| {
+                                let snapshot = system_flyout_status.borrow().snapshot().cloned();
+                                let flyout_status = status(snapshot.as_ref());
+                                let action_client = Rc::clone(&system_flyout_client);
+                                let action_status = Rc::clone(&system_flyout_status);
+                                let action_start = Rc::clone(&system_flyout_start);
+                                let dismiss_slot =
+                                    Rc::clone(&system_flyout_window_for_taskbar);
+                                let opened = app.open_window(
+                                    system_flyout_options(&system_flyout_monitor, kind),
+                                    move |window, cx| {
                                         window.activate_window();
-                                        cx.notify();
-                                    });
-                                    trace_action("start:ime-focus-restored");
+                                        let dismiss_slot = Rc::clone(&dismiss_slot);
+                                        cx.new(move |cx| {
+                                            SystemFlyoutView::new(
+                                                kind,
+                                                snapshot,
+                                                flyout_status,
+                                                Rc::new(move |action, app| {
+                                                    apply_system_status_action(
+                                                        action,
+                                                        app,
+                                                        &action_client,
+                                                        &action_status,
+                                                        &action_start,
+                                                    );
+                                                }),
+                                                Rc::new(move |window, _| {
+                                                    window.remove_window();
+                                                    *dismiss_slot.borrow_mut() = None;
+                                                    trace_action("status:flyout-dismissed");
+                                                }),
+                                                window,
+                                                cx,
+                                            )
+                                        })
+                                    },
+                                );
+                                if let Ok(handle) = opened {
+                                    *system_flyout_window_for_taskbar.borrow_mut() =
+                                        Some((kind, handle));
+                                    trace_action("status:owned-flyout-opened");
                                 }
                             }),
                             rendered: Rc::new(trace_rendered_frame),
@@ -2407,6 +2511,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                 let refresh_notification_client = Rc::clone(&notification_client);
                 let refresh_status_client = Rc::clone(&status_client);
                 let refresh_status_reconciler = Rc::clone(&status_reconciler);
+                let refresh_system_flyouts = system_flyout_windows.clone();
                 let refresh_settings = Rc::clone(&persisted_settings);
                 let refresh_task_icons = Rc::clone(&task_icon_cache);
                 refresh_foreground
@@ -2519,6 +2624,26 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                         continue;
                                     }
                                 }
+                                for slot in &refresh_system_flyouts {
+                                    let handle = slot
+                                        .borrow()
+                                        .as_ref()
+                                        .map(|(_, handle)| *handle);
+                                    if let Some(handle) = handle {
+                                        let updated = handle.update(app, |view, _, cx| {
+                                            if view.snapshot != current_system_snapshot
+                                                || view.status != current_status
+                                            {
+                                                view.snapshot = current_system_snapshot.clone();
+                                                view.status = current_status.clone();
+                                                cx.notify();
+                                            }
+                                        });
+                                        if updated.is_err() {
+                                            slot.borrow_mut().take();
+                                        }
+                                    }
+                                }
                                 if !alive {
                                     app.quit();
                                 }
@@ -2546,6 +2671,11 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                             }
                             for handle in taskbar_handles {
                                 let _ = handle.update(app, |_, window, _| window.remove_window());
+                            }
+                            for slot in system_flyout_windows {
+                                if let Some((_, handle)) = slot.borrow_mut().take() {
+                                    let _ = handle.update(app, |_, window, _| window.remove_window());
+                                }
                             }
                             *terminal_for_timer.borrow_mut() = Some(Ok(()));
                             app.quit();
@@ -2677,9 +2807,8 @@ mod live_parity_tests {
         let start = include_str!("../../taskbar-ui/src/start.rs");
         assert!(source.contains("start:ime-focus-restored"));
         assert!(source.contains("SystemStatusAction::ActivateInputProfile"));
-        assert!(source.contains(
-            "window.activate_window();\n                                        cx.notify();"
-        ));
+        assert!(source.contains("let _ = start.update(app"));
+        assert!(source.contains("window.activate_window();"));
         assert!(start.contains("let composition = self.model.composition.clone();"));
         let status_callback = source
             .split("system_status: Rc::new")
@@ -2687,6 +2816,24 @@ mod live_parity_tests {
             .and_then(|tail| tail.split("rendered: Rc::new").next())
             .expect("system status callback source");
         assert!(!status_callback.contains("composition"));
+    }
+
+    #[test]
+    fn system_status_supervision_and_owned_flyouts_are_mode_independent() {
+        let source = include_str!("surface_runtime.rs");
+        let production = source.split("#[cfg(test)]").next().unwrap_or(source);
+        assert_eq!(
+            production.matches("SystemStatusClient::adjacent()").count(),
+            1
+        );
+        assert!(production.contains("status:restart-capacity-exhausted"));
+        assert!(production.contains("status:owned-flyout-opened"));
+        let callback = production
+            .split("system_flyout: Rc::new")
+            .nth(1)
+            .and_then(|tail| tail.split("rendered: Rc::new").next())
+            .expect("owned system flyout callback");
+        assert!(!callback.contains("if shell"));
     }
 
     #[test]

@@ -140,6 +140,7 @@ pub struct TaskbarView {
 pub type TaskCallback = Rc<dyn Fn(&str, &mut App)>;
 pub type NotificationCallback = Rc<dyn Fn(&IconKey, NotificationEventKind)>;
 pub type SystemStatusCallback = Rc<dyn Fn(SystemStatusAction, &mut App)>;
+pub type SystemFlyoutCallback = Rc<dyn Fn(SystemFlyoutKind, &mut App)>;
 
 struct NotificationTooltip {
     text: String,
@@ -166,6 +167,7 @@ pub struct TaskbarCallbacks {
     pub task_context: TaskCallback,
     pub notification: NotificationCallback,
     pub system_status: SystemStatusCallback,
+    pub system_flyout: SystemFlyoutCallback,
     pub rendered: Rc<dyn Fn()>,
 }
 
@@ -193,11 +195,25 @@ impl Render for TaskbarView {
             .callbacks
             .as_ref()
             .map(|value| Rc::clone(&value.system_status));
+        let system_flyout_callback = self
+            .callbacks
+            .as_ref()
+            .map(|value| Rc::clone(&value.system_flyout));
+        let network_flyout_callback = system_flyout_callback.clone();
+        let network_flyout_key_callback = system_flyout_callback.clone();
+        let volume_flyout_callback = system_flyout_callback.clone();
+        let volume_flyout_key_callback = system_flyout_callback.clone();
+        let input_flyout_callback = system_flyout_callback.clone();
+        let input_flyout_key_callback = system_flyout_callback.clone();
+        let calendar_flyout_callback = system_flyout_callback;
+        let calendar_flyout_key_callback = calendar_flyout_callback.clone();
         let volume_callback = system_status_callback.clone();
         let mute_callback = system_status_callback.clone();
         let input_callback = system_status_callback.clone();
         let system_snapshot = self.system_snapshot.clone();
-        let system_flyout = self.system_flyout;
+        // Product composition opens the flyout in its own popup window. Keep
+        // the inline branch disabled so the taskbar HWND never clips it.
+        let system_flyout: Option<SystemFlyoutKind> = None;
         let start_key = start.clone();
         let task_view_key = task_view.clone();
         let fixed_key = fixed.clone();
@@ -711,20 +727,26 @@ impl Render for TaskbarView {
                             .flex()
                             .items_center()
                             .cursor_pointer()
-                            .on_click(_cx.listener(|this, _, _, cx| {
+                            .on_click(_cx.listener(move |this, _, _, cx| {
                                 this.system_flyout = toggled_system_flyout(
                                     this.system_flyout,
                                     SystemFlyoutKind::NetworkPower,
                                 );
+                                if let Some(callback) = &network_flyout_callback {
+                                    callback(SystemFlyoutKind::NetworkPower, cx);
+                                }
                                 cx.notify();
                             }))
                             .on_key_down(_cx.listener(
-                                |this, event: &gpui::KeyDownEvent, _, cx| {
+                                move |this, event: &gpui::KeyDownEvent, _, cx| {
                                     if activates_button(&event.keystroke.key) {
                                         this.system_flyout = toggled_system_flyout(
                                             this.system_flyout,
                                             SystemFlyoutKind::NetworkPower,
                                         );
+                                        if let Some(callback) = &network_flyout_key_callback {
+                                            callback(SystemFlyoutKind::NetworkPower, cx);
+                                        }
                                         cx.notify();
                                     }
                                 },
@@ -749,20 +771,26 @@ impl Render for TaskbarView {
                             .flex()
                             .items_center()
                             .cursor_pointer()
-                            .on_click(_cx.listener(|this, _, _, cx| {
+                            .on_click(_cx.listener(move |this, _, _, cx| {
                                 this.system_flyout = toggled_system_flyout(
                                     this.system_flyout,
                                     SystemFlyoutKind::Volume,
                                 );
+                                if let Some(callback) = &volume_flyout_callback {
+                                    callback(SystemFlyoutKind::Volume, cx);
+                                }
                                 cx.notify();
                             }))
                             .on_key_down(_cx.listener(
-                                |this, event: &gpui::KeyDownEvent, _, cx| {
+                                move |this, event: &gpui::KeyDownEvent, _, cx| {
                                     if activates_button(&event.keystroke.key) {
                                         this.system_flyout = toggled_system_flyout(
                                             this.system_flyout,
                                             SystemFlyoutKind::Volume,
                                         );
+                                        if let Some(callback) = &volume_flyout_key_callback {
+                                            callback(SystemFlyoutKind::Volume, cx);
+                                        }
                                         cx.notify();
                                     }
                                 },
@@ -791,20 +819,26 @@ impl Render for TaskbarView {
                             .flex()
                             .items_center()
                             .cursor_pointer()
-                            .on_click(_cx.listener(|this, _, _, cx| {
+                            .on_click(_cx.listener(move |this, _, _, cx| {
                                 this.system_flyout = toggled_system_flyout(
                                     this.system_flyout,
                                     SystemFlyoutKind::Input,
                                 );
+                                if let Some(callback) = &input_flyout_callback {
+                                    callback(SystemFlyoutKind::Input, cx);
+                                }
                                 cx.notify();
                             }))
                             .on_key_down(_cx.listener(
-                                |this, event: &gpui::KeyDownEvent, _, cx| {
+                                move |this, event: &gpui::KeyDownEvent, _, cx| {
                                     if activates_button(&event.keystroke.key) {
                                         this.system_flyout = toggled_system_flyout(
                                             this.system_flyout,
                                             SystemFlyoutKind::Input,
                                         );
+                                        if let Some(callback) = &input_flyout_key_callback {
+                                            callback(SystemFlyoutKind::Input, cx);
+                                        }
                                         cx.notify();
                                     }
                                 },
@@ -827,20 +861,26 @@ impl Render for TaskbarView {
                             .items_center()
                             .justify_center()
                             .cursor_pointer()
-                            .on_click(_cx.listener(|this, _, _, cx| {
+                            .on_click(_cx.listener(move |this, _, _, cx| {
                                 this.system_flyout = toggled_system_flyout(
                                     this.system_flyout,
                                     SystemFlyoutKind::Calendar,
                                 );
+                                if let Some(callback) = &calendar_flyout_callback {
+                                    callback(SystemFlyoutKind::Calendar, cx);
+                                }
                                 cx.notify();
                             }))
                             .on_key_down(_cx.listener(
-                                |this, event: &gpui::KeyDownEvent, _, cx| {
+                                move |this, event: &gpui::KeyDownEvent, _, cx| {
                                     if activates_button(&event.keystroke.key) {
                                         this.system_flyout = toggled_system_flyout(
                                             this.system_flyout,
                                             SystemFlyoutKind::Calendar,
                                         );
+                                        if let Some(callback) = &calendar_flyout_key_callback {
+                                            callback(SystemFlyoutKind::Calendar, cx);
+                                        }
                                         cx.notify();
                                     }
                                 },

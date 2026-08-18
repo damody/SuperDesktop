@@ -129,7 +129,7 @@
 - [x] 4.2.2 Add input-profile list with active mark and typed switch actions.
 - [x] 4.2.3 Add volume slider/mute state and typed audio actions.
 - [x] 4.2.4 Add truthful network/power summary and clock/calendar views.
-- [ ] 4.2.5 Add pointer, keyboard, UIA, focus-return, unavailable and rapid-switch tests.
+- [x] 4.2.5 Add pointer, keyboard, UIA, focus-return, unavailable and rapid-switch tests.
 
 ### 4.3 Integrate snapshots, commands and Start IME stability
 
@@ -144,7 +144,7 @@
 - [x] 4.3.1 Start/supervise the host and apply initial/live status snapshots.
 - [x] 4.3.2 Route input/audio flyout actions and observed terminal state back to views.
 - [x] 4.3.3 Preserve Start IME composition and focus during taskbar profile changes.
-- [ ] 4.3.4 Add end-to-end provider unavailable/restart and mode-independent integration tests.
+- [x] 4.3.4 Add end-to-end provider unavailable/restart and mode-independent integration tests.
 
 ## 5. Verification and Packaging
 

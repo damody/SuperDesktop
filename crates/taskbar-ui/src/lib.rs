@@ -11,6 +11,7 @@ mod notification_area;
 mod start;
 mod status;
 mod surface;
+mod system_flyout;
 mod task_view;
 mod tracker;
 mod view;
@@ -39,6 +40,7 @@ pub use status::{
 pub use surface::{
     AppBarEffect, AppBarMode, AppBarRegistry, MonitorBar, MonitorGeometry, SurfaceChange,
 };
+pub use system_flyout::{SystemFlyoutAction, SystemFlyoutDismiss, SystemFlyoutView};
 pub use task_view::{
     DesktopCard, TaskViewAccessibleNode, TaskViewEffect, TaskViewModel, TaskViewSurface,
     VirtualDesktopSnapshot,
@@ -46,6 +48,6 @@ pub use task_view::{
 pub use tracker::{
     Eligibility, OwnedWindowEvent, TaskWindow, TrackerPush, WindowObservation, WindowTracker,
 };
-pub use view::{TaskbarCallbacks, TaskbarView};
+pub use view::{SystemFlyoutCallback, TaskbarCallbacks, TaskbarView};
 
 pub const CRATE_ROLE: &str = "taskbar GPUI surface and window-management boundary";
