@@ -1,0 +1,82 @@
+{
+    "schema":  "taskbar-auto-hide-headful/v1",
+    "result":  "passed",
+    "shell":  false,
+    "rows":  3,
+    "app_sha256":  "1725de5a30f1a4ef461cd0c0c10972226d4acf2c9ff9b4b98bebd7830d146b02",
+    "explorer_before":  [
+                            9856
+                        ],
+    "explorer_absent_during_capture":  false,
+    "hidden_client":  {
+                          "left":  0,
+                          "top":  2016,
+                          "width":  3840,
+                          "height":  210,
+                          "right":  3840,
+                          "bottom":  2226,
+                          "dpi":  168
+                      },
+    "visible_client":  {
+                           "left":  0,
+                           "top":  1808,
+                           "width":  3840,
+                           "height":  210,
+                           "right":  3840,
+                           "bottom":  2018,
+                           "dpi":  168
+                       },
+    "before_delay_client":  {
+                                "left":  0,
+                                "top":  1808,
+                                "width":  3840,
+                                "height":  210,
+                                "right":  3840,
+                                "bottom":  2018,
+                                "dpi":  168
+                            },
+    "after_delay_client":  {
+                               "left":  0,
+                               "top":  2016,
+                               "width":  3840,
+                               "height":  210,
+                               "right":  3840,
+                               "bottom":  2226,
+                               "dpi":  168
+                           },
+    "context_hold_client":  {
+                                "left":  0,
+                                "top":  1808,
+                                "width":  3840,
+                                "height":  210,
+                                "right":  3840,
+                                "bottom":  2018,
+                                "dpi":  168
+                            },
+    "anchor_bottom":  2018,
+    "final_settings":  {
+                           "rows":  3,
+                           "locked":  true,
+                           "auto_hide":  true,
+                           "pins":  [
+
+                                    ]
+                       },
+    "screenshots":  [
+                        {
+                            "name":  "taskbar-auto-hide-context-hold.png",
+                            "bytes":  1354328,
+                            "sha256":  "ffbfb2de7511c16ac639c32950957c3fe8c008e61873d9e6615e5eb448757677"
+                        },
+                        {
+                            "name":  "taskbar-auto-hide-hidden.png",
+                            "bytes":  717785,
+                            "sha256":  "fa085214db7a8b2355af09f1cdeecd656ccc4745665b90017a6e9f3fca1ca717"
+                        },
+                        {
+                            "name":  "taskbar-auto-hide-visible.png",
+                            "bytes":  1358654,
+                            "sha256":  "62b93fa7b14b107720b99f2d9e8e7d35f775ce31fc9d9b4968681bddf52c87ee"
+                        }
+                    ]
+}

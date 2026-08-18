@@ -231,6 +231,22 @@ impl ControlledShellCapability {
         Ok(())
     }
 
+    /// Removes only this lease's AppBar reservation while retaining the owned
+    /// Shell Hook subscription. This is used by owned taskbar auto-hide.
+    pub fn remove_appbar(&mut self) -> Result<bool, &'static str> {
+        self.validate_active()?;
+        if !self.appbar_registered {
+            return Ok(false);
+        }
+        let mut data = self.appbar_data();
+        // SAFETY: removes only the registration created for this controlled HWND.
+        if unsafe { SHAppBarMessage(ABM_REMOVE, &mut data) } == 0 {
+            return Err("appbar-remove-failed");
+        }
+        self.appbar_registered = false;
+        Ok(true)
+    }
+
     /// Asks the shell for a bottom reservation, then applies its exact returned
     /// rectangle to the controlled test AppBar. No Explorer HWND is touched.
     pub fn reserve_bottom(
@@ -348,12 +364,7 @@ impl ControlledShellCapability {
             }
         }
         if self.appbar_registered {
-            let mut data = self.appbar_data();
-            // SAFETY: removes only the registration created for this controlled HWND.
-            result.appbar_removed = unsafe { SHAppBarMessage(ABM_REMOVE, &mut data) } != 0;
-            if result.appbar_removed {
-                self.appbar_registered = false;
-            }
+            result.appbar_removed = self.remove_appbar().unwrap_or(false);
         }
         result
     }

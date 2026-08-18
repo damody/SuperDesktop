@@ -1,0 +1,19 @@
+{
+  "schema": "independent-review/v1",
+  "result": "passed",
+  "reviewer_role": "architecture_reviewer",
+  "scope": ["Win32 ownership", "AppBar lifecycle", "provider isolation", "GPUI timing", "accessibility", "Explorer-free behavior"],
+  "remediations": [
+    "provider IPC moved to a dedicated joined worker",
+    "reveal worker posts a private registered message and never synchronously mutates the cross-thread HWND",
+    "registered-message zero fails closed",
+    "AppBar transitions retry and partial registration is removed",
+    "native resize sessions hold visibility with callback panic fencing",
+    "Preview owns a Shell-Hook-only attention observer",
+    "normal close and timed teardown restore current-row visible geometry and join workers",
+    "UIA CheckBox TogglePattern and save-failure reconciliation are executable"
+  ],
+  "unresolved_p0": 0,
+  "unresolved_p1": 0,
+  "unresolved_release_blocking_p2": 0
+}

@@ -85,6 +85,7 @@ pub enum TaskbarAlignment {
 pub struct TaskbarSettings {
     pub rows: u8,
     pub locked: bool,
+    pub auto_hide: bool,
     pub pins: Vec<String>,
     pub combine_groups: bool,
     pub show_labels: bool,
@@ -100,6 +101,7 @@ impl Default for TaskbarSettings {
         Self {
             rows: 2,
             locked: true,
+            auto_hide: false,
             pins: Vec::new(),
             combine_groups: false,
             show_labels: true,
@@ -225,6 +227,7 @@ impl SettingsV1 {
                 corrections.push(SettingsCorrection::TaskbarRows);
             }
             settings.taskbar.locked = take_bool(&mut taskbar, "locked").unwrap_or(true);
+            settings.taskbar.auto_hide = take_bool(&mut taskbar, "auto_hide").unwrap_or(false);
             settings.taskbar.pins = take_string_array(&mut taskbar, "pins").unwrap_or_default();
             settings.taskbar.combine_groups =
                 take_bool(&mut taskbar, "combine_groups").unwrap_or(false);
@@ -354,6 +357,7 @@ impl SettingsV1 {
                 ),
                 ("rows".into(), Value::Number(i64::from(self.taskbar.rows))),
                 ("locked".into(), Value::Bool(self.taskbar.locked)),
+                ("auto_hide".into(), Value::Bool(self.taskbar.auto_hide)),
                 (
                     "combine_groups".into(),
                     Value::Bool(self.taskbar.combine_groups),
@@ -720,9 +724,10 @@ mod tests {
         assert_eq!(defaults.taskbar.alignment, TaskbarAlignment::Left);
         assert!(!defaults.taskbar.show_labels);
         assert!(defaults.taskbar.locked);
+        assert!(!defaults.taskbar.auto_hide);
 
         let configured = SettingsV1::decode(
-            r#"{"schema_version":1,"taskbar":{"rows":3,"locked":false,"search_mode":"box","show_task_view":false,"alignment":"center","combine_groups":true}}"#,
+            r#"{"schema_version":1,"taskbar":{"rows":3,"locked":false,"auto_hide":true,"search_mode":"box","show_task_view":false,"alignment":"center","combine_groups":true}}"#,
         )
         .unwrap()
         .settings;
@@ -730,13 +735,14 @@ mod tests {
         assert!(!configured.taskbar.show_task_view);
         assert_eq!(configured.taskbar.alignment, TaskbarAlignment::Center);
         assert!(!configured.taskbar.locked);
+        assert!(configured.taskbar.auto_hide);
         assert_eq!(
             SettingsV1::decode(&configured.encode()).unwrap().settings,
             configured
         );
 
         let invalid = SettingsV1::decode(
-            r#"{"schema_version":1,"taskbar":{"rows":1,"search_mode":"future","show_task_view":false,"alignment":"diagonal","previews_enabled":false}}"#,
+            r#"{"schema_version":1,"taskbar":{"rows":1,"auto_hide":"future","search_mode":"future","show_task_view":false,"alignment":"diagonal","previews_enabled":false}}"#,
         )
         .unwrap()
         .settings;
@@ -746,6 +752,7 @@ mod tests {
         assert!(!invalid.taskbar.previews_enabled);
         assert_eq!(invalid.taskbar.rows, 1);
         assert!(invalid.taskbar.locked);
+        assert!(!invalid.taskbar.auto_hide);
     }
 
     #[test]

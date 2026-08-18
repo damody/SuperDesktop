@@ -1,0 +1,12 @@
+{
+    "schema":  "taskbar-auto-hide-uia/v1",
+    "result":  "passed",
+    "semantic_role":  "CheckBox",
+    "uia_control_type":  "ControlType.CheckBox",
+    "uia_discovery":  true,
+    "activation":  "toggle",
+    "before_name":  "自動隱藏工作列, 關閉",
+    "after_name":  "自動隱藏工作列, 開啟",
+    "keyboard_model_test":  "taskbar_settings::tests::settings_model_changes_only_supported_fields_and_reconciles_revision",
+    "save_failure_model":  "TaskbarSettingsView.reject retains authoritative model state"
+}

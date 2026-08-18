@@ -4,6 +4,7 @@
 compile_error!("SuperDesktop is supported only on Windows targets.");
 
 mod advanced;
+mod auto_hide;
 mod grouping;
 mod interaction;
 mod layout;
@@ -21,6 +22,10 @@ mod view;
 pub use advanced::{
     AdvancedTaskbarPreferences, FlyoutAction, FlyoutModel, JumpListGroup, JumpListModel,
     JumpListView, PreviewCard, ProgressState, TaskFlyoutView, TaskOverlay, TaskVisualState,
+};
+pub use auto_hide::{
+    AUTO_HIDE_DELAY_MS, AUTO_HIDE_REVEAL_PIXELS, AutoHideEffect, AutoHideEndpoints, AutoHideInput,
+    AutoHideState, PhysicalPoint, PhysicalRect, auto_hide_endpoints, reduce_auto_hide,
 };
 pub use grouping::{GroupModel, PinChange, TaskGroup};
 pub use interaction::{

@@ -1,0 +1,19 @@
+{
+  "schema": "owned-taskbar-auto-hide-automated/v1",
+  "result": "passed",
+  "release_app_sha256": "1725de5a30f1a4ef461cd0c0c10972226d4acf2c9ff9b4b98bebd7830d146b02",
+  "commands": [
+    "cargo fmt --all -- --check",
+    "cargo test --workspace --all-targets --locked --offline --no-fail-fast",
+    "cargo clippy --workspace --all-targets --locked --offline -- -D warnings",
+    "cargo build --workspace --all-targets --release --locked --offline"
+  ],
+  "focused_counts": {
+    "platform_win": 77,
+    "taskbar_ui": 57,
+    "superdesktop_app": 32,
+    "settings_store": 15
+  },
+  "headful_profiles": ["preview-row1", "preview", "preview-row3", "shell", "settings-uia"],
+  "host": {"windows_build": 26200, "dpi_percent": 175, "physical_bottom": 2160, "preview_work_bottom": 2018}
+}

@@ -1,10 +1,14 @@
 //! Owned taskbar window snapshots and validated foreground effects.
 
 use std::{
+    cell::RefCell,
+    collections::BTreeSet,
     ffi::c_void,
     mem::size_of,
     os::windows::fs::MetadataExt,
+    panic::{AssertUnwindSafe, catch_unwind},
     process::{Command, Stdio},
+    sync::OnceLock,
 };
 
 use windows::Win32::{
@@ -18,17 +22,18 @@ use windows::Win32::{
     UI::{
         Shell::{DefSubclassProc, RemoveWindowSubclass, SetWindowSubclass},
         WindowsAndMessaging::{
-            EnumWindows, GW_OWNER, GWL_EXSTYLE, GWL_STYLE, GetClientRect, GetForegroundWindow,
-            GetWindow, GetWindowLongPtrW, GetWindowRect, GetWindowTextLengthW, GetWindowTextW,
-            GetWindowThreadProcessId, HTCLIENT, HWND_TOPMOST, IsIconic, IsWindow, IsWindowVisible,
-            PostMessageW, SW_MINIMIZE, SW_RESTORE, SWP_FRAMECHANGED, SWP_NOACTIVATE, SWP_NOMOVE,
-            SWP_NOSIZE, SWP_NOZORDER, SWP_SHOWWINDOW, SetForegroundWindow, SetWindowLongPtrW,
-            SetWindowPos, ShowWindow, WM_CLOSE, WM_NCDESTROY, WM_NCHITTEST, WS_EX_NOACTIVATE,
+            EnumWindows, GW_OWNER, GWL_EXSTYLE, GWL_STYLE, GetClientRect, GetCursorPos,
+            GetForegroundWindow, GetWindow, GetWindowLongPtrW, GetWindowRect, GetWindowTextLengthW,
+            GetWindowTextW, GetWindowThreadProcessId, HTCLIENT, HWND_TOPMOST, IsIconic, IsWindow,
+            IsWindowVisible, PostMessageW, RegisterWindowMessageW, SW_MINIMIZE, SW_RESTORE,
+            SWP_FRAMECHANGED, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER, SWP_SHOWWINDOW,
+            SetForegroundWindow, SetWindowLongPtrW, SetWindowPos, ShowWindow, WM_CLOSE,
+            WM_ENTERSIZEMOVE, WM_EXITSIZEMOVE, WM_NCDESTROY, WM_NCHITTEST, WS_EX_NOACTIVATE,
             WS_EX_TOOLWINDOW, WS_THICKFRAME,
         },
     },
 };
-use windows::core::{BOOL, PWSTR};
+use windows::core::{BOOL, PWSTR, w};
 
 use super::ffi_boundary::{CallbackFence, CallbackResult};
 
@@ -39,6 +44,10 @@ const DWMWCP_DONOTROUND: u32 = 1;
 const DWMWA_COLOR_NONE: u32 = 0xffff_fffe;
 const FILE_ATTRIBUTE_REPARSE_POINT: u32 = 0x0000_0400;
 const TASKBAR_RESIZE_SUBCLASS_ID: usize = 0x5253_5a45;
+static TASKBAR_AUTO_HIDE_REVEAL_MESSAGE: OnceLock<u32> = OnceLock::new();
+thread_local! {
+    static TASKBAR_RESIZE_SESSIONS: RefCell<BTreeSet<isize>> = const { RefCell::new(BTreeSet::new()) };
+}
 #[link(name = "dwmapi")]
 unsafe extern "system" {
     fn DwmGetWindowAttribute(hwnd: HWND, attribute: u32, value: *mut c_void, size: u32) -> i32;
@@ -53,6 +62,35 @@ unsafe extern "system" fn taskbar_resize_subclass_proc(
     id: usize,
     ref_data: usize,
 ) -> LRESULT {
+    if TASKBAR_AUTO_HIDE_REVEAL_MESSAGE
+        .get()
+        .is_some_and(|registered| *registered != 0 && message == *registered)
+    {
+        let _ = catch_unwind(AssertUnwindSafe(|| {
+            let mut client = RECT::default();
+            if unsafe { GetClientRect(hwnd, &mut client) }.is_ok() {
+                let _ = configure_and_show_taskbar_window(
+                    hwnd.0 as isize,
+                    wparam.0 as i32,
+                    lparam.0 as i32,
+                    client.right - client.left,
+                    client.bottom - client.top,
+                );
+            }
+        }));
+        return LRESULT(0);
+    }
+    let _ = catch_unwind(AssertUnwindSafe(|| {
+        TASKBAR_RESIZE_SESSIONS.with(|sessions| match message {
+            WM_ENTERSIZEMOVE => {
+                sessions.borrow_mut().insert(hwnd.0 as isize);
+            }
+            WM_EXITSIZEMOVE | WM_NCDESTROY => {
+                sessions.borrow_mut().remove(&(hwnd.0 as isize));
+            }
+            _ => {}
+        });
+    }));
     if message == WM_NCDESTROY {
         unsafe {
             let _ = RemoveWindowSubclass(hwnd, Some(taskbar_resize_subclass_proc), id);
@@ -62,6 +100,57 @@ unsafe extern "system" fn taskbar_resize_subclass_proc(
         return LRESULT(HTCLIENT as isize);
     }
     unsafe { DefSubclassProc(hwnd, message, wparam, lparam) }
+}
+
+fn taskbar_auto_hide_reveal_message() -> Result<u32, &'static str> {
+    if let Some(message) = TASKBAR_AUTO_HIDE_REVEAL_MESSAGE.get().copied() {
+        return (message != 0)
+            .then_some(message)
+            .ok_or("taskbar-reveal-message-zero");
+    }
+    let message = unsafe { RegisterWindowMessageW(w!("SuperDesktop.Taskbar.AutoHideReveal")) };
+    if message == 0 {
+        return Err("taskbar-reveal-message-register");
+    }
+    let _ = TASKBAR_AUTO_HIDE_REVEAL_MESSAGE.set(message);
+    Ok(TASKBAR_AUTO_HIDE_REVEAL_MESSAGE
+        .get()
+        .copied()
+        .unwrap_or(message))
+}
+
+pub fn owned_taskbar_resize_active() -> bool {
+    TASKBAR_RESIZE_SESSIONS.with(|sessions| !sessions.borrow().is_empty())
+}
+
+pub fn post_owned_taskbar_reveal(
+    hwnd_identity: isize,
+    client_left: i32,
+    client_top: i32,
+) -> Result<(), String> {
+    if hwnd_identity == 0 {
+        return Err("taskbar-reveal-hwnd-zero".into());
+    }
+    let hwnd = HWND(hwnd_identity as *mut c_void);
+    let mut owner_pid = 0;
+    unsafe {
+        if !IsWindow(Some(hwnd)).as_bool() {
+            return Err("taskbar-reveal-hwnd-retired".into());
+        }
+        if GetWindowThreadProcessId(hwnd, Some(&mut owner_pid)) == 0
+            || owner_pid != GetCurrentProcessId()
+        {
+            return Err("taskbar-reveal-hwnd-foreign".into());
+        }
+        PostMessageW(
+            Some(hwnd),
+            taskbar_auto_hide_reveal_message().map_err(str::to_owned)?,
+            WPARAM(client_left as usize),
+            LPARAM(client_top as isize),
+        )
+        .map_err(|error| error.to_string())?;
+    }
+    Ok(())
 }
 
 /// Resolves the inbox Task Manager from the Windows directory and launches the
@@ -111,6 +200,7 @@ pub fn set_owned_taskbar_resizable(hwnd_identity: isize, resizable: bool) -> Res
         return Err("taskbar-resize-hwnd-zero".into());
     }
     let hwnd = HWND(hwnd_identity as *mut c_void);
+    let _ = taskbar_auto_hide_reveal_message().map_err(str::to_owned)?;
     let mut owner_pid = 0;
     // SAFETY: all mutation follows liveness and current-process ownership checks.
     unsafe {
@@ -157,6 +247,56 @@ pub fn set_owned_taskbar_resizable(hwnd_identity: isize, resizable: bool) -> Res
         )
         .map_err(|error| error.to_string())?;
     }
+    Ok(true)
+}
+
+pub fn physical_cursor_position() -> Result<(i32, i32), String> {
+    let mut point = POINT::default();
+    // SAFETY: GetCursorPos writes one initialized POINT and mutates no window.
+    if unsafe { GetCursorPos(&mut point) }.is_ok() {
+        Ok((point.x, point.y))
+    } else {
+        Err("taskbar-cursor-unavailable".into())
+    }
+}
+
+pub fn move_owned_taskbar_client(
+    hwnd_identity: isize,
+    left: i32,
+    top: i32,
+    width: i32,
+    height: i32,
+) -> Result<bool, String> {
+    if hwnd_identity == 0 || width <= 0 || height <= 0 {
+        return Err("taskbar-endpoint-invalid".into());
+    }
+    let hwnd = HWND(hwnd_identity as *mut c_void);
+    let mut owner_pid = 0;
+    let mut client = RECT::default();
+    let mut origin = POINT::default();
+    // SAFETY: queries use local output storage and occur before any mutation.
+    unsafe {
+        if !IsWindow(Some(hwnd)).as_bool() {
+            return Err("taskbar-endpoint-retired".into());
+        }
+        if GetWindowThreadProcessId(hwnd, Some(&mut owner_pid)) == 0
+            || owner_pid != GetCurrentProcessId()
+        {
+            return Err("taskbar-endpoint-foreign".into());
+        }
+        GetClientRect(hwnd, &mut client).map_err(|error| error.to_string())?;
+        if !ClientToScreen(hwnd, &mut origin).as_bool() {
+            return Err("taskbar-endpoint-origin-unavailable".into());
+        }
+    }
+    if origin.x == left
+        && origin.y == top
+        && client.right - client.left == width
+        && client.bottom - client.top == height
+    {
+        return Ok(false);
+    }
+    configure_and_show_taskbar_window(hwnd_identity, left, top, width, height)?;
     Ok(true)
 }
 
@@ -507,10 +647,81 @@ mod tests {
             "SetWindowSubclass",
             "message == WM_NCHITTEST && ref_data == 1",
             "RemoveWindowSubclass",
+            "WM_ENTERSIZEMOVE",
+            "WM_EXITSIZEMOVE | WM_NCDESTROY",
+            "catch_unwind(AssertUnwindSafe",
         ] {
             assert!(production.contains(required));
         }
         assert!(!production.contains("Shell_TrayWnd"));
+    }
+    #[test]
+    fn taskbar_auto_hide_adapters_reject_invalid_and_foreign_windows() {
+        assert!(move_owned_taskbar_client(0, 0, 0, 100, 40).is_err());
+        assert!(move_owned_taskbar_client(1, 0, 0, 100, 40).is_err());
+        assert!(move_owned_taskbar_client(0, 0, 0, 0, 40).is_err());
+        let foreground = unsafe { GetForegroundWindow() };
+        if !foreground.0.is_null() {
+            let mut process_id = 0;
+            unsafe { GetWindowThreadProcessId(foreground, Some(&mut process_id)) };
+            if process_id != 0 && process_id != unsafe { GetCurrentProcessId() } {
+                assert!(move_owned_taskbar_client(foreground.0 as isize, 0, 0, 100, 40).is_err());
+            }
+        }
+        let production = include_str!("taskbar.rs")
+            .split("#[cfg(test)]")
+            .next()
+            .unwrap();
+        for token in [
+            "GetCursorPos",
+            "owner_pid != GetCurrentProcessId()",
+            "taskbar-endpoint-foreign",
+            "configure_and_show_taskbar_window(hwnd_identity, left, top, width, height)",
+            "taskbar-reveal-message-register",
+            "if message == 0",
+            "PostMessageW",
+        ] {
+            assert!(production.contains(token));
+        }
+        assert!(!production.contains("Shell_TrayWnd"));
+    }
+    #[test]
+    fn owned_taskbar_endpoint_move_is_exact_idempotent_and_rejects_retirement() {
+        use windows::Win32::UI::WindowsAndMessaging::{CreateWindowExW, DestroyWindow, WS_POPUP};
+        use windows::core::w;
+
+        let hwnd = unsafe {
+            CreateWindowExW(
+                Default::default(),
+                w!("STATIC"),
+                w!("SuperDesktop owned auto-hide test"),
+                WS_POPUP,
+                -20_000,
+                -20_000,
+                32,
+                32,
+                None,
+                None,
+                None,
+                None,
+            )
+        }
+        .expect("owned test hwnd");
+        assert!(move_owned_taskbar_client(hwnd.0 as isize, -1800, 900, 640, 70).unwrap());
+        assert!(!move_owned_taskbar_client(hwnd.0 as isize, -1800, 900, 640, 70).unwrap());
+        let mut client = RECT::default();
+        let mut origin = POINT::default();
+        unsafe {
+            GetClientRect(hwnd, &mut client).unwrap();
+            assert!(ClientToScreen(hwnd, &mut origin).as_bool());
+        }
+        assert_eq!((origin.x, origin.y), (-1800, 900));
+        assert_eq!(
+            (client.right - client.left, client.bottom - client.top),
+            (640, 70)
+        );
+        unsafe { DestroyWindow(hwnd).unwrap() };
+        assert!(move_owned_taskbar_client(hwnd.0 as isize, 0, 0, 640, 70).is_err());
     }
     #[test]
     fn task_manager_path_is_canonical_system32_regular_file() {

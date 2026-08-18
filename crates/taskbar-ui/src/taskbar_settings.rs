@@ -2,7 +2,7 @@ use std::{collections::BTreeSet, rc::Rc};
 
 use gpui::{
     Context, FocusHandle, InteractiveElement, IntoElement, ParentElement, Render,
-    StatefulInteractiveElement, Styled, Window, div, prelude::FluentBuilder as _, px, rgb,
+    StatefulInteractiveElement, Styled, Toggled, Window, div, prelude::FluentBuilder as _, px, rgb,
 };
 use settings_store::{TaskbarAlignment, TaskbarSearchMode, TaskbarSettings};
 
@@ -496,9 +496,9 @@ impl TaskbarSettingsModel {
                 TaskbarSettingsSection::Behaviors,
                 "Automatically hide the taskbar",
                 "Hide until the pointer reaches the screen edge",
-                "Off",
-                false,
-                Some("Auto-hide requires a separately verified AppBar design"),
+                on_off(s.auto_hide),
+                true,
+                None,
             ),
             row(
                 TaskbarSettingId::DateTime,
@@ -553,6 +553,7 @@ impl TaskbarSettingsModel {
             TaskbarSettingId::Previews => candidate.previews_enabled = !candidate.previews_enabled,
             TaskbarSettingId::AllMonitors => candidate.all_monitors = !candidate.all_monitors,
             TaskbarSettingId::Locked => candidate.locked = !candidate.locked,
+            TaskbarSettingId::AutoHide => candidate.auto_hide = !candidate.auto_hide,
             TaskbarSettingId::Rows => {
                 candidate.rows = if candidate.rows >= 3 {
                     1
@@ -867,7 +868,8 @@ impl Render for TaskbarSettingsView {
                                 let is_switch = matches!(id, TaskbarSettingId::TaskView | TaskbarSettingId::Widgets | TaskbarSettingId::Labels | TaskbarSettingId::CombineGroups | TaskbarSettingId::Previews | TaskbarSettingId::AllMonitors | TaskbarSettingId::Locked | TaskbarSettingId::PenMenu | TaskbarSettingId::AutoHide);
                                 let switch_on = matches!(value.as_str(), "On" | "開啟");
                                 let aria = if let Some(reason) = row.unavailable_reason { format!("{title}, unavailable: {reason}") } else { format!("{title}, {value}") };
-                                div().id(format!("taskbar-setting-{id:?}")).role(gpui::Role::Button).aria_label(aria).tab_index(0)
+                                div().id(format!("taskbar-setting-{id:?}")).role(if is_switch { gpui::Role::CheckBox } else { gpui::Role::Button }).aria_label(aria).tab_index(0)
+                                    .when(is_switch, |element| element.aria_toggled(Toggled::from(switch_on)))
                                     .min_h(px(56.)).px(px(16.)).py(px(10.)).border_t_1().border_color(rgb(border)).flex().items_center().gap(px(16.))
                                     .when(!enabled, |element| element.opacity(0.5))
                                     .when(enabled, |element| element.cursor_pointer().on_click(cx.listener(move |this, _, _, cx| { if let Some(effect) = this.model.activate(id) { this.apply(effect); } cx.notify(); })))
@@ -932,6 +934,23 @@ mod tests {
         };
         assert!(!unlocked.locked);
         assert_eq!(unlocked.rows, candidate.rows);
+
+        model.apply_saved(unlocked, 9);
+        let Some(TaskbarSettingsEffect::Save {
+            candidate: auto_hidden,
+            base_revision: 9,
+        }) = model.activate(TaskbarSettingId::AutoHide)
+        else {
+            panic!("auto-hide save effect")
+        };
+        assert!(auto_hidden.auto_hide);
+        assert!(!auto_hidden.locked);
+        let authoritative_before_failure = model.settings().clone();
+        let revision_before_failure = model.revision();
+        model.reject("simulated atomic save failure");
+        assert_eq!(model.settings(), &authoritative_before_failure);
+        assert_eq!(model.revision(), revision_before_failure);
+        assert_eq!(model.error(), Some("simulated atomic save failure"));
     }
 
     #[test]
@@ -941,13 +960,21 @@ mod tests {
             TaskbarSettingId::Widgets,
             TaskbarSettingId::PenMenu,
             TaskbarSettingId::TouchKeyboard,
-            TaskbarSettingId::AutoHide,
         ] {
             let row = model.rows().into_iter().find(|row| row.id == id).unwrap();
             assert!(!row.enabled);
             assert!(row.unavailable_reason.is_some());
             assert_eq!(model.activate(id), None);
         }
+
+        let auto_hide = model
+            .rows()
+            .into_iter()
+            .find(|row| row.id == TaskbarSettingId::AutoHide)
+            .unwrap();
+        assert!(auto_hide.enabled);
+        assert_eq!(auto_hide.value, "Off");
+        assert_eq!(auto_hide.unavailable_reason, None);
     }
 
     #[test]
@@ -961,6 +988,8 @@ mod tests {
             "Role::Menu",
             "Role::Dialog",
             "Role::Alert",
+            "Role::CheckBox",
+            "aria_toggled",
         ] {
             assert!(source.contains(token), "missing {token}");
         }

@@ -12,9 +12,9 @@
 **Gate／Evidence：** `G-AUTOHIDE-SETTINGS`; automated evidence.
 **完成門檻：** Legacy, valid, invalid, and sibling-isolation cases pass.
 
-- [ ] 1.1.1 Add `auto_hide` with a false legacy default without changing schema version.
-- [ ] 1.1.2 Decode, encode, and atomically round-trip the authoritative value.
-- [ ] 1.1.3 Add legacy fallback, invalid-field, and independent-sibling tests.
+- [x] 1.1.1 Add `auto_hide` with a false legacy default without changing schema version.
+- [x] 1.1.2 Decode, encode, and atomically round-trip the authoritative value.
+- [x] 1.1.3 Add legacy fallback, invalid-field, and independent-sibling tests.
 
 ### 1.2 Define pure auto-hide state and geometry
 
@@ -26,9 +26,9 @@
 **Gate／Evidence：** `G-AUTOHIDE-STATE`, `G-AUTOHIDE-GEOMETRY`; unit evidence.
 **完成門檻：** Every state transition, threshold, DPI, and negative-origin case is deterministic.
 
-- [ ] 1.2.1 Add `Visible`, `HidePending`, and `Hidden` state with typed effects.
-- [ ] 1.2.2 Add exact Preview/Shell visible and two-physical-pixel hidden endpoint geometry.
-- [ ] 1.2.3 Add reveal, 499/500 ms, duplicate tick, disabled, DPI, and negative-origin tests.
+- [x] 1.2.1 Add `Visible`, `HidePending`, and `Hidden` state with typed effects.
+- [x] 1.2.2 Add exact Preview/Shell visible and two-physical-pixel hidden endpoint geometry.
+- [x] 1.2.3 Add reveal, 499/500 ms, duplicate tick, disabled, DPI, and negative-origin tests.
 
 ## 2. Owned UI and runtime integration
 
@@ -42,9 +42,9 @@
 **Gate／Evidence：** `G-AUTOHIDE-UI`; model/UIA evidence.
 **完成門檻：** Pointer, keyboard, UIA, save failure, and refresh reconcile one authoritative value.
 
-- [ ] 2.1.1 Replace the disabled auto-hide row with an enabled localized toggle.
-- [ ] 2.1.2 Emit one typed atomic save effect and reconcile success/failure.
-- [ ] 2.1.3 Add pointer, keyboard, accessibility, localization, and save-failure tests.
+- [x] 2.1.1 Replace the disabled auto-hide row with an enabled localized toggle.
+- [x] 2.1.2 Emit one typed atomic save effect and reconcile success/failure.
+- [x] 2.1.3 Add pointer, keyboard, accessibility, localization, and save-failure tests.
 
 ### 2.2 Add fail-closed cursor and HWND adapters
 
@@ -56,9 +56,9 @@
 **Gate／Evidence：** `G-AUTOHIDE-NATIVE`, `G-SHELL-NONINTERFERENCE`; platform evidence.
 **完成門檻：** Owned movement is exact; null, retired, foreign, and duplicate requests are zero-effect.
 
-- [ ] 2.2.1 Add a typed physical cursor observation adapter.
-- [ ] 2.2.2 Add current-process HWND validation and exact idempotent endpoint movement.
-- [ ] 2.2.3 Add invalid, foreign, retired, duplicate, DPI, and source-contract tests.
+- [x] 2.2.1 Add a typed physical cursor observation adapter.
+- [x] 2.2.2 Add current-process HWND validation and exact idempotent endpoint movement.
+- [x] 2.2.3 Add invalid, foreign, retired, duplicate, DPI, and source-contract tests.
 
 ### 2.3 Integrate visibility holds and timed reconciliation
 
@@ -70,9 +70,9 @@
 **Gate／Evidence：** `G-AUTOHIDE-STATE`, `G-AUTOHIDE-INTERACTION`; app/headful evidence.
 **完成門檻：** Edge reveal is immediate, hide delay is continuous, and every declared hold prevents hiding.
 
-- [ ] 2.3.1 Compose pointer, focus, resize, popup, Start, flyout, and attention holds.
-- [ ] 2.3.2 Run the reducer on the bounded timer and apply each endpoint exactly once.
-- [ ] 2.3.3 Reconcile live setting changes, cursor failure, stale windows, and typed traces.
+- [x] 2.3.1 Compose pointer, focus, resize, popup, Start, flyout, and attention holds.
+- [x] 2.3.2 Run the reducer on the bounded timer and apply each endpoint exactly once.
+- [x] 2.3.3 Reconcile live setting changes, cursor failure, stale windows, and typed traces.
 
 ### 2.4 Reconcile AppBar and lifecycle behavior
 
@@ -84,9 +84,9 @@
 **Gate／Evidence：** `G-AUTOHIDE-LIFECYCLE`, `G-SHELL-NONINTERFERENCE`; lifecycle evidence.
 **完成門檻：** Preview is non-mutating; Shell skips reservation while enabled; disable and shutdown restore visibility.
 
-- [ ] 2.4.1 Skip Shell AppBar reservation while automatic hiding is authoritative.
-- [ ] 2.4.2 Restore visible placement and ordinary reservation when automatic hiding is disabled.
-- [ ] 2.4.3 Restore visible placement before normal teardown and add idempotent lifecycle tests.
+- [x] 2.4.1 Skip Shell AppBar reservation while automatic hiding is authoritative.
+- [x] 2.4.2 Restore visible placement and ordinary reservation when automatic hiding is disabled.
+- [x] 2.4.3 Restore visible placement before normal teardown and add idempotent lifecycle tests.
 
 ## 3. Verification and packaging
 
@@ -100,9 +100,9 @@
 **Gate／Evidence：** `G-AUTOHIDE-UI`, `G-AUTOHIDE-INTERACTION`, `G-AUTOHIDE-GEOMETRY`, `G-SHELL-NONINTERFERENCE`; headful evidence.
 **完成門檻：** Preview and Explorer-free Shell pass row, timing, edge, settings, and restoration checks.
 
-- [ ] 3.1.1 Run fmt, locked/offline workspace tests, clippy warnings-as-errors, and release build.
-- [ ] 3.1.2 Capture Preview one-to-three-row hide, delayed reveal, settings, and hold evidence.
-- [ ] 3.1.3 Capture Explorer-free Shell endpoints, process absence, teardown, and Explorer restoration evidence.
+- [x] 3.1.1 Run fmt, locked/offline workspace tests, clippy warnings-as-errors, and release build.
+- [x] 3.1.2 Capture Preview one-to-three-row hide, delayed reveal, settings, and hold evidence.
+- [x] 3.1.3 Capture Explorer-free Shell endpoints, process absence, teardown, and Explorer restoration evidence.
 
 ### 3.2 Validate traceability and distributable packages
 

@@ -25,7 +25,10 @@ use platform_win::common::{
     },
     desktop::{configure_and_show_desktop_window, current_wallpaper_path},
     monitor_dpi_start::{MonitorRecord, enable_per_monitor_v2, snapshot_real_monitors},
-    taskbar::{configure_and_show_taskbar_window, snapshot_task_windows},
+    taskbar::{
+        configure_and_show_taskbar_window, move_owned_taskbar_client, owned_taskbar_resize_active,
+        physical_cursor_position, post_owned_taskbar_reveal, snapshot_task_windows,
+    },
 };
 use raw_window_handle::{HasWindowHandle, RawWindowHandle};
 use settings_store::{DesktopSortDirection, DesktopSortKey};
@@ -35,17 +38,18 @@ use shell_provider_protocol::{
     NotificationEventKind, NotificationHostResponse, NotificationMutation, ProviderRequest,
     ResponseBody, SearchBatch, SearchQuery, StatusAvailability, SystemStatusCommand,
     SystemStatusCommandRequest, SystemStatusHostRequest, SystemStatusHostResponse,
-    SystemStatusSnapshot, TaskbarProgressKind, TaskbarWindowState, TerminalKind,
-    reduce_group_progress,
+    SystemStatusSnapshot, TaskbarProgressKind, TaskbarStateSnapshot, TaskbarWindowState,
+    TerminalKind, reduce_group_progress,
 };
 use taskbar_ui::{
-    AccessibleTask, ClockLocale, CoreStatus, FlyoutAction, JumpListModel, JumpListView,
-    NotificationAreaModel, NotificationOverflowView, PreviewCard, ProgressState, ProviderState,
-    StartActions, StartPowerAction, StartSnapshot, StartView, StatusRegion, SystemFlyoutKind,
-    SystemFlyoutPresentation, SystemFlyoutTheme, SystemFlyoutView, SystemStatusAction, TaskAction,
-    TaskFlyoutView, TaskViewEffect, TaskViewModel, TaskViewSurface, TaskbarCallbacks,
-    TaskbarContextCommand, TaskbarContextView, TaskbarLayout, TaskbarSettingId,
-    TaskbarSettingsEffect, TaskbarSettingsView, TaskbarView, TestClock,
+    AccessibleTask, AutoHideEffect, AutoHideInput, AutoHideState, ClockLocale, CoreStatus,
+    FlyoutAction, JumpListModel, JumpListView, NotificationAreaModel, NotificationOverflowView,
+    PreviewCard, ProgressState, ProviderState, StartActions, StartPowerAction, StartSnapshot,
+    StartView, StatusRegion, SystemFlyoutKind, SystemFlyoutPresentation, SystemFlyoutTheme,
+    SystemFlyoutView, SystemStatusAction, TaskAction, TaskFlyoutView, TaskViewEffect,
+    TaskViewModel, TaskViewSurface, TaskbarCallbacks, TaskbarContextCommand, TaskbarContextView,
+    TaskbarLayout, TaskbarSettingId, TaskbarSettingsEffect, TaskbarSettingsView, TaskbarView,
+    TestClock, auto_hide_endpoints, reduce_auto_hide,
 };
 
 use crate::{
@@ -75,6 +79,13 @@ struct WindowAttention {
 #[derive(Default)]
 struct AttentionRuntime {
     windows: BTreeMap<isize, WindowAttention>,
+}
+
+#[derive(Default)]
+struct ProviderRefreshBatch {
+    notification: Option<Result<NotificationHostResponse, String>>,
+    status: Option<Result<SystemStatusHostResponse, String>>,
+    taskbar: Option<Result<TaskbarStateSnapshot, String>>,
 }
 
 impl AttentionRuntime {
@@ -1381,6 +1392,176 @@ struct TaskbarPhysicalGeometry {
     bottom: i32,
 }
 
+#[derive(Clone)]
+struct TaskbarAutoHideRuntime {
+    monitor: MonitorRecord,
+    state: Rc<RefCell<AutoHideState>>,
+    enabled: Rc<RefCell<bool>>,
+    visibility_hold: Rc<dyn Fn() -> bool>,
+    fast_hidden: Arc<AtomicBool>,
+    fast_enabled: Arc<AtomicBool>,
+    fast_rows: Arc<AtomicU64>,
+    stop_reveal_worker: Arc<AtomicBool>,
+    reveal_worker: Rc<RefCell<Option<std::thread::JoinHandle<()>>>>,
+}
+
+fn reconcile_taskbar_auto_hide(
+    runtime: &TaskbarAutoHideRuntime,
+    shell: bool,
+    taskbar_settings: &settings_store::TaskbarSettings,
+    attention_hold: bool,
+    context_open: bool,
+    settings_open: bool,
+    leases: &Rc<RefCell<Vec<ControlledShellCapability>>>,
+    view: &TaskbarView,
+    window: &mut gpui::Window,
+    epoch: Instant,
+) {
+    let taskbar_height =
+        taskbar_physical_geometry(&runtime.monitor, shell, taskbar_settings.rows).height;
+    let anchor_bottom = if shell {
+        runtime.monitor.bounds.bottom
+    } else {
+        runtime.monitor.work_area.bottom
+    };
+    let Some(endpoints) = auto_hide_endpoints(
+        runtime.monitor.bounds.left,
+        runtime.monitor.bounds.right,
+        anchor_bottom,
+        taskbar_height,
+    ) else {
+        return;
+    };
+    let cursor = physical_cursor_position()
+        .ok()
+        .map(|(x, y)| taskbar_ui::PhysicalPoint { x, y });
+    if cursor.is_none() {
+        trace_action("taskbar:auto-hide-cursor-unavailable");
+    }
+    let enabled = taskbar_settings.auto_hide;
+    runtime.fast_enabled.store(enabled, Ordering::Release);
+    runtime
+        .fast_rows
+        .store(u64::from(taskbar_settings.rows), Ordering::Release);
+    if *runtime.state.borrow() == AutoHideState::Hidden
+        && !runtime.fast_hidden.load(Ordering::Acquire)
+    {
+        *runtime.state.borrow_mut() = AutoHideState::Visible;
+    }
+    let was_enabled = *runtime.enabled.borrow();
+    let transition_pending = was_enabled != enabled;
+    let view_attention = view
+        .overlays
+        .values()
+        .any(|overlay| overlay.attention || overlay.attention_phase_on || overlay.attention_steady);
+    let visibility_hold = (runtime.visibility_hold)()
+        || context_open
+        || settings_open
+        || view
+            .keyboard_focus
+            .as_ref()
+            .is_some_and(|focus| focus.is_focused(window))
+        || attention_hold
+        || view_attention
+        || owned_taskbar_resize_active()
+        || transition_pending;
+    let prior = *runtime.state.borrow();
+    let (next, effect) = reduce_auto_hide(
+        prior,
+        AutoHideInput {
+            enabled,
+            now_ms: epoch.elapsed().as_millis() as u64,
+            pointer: cursor,
+            visibility_hold,
+            endpoints,
+        },
+    );
+    let endpoint = match effect {
+        AutoHideEffect::Show => Some(endpoints.visible),
+        AutoHideEffect::Hide => Some(endpoints.hidden),
+        AutoHideEffect::NoChange => None,
+    };
+    let applied = endpoint.is_none_or(|rect| {
+        hwnd(window).is_ok_and(|raw| {
+            move_owned_taskbar_client(raw, rect.left, rect.top, rect.width(), rect.height()).is_ok()
+        })
+    });
+    if applied {
+        *runtime.state.borrow_mut() = next;
+        if effect == AutoHideEffect::Show {
+            runtime.fast_hidden.store(false, Ordering::Release);
+        } else if effect == AutoHideEffect::Hide {
+            runtime.fast_hidden.store(true, Ordering::Release);
+        }
+        if effect == AutoHideEffect::Show {
+            trace_action("taskbar:auto-hide-shown");
+        } else if effect == AutoHideEffect::Hide {
+            trace_action("taskbar:auto-hide-hidden");
+        }
+    } else {
+        trace_action("taskbar:auto-hide-endpoint-rejected");
+    }
+
+    if was_enabled == enabled {
+        return;
+    }
+    let mut transition_ok = !shell;
+    if shell {
+        if let Ok(raw) = hwnd(window) {
+            let mut leases = leases.borrow_mut();
+            if let Some(lease) = leases.iter_mut().find(|lease| lease.owns_window(raw)) {
+                transition_ok = if enabled {
+                    match lease.remove_appbar() {
+                        Ok(_) => {
+                            trace_action("taskbar:auto-hide-appbar-removed");
+                            true
+                        }
+                        Err(_) => {
+                            trace_action("taskbar:auto-hide-appbar-remove-rejected");
+                            false
+                        }
+                    }
+                } else {
+                    match lease.register_appbar() {
+                        Err(_) => {
+                            trace_action("taskbar:auto-hide-owned-workarea-restored");
+                            true
+                        }
+                        Ok(())
+                            if lease
+                                .reserve_bottom(
+                                    ScreenRect {
+                                        left: runtime.monitor.bounds.left,
+                                        top: runtime.monitor.bounds.top,
+                                        right: runtime.monitor.bounds.right,
+                                        bottom: runtime.monitor.bounds.bottom,
+                                    },
+                                    taskbar_height,
+                                )
+                                .is_ok() =>
+                        {
+                            trace_action("taskbar:auto-hide-appbar-restored");
+                            true
+                        }
+                        Ok(()) => {
+                            let _ = lease.remove_appbar();
+                            trace_action("taskbar:auto-hide-appbar-restore-rejected");
+                            false
+                        }
+                    }
+                };
+            } else {
+                trace_action("taskbar:auto-hide-lease-missing");
+            }
+        } else {
+            trace_action("taskbar:auto-hide-hwnd-rejected");
+        }
+    }
+    if transition_ok {
+        *runtime.enabled.borrow_mut() = enabled;
+    }
+}
+
 fn taskbar_physical_geometry(
     monitor: &MonitorRecord,
     shell: bool,
@@ -1984,7 +2165,8 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
         .filter(|path| path.is_file())
         .or_else(|| current_wallpaper_path().ok());
     let verification_surface = std::env::var("SUPERDESKTOP_VERIFICATION_SURFACE").ok();
-    let interactive = verification_surface.is_some();
+    let auto_hide_verification = verification_surface.as_deref() == Some("taskbar-auto-hide");
+    let interactive = verification_surface.is_some() && !auto_hide_verification;
     let desktop_namespace = Rc::new(RefCell::new(DesktopNamespaceRuntime::default()));
     let desktop_operations = Rc::new(RefCell::new(DesktopOperationController::default()));
     let desktop_transfers = ProductionTransferRuntime::default();
@@ -2003,9 +2185,6 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
     }
     let notification_client = Rc::new(RefCell::new(initial_notification_client));
     let status_client = Rc::new(RefCell::new(SystemStatusClient::adjacent()?));
-    let mut initial_taskbar_state_client = TaskbarStateClient::adjacent(shell)?;
-    initial_taskbar_state_client.ensure_started()?;
-    let taskbar_state_client = Rc::new(RefCell::new(initial_taskbar_state_client));
     let taskbar_state_reconciler = Rc::new(RefCell::new(TaskbarStateReconciler::default()));
     let status_reconciler = Rc::new(RefCell::new(StatusReconciler::default()));
     if let Ok(response) = status_client.borrow_mut().request(
@@ -2023,8 +2202,78 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
     gpui::Application::with_platform(Rc::new(platform))
         .with_quit_mode(gpui::QuitMode::Explicit)
         .run(move |cx: &mut App| {
+            let provider_refresh_batch = Arc::new(Mutex::new(ProviderRefreshBatch::default()));
+            let provider_refresh_stop = Arc::new(AtomicBool::new(false));
+            let provider_batch_for_worker = Arc::clone(&provider_refresh_batch);
+            let provider_stop_for_worker = Arc::clone(&provider_refresh_stop);
+            let provider_refresh_worker = Rc::new(RefCell::new(
+                std::thread::Builder::new()
+                    .name("superdesktop-provider-refresh".into())
+                    .spawn(move || {
+                    let mut notification = NotificationClient::adjacent(shell).ok();
+                    let mut status = SystemStatusClient::adjacent().ok();
+                    let mut taskbar = TaskbarStateClient::adjacent(shell).ok();
+                    if let Some(taskbar) = taskbar.as_mut() {
+                        let _ = taskbar.ensure_started();
+                    }
+                    let mut tick = 0u8;
+                    while !provider_stop_for_worker.load(Ordering::Acquire) {
+                        tick = tick.wrapping_add(1);
+                        let notification_result = tick.is_multiple_of(10).then(|| {
+                            notification
+                                .as_mut()
+                                .ok_or_else(|| "notification-refresh-unavailable".into())
+                                .and_then(|client| {
+                                    client
+                                        .request(
+                                            &NotificationMutation::Snapshot,
+                                            Duration::from_millis(100),
+                                        )
+                                        .map_err(ToOwned::to_owned)
+                                })
+                        });
+                        let status_result = tick.is_multiple_of(10).then(|| {
+                            status
+                                .as_mut()
+                                .ok_or_else(|| "status-refresh-unavailable".into())
+                                .and_then(|client| {
+                                    client
+                                        .request(
+                                            &SystemStatusHostRequest::Snapshot,
+                                            Duration::from_millis(250),
+                                        )
+                                        .map_err(ToOwned::to_owned)
+                                })
+                        });
+                        let taskbar_result = tick.is_multiple_of(2).then(|| {
+                            taskbar
+                                .as_mut()
+                                .ok_or_else(|| "taskbar-refresh-unavailable".into())
+                                .and_then(|client| {
+                                    client
+                                        .request_snapshot(Duration::from_millis(100))
+                                        .map_err(ToOwned::to_owned)
+                                })
+                        });
+                        if let Ok(mut batch) = provider_batch_for_worker.lock() {
+                            if let Some(result) = notification_result {
+                                batch.notification = Some(result);
+                            }
+                            if let Some(result) = status_result {
+                                batch.status = Some(result);
+                            }
+                            if let Some(result) = taskbar_result {
+                                batch.taskbar = Some(result);
+                            }
+                        }
+                        std::thread::sleep(Duration::from_millis(50));
+                    }
+                    })
+                    .ok(),
+            ));
             let mut desktop_handles = Vec::new();
             let mut taskbar_handles = Vec::new();
+            let mut taskbar_auto_hide = Vec::<TaskbarAutoHideRuntime>::new();
             let mut system_flyout_windows = Vec::new();
             let leases = Rc::new(RefCell::new(Vec::<ControlledShellCapability>::new()));
             let attention_runtime = Rc::new(RefCell::new(AttentionRuntime::default()));
@@ -2034,7 +2283,10 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                 Rc::new(RefCell::new(None::<gpui::WindowHandle<TaskbarSettingsView>>));
             let init_error = Rc::new(RefCell::new(None::<&'static str>));
             for monitor in snapshot.monitors.clone() {
-                if verification_surface.as_deref() != Some("taskbar") {
+                if !matches!(
+                    verification_surface.as_deref(),
+                    Some("taskbar" | "taskbar-auto-hide")
+                ) {
                     let desktop_monitor = monitor.clone();
                     let desktop_wallpaper = wallpaper.clone();
                     let desktop_error = Rc::clone(&init_error);
@@ -2292,6 +2544,20 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                 let taskbar_resize_settings = Rc::clone(&persisted_settings);
                 let taskbar_resize_monitor = taskbar_monitor.clone();
                 let taskbar_resize_settle = Rc::new(RefCell::new(None::<Instant>));
+                let auto_hide_resize_settle = Rc::clone(&taskbar_resize_settle);
+                let auto_hide_state = Rc::new(RefCell::new(AutoHideState::Visible));
+                let auto_hide_enabled =
+                    Rc::new(RefCell::new(persisted_settings.borrow().taskbar.auto_hide));
+                let auto_hide_fast_hidden = Arc::new(AtomicBool::new(false));
+                let auto_hide_fast_enabled = Arc::new(AtomicBool::new(
+                    persisted_settings.borrow().taskbar.auto_hide,
+                ));
+                let auto_hide_fast_rows = Arc::new(AtomicU64::new(u64::from(
+                    persisted_settings.borrow().taskbar.rows,
+                )));
+                let auto_hide_worker_stop = Arc::new(AtomicBool::new(false));
+                let auto_hide_worker_handle =
+                    Rc::new(RefCell::new(None::<std::thread::JoinHandle<()>>));
                 let start_window = Rc::new(RefCell::new(None::<gpui::WindowHandle<StartView>>));
                 let start_window_for_taskbar = Rc::clone(&start_window);
                 let start_window_for_status = Rc::clone(&start_window);
@@ -2345,6 +2611,19 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                 let context_settings_target = Rc::clone(&settings_target);
                 let context_persisted_settings = Rc::clone(&persisted_settings);
                 let production_taskbar_settings = persisted_settings.borrow().taskbar.clone();
+                let auto_hide_monitor = taskbar_monitor.clone();
+                let close_monitor = taskbar_monitor.clone();
+                let close_settings = Rc::clone(&persisted_settings);
+                let close_worker_stop = Arc::clone(&auto_hide_worker_stop);
+                let close_worker_handle = Rc::clone(&auto_hide_worker_handle);
+                let close_provider_stop = Arc::clone(&provider_refresh_stop);
+                let close_provider_worker = Rc::clone(&provider_refresh_worker);
+                let worker_monitor = taskbar_monitor.clone();
+                let worker_hidden = Arc::clone(&auto_hide_fast_hidden);
+                let worker_enabled = Arc::clone(&auto_hide_fast_enabled);
+                let worker_rows = Arc::clone(&auto_hide_fast_rows);
+                let worker_stop = Arc::clone(&auto_hide_worker_stop);
+                let worker_handle_slot = Rc::clone(&auto_hide_worker_handle);
                 let taskbar = cx.open_window(
                     options(
                         &monitor,
@@ -2364,22 +2643,50 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                     );
                     let width = geometry.width;
                     let height = geometry.height;
+                    window.on_window_should_close(cx, move |window, _| {
+                        close_worker_stop.store(true, Ordering::Release);
+                        if let Some(worker) = close_worker_handle.borrow_mut().take() {
+                            let _ = worker.join();
+                        }
+                        close_provider_stop.store(true, Ordering::Release);
+                        if let Some(worker) = close_provider_worker.borrow_mut().take() {
+                            let _ = worker.join();
+                        }
+                        let close_geometry = taskbar_physical_geometry(
+                            &close_monitor,
+                            shell,
+                            close_settings.borrow().taskbar.rows,
+                        );
+                        if let Ok(raw) = hwnd(window) {
+                            let _ = move_owned_taskbar_client(
+                                raw,
+                                close_geometry.left,
+                                close_geometry.top,
+                                close_geometry.width,
+                                close_geometry.height,
+                            );
+                            trace_action("taskbar:auto-hide-close-visible");
+                        }
+                        true
+                    });
                     let configured = hwnd(window).and_then(|value| {
-                        let mut lease = if shell {
-                            let mut lease =
-                                ControlledShellCapability::attach_controlled_window(value)
-                                    .map_err(|_| "taskbar-capability-attach")?;
-                            let appbar_available = lease.register_appbar().is_ok();
-                            lease
-                                .register_shell_hook()
-                                .map_err(|_| "taskbar-hook-register")?;
+                        let mut lease = ControlledShellCapability::attach_controlled_window(value)
+                            .map_err(|_| "taskbar-capability-attach")?;
+                        let appbar_available = !shell
+                            || production_taskbar_settings.auto_hide
+                            || lease.register_appbar().is_ok();
+                        lease
+                            .register_shell_hook()
+                            .map_err(|_| "taskbar-hook-register")?;
+                        if shell {
                             if !appbar_available {
                                 trace_action("taskbar:appbar-unavailable-owned-shell");
+                            } else if production_taskbar_settings.auto_hide {
+                                trace_action("taskbar:auto-hide-appbar-skipped");
                             }
-                            Some(lease)
                         } else {
-                            None
-                        };
+                            trace_action("taskbar:preview-shell-hook-owned");
+                        }
                         platform_win::common::taskbar::set_owned_taskbar_resizable(
                             value,
                             !production_taskbar_settings.locked,
@@ -2393,10 +2700,54 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                             height,
                         )
                         .map_err(|_| "taskbar-window-configure")?;
-                        if let Some(mut lease) = lease.take() {
-                            if lease.appbar_registered() {
-                                lease
-                                    .reserve_bottom(
+                        let worker_anchor_bottom = if shell {
+                            worker_monitor.bounds.bottom
+                        } else {
+                            worker_monitor.work_area.bottom
+                        };
+                        let reveal_worker = std::thread::Builder::new()
+                            .name("superdesktop-auto-hide-reveal".into())
+                            .spawn(move || {
+                                while !worker_stop.load(Ordering::Acquire) {
+                                    if worker_enabled.load(Ordering::Acquire)
+                                        && worker_hidden.load(Ordering::Acquire)
+                                    {
+                                        let rows = worker_rows.load(Ordering::Acquire).clamp(1, 3)
+                                            as u8;
+                                        let height = taskbar_physical_geometry(
+                                            &worker_monitor,
+                                            shell,
+                                            rows,
+                                        )
+                                        .height;
+                                        if let Some(endpoints) = auto_hide_endpoints(
+                                            worker_monitor.bounds.left,
+                                            worker_monitor.bounds.right,
+                                            worker_anchor_bottom,
+                                            height,
+                                        ) && let Ok((x, y)) = physical_cursor_position()
+                                            && endpoints
+                                                .reveal
+                                                .contains(taskbar_ui::PhysicalPoint { x, y })
+                                            && post_owned_taskbar_reveal(
+                                                value,
+                                                endpoints.visible.left,
+                                                endpoints.visible.top,
+                                            )
+                                            .is_ok()
+                                        {
+                                            worker_hidden.store(false, Ordering::Release);
+                                            trace_action("taskbar:auto-hide-fast-shown");
+                                        }
+                                    }
+                                    std::thread::sleep(Duration::from_millis(50));
+                                }
+                            })
+                            .map_err(|_| "taskbar-auto-hide-worker-spawn")?;
+                        *worker_handle_slot.borrow_mut() = Some(reveal_worker);
+                        if lease.appbar_registered() && !production_taskbar_settings.auto_hide {
+                            lease
+                                .reserve_bottom(
                                     ScreenRect {
                                         left: taskbar_monitor.bounds.left,
                                         top: taskbar_monitor.bounds.top,
@@ -2404,10 +2755,11 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                         bottom: taskbar_monitor.bounds.bottom,
                                     },
                                     height,
-                                )
+                                    )
                                 .map_err(|_| "taskbar-work-area-reserve")?;
-                            }
-                            taskbar_leases.borrow_mut().push(lease);
+                        }
+                        taskbar_leases.borrow_mut().push(lease);
+                        if shell {
                             trace_action("taskbar:appbar-owned");
                         }
                         Ok(())
@@ -2983,7 +3335,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                     trace_action("taskbar:resize-snap-rejected");
                                     return false;
                                 }
-                                if shell {
+                                if shell && !taskbar_resize_settings.borrow().taskbar.auto_hide {
                                     let mut leases = taskbar_resize_leases.borrow_mut();
                                     let Some(lease) =
                                         leases.iter_mut().find(|lease| lease.owns_window(raw))
@@ -3175,6 +3527,32 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                     cx.quit();
                     return;
                 };
+                let hold_start = Rc::clone(&start_window);
+                let hold_task_flyout = Rc::clone(&flyout_window);
+                let hold_jump_list = Rc::clone(&jump_list_window);
+                let hold_task_view = Rc::clone(&task_view_window);
+                let hold_notification_overflow = Rc::clone(&notification_overflow_window);
+                let hold_system_flyout = Rc::clone(&system_flyout_window);
+                let visibility_hold: Rc<dyn Fn() -> bool> = Rc::new(move || {
+                    hold_start.borrow().is_some()
+                        || hold_task_flyout.borrow().is_some()
+                        || hold_jump_list.borrow().is_some()
+                        || hold_task_view.borrow().is_some()
+                        || hold_notification_overflow.borrow().is_some()
+                        || hold_system_flyout.borrow().is_some()
+                        || auto_hide_resize_settle.borrow().is_some()
+                });
+                taskbar_auto_hide.push(TaskbarAutoHideRuntime {
+                    monitor: auto_hide_monitor,
+                    state: auto_hide_state,
+                    enabled: auto_hide_enabled,
+                    visibility_hold,
+                    fast_hidden: auto_hide_fast_hidden,
+                    fast_enabled: auto_hide_fast_enabled,
+                    fast_rows: auto_hide_fast_rows,
+                    stop_reveal_worker: auto_hide_worker_stop,
+                    reveal_worker: auto_hide_worker_handle,
+                });
                 taskbar_handles.push(taskbar);
             }
             if let Some(error) = init_error.borrow_mut().take() {
@@ -3234,23 +3612,73 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                     .detach();
             }
 
+            let auto_hide_handles = taskbar_handles.clone();
+            if !auto_hide_handles.is_empty() && !state_matrix {
+                let auto_hide_background = cx.background_executor().clone();
+                let auto_hide_foreground = cx.foreground_executor().clone();
+                let auto_hide_app = cx.to_async();
+                let auto_hide_runtimes = taskbar_auto_hide.clone();
+                let auto_hide_settings = Rc::clone(&persisted_settings);
+                let auto_hide_attention = Rc::clone(&attention_runtime);
+                let auto_hide_context = Rc::clone(&taskbar_context_window);
+                let auto_hide_settings_window = Rc::clone(&taskbar_settings_window);
+                let auto_hide_leases = Rc::clone(&leases);
+                auto_hide_foreground
+                    .spawn(async move {
+                        let epoch = Instant::now();
+                        loop {
+                            auto_hide_background.timer(Duration::from_millis(50)).await;
+                            let settings = auto_hide_settings.borrow().taskbar.clone();
+                            let attention_hold = !auto_hide_attention
+                                .borrow()
+                                .active_windows()
+                                .is_empty();
+                            let context_open = auto_hide_context.borrow().is_some();
+                            let settings_open = auto_hide_settings_window.borrow().is_some();
+                            auto_hide_app.update(|app| {
+                                for (index, handle) in auto_hide_handles.iter().enumerate() {
+                                    let Some(runtime) = auto_hide_runtimes.get(index) else {
+                                        continue;
+                                    };
+                                    let _ = handle.update(app, |view, window, _| {
+                                        reconcile_taskbar_auto_hide(
+                                            runtime,
+                                            shell,
+                                            &settings,
+                                            attention_hold,
+                                            context_open,
+                                            settings_open,
+                                            &auto_hide_leases,
+                                            view,
+                                            window,
+                                            epoch,
+                                        );
+                                    });
+                                }
+                            });
+                        }
+                    })
+                    .detach();
+            }
+
             let refresh_handles = taskbar_handles.clone();
             if !refresh_handles.is_empty() && !state_matrix {
                 let refresh_background = cx.background_executor().clone();
                 let refresh_foreground = cx.foreground_executor().clone();
                 let refresh_app = cx.to_async();
-                let refresh_notification_client = Rc::clone(&notification_client);
-                let refresh_status_client = Rc::clone(&status_client);
                 let refresh_status_reconciler = Rc::clone(&status_reconciler);
-                let refresh_taskbar_state_client = Rc::clone(&taskbar_state_client);
                 let refresh_taskbar_state_reconciler = Rc::clone(&taskbar_state_reconciler);
+                let refresh_provider_batch = Arc::clone(&provider_refresh_batch);
                 let refresh_system_flyouts = system_flyout_windows.clone();
                 let refresh_settings = Rc::clone(&persisted_settings);
                 let refresh_task_icons = Rc::clone(&task_icon_cache);
                 let refresh_attention = Rc::clone(&attention_runtime);
+                let refresh_auto_hide_context = Rc::clone(&taskbar_context_window);
+                let refresh_auto_hide_settings_window = Rc::clone(&taskbar_settings_window);
+                let refresh_auto_hide_leases = Rc::clone(&leases);
                 refresh_foreground
                     .spawn(async move {
-                        let mut notification_tick = 0u8;
+                        let auto_hide_epoch = Instant::now();
                         loop {
                             refresh_background.timer(Duration::from_millis(50)).await;
                             let now = Instant::now();
@@ -3271,25 +3699,27 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                             ) else {
                                 continue;
                             };
-                            notification_tick = notification_tick.wrapping_add(1);
-                            let notification_update = notification_tick.is_multiple_of(10).then(|| {
-                                match refresh_notification_client.borrow_mut().request(
-                                    &NotificationMutation::Snapshot,
-                                    Duration::from_millis(100),
-                                ) {
-                                    Ok(NotificationHostResponse::Snapshot(snapshot)) => Some(snapshot),
-                                    Ok(_) => None,
-                                    Err(reason) => {
-                                        trace_action(&format!("notification:provider-error:{reason}"));
-                                        None
-                                    }
+                            let (notification_result, status_result, taskbar_result) =
+                                refresh_provider_batch.lock().map_or(
+                                    (None, None, None),
+                                    |mut batch| {
+                                        (
+                                            batch.notification.take(),
+                                            batch.status.take(),
+                                            batch.taskbar.take(),
+                                        )
+                                    },
+                                );
+                            let notification_update = notification_result.map(|result| match result {
+                                Ok(NotificationHostResponse::Snapshot(snapshot)) => Some(snapshot),
+                                Ok(_) => None,
+                                Err(reason) => {
+                                    trace_action(&format!("notification:provider-error:{reason}"));
+                                    None
                                 }
                             });
-                            if notification_tick.is_multiple_of(10) {
-                                match refresh_status_client.borrow_mut().request(
-                                    &SystemStatusHostRequest::Snapshot,
-                                    Duration::from_millis(250),
-                                ) {
+                            if let Some(result) = status_result {
+                                match result {
                                     Ok(response @ SystemStatusHostResponse::Snapshot(_)) => {
                                         refresh_status_reconciler.borrow_mut().apply(response);
                                     }
@@ -3303,15 +3733,14 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                     }
                                 }
                             }
-                            if notification_tick.is_multiple_of(2) {
-                                match refresh_taskbar_state_client
-                                    .borrow_mut()
-                                    .request_snapshot(Duration::from_millis(100))
-                                {
+                            if let Some(result) = taskbar_result {
+                                match result {
                                     Ok(snapshot) => {
-                                        refresh_taskbar_state_reconciler.borrow_mut().apply(snapshot);
+                                        refresh_taskbar_state_reconciler
+                                            .borrow_mut()
+                                            .apply(snapshot);
                                     }
-                                    Err("taskbar-state-disabled") => {}
+                                    Err(reason) if reason == "taskbar-state-disabled" => {}
                                     Err(_) => {
                                         refresh_taskbar_state_reconciler
                                             .borrow_mut()
@@ -3329,9 +3758,167 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                             refresh_app.update(|app| {
                                 let mut alive = false;
                                 for handle in &refresh_handles {
+                                    let auto_hide = None::<TaskbarAutoHideRuntime>;
                                     if handle
                                         .update(app, |view, window, cx| {
                                             alive = true;
+                                            if let Some(runtime) = &auto_hide {
+                                                let taskbar_height = taskbar_physical_geometry(
+                                                    &runtime.monitor,
+                                                    shell,
+                                                    taskbar_settings.rows,
+                                                )
+                                                .height;
+                                                let anchor_bottom = if shell {
+                                                    runtime.monitor.bounds.bottom
+                                                } else {
+                                                    runtime.monitor.work_area.bottom
+                                                };
+                                                if let Some(endpoints) = auto_hide_endpoints(
+                                                    runtime.monitor.bounds.left,
+                                                    runtime.monitor.bounds.right,
+                                                    anchor_bottom,
+                                                    taskbar_height,
+                                                ) {
+                                                    let attention_hold = !attention_windows.is_empty()
+                                                        || view.overlays.values().any(|overlay| {
+                                                            overlay.attention
+                                                                || overlay.attention_phase_on
+                                                                || overlay.attention_steady
+                                                        });
+                                                    let cursor = physical_cursor_position()
+                                                        .ok()
+                                                        .map(|(x, y)| {
+                                                            taskbar_ui::PhysicalPoint { x, y }
+                                                        });
+                                                    if cursor.is_none() {
+                                                        trace_action(
+                                                            "taskbar:auto-hide-cursor-unavailable",
+                                                        );
+                                                    }
+                                                    let enabled = taskbar_settings.auto_hide;
+                                                    let was_enabled = *runtime.enabled.borrow();
+                                                    let transition_pending = was_enabled != enabled;
+                                                    let visibility_hold =
+                                                        (runtime.visibility_hold)()
+                                                            || refresh_auto_hide_context
+                                                                .borrow()
+                                                                .is_some()
+                                                            || refresh_auto_hide_settings_window
+                                                                .borrow()
+                                                                .is_some()
+                                                            || view
+                                                                .keyboard_focus
+                                                                .as_ref()
+                                                                .is_some_and(|focus| {
+                                                                    focus.is_focused(window)
+                                                                })
+                                                            || attention_hold
+                                                            || owned_taskbar_resize_active()
+                                                            || transition_pending;
+                                                    let prior = *runtime.state.borrow();
+                                                    let (next, effect) = reduce_auto_hide(
+                                                        prior,
+                                                        AutoHideInput {
+                                                            enabled,
+                                                            now_ms: auto_hide_epoch
+                                                                .elapsed()
+                                                                .as_millis()
+                                                                as u64,
+                                                            pointer: cursor,
+                                                            visibility_hold,
+                                                            endpoints,
+                                                        },
+                                                    );
+                                                    let endpoint = match effect {
+                                                        AutoHideEffect::Show => Some(endpoints.visible),
+                                                        AutoHideEffect::Hide => Some(endpoints.hidden),
+                                                        AutoHideEffect::NoChange => None,
+                                                    };
+                                                    let applied = endpoint.is_none_or(|rect| {
+                                                        hwnd(window).is_ok_and(|raw| {
+                                                            move_owned_taskbar_client(
+                                                                raw,
+                                                                rect.left,
+                                                                rect.top,
+                                                                rect.width(),
+                                                                rect.height(),
+                                                            )
+                                                            .is_ok()
+                                                        })
+                                                    });
+                                                    if applied {
+                                                        *runtime.state.borrow_mut() = next;
+                                                        if effect == AutoHideEffect::Show {
+                                                            trace_action("taskbar:auto-hide-shown");
+                                                        } else if effect == AutoHideEffect::Hide {
+                                                            trace_action("taskbar:auto-hide-hidden");
+                                                        }
+                                                    } else {
+                                                        trace_action("taskbar:auto-hide-endpoint-rejected");
+                                                    }
+                                                    if was_enabled != enabled {
+                                                        let mut transition_ok = !shell;
+                                                        if shell {
+                                                            if let Ok(raw) = hwnd(window) {
+                                                                let mut leases = refresh_auto_hide_leases
+                                                                    .borrow_mut();
+                                                                if let Some(lease) = leases
+                                                                    .iter_mut()
+                                                                    .find(|lease| lease.owns_window(raw))
+                                                                {
+                                                                    transition_ok = if enabled {
+                                                                        match lease.remove_appbar() {
+                                                                            Ok(_) => {
+                                                                                trace_action("taskbar:auto-hide-appbar-removed");
+                                                                                true
+                                                                            }
+                                                                            Err(_) => {
+                                                                                trace_action("taskbar:auto-hide-appbar-remove-rejected");
+                                                                                false
+                                                                            }
+                                                                        }
+                                                                    } else {
+                                                                        match lease.register_appbar() {
+                                                                            Err(_) => {
+                                                                                trace_action("taskbar:auto-hide-owned-workarea-restored");
+                                                                                true
+                                                                            }
+                                                                            Ok(()) if lease
+                                                                                .reserve_bottom(
+                                                                                    ScreenRect {
+                                                                                        left: runtime.monitor.bounds.left,
+                                                                                        top: runtime.monitor.bounds.top,
+                                                                                        right: runtime.monitor.bounds.right,
+                                                                                        bottom: runtime.monitor.bounds.bottom,
+                                                                                    },
+                                                                                    taskbar_height,
+                                                                                )
+                                                                                .is_ok() =>
+                                                                            {
+                                                                                trace_action("taskbar:auto-hide-appbar-restored");
+                                                                                true
+                                                                            }
+                                                                            Ok(()) => {
+                                                                                let _ = lease.remove_appbar();
+                                                                                trace_action("taskbar:auto-hide-appbar-restore-rejected");
+                                                                                false
+                                                                            }
+                                                                        }
+                                                                    };
+                                                                } else {
+                                                                    trace_action("taskbar:auto-hide-lease-missing");
+                                                                }
+                                                            } else {
+                                                                trace_action("taskbar:auto-hide-hwnd-rejected");
+                                                            }
+                                                        }
+                                                        if transition_ok {
+                                                            *runtime.enabled.borrow_mut() = enabled;
+                                                        }
+                                                    }
+                                                }
+                                            }
                                             let mut settings_changed = false;
                                             let mut row_geometry_ready =
                                                 view.layout.rows.get() == taskbar_settings.rows;
@@ -3538,10 +4125,45 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                 let leases_for_timer = Rc::clone(&leases);
                 let context_for_timer = Rc::clone(&taskbar_context_window);
                 let settings_for_timer = Rc::clone(&taskbar_settings_window);
+                let auto_hide_for_timer = taskbar_auto_hide.clone();
+                let auto_hide_config_for_timer = Rc::clone(&persisted_settings);
+                let provider_stop_for_timer = Arc::clone(&provider_refresh_stop);
+                let provider_worker_for_timer = Rc::clone(&provider_refresh_worker);
                 foreground
                     .spawn(async move {
                         background.timer(duration).await;
                         async_app.update(|app| {
+                            provider_stop_for_timer.store(true, Ordering::Release);
+                            if let Some(worker) = provider_worker_for_timer.borrow_mut().take() {
+                                let _ = worker.join();
+                            }
+                            let rows = auto_hide_config_for_timer.borrow().taskbar.rows;
+                            for (index, handle) in taskbar_handles.iter().enumerate() {
+                                let Some(runtime) = auto_hide_for_timer.get(index) else {
+                                    continue;
+                                };
+                                runtime.stop_reveal_worker.store(true, Ordering::Release);
+                                if let Some(worker) = runtime.reveal_worker.borrow_mut().take() {
+                                    let _ = worker.join();
+                                }
+                                let geometry =
+                                    taskbar_physical_geometry(&runtime.monitor, shell, rows);
+                                let _ = handle.update(app, |_, window, _| {
+                                    if let Ok(raw) = hwnd(window)
+                                        && move_owned_taskbar_client(
+                                            raw,
+                                            geometry.left,
+                                            geometry.top,
+                                            geometry.width,
+                                            geometry.height,
+                                        )
+                                        .is_ok()
+                                    {
+                                        trace_action("taskbar:auto-hide-teardown-visible");
+                                    }
+                                });
+                                *runtime.state.borrow_mut() = AutoHideState::Visible;
+                            }
                             for lease in leases_for_timer.borrow_mut().iter_mut() {
                                 lease.teardown();
                             }
@@ -3758,8 +4380,9 @@ mod live_parity_tests {
         let production = source.split("#[cfg(test)]").next().unwrap_or(source);
         assert_eq!(
             production.matches("SystemStatusClient::adjacent()").count(),
-            1
+            2
         );
+        assert!(production.contains("superdesktop-provider-refresh"));
         assert!(production.contains("status:restart-capacity-exhausted"));
         assert!(production.contains("status:owned-flyout-opened"));
         let callback = production
@@ -4147,5 +4770,30 @@ mod live_parity_tests {
             assert!(!production.contains(forbidden));
         }
         assert!(include_str!("../../taskbar-ui/src/view.rs").contains("cx.stop_propagation();"));
+    }
+
+    #[test]
+    fn owned_auto_hide_source_retries_lifecycle_and_observes_preview_attention() {
+        let source = include_str!("surface_runtime.rs");
+        let production = source.split("#[cfg(test)]").next().unwrap_or(source);
+        for token in [
+            "taskbar-auto-hide",
+            "physical_cursor_position()",
+            "owned_taskbar_resize_active()",
+            "transition_pending",
+            "if transition_ok",
+            "lease.remove_appbar()",
+            "let _ = lease.remove_appbar();",
+            "window.on_window_should_close",
+            "taskbar:auto-hide-close-visible",
+            "taskbar:preview-shell-hook-owned",
+            "taskbar:auto-hide-teardown-visible",
+            "superdesktop-auto-hide-reveal",
+            "std::thread::sleep(Duration::from_millis(50))",
+        ] {
+            assert!(production.contains(token), "missing {token}");
+        }
+        assert!(!production.contains("Shell_TrayWnd"));
+        assert!(!production.contains("StartMenuExperienceHost"));
     }
 }
