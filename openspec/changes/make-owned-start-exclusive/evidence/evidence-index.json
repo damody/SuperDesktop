@@ -1,0 +1,69 @@
+{
+  "schema": "owned-start-exclusive-evidence/v1",
+  "recorded_at": "2026-08-18T04:00:00+08:00",
+  "gate": "G-OWNED-START",
+  "result": "passed",
+  "records": [
+    {
+      "record_id": "automated",
+      "procedure": "Run source ownership guards, focused Start/desktop tests, complete locked/offline workspace check and tests, clippy with warnings denied, and release build.",
+      "expected": "Product composition contains one owned StartView path and no system Start-host call; all commands exit zero.",
+      "actual": "The negative delegated fixture was rejected; superdesktop-app 15, taskbar-ui 33, desktop-ui 28 and platform-win 55 tests passed; complete workspace gates exited zero.",
+      "exit_status": 0,
+      "artifacts": [
+        { "path": "automated.json", "subcheck": "owned-source-and-workspace-gates" }
+      ]
+    },
+    {
+      "record_id": "headful",
+      "procedure": "Without an owned-Start selection environment variable, invoke taskbar Start at 175% DPI, inspect Home and All apps, then close Start and run desktop reverse-marquee plus six SuperExplorer input routes.",
+      "expected": "The Start HWND belongs to SuperDesktop, system Start-process identities do not change, required sections/icons are visible, Power is collapsed, reverse marquee selects multiple items and fixed-entry routes pass.",
+      "actual": "Owned Start PID equaled taskbar PID; system host PID set was unchanged; All apps exposed 75 entries; reverse marquee selected 15 items; all six pointer/keyboard/UIA fixed-entry routes passed.",
+      "exit_status": 0,
+      "artifacts": [
+        { "path": "start-home.png", "sha256": "8fb91b94c26e486bd80b20db334cf92fc8a7446596080fc5f4f72942aa71f632" },
+        { "path": "start-all-apps.png", "sha256": "141111127424041406be35d5cd3890f6f7315ab94191c11ff3ec34bb251873df" },
+        { "path": "start-production.json", "subcheck": "owned-pid-sections-power-and-process-observation" },
+        { "path": "desktop-marquee.png", "sha256": "de363a62b31d1a4c64fb57b391ead6ef24d025def52852f377e6ca276038d20e" },
+        { "path": "desktop-marquee.json", "subcheck": "reverse-marquee-selected-15" },
+        { "path": "input-routes.json", "subcheck": "six-fixed-entry-routes" }
+      ]
+    },
+    {
+      "record_id": "packaging",
+      "procedure": "Build standalone SuperDesktop and combined SuperExplorer UTF-8 NSIS installers without launch after exact submodule admission.",
+      "expected": "Both builds exit zero and package the final release binary.",
+      "actual": "Both installers built successfully from admitted SuperDesktop revision eed2111d79c114c936c310280d96e05a03bfad67.",
+      "exit_status": 0,
+      "artifacts": [
+        { "path": "D:/SuperExplorer/dist/SuperDesktop-Test-Setup-1.2026.8.18-x64.exe", "bytes": 5356419, "sha256": "bf1e7a1c0aefa673ee8e7e5204c09851f2cc6909d93389df68a443fbffd2261f" },
+        { "path": "D:/SuperExplorer/dist/SuperExplorer-Setup-1.2026.8.18-x64.exe", "bytes": 13019457, "sha256": "3d6034eeb64f9f1204baab6744d0b335bb9cb20525a61dbaef751cbff966f638" },
+        { "path": "D:/SuperExplorer/SuperDesktop/target/release/superdesktop-app.exe", "bytes": 19834880, "sha256": "8c9a1a3f7321bc674e69691eab351828e8adc7f4a8a19080b5306f6966e094fa" }
+      ]
+    }
+  ],
+  "task_links": [
+    { "task_id": "1.1.1", "record_id": "automated", "subcheck": "product-source-guard" },
+    { "task_id": "1.1.2", "record_id": "automated", "subcheck": "single-owned-renderer-mode-contract" },
+    { "task_id": "1.1.3", "record_id": "automated", "subcheck": "delegated-negative-fixture" },
+    { "task_id": "1.2.1", "record_id": "automated", "subcheck": "renderer-branch-removed" },
+    { "task_id": "1.2.2", "record_id": "headful", "subcheck": "owned-open-close-traces" },
+    { "task_id": "1.2.3", "record_id": "automated", "subcheck": "historical-adapter-isolated" },
+    { "task_id": "2.1.1", "record_id": "headful", "subcheck": "home-all-apps-icons-unavailable" },
+    { "task_id": "2.1.2", "record_id": "automated", "subcheck": "activation-and-persistence" },
+    { "task_id": "2.1.3", "record_id": "headful", "subcheck": "collapsed-confirmed-power" },
+    { "task_id": "2.1.4", "record_id": "automated", "subcheck": "input-ime-toggle-placement" },
+    { "task_id": "2.2.1", "record_id": "headful", "subcheck": "no-owned-selection-env" },
+    { "task_id": "2.2.2", "record_id": "headful", "subcheck": "host-dpi-home-all-apps" },
+    { "task_id": "2.2.3", "record_id": "headful", "subcheck": "owned-pid-system-process-stability" },
+    { "task_id": "3.1.1", "record_id": "automated", "subcheck": "marquee-geometry-suite" },
+    { "task_id": "3.1.2", "record_id": "headful", "subcheck": "fixed-entry-six-routes" },
+    { "task_id": "3.1.3", "record_id": "headful", "subcheck": "active-reverse-marquee" },
+    { "task_id": "4.1.1", "record_id": "automated", "subcheck": "fmt-check-test" },
+    { "task_id": "4.1.2", "record_id": "automated", "subcheck": "clippy-deny-warnings" },
+    { "task_id": "4.1.3", "record_id": "automated", "subcheck": "release-and-artifact-hashes" },
+    { "task_id": "4.1.4", "record_id": "automated", "subcheck": "unique-evidence-and-strict-validation" },
+    { "task_id": "4.2.1", "record_id": "packaging", "subcheck": "standalone-installer" },
+    { "task_id": "4.2.2", "record_id": "packaging", "subcheck": "combined-installer" }
+  ]
+}

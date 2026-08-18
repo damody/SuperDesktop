@@ -1,6 +1,6 @@
 {
     "schema":  "m0-real-input-routes/v1",
-    "app_sha256":  "D89FDF86A19BAB00CC1871875625F42E4B55199EE36CDF055A5AF2CA35E9230C",
+    "app_sha256":  "8C9A1A3F7321BC674E69691EAB351828E8ADC7F4A8A19080B5306F6966E094FA",
     "superexplorer_sha256":  "5A2CEBF77E97450575DDF241ADB967B8D79D223939A2ABB1CA14E9E0CD013D69",
     "route_count":  6,
     "all_passed":  true,
@@ -82,7 +82,7 @@
                                       "width":  262,
                                       "height":  70
                                   },
-                       "launched_process_count":  3,
+                       "launched_process_count":  2,
                        "trace_contains_launch":  true
                    },
                    {

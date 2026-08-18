@@ -1,11 +1,11 @@
 {
     "schema":  "desktop-marquee-production/v1",
     "result":  "passed",
-    "app_sha256":  "D89FDF86A19BAB00CC1871875625F42E4B55199EE36CDF055A5AF2CA35E9230C",
+    "app_sha256":  "8C9A1A3F7321BC674E69691EAB351828E8ADC7F4A8A19080B5306F6966E094FA",
     "reverse_drag":  true,
     "selected_count":  15,
     "raw_names_persisted":  false,
     "screenshot":  "desktop-marquee.png",
-    "screenshot_sha256":  "C472E706DBA3449C9EE36E90908FB5D607B070DBEEABF3ED8F4DDC07E5674031",
+    "screenshot_sha256":  "DE363A62B31D1A4C64FB57B391EAD6EF24D025DEF52852F377E6CA276038D20E",
     "frame_visible":  true
 }

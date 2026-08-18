@@ -92,7 +92,7 @@
 - [x] 4.1.1 Run `cargo fmt --check` and complete locked/offline workspace check and tests.
 - [x] 4.1.2 Run complete locked/offline clippy with warnings denied.
 - [x] 4.1.3 Build release binaries and record product hashes plus headful artifact hashes.
-- [ ] 4.1.4 Create the unique task-linked evidence index and pass strict OpenSpec validation.
+- [x] 4.1.4 Create the unique task-linked evidence index and pass strict OpenSpec validation.
 
 ### 4.2 Refresh installers
 
@@ -104,5 +104,5 @@
 **Gate／Evidence：** `G-OWNED-START`, `G-TRACE`; packaging record.
 **完成門檻：** Both UTF-8 NSIS builds exit zero and package the admitted SuperDesktop revision.
 
-- [ ] 4.2.1 Build and hash the standalone SuperDesktop installer without launching it.
-- [ ] 4.2.2 Build and hash the combined SuperExplorer installer with exact submodule admission.
+- [x] 4.2.1 Build and hash the standalone SuperDesktop installer without launching it.
+- [x] 4.2.2 Build and hash the combined SuperExplorer installer with exact submodule admission.
