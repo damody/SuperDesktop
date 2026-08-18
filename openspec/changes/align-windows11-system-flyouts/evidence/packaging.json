@@ -1,0 +1,10 @@
+{
+  "schema": "windows11-system-flyout-packaging/v1",
+  "revision": "43244527dc42bd0d38ab9aa5bbcd0342198a8925",
+  "built_without_launch": true,
+  "artifacts": [
+    {"name": "superdesktop-app.exe", "bytes": 20918272, "sha256": "d5f2f282d977b9f19d7d27c9dcb827f10741f70d08bb30ad3ec7c0b94b1394a8"},
+    {"name": "SuperDesktop-Test-Setup-1.2026.8.19-x64.exe", "bytes": 5784182, "sha256": "fedfd5737fae9f46614f257377d54ad3d22a1da5e0bed995b25f2fe466487606"},
+    {"name": "SuperExplorer-Setup-1.2026.8.19-x64.exe", "bytes": 13506932, "sha256": "a9263d569eea8fe04f6ebb2fc7392ea6b351499ecfd10392b68a739fa676c321"}
+  ]
+}

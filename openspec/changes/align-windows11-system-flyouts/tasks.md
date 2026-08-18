@@ -114,6 +114,6 @@
 **Gate／Evidence：** `G-TRACE`, `G-PACKAGE`; evidence and package records.
 **完成門檻：** Every leaf has unique evidence; detailed/strict validation and both installer builds pass without launch.
 
-- [ ] 3.2.1 Build release binaries and record reproducible hashes.
-- [ ] 3.2.2 Build standalone and combined NSIS installers without launch and record hashes.
-- [ ] 3.2.3 Create the unique evidence index and pass detailed and strict validation.
+- [x] 3.2.1 Build release binaries and record reproducible hashes.
+- [x] 3.2.2 Build standalone and combined NSIS installers without launch and record hashes.
+- [x] 3.2.3 Create the unique evidence index and pass detailed and strict validation.
