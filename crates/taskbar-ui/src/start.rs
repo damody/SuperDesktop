@@ -422,6 +422,127 @@ pub enum StartPowerAction {
     ShutDown,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+struct StartStrings {
+    start: &'static str,
+    search_placeholder: &'static str,
+    pinned: &'static str,
+    all_apps: &'static str,
+    recommended: &'static str,
+    recent_empty: &'static str,
+    back_to_pinned: &'static str,
+    search_results: &'static str,
+    account_prefix: &'static str,
+    settings: &'static str,
+    power: &'static str,
+    footer_actions: &'static str,
+    power_options: &'static str,
+    sign_out: &'static str,
+    restart: &'static str,
+    shut_down: &'static str,
+    user_fallback: &'static str,
+}
+
+impl StartStrings {
+    const ENGLISH: Self = Self {
+        start: "Start",
+        search_placeholder: "Search apps, settings, and files",
+        pinned: "Pinned",
+        all_apps: "All apps",
+        recommended: "Recommended",
+        recent_empty: "Recent apps and files will appear here.",
+        back_to_pinned: "Back to pinned",
+        search_results: "Search results",
+        account_prefix: "User account",
+        settings: "Settings",
+        power: "Power",
+        footer_actions: "Start footer actions",
+        power_options: "Power options",
+        sign_out: "Sign out",
+        restart: "Restart",
+        shut_down: "Shut down",
+        user_fallback: "User",
+    };
+
+    const TRADITIONAL_CHINESE: Self = Self {
+        start: "開始",
+        search_placeholder: "搜尋應用程式、設定及檔案",
+        pinned: "已釘選",
+        all_apps: "所有應用程式",
+        recommended: "建議",
+        recent_empty: "最近使用的應用程式和檔案將顯示在這裡。",
+        back_to_pinned: "返回已釘選",
+        search_results: "搜尋結果",
+        account_prefix: "使用者帳戶",
+        settings: "設定",
+        power: "電源",
+        footer_actions: "開始功能表動作",
+        power_options: "電源選項",
+        sign_out: "登出",
+        restart: "重新啟動",
+        shut_down: "關機",
+        user_fallback: "使用者",
+    };
+
+    fn from_locale(locale: Option<&str>) -> Self {
+        if locale.is_some_and(|locale| locale.eq_ignore_ascii_case("zh-TW")) {
+            Self::TRADITIONAL_CHINESE
+        } else {
+            Self::ENGLISH
+        }
+    }
+
+    fn current() -> Self {
+        let locale = std::env::var("SUPERDESKTOP_LOCALE")
+            .ok()
+            .or_else(platform_win::common::taskbar_status::user_locale_name);
+        Self::from_locale(locale.as_deref())
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+struct StartVisualTokens {
+    panel: u32,
+    text: u32,
+    secondary_text: u32,
+    surface: u32,
+    subtle_surface: u32,
+    hover: u32,
+    pressed: u32,
+    border: u32,
+    focus: u32,
+}
+
+impl StartVisualTokens {
+    const fn new(high_contrast: bool) -> Self {
+        if high_contrast {
+            Self {
+                panel: 0x000000,
+                text: 0xffffff,
+                secondary_text: 0xffffff,
+                surface: 0x000000,
+                subtle_surface: 0x000000,
+                hover: 0x1f1f1f,
+                pressed: 0x333333,
+                border: 0xffffff,
+                focus: 0xffff00,
+            }
+        } else {
+            Self {
+                panel: 0xf3f3f3,
+                text: 0x202020,
+                secondary_text: 0x616161,
+                surface: 0xfbfbfb,
+                subtle_surface: 0xe9e9e9,
+                hover: 0xe5e5e5,
+                pressed: 0xdadada,
+                border: 0xd2d2d2,
+                focus: 0x0067c0,
+            }
+        }
+    }
+}
+
 pub struct StartActions {
     pub search: SearchAction,
     pub activate: ActivationAction,
@@ -601,12 +722,18 @@ impl StartView {
         let sign_out = self.power.clone();
         let restart = self.power.clone();
         let shut_down = self.power.clone();
-        let account_name = std::env::var("USERNAME").unwrap_or_else(|_| "User".into());
+        let strings = StartStrings::current();
+        let high_contrast = std::env::var("SUPERDESKTOP_THEME")
+            .is_ok_and(|value| value.eq_ignore_ascii_case("high-contrast"));
+        let tokens = StartVisualTokens::new(high_contrast);
+        let account_name =
+            std::env::var("USERNAME").unwrap_or_else(|_| strings.user_fallback.into());
+        let account_initial = account_name.chars().next().unwrap_or('U').to_string();
 
         div()
             .id("windows11-start-surface")
             .role(gpui::Role::Dialog)
-            .aria_label("Start")
+            .aria_label(strings.start)
             .tab_index(0)
             .track_focus(&self.focus)
             .size_full()
@@ -615,8 +742,12 @@ impl StartView {
             .flex_col()
             .gap_3()
             .relative()
-            .bg(rgb(0xf2f5f9))
-            .text_color(rgb(0x172033))
+            .rounded(px(12.))
+            .border_1()
+            .border_color(rgb(tokens.border))
+            .bg(rgb(tokens.panel))
+            .text_color(rgb(tokens.text))
+            .shadow_lg()
             .on_key_down(
                 cx.listener(move |this, event: &gpui::KeyDownEvent, window, cx| {
                     match event.keystroke.key.as_str() {
@@ -655,18 +786,21 @@ impl StartView {
                 div()
                     .id("start-search-input")
                     .role(gpui::Role::TextInput)
-                    .aria_label("Search apps, settings, and files")
+                    .aria_label(strings.search_placeholder)
                     .h(px(44.))
                     .px_3()
                     .flex_none()
                     .flex()
                     .items_center()
-                    .rounded_lg()
-                    .bg(rgb(0xffffff))
+                    .rounded(px(8.))
+                    .bg(rgb(tokens.surface))
                     .border_1()
-                    .border_color(rgb(0xc8d3df))
-                    .text_color(rgb(0x172033))
+                    .border_color(rgb(tokens.border))
+                    .text_color(rgb(tokens.text))
                     .relative()
+                    .hover(move |style| style.bg(rgb(tokens.hover)))
+                    .focus_visible(move |style| style.border_2().border_color(rgb(tokens.focus)))
+                    .child(div().mr_2().text_size(px(16.)).child("⌕"))
                     .child(
                         canvas(
                             |bounds, _, _| bounds,
@@ -682,7 +816,7 @@ impl StartView {
                         .inset_0(),
                     )
                     .child(if query.is_empty() && composition.is_empty() {
-                        "Search apps, settings, and files".to_owned()
+                        strings.search_placeholder.to_owned()
                     } else {
                         format!("{query}{composition}")
                     }),
@@ -702,30 +836,35 @@ impl StartView {
                                 .flex()
                                 .items_center()
                                 .justify_between()
-                                .child(div().text_size(px(18.)).child("Pinned"))
+                                .child(div().text_size(px(18.)).child(strings.pinned))
                                 .child(
                                     div()
                                         .id("start-all-apps")
                                         .role(gpui::Role::Button)
-                                        .aria_label("All apps")
+                                        .aria_label(strings.all_apps)
                                         .tab_index(0)
                                         .px_3()
                                         .py_1()
                                         .rounded_md()
-                                        .bg(rgb(0xe3e9f0))
+                                        .bg(rgb(tokens.subtle_surface))
                                         .cursor_pointer()
+                                        .hover(move |style| style.bg(rgb(tokens.hover)))
+                                        .active(move |style| style.bg(rgb(tokens.pressed)))
+                                        .focus_visible(move |style| {
+                                            style.border_2().border_color(rgb(tokens.focus))
+                                        })
                                         .on_click(cx.listener(|this, _, _, cx| {
                                             this.model.show_all_apps();
                                             cx.notify();
                                         }))
-                                        .child("All apps  >"),
+                                        .child(format!("{}  ›", strings.all_apps)),
                                 ),
                         )
                         .child(
                             div()
                                 .id("start-pinned-grid")
                                 .role(gpui::Role::List)
-                                .aria_label("Pinned")
+                                .aria_label(strings.pinned)
                                 .flex()
                                 .flex_wrap()
                                 .children(pins.into_iter().map(|result| {
@@ -748,7 +887,12 @@ impl StartView {
                                         .justify_center()
                                         .gap_1()
                                         .cursor_pointer()
-                                        .when(focused, |element| element.bg(rgb(0xdbe8f8)))
+                                        .when(focused, |element| element.bg(rgb(tokens.hover)))
+                                        .hover(move |style| style.bg(rgb(tokens.hover)))
+                                        .active(move |style| style.bg(rgb(tokens.pressed)))
+                                        .focus_visible(move |style| {
+                                            style.border_2().border_color(rgb(tokens.focus))
+                                        })
                                         .on_click(cx.listener(move |this, _, window, cx| {
                                             this.activate_result(activate_result.clone());
                                             this.model.close();
@@ -767,20 +911,20 @@ impl StartView {
                                         )
                                 })),
                         )
-                        .child(div().text_size(px(18.)).child("Recommended"))
+                        .child(div().text_size(px(18.)).child(strings.recommended))
                         .child(
                             div()
                                 .id("start-recommended")
                                 .role(gpui::Role::List)
-                                .aria_label("Recommended")
+                                .aria_label(strings.recommended)
                                 .flex()
                                 .flex_wrap()
                                 .when(recommendations.is_empty(), |element| {
                                     element.child(
                                         div()
                                             .py_3()
-                                            .text_color(rgb(0x66717d))
-                                            .child("Recent apps and files will appear here."),
+                                            .text_color(rgb(tokens.secondary_text))
+                                            .child(strings.recent_empty),
                                     )
                                 })
                                 .children(recommendations.into_iter().map(|result| {
@@ -800,6 +944,11 @@ impl StartView {
                                         .items_center()
                                         .gap_2()
                                         .cursor_pointer()
+                                        .hover(move |style| style.bg(rgb(tokens.hover)))
+                                        .active(move |style| style.bg(rgb(tokens.pressed)))
+                                        .focus_visible(move |style| {
+                                            style.border_2().border_color(rgb(tokens.focus))
+                                        })
                                         .on_click(cx.listener(move |this, _, window, cx| {
                                             this.activate_result(activate_result.clone());
                                             this.model.close();
@@ -813,7 +962,7 @@ impl StartView {
                                                     element.child(
                                                         div()
                                                             .text_size(px(11.))
-                                                            .text_color(rgb(0x66717d))
+                                                            .text_color(rgb(tokens.secondary_text))
                                                             .overflow_hidden()
                                                             .whitespace_nowrap()
                                                             .text_ellipsis()
@@ -849,24 +998,29 @@ impl StartView {
                                         div()
                                             .id("start-back-home")
                                             .role(gpui::Role::Button)
-                                            .aria_label("Back to pinned")
+                                            .aria_label(strings.back_to_pinned)
                                             .tab_index(0)
                                             .px_2()
                                             .py_1()
                                             .rounded_md()
-                                            .bg(rgb(0xe3e9f0))
+                                            .bg(rgb(tokens.subtle_surface))
                                             .cursor_pointer()
+                                            .hover(move |style| style.bg(rgb(tokens.hover)))
+                                            .active(move |style| style.bg(rgb(tokens.pressed)))
+                                            .focus_visible(move |style| {
+                                                style.border_2().border_color(rgb(tokens.focus))
+                                            })
                                             .on_click(cx.listener(|this, _, _, cx| {
                                                 this.model.show_home();
                                                 cx.notify();
                                             }))
-                                            .child("<"),
+                                            .child("‹"),
                                     )
                                 })
                                 .child(div().text_size(px(18.)).child(if query_active {
-                                    "Search results"
+                                    strings.search_results
                                 } else {
-                                    "All apps"
+                                    strings.all_apps
                                 })),
                         )
                         .child(
@@ -874,9 +1028,9 @@ impl StartView {
                                 .id("start-mode-results")
                                 .role(gpui::Role::List)
                                 .aria_label(if query_active {
-                                    "Search results"
+                                    strings.search_results
                                 } else {
-                                    "All apps"
+                                    strings.all_apps
                                 })
                                 .flex_1()
                                 .min_h_0()
@@ -901,7 +1055,12 @@ impl StartView {
                                         .items_center()
                                         .gap_3()
                                         .cursor_pointer()
-                                        .when(focused, |element| element.bg(rgb(0xdbe8f8)))
+                                        .when(focused, |element| element.bg(rgb(tokens.hover)))
+                                        .hover(move |style| style.bg(rgb(tokens.hover)))
+                                        .active(move |style| style.bg(rgb(tokens.pressed)))
+                                        .focus_visible(move |style| {
+                                            style.border_2().border_color(rgb(tokens.focus))
+                                        })
                                         .on_click(cx.listener(move |this, _, window, cx| {
                                             this.activate_result(activate_result.clone());
                                             this.model.close();
@@ -915,7 +1074,7 @@ impl StartView {
                                                     element.child(
                                                         div()
                                                             .text_size(px(11.))
-                                                            .text_color(rgb(0x66717d))
+                                                            .text_color(rgb(tokens.secondary_text))
                                                             .overflow_hidden()
                                                             .whitespace_nowrap()
                                                             .text_ellipsis()
@@ -938,69 +1097,104 @@ impl StartView {
                     .items_center()
                     .justify_between()
                     .border_t_1()
-                    .border_color(rgb(0xc8d3df))
+                    .border_color(rgb(tokens.border))
                     .child(
                         div()
                             .id("start-account")
                             .role(gpui::Role::Button)
-                            .aria_label(format!("User account {account_name}"))
+                            .aria_label(format!("{} {account_name}", strings.account_prefix))
                             .tab_index(0)
                             .px_3()
                             .py_2()
                             .rounded_md()
                             .cursor_pointer()
+                            .flex()
+                            .items_center()
+                            .gap_2()
+                            .hover(move |style| style.bg(rgb(tokens.hover)))
+                            .active(move |style| style.bg(rgb(tokens.pressed)))
+                            .focus_visible(move |style| {
+                                style.border_2().border_color(rgb(tokens.focus))
+                            })
                             .on_click(move |_, _, _| {
                                 account_activate(&settings_command(
                                     "ms-settings:yourinfo",
-                                    "Account",
+                                    strings.account_prefix,
                                 ));
                             })
+                            .child(
+                                div()
+                                    .w(px(28.))
+                                    .h(px(28.))
+                                    .rounded_full()
+                                    .bg(rgb(tokens.subtle_surface))
+                                    .flex()
+                                    .items_center()
+                                    .justify_center()
+                                    .child(account_initial),
+                            )
                             .child(account_name),
                     )
                     .child(
                         div()
                             .id("start-footer-actions")
                             .role(gpui::Role::Group)
-                            .aria_label("Start footer actions")
+                            .aria_label(strings.footer_actions)
                             .flex()
                             .gap_2()
                             .child(
                                 div()
                                     .id("start-settings")
                                     .role(gpui::Role::Button)
-                                    .aria_label("Settings")
+                                    .aria_label(strings.settings)
                                     .tab_index(0)
-                                    .px_3()
-                                    .py_2()
+                                    .w(px(40.))
+                                    .h(px(40.))
                                     .rounded_md()
-                                    .bg(rgb(0xe3e9f0))
+                                    .bg(rgb(tokens.subtle_surface))
+                                    .flex()
+                                    .items_center()
+                                    .justify_center()
                                     .cursor_pointer()
+                                    .hover(move |style| style.bg(rgb(tokens.hover)))
+                                    .active(move |style| style.bg(rgb(tokens.pressed)))
+                                    .focus_visible(move |style| {
+                                        style.border_2().border_color(rgb(tokens.focus))
+                                    })
                                     .on_click(cx.listener(move |this, _, window, cx| {
                                         settings_activate(&settings_command(
                                             "ms-settings:",
-                                            "Settings",
+                                            strings.settings,
                                         ));
                                         this.model.close();
                                         settings_dismiss(window, cx);
                                     }))
-                                    .child("Settings"),
+                                    .child("⚙"),
                             )
                             .child(
                                 div()
                                     .id("start-power")
                                     .role(gpui::Role::Button)
-                                    .aria_label("Power")
+                                    .aria_label(strings.power)
                                     .tab_index(0)
-                                    .px_3()
-                                    .py_2()
+                                    .w(px(40.))
+                                    .h(px(40.))
                                     .rounded_md()
-                                    .bg(rgb(0xe3e9f0))
+                                    .bg(rgb(tokens.subtle_surface))
+                                    .flex()
+                                    .items_center()
+                                    .justify_center()
                                     .cursor_pointer()
+                                    .hover(move |style| style.bg(rgb(tokens.hover)))
+                                    .active(move |style| style.bg(rgb(tokens.pressed)))
+                                    .focus_visible(move |style| {
+                                        style.border_2().border_color(rgb(tokens.focus))
+                                    })
                                     .on_click(cx.listener(|this, _, _, cx| {
                                         this.model.toggle_power();
                                         cx.notify();
                                     }))
-                                    .child("Power"),
+                                    .child("⏻"),
                             ),
                     ),
             )
@@ -1009,35 +1203,39 @@ impl StartView {
                     div()
                         .id("start-power-menu")
                         .role(gpui::Role::Menu)
-                        .aria_label("Power options")
+                        .aria_label(strings.power_options)
                         .absolute()
                         .right(px(16.))
                         .bottom(px(66.))
                         .w(px(190.))
                         .p_1()
                         .rounded_lg()
-                        .bg(rgb(0xffffff))
+                        .bg(rgb(tokens.surface))
                         .border_1()
-                        .border_color(rgb(0xc8d3df))
+                        .border_color(rgb(tokens.border))
+                        .shadow_lg()
                         .flex()
                         .flex_col()
                         .child(power_menu_item(
                             "start-sign-out",
-                            "Sign out",
+                            strings.sign_out,
+                            tokens,
                             sign_out,
                             StartPowerAction::SignOut,
                             cx,
                         ))
                         .child(power_menu_item(
                             "start-restart",
-                            "Restart",
+                            strings.restart,
+                            tokens,
                             restart,
                             StartPowerAction::Restart,
                             cx,
                         ))
                         .child(power_menu_item(
                             "start-shut-down",
-                            "Shut down",
+                            strings.shut_down,
+                            tokens,
                             shut_down,
                             StartPowerAction::ShutDown,
                             cx,
@@ -1090,6 +1288,7 @@ fn start_icon_tile(
 fn power_menu_item(
     id: &'static str,
     label: &'static str,
+    tokens: StartVisualTokens,
     action: PowerAction,
     value: StartPowerAction,
     cx: &mut Context<StartView>,
@@ -1103,6 +1302,9 @@ fn power_menu_item(
         .py_2()
         .rounded_md()
         .cursor_pointer()
+        .hover(move |style| style.bg(rgb(tokens.hover)))
+        .active(move |style| style.bg(rgb(tokens.pressed)))
+        .focus_visible(move |style| style.border_2().border_color(rgb(tokens.focus)))
         .on_click(cx.listener(move |this, _, _, cx| {
             this.model.power_open = false;
             action(value);
@@ -1425,6 +1627,12 @@ mod tests {
             "start-power",
             "start-power-menu",
             "render_icons_for",
+            "StartStrings::current",
+            "StartVisualTokens::new",
+            ".hover(move |style|",
+            ".active(move |style|",
+            ".focus_visible(move |style|",
+            "high-contrast",
         ] {
             assert!(
                 source.contains(required),
@@ -1434,6 +1642,55 @@ mod tests {
         assert!(source.contains("return self.render_windows11(window, cx)"));
         let model = StartModel::default();
         assert!(!model.power_open);
+    }
+
+    #[test]
+    fn start_strings_are_complete_localized_and_fall_back_to_english() {
+        let zh = StartStrings::from_locale(Some("zh-TW"));
+        assert_eq!(zh.start, "開始");
+        assert_eq!(zh.search_placeholder, "搜尋應用程式、設定及檔案");
+        assert_eq!(zh.all_apps, "所有應用程式");
+        assert_eq!(zh.power_options, "電源選項");
+        assert_eq!(zh.shut_down, "關機");
+        let english = StartStrings::from_locale(Some("en-US"));
+        assert_eq!(english, StartStrings::ENGLISH);
+        assert_eq!(
+            StartStrings::from_locale(Some("ar-SA")),
+            StartStrings::ENGLISH
+        );
+        for value in [
+            zh.start,
+            zh.search_placeholder,
+            zh.pinned,
+            zh.all_apps,
+            zh.recommended,
+            zh.recent_empty,
+            zh.back_to_pinned,
+            zh.search_results,
+            zh.account_prefix,
+            zh.settings,
+            zh.power,
+            zh.footer_actions,
+            zh.power_options,
+            zh.sign_out,
+            zh.restart,
+            zh.shut_down,
+        ] {
+            assert!(!value.trim().is_empty());
+            assert!(value.chars().count() <= 32);
+        }
+    }
+
+    #[test]
+    fn start_visual_tokens_keep_high_contrast_geometry_distinct() {
+        let light = StartVisualTokens::new(false);
+        let contrast = StartVisualTokens::new(true);
+        assert_ne!(light.panel, light.surface);
+        assert_ne!(light.hover, light.pressed);
+        assert_eq!(contrast.panel, 0x000000);
+        assert_eq!(contrast.border, 0xffffff);
+        assert_eq!(contrast.focus, 0xffff00);
+        assert_ne!(contrast.hover, contrast.pressed);
     }
 
     #[test]

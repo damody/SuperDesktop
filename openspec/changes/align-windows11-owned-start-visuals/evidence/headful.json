@@ -1,0 +1,38 @@
+{
+    "schema":  "windows11-owned-start-production/v2",
+    "result":  "passed",
+    "app_sha256":  "7D796FEDB5CC5E70E5E2CEE047F63D2C56EB5185FD262CDC41E5EE9986888038",
+    "owned_start_pid":  48872,
+    "taskbar_pid":  48872,
+    "system_start_process_ids_before":  [
+                                            20348,
+                                            39280,
+                                            50144
+                                        ],
+    "system_start_process_ids_after":  [
+                                           20348,
+                                           39280,
+                                           50144
+                                       ],
+    "locale":  "zh-TW",
+    "home_sections":  [
+                          "已釘選",
+                          "建議",
+                          "設定",
+                          "電源"
+                      ],
+    "power_collapsed":  true,
+    "all_apps_count":  75,
+    "centered_home_bounds":  {
+                                 "left":  1348,
+                                 "top":  731,
+                                 "width":  1144,
+                                 "height":  1272
+                             },
+    "home_screenshot":  "start-home-zh-tw.png",
+    "home_sha256":  "F120A4B3C487F3F3B0FEE1CF020A53A2C4E22C600FA3140E6EEDCC2C2C61112D",
+    "all_apps_screenshot":  "start-all-apps-zh-tw.png",
+    "all_apps_sha256":  "A1510206633A8DBA0E2616F03C28188B652E44287F26C2F715FBF3FB8C7880C6",
+    "power_screenshot":  "start-power-zh-tw.png",
+    "power_sha256":  "3671C900FB0E0D1C1F6EC97835C5E9E724285013778AE6E5CB18823E6D6B8DB8"
+}

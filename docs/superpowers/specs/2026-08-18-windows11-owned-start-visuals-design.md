@@ -20,7 +20,7 @@ The logical window remains 640×720 and scales once through GPUI. The search fie
 
 ## Explorer independence
 
-No Start path may call `explorer.exe`, `StartMenuExperienceHost`, `SearchHost`, `ShellExperienceHost`, `ms-settings:` presentation or the historical Start-host probe. Settings and result activation stay typed SuperDesktop/platform commands; unavailable providers render truthful owned states.
+No Start path may call `explorer.exe`, `StartMenuExperienceHost`, `SearchHost`, `ShellExperienceHost` or the historical Start-host probe. Windows Settings remains an allowed typed platform activation because it is not Explorer or a delegated Start surface; unavailable providers render truthful owned states.
 
 ## Verification
 

@@ -30,7 +30,7 @@ Every owned Start action SHALL expose distinct hover, pressed and keyboard focus
 - **THEN** focused controls remain visible by border geometry and expose stable names and roles
 
 ### Requirement: Start remains Explorer-free
-SuperDesktop MUST render and operate Start without invoking Explorer, system Start hosts, SearchHost, ShellExperienceHost or system Settings presentation.
+SuperDesktop MUST render and operate Start without invoking Explorer, system Start hosts, SearchHost or ShellExperienceHost. Typed activation of the separate Windows Settings application remains allowed.
 
 #### Scenario: Owned Start process observation
 - **WHEN** Start opens and navigates Home, All apps and Power

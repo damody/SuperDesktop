@@ -3381,6 +3381,10 @@ mod live_parity_tests {
             && production.contains("start:closed")
             && !production.contains("invoke_start_host_controlled")
             && !production.contains("SUPERDESKTOP_VERIFICATION_OWNED_START")
+            && !production.contains("StartMenuExperienceHost")
+            && !production.contains("SearchHost")
+            && !production.contains("ShellExperienceHost")
+            && !production.contains("explorer.exe")
     }
 
     fn product_status_has_no_fixed_provider_values(source: &str) -> bool {
@@ -3447,6 +3451,14 @@ mod live_parity_tests {
         assert!(!production.contains("if !shell"));
         assert!(!composition.contains("invoke_start_host_controlled"));
         assert!(!composition.contains("start-host-unavailable"));
+        for forbidden in [
+            "StartMenuExperienceHost",
+            "SearchHost",
+            "ShellExperienceHost",
+            "explorer.exe",
+        ] {
+            assert!(!production.contains(forbidden));
+        }
     }
 
     #[test]
