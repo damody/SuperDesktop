@@ -1,0 +1,26 @@
+{
+  "schema": "windows11-taskbar-settings-layout-automated/v1",
+  "result": "passed",
+  "superdesktop_revision": "bd52cf0d384372e0277e3b395f5a0058be55c736",
+  "release_app_sha256": "555b2ea7d5ef1bf4873f5c986719e0c7043654f6e9557420c2849fa8adf3edeb",
+  "commands": [
+    "cargo fmt --all -- --check",
+    "cargo test --workspace --all-targets --locked --offline --no-fail-fast",
+    "cargo clippy --workspace --all-targets --locked --offline -- -D warnings",
+    "cargo build --workspace --all-targets --release --locked --offline"
+  ],
+  "focused_counts": {
+    "taskbar_ui": 59,
+    "superdesktop_app": 33
+  },
+  "geometry_matrix_dpi": [96, 120, 144, 168, 192, 216],
+  "headful": {
+    "windows_build": 26200,
+    "dpi": 168,
+    "dpi_percent": 175,
+    "themes": ["light", "dark"],
+    "locale": "zh-TW",
+    "uia_toggle_pattern": true,
+    "delegated_shell_processes_started": 0
+  }
+}

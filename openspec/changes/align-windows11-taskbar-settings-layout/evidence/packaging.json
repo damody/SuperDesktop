@@ -1,0 +1,30 @@
+{
+  "schema": "windows11-taskbar-settings-layout-packaging/v1",
+  "result": "passed",
+  "version": "1.2026.8.19",
+  "superdesktop_revision": "bd52cf0d384372e0277e3b395f5a0058be55c736",
+  "superexplorer_revision": "1e6dcb65b2ac08253e4557d2908b9170c3f565c9",
+  "artifacts": [
+    {
+      "path": "D:/SuperExplorer/SuperDesktop/target/release/superdesktop-app.exe",
+      "bytes": 21042176,
+      "sha256": "555b2ea7d5ef1bf4873f5c986719e0c7043654f6e9557420c2849fa8adf3edeb"
+    },
+    {
+      "path": "D:/SuperExplorer/dist/SuperDesktop-Test-Setup-1.2026.8.19-x64.exe",
+      "mode": "superdesktop-only",
+      "bytes": 5810568,
+      "sha256": "984759bac38d8e239d08a1eff9f472cff70646939a89793384ed97b3909da67e"
+    },
+    {
+      "path": "D:/SuperExplorer/dist/SuperExplorer-Setup-1.2026.8.19-x64.exe",
+      "mode": "superexplorer-plus-superdesktop",
+      "bytes": 13547159,
+      "sha256": "b8c6957b9db0f2bc337e4a97dc2bfe8ed3de7388f345e0bc7bd34bc4b9034ad8"
+    }
+  ],
+  "commands": [
+    "build_desktop_test_install.bat --no-launch",
+    "build_install.bat --no-launch"
+  ]
+}

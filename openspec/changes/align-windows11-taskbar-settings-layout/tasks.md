@@ -86,6 +86,6 @@
 **Gate／Evidence：** `G-TRACE`, `G-PACKAGE`; packaging/evidence records.
 **完成門檻：** 18/18 unique evidence, both installers, detailed/strict pass, unarchived.
 
-- [ ] 3.2.1 Commit implementation and record release binary/revision hashes.
-- [ ] 3.2.2 Build standalone and combined NSIS installers without launch.
-- [ ] 3.2.3 Create the unique evidence index and pass detailed/strict validation.
+- [x] 3.2.1 Commit implementation and record release binary/revision hashes.
+- [x] 3.2.2 Build standalone and combined NSIS installers without launch.
+- [x] 3.2.3 Create the unique evidence index and pass detailed/strict validation.

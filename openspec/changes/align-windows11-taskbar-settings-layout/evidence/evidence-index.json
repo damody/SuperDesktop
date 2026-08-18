@@ -1,0 +1,26 @@
+{
+  "schema": "openspec-leaf-evidence-index/v1",
+  "change": "align-windows11-taskbar-settings-layout",
+  "result": "passed",
+  "leaf_count": 18,
+  "entries": [
+    {"task":"1.1.1","evidence_id":"E-TS-LOGICAL-ORIGIN","artifact":"automated-gates.json","proof":"placement returns logical monitor coordinates"},
+    {"task":"1.1.2","evidence_id":"E-TS-WINDOW-OPTIONS","artifact":"automated-gates.json","proof":"GPUI receives logical width and height without DPI multiplication"},
+    {"task":"1.1.3","evidence_id":"E-TS-DPI-MATRIX","artifact":"automated-gates.json","proof":"96 through 216 DPI, negative origin, and compact monitor tests pass"},
+    {"task":"1.2.1","evidence_id":"E-TS-RESPONSIVE-METRICS","artifact":"automated-gates.json","proof":"compact and normal padding plus bounded content tests pass"},
+    {"task":"1.2.2","evidence_id":"E-TS-VISUAL-TOKENS","artifact":"dark/dark-top.png","proof":"central card, focus, border, text, and switch tokens render"},
+    {"task":"1.2.3","evidence_id":"E-TS-THEME-MATRIX","artifact":"automated-gates.json","proof":"light, dark, and explicit high-contrast token tests pass"},
+    {"task":"2.1.1","evidence_id":"E-TS-FULL-ROOT","artifact":"light/light-top.png","proof":"root fills the actual settings window"},
+    {"task":"2.1.2","evidence_id":"E-TS-CENTERED-COLUMN","artifact":"light/light-top.png","proof":"bounded content column is centered with Windows spacing"},
+    {"task":"2.1.3","evidence_id":"E-TS-SCROLL-BOTTOM","artifact":"light/light-bottom.png","proof":"one scroll surface reaches behavior and related settings"},
+    {"task":"2.2.1","evidence_id":"E-TS-WINDOWS-METRICS","artifact":"dark/dark-bottom.png","proof":"cards, 56-pixel rows, 44-by-24 switches, and glyph columns render"},
+    {"task":"2.2.2","evidence_id":"E-TS-FOCUS-CONTRAST","artifact":"automated-gates.json","proof":"focus-visible and high-contrast non-color contracts pass"},
+    {"task":"2.2.3","evidence_id":"E-TS-A11Y-I18N","artifact":"light/light-report.json","proof":"zh-TW UIA CheckBox TogglePattern and authoritative reconciliation pass"},
+    {"task":"3.1.1","evidence_id":"E-TS-FULL-GATES","artifact":"automated-gates.json","proof":"format, workspace tests, clippy, and release build pass"},
+    {"task":"3.1.2","evidence_id":"E-TS-HEADFUL-175","artifact":"dark/dark-report.json","proof":"168 DPI top and bottom dark capture geometry passes"},
+    {"task":"3.1.3","evidence_id":"E-TS-ZERO-DELEGATION","artifact":"light/light-report.json","proof":"UIA activation succeeds with zero delegated shell processes"},
+    {"task":"3.2.1","evidence_id":"E-TS-REVISION","artifact":"packaging.json","proof":"committed revision and release application hash recorded"},
+    {"task":"3.2.2","evidence_id":"E-TS-INSTALLERS","artifact":"packaging.json","proof":"standalone and combined NSIS installers built without launch"},
+    {"task":"3.2.3","evidence_id":"E-TS-TRACE","artifact":"evidence-index.json","proof":"18 unique leaf records and strict validation"}
+  ]
+}
