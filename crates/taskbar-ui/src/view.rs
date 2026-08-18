@@ -7,9 +7,10 @@ use std::{
 };
 
 use gpui::{
-    App, AppContext, Context, FocusHandle, InteractiveElement, IntoElement, ObjectFit,
-    ParentElement, Render, RenderImage, StatefulInteractiveElement, Styled, StyledImage, Window,
-    div, img, prelude::FluentBuilder as _, px, rgb, svg,
+    App, AppContext, Context, CursorStyle, FocusHandle, InteractiveElement, IntoElement,
+    MouseButton, ObjectFit, ParentElement, Render, RenderImage, ResizeEdge,
+    StatefulInteractiveElement, Styled, StyledImage, Subscription, Window, div, img,
+    prelude::FluentBuilder as _, px, rgb, svg,
 };
 
 use crate::{
@@ -208,8 +209,10 @@ pub struct TaskbarView {
     pub search_mode: TaskbarSearchMode,
     pub show_task_view: bool,
     pub alignment: TaskbarAlignment,
+    pub locked: bool,
     pub callbacks: Option<TaskbarCallbacks>,
     pub keyboard_focus: Option<FocusHandle>,
+    pub resize_subscription: Option<Subscription>,
 }
 
 pub type TaskCallback = Rc<dyn Fn(&str, &mut App)>;
@@ -218,6 +221,11 @@ pub type NotificationOverflowCallback = Rc<dyn Fn(Vec<NotificationAccessibleNode
 pub type SystemStatusCallback = Rc<dyn Fn(SystemStatusAction, &mut App)>;
 pub type SystemFlyoutCallback = Rc<dyn Fn(SystemFlyoutKind, &mut App)>;
 pub type TaskbarBackgroundContextCallback = Rc<dyn Fn(gpui::Point<gpui::Pixels>, &mut App)>;
+pub type TaskbarResizeCallback = Rc<dyn Fn(u8, &mut Window, &mut App) -> bool>;
+
+fn taskbar_rows_for_logical_height(height: f32) -> u8 {
+    ((height / 40.0).round() as i32).clamp(1, 3) as u8
+}
 
 struct NotificationTooltip {
     text: String,
@@ -243,11 +251,34 @@ pub struct TaskbarCallbacks {
     pub task: TaskCallback,
     pub task_context: TaskCallback,
     pub taskbar_context: TaskbarBackgroundContextCallback,
+    pub resize_rows: TaskbarResizeCallback,
     pub notification: NotificationCallback,
     pub notification_overflow: NotificationOverflowCallback,
     pub system_status: SystemStatusCallback,
     pub system_flyout: SystemFlyoutCallback,
     pub rendered: Rc<dyn Fn()>,
+}
+
+impl TaskbarView {
+    pub fn attach_resize_observer(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let Some(callback) = self
+            .callbacks
+            .as_ref()
+            .map(|callbacks| Rc::clone(&callbacks.resize_rows))
+        else {
+            return;
+        };
+        self.resize_subscription =
+            Some(cx.observe_window_bounds(window, move |this, window, cx| {
+                if this.locked {
+                    return;
+                }
+                let rows = taskbar_rows_for_logical_height(window.bounds().size.height.as_f32());
+                if rows != this.layout.rows.get() {
+                    let _ = callback(rows, window, cx);
+                }
+            }));
+    }
 }
 
 impl Render for TaskbarView {
@@ -270,7 +301,6 @@ impl Render for TaskbarView {
             .map(|value| Rc::clone(&value.taskbar_context));
         let overlays = self.overlays.clone();
         let show_labels = self.show_labels;
-        let row_count = self.layout.rows.get();
         let search_mode = self.search_mode;
         let show_task_view = self.show_task_view;
         let alignment = self.alignment;
@@ -387,15 +417,28 @@ impl Render for TaskbarView {
             .border_color(rgb(tokens.border))
             .text_color(rgb(tokens.text))
             .text_size(px(13.))
-            .children((1..row_count).map(|row| {
-                div()
-                    .absolute()
-                    .left_0()
-                    .right_0()
-                    .top(px(40.0 * f32::from(row)))
-                    .h(px(1.))
-                    .bg(rgb(tokens.border))
-            }))
+            .when(!self.locked, |root| {
+                root.child(
+                    div()
+                        .id("taskbar-resize-strip")
+                        .role(gpui::Role::Button)
+                        .aria_label(if zh_tw {
+                            "調整工作列高度"
+                        } else {
+                            "Resize taskbar height"
+                        })
+                        .absolute()
+                        .left_0()
+                        .right_0()
+                        .top_0()
+                        .h(px(6.))
+                        .cursor(CursorStyle::ResizeUpDown)
+                        .on_mouse_down(MouseButton::Left, |_, window, cx| {
+                            window.start_window_resize(ResizeEdge::Top);
+                            cx.stop_propagation();
+                        }),
+                )
+            })
             .child(
                 div()
                     .id("notification-area")
@@ -1278,7 +1321,8 @@ impl Render for TaskbarView {
 mod tests {
     use super::{
         TaskbarChromeTokens, activates_button, bc7_render_image, compact_input_language,
-        icon_render_image, task_display_label, taskbar_search_label, toggled_system_flyout,
+        icon_render_image, task_display_label, taskbar_rows_for_logical_height,
+        taskbar_search_label, toggled_system_flyout,
     };
     use crate::SystemFlyoutKind;
     use shell_provider_protocol::IconData;
@@ -1399,6 +1443,33 @@ mod tests {
                 "missing taskbar chrome: {required}"
             );
         }
+    }
+
+    #[test]
+    fn taskbar_resize_quantization_lock_strip_and_continuous_rows_are_deterministic() {
+        assert_eq!(taskbar_rows_for_logical_height(1.0), 1);
+        assert_eq!(taskbar_rows_for_logical_height(59.9), 1);
+        assert_eq!(taskbar_rows_for_logical_height(60.0), 2);
+        assert_eq!(taskbar_rows_for_logical_height(99.9), 2);
+        assert_eq!(taskbar_rows_for_logical_height(100.0), 3);
+        assert_eq!(taskbar_rows_for_logical_height(10_000.0), 3);
+        let source = include_str!("view.rs");
+        let production = source.split("#[cfg(test)]").next().unwrap_or(source);
+        for required in [
+            "taskbar-resize-strip",
+            "CursorStyle::ResizeUpDown",
+            "ResizeEdge::Top",
+            "attach_resize_observer",
+            "if this.locked",
+            ".border_t_1()",
+        ] {
+            assert!(
+                source.contains(required),
+                "missing resize contract: {required}"
+            );
+        }
+        assert!(!production.contains("(1..row_count)"));
+        assert!(!production.contains("40.0 * f32::from(row)"));
     }
 
     #[test]

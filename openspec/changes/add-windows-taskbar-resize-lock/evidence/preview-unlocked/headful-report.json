@@ -1,0 +1,83 @@
+{
+    "schema":  "taskbar-resize-lock-headful/v1",
+    "result":  "passed",
+    "shell":  false,
+    "locked":  false,
+    "app_sha256":  "68a72c7454ed7d3c98d59daa940c6da222f8c484f49a50a9b1ab71198d865163",
+    "explorer_before":  [
+                            43780
+                        ],
+    "explorer_absent_during_capture":  false,
+    "appbar_disposition":  "not-applicable-preview",
+    "initial_rect":  {
+                         "left":  -12,
+                         "top":  1878,
+                         "right":  3852,
+                         "bottom":  2030,
+                         "width":  3864,
+                         "height":  152
+                     },
+    "initial_client":  {
+                           "left":  0,
+                           "top":  1878,
+                           "width":  3840,
+                           "height":  140,
+                           "right":  3840,
+                           "bottom":  2018
+                       },
+    "three_rows_rect":  {
+                            "left":  -12,
+                            "top":  1808,
+                            "right":  3852,
+                            "bottom":  2030,
+                            "width":  3864,
+                            "height":  222
+                        },
+    "three_rows_client":  {
+                              "left":  0,
+                              "top":  1808,
+                              "width":  3840,
+                              "height":  210,
+                              "right":  3840,
+                              "bottom":  2018
+                          },
+    "one_row_rect":  {
+                         "left":  -12,
+                         "top":  1948,
+                         "right":  3852,
+                         "bottom":  2030,
+                         "width":  3864,
+                         "height":  82
+                     },
+    "one_row_client":  {
+                           "left":  0,
+                           "top":  1948,
+                           "width":  3840,
+                           "height":  70,
+                           "right":  3840,
+                           "bottom":  2018
+                       },
+    "locked_drag_rect":  null,
+    "initial_style":  348389376,
+    "final_settings":  {
+                           "rows":  1,
+                           "locked":  false
+                       },
+    "screenshots":  [
+                        {
+                            "name":  "taskbar-lock-context.png",
+                            "bytes":  1302454,
+                            "sha256":  "9d94fccb66cbe1248dfd39a02cbdd79a4206d8e16cbd6d2cd8070272ae561e4d"
+                        },
+                        {
+                            "name":  "taskbar-one-row.png",
+                            "bytes":  1313257,
+                            "sha256":  "d9d1dc768357625cffb38eeeefa0ea1a94a7ee64ecd87470d4d6bbf36ec9e10e"
+                        },
+                        {
+                            "name":  "taskbar-three-rows.png",
+                            "bytes":  1313426,
+                            "sha256":  "8a8d8e9df04986c988f4dfb04146ddd6aba0ee84762a7a3fddc52f507d18ef88"
+                        }
+                    ]
+}

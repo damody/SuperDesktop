@@ -84,6 +84,7 @@ pub enum TaskbarAlignment {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TaskbarSettings {
     pub rows: u8,
+    pub locked: bool,
     pub pins: Vec<String>,
     pub combine_groups: bool,
     pub show_labels: bool,
@@ -98,6 +99,7 @@ impl Default for TaskbarSettings {
     fn default() -> Self {
         Self {
             rows: 2,
+            locked: true,
             pins: Vec::new(),
             combine_groups: false,
             show_labels: true,
@@ -222,6 +224,7 @@ impl SettingsV1 {
             } else {
                 corrections.push(SettingsCorrection::TaskbarRows);
             }
+            settings.taskbar.locked = take_bool(&mut taskbar, "locked").unwrap_or(true);
             settings.taskbar.pins = take_string_array(&mut taskbar, "pins").unwrap_or_default();
             settings.taskbar.combine_groups =
                 take_bool(&mut taskbar, "combine_groups").unwrap_or(false);
@@ -350,6 +353,7 @@ impl SettingsV1 {
                     ),
                 ),
                 ("rows".into(), Value::Number(i64::from(self.taskbar.rows))),
+                ("locked".into(), Value::Bool(self.taskbar.locked)),
                 (
                     "combine_groups".into(),
                     Value::Bool(self.taskbar.combine_groups),
@@ -715,15 +719,17 @@ mod tests {
         assert!(defaults.taskbar.show_task_view);
         assert_eq!(defaults.taskbar.alignment, TaskbarAlignment::Left);
         assert!(!defaults.taskbar.show_labels);
+        assert!(defaults.taskbar.locked);
 
         let configured = SettingsV1::decode(
-            r#"{"schema_version":1,"taskbar":{"rows":3,"search_mode":"box","show_task_view":false,"alignment":"center","combine_groups":true}}"#,
+            r#"{"schema_version":1,"taskbar":{"rows":3,"locked":false,"search_mode":"box","show_task_view":false,"alignment":"center","combine_groups":true}}"#,
         )
         .unwrap()
         .settings;
         assert_eq!(configured.taskbar.search_mode, TaskbarSearchMode::Box);
         assert!(!configured.taskbar.show_task_view);
         assert_eq!(configured.taskbar.alignment, TaskbarAlignment::Center);
+        assert!(!configured.taskbar.locked);
         assert_eq!(
             SettingsV1::decode(&configured.encode()).unwrap().settings,
             configured
@@ -739,6 +745,7 @@ mod tests {
         assert!(!invalid.taskbar.show_task_view);
         assert!(!invalid.taskbar.previews_enabled);
         assert_eq!(invalid.taskbar.rows, 1);
+        assert!(invalid.taskbar.locked);
     }
 
     #[test]

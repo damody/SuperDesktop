@@ -12,9 +12,9 @@
 **Gate／Evidence：** `G-TASKBAR-LOCK`; automated record.
 **完成門檻：** Legacy files default locked, valid values round-trip, invalid siblings stay isolated.
 
-- [ ] 1.1.1 Add `locked` with a true default to taskbar settings.
-- [ ] 1.1.2 Decode and encode lock state without changing schema version.
-- [ ] 1.1.3 Add legacy fallback, round-trip, and independent-field tests.
+- [x] 1.1.1 Add `locked` with a true default to taskbar settings.
+- [x] 1.1.2 Decode and encode lock state without changing schema version.
+- [x] 1.1.3 Add legacy fallback, round-trip, and independent-field tests.
 
 ### 1.2 Add an owned-HWND resize-style adapter
 
@@ -26,9 +26,9 @@
 **Gate／Evidence：** `G-TASKBAR-RESIZE`, `G-SHELL-NONINTERFERENCE`; platform record.
 **完成門檻：** Owned style toggles only `WS_THICKFRAME`; invalid/foreign HWNDs are zero-effect.
 
-- [ ] 1.2.1 Validate HWND liveness and current-process ownership.
-- [ ] 1.2.2 Toggle `WS_THICKFRAME` with frame refresh and idempotence.
-- [ ] 1.2.3 Add owned, invalid, foreign, and repeated-toggle tests.
+- [x] 1.2.1 Validate HWND liveness and current-process ownership.
+- [x] 1.2.2 Toggle `WS_THICKFRAME` with frame refresh and idempotence.
+- [x] 1.2.3 Add owned, invalid, foreign, and repeated-toggle tests.
 
 ## 2. Owned Taskbar Interaction
 
@@ -42,9 +42,9 @@
 **Gate／Evidence：** `G-TASKBAR-LOCK`; model/UIA/headful records.
 **完成門檻：** Both surfaces show the authoritative state and emit one atomic toggle.
 
-- [ ] 2.1.1 Add first-position `ToggleLockTaskbar` context command with checked UIA state.
-- [ ] 2.1.2 Add owned settings behavior row and typed lock mutation.
-- [ ] 2.1.3 Add pointer, keyboard, localization, save-failure, and reconciliation tests.
+- [x] 2.1.1 Add first-position `ToggleLockTaskbar` context command with checked UIA state.
+- [x] 2.1.2 Add owned settings behavior row and typed lock mutation.
+- [x] 2.1.3 Add pointer, keyboard, localization, save-failure, and reconciliation tests.
 
 ### 2.2 Quantize native resize to rows
 
@@ -56,9 +56,9 @@
 **Gate／Evidence：** `G-TASKBAR-RESIZE`, `G-TASKBAR-LOCK`; deterministic/headful records.
 **完成門檻：** Unlocked heights map to 1–3 rows once; locked state exposes no resize route.
 
-- [ ] 2.2.1 Add unlocked top-edge resize strip and native vertical-resize cursor.
-- [ ] 2.2.2 Observe bounds and quantize logical height to one, two, or three rows.
-- [ ] 2.2.3 Add threshold, duplicate, locked, DPI, and negative-origin tests.
+- [x] 2.2.1 Add unlocked top-edge resize strip and native vertical-resize cursor.
+- [x] 2.2.2 Observe bounds and quantize logical height to one, two, or three rows.
+- [x] 2.2.3 Add threshold, duplicate, locked, DPI, and negative-origin tests.
 
 ### 2.3 Reconcile placement, HWND, settings, and AppBar
 
@@ -70,9 +70,9 @@
 **Gate／Evidence：** `G-TASKBAR-PLACEMENT`, `G-TASKBAR-RESIZE`; app/platform records.
 **完成門檻：** Preview anchors to work area, Shell anchors to monitor and reserves exact thickness.
 
-- [ ] 2.3.1 Preserve Preview work-bottom and Shell monitor-bottom anchors.
-- [ ] 2.3.2 Save changed rows before snapping exact DPI-scaled HWND geometry.
-- [ ] 2.3.3 Update the matching Shell AppBar lease and reject save/lease failure.
+- [x] 2.3.1 Preserve Preview work-bottom and Shell monitor-bottom anchors.
+- [x] 2.3.2 Save changed rows before snapping exact DPI-scaled HWND geometry.
+- [x] 2.3.3 Update the matching Shell AppBar lease when available, preserve explicit Explorer-free owned geometry when the broker is absent, and reject other save/lease failure.
 
 ### 2.4 Remove row separators without losing indicators
 
@@ -84,9 +84,9 @@
 **Gate／Evidence：** `G-TASKBAR-CHROME`; source and theme screenshots.
 **完成門檻：** One/two/three rows have no full-width internal line and retain outer border/indicators.
 
-- [ ] 2.4.1 Remove generated full-width row separator elements.
-- [ ] 2.4.2 Preserve outer top border and per-task indicator/progress geometry.
-- [ ] 2.4.3 Add one/two/three-row light/dark/high-contrast source and geometry tests.
+- [x] 2.4.1 Remove generated full-width row separator elements.
+- [x] 2.4.2 Preserve outer top border and per-task indicator/progress geometry.
+- [x] 2.4.3 Add one/two/three-row light/dark/high-contrast source and geometry tests.
 
 ## 3. Verification and Packaging
 
@@ -100,9 +100,9 @@
 **Gate／Evidence：** `G-TASKBAR-PLACEMENT`, `G-TASKBAR-RESIZE`, `G-TASKBAR-LOCK`, `G-TASKBAR-CHROME`, `G-SHELL-NONINTERFERENCE`; headful records.
 **完成門檻：** All rows, lock states, anchors, themes, UIA, AppBar and Explorer absence pass.
 
-- [ ] 3.1.1 Run fmt, locked/offline workspace tests, and clippy warnings-as-errors.
-- [ ] 3.1.2 Capture Preview drag/lock and separator-free 1–3 row matrices.
-- [ ] 3.1.3 Capture Explorer-free Shell drag/AppBar/UIA/process evidence and restore Explorer.
+- [x] 3.1.1 Run fmt, locked/offline workspace tests, and clippy warnings-as-errors.
+- [x] 3.1.2 Capture Preview drag/lock and separator-free 1–3 row matrices.
+- [x] 3.1.3 Capture Explorer-free Shell drag/AppBar/UIA/process evidence and restore Explorer.
 
 ### 3.2 Validate traceability, release, and installers
 

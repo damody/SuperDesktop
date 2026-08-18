@@ -68,6 +68,7 @@ impl CommandSurfaceTokens {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum TaskbarContextCommand {
+    ToggleLockTaskbar,
     OpenTaskManager,
     OpenTaskbarSettings,
 }
@@ -84,7 +85,8 @@ pub struct TaskbarContextModel {
 }
 
 impl TaskbarContextModel {
-    pub const COMMANDS: [TaskbarContextCommand; 2] = [
+    pub const COMMANDS: [TaskbarContextCommand; 3] = [
+        TaskbarContextCommand::ToggleLockTaskbar,
         TaskbarContextCommand::OpenTaskManager,
         TaskbarContextCommand::OpenTaskbarSettings,
     ];
@@ -108,6 +110,7 @@ pub type TaskbarSurfaceDismiss = Rc<dyn Fn(&mut Window, &mut gpui::App)>;
 
 pub struct TaskbarContextView {
     pub model: TaskbarContextModel,
+    pub locked: bool,
     action: TaskbarContextAction,
     dismiss: TaskbarSurfaceDismiss,
     focus: FocusHandle,
@@ -115,6 +118,7 @@ pub struct TaskbarContextView {
 
 impl TaskbarContextView {
     pub fn new(
+        locked: bool,
         action: TaskbarContextAction,
         dismiss: TaskbarSurfaceDismiss,
         _window: &mut Window,
@@ -122,6 +126,7 @@ impl TaskbarContextView {
     ) -> Self {
         Self {
             model: TaskbarContextModel::default(),
+            locked,
             action,
             dismiss,
             focus: cx.focus_handle(),
@@ -145,7 +150,7 @@ impl Render for TaskbarContextView {
             .left_0()
             .top_0()
             .w(px(220.))
-            .h(px(80.))
+            .h(px(114.))
             .p(px(4.))
             .rounded(px(8.))
             .border_1()
@@ -181,6 +186,14 @@ impl Render for TaskbarContextView {
                     let action = self.action.clone();
                     let dismiss = self.dismiss.clone();
                     let (icon, label) = match command {
+                        TaskbarContextCommand::ToggleLockTaskbar => (
+                            if self.locked { "✓" } else { "" },
+                            if traditional_chinese() {
+                                "鎖定工作列"
+                            } else {
+                                "Lock the taskbar"
+                            },
+                        ),
                         TaskbarContextCommand::OpenTaskManager => (
                             "▥",
                             if traditional_chinese() {
@@ -201,7 +214,21 @@ impl Render for TaskbarContextView {
                     div()
                         .id(format!("taskbar-context-{command:?}"))
                         .role(gpui::Role::MenuItem)
-                        .aria_label(label)
+                        .aria_label(if command == TaskbarContextCommand::ToggleLockTaskbar {
+                            format!(
+                                "{label}, {}",
+                                if self.locked {
+                                    "checked"
+                                } else {
+                                    "not checked"
+                                }
+                            )
+                        } else {
+                            label.into()
+                        })
+                        .aria_selected(
+                            command == TaskbarContextCommand::ToggleLockTaskbar && self.locked,
+                        )
                         .tab_index(0)
                         .h(px(32.))
                         .px(px(10.))
@@ -244,6 +271,7 @@ pub enum TaskbarSettingId {
     CombineGroups,
     Previews,
     AllMonitors,
+    Locked,
     Rows,
     Alignment,
     PenMenu,
@@ -442,6 +470,15 @@ impl TaskbarSettingsModel {
                 None,
             ),
             row(
+                TaskbarSettingId::Locked,
+                TaskbarSettingsSection::Behaviors,
+                "Lock the taskbar",
+                "Prevent changing the taskbar height",
+                on_off(s.locked),
+                true,
+                None,
+            ),
+            row(
                 TaskbarSettingId::Rows,
                 TaskbarSettingsSection::Behaviors,
                 "Taskbar rows",
@@ -515,6 +552,7 @@ impl TaskbarSettingsModel {
             TaskbarSettingId::CombineGroups => candidate.combine_groups = !candidate.combine_groups,
             TaskbarSettingId::Previews => candidate.previews_enabled = !candidate.previews_enabled,
             TaskbarSettingId::AllMonitors => candidate.all_monitors = !candidate.all_monitors,
+            TaskbarSettingId::Locked => candidate.locked = !candidate.locked,
             TaskbarSettingId::Rows => {
                 candidate.rows = if candidate.rows >= 3 {
                     1
@@ -589,6 +627,7 @@ fn localized_row(row: &TaskbarSettingRow, zh: bool) -> (String, String, String) 
         TaskbarSettingId::CombineGroups => "合併工作列按鈕",
         TaskbarSettingId::Previews => "視窗預覽",
         TaskbarSettingId::AllMonitors => "在所有顯示器上顯示",
+        TaskbarSettingId::Locked => "鎖定工作列",
         TaskbarSettingId::Rows => "工作列列數",
         TaskbarSettingId::AutoHide => "自動隱藏工作列",
         TaskbarSettingId::DateTime => "日期和時間",
@@ -606,6 +645,7 @@ fn localized_row(row: &TaskbarSettingRow, zh: bool) -> (String, String, String) 
         TaskbarSettingId::CombineGroups => "將相同應用程式的視窗分組",
         TaskbarSettingId::Previews => "游標停留時顯示縮圖預覽",
         TaskbarSettingId::AllMonitors => "在每個顯示器顯示工作列",
+        TaskbarSettingId::Locked => "防止變更工作列高度",
         TaskbarSettingId::Rows => "選擇一列、兩列或三列工作",
         TaskbarSettingId::AutoHide => "游標到達畫面邊緣前隱藏工作列",
         TaskbarSettingId::DateTime => "時區、時鐘及行事曆",
@@ -824,7 +864,7 @@ impl Render for TaskbarSettingsView {
                                 let enabled = row.enabled;
                                 let id = row.id;
                                 let (title, description, value) = localized_row(&row, zh);
-                                let is_switch = matches!(id, TaskbarSettingId::TaskView | TaskbarSettingId::Widgets | TaskbarSettingId::Labels | TaskbarSettingId::CombineGroups | TaskbarSettingId::Previews | TaskbarSettingId::AllMonitors | TaskbarSettingId::PenMenu | TaskbarSettingId::AutoHide);
+                                let is_switch = matches!(id, TaskbarSettingId::TaskView | TaskbarSettingId::Widgets | TaskbarSettingId::Labels | TaskbarSettingId::CombineGroups | TaskbarSettingId::Previews | TaskbarSettingId::AllMonitors | TaskbarSettingId::Locked | TaskbarSettingId::PenMenu | TaskbarSettingId::AutoHide);
                                 let switch_on = matches!(value.as_str(), "On" | "開啟");
                                 let aria = if let Some(reason) = row.unavailable_reason { format!("{title}, unavailable: {reason}") } else { format!("{title}, {value}") };
                                 div().id(format!("taskbar-setting-{id:?}")).role(gpui::Role::Button).aria_label(aria).tab_index(0)
@@ -852,7 +892,7 @@ mod tests {
         let mut model = TaskbarContextModel::default();
         assert_eq!(
             model.activate(),
-            TaskbarContextEffect::Command(TaskbarContextCommand::OpenTaskManager)
+            TaskbarContextEffect::Command(TaskbarContextCommand::ToggleLockTaskbar)
         );
         model.move_selection(-1);
         assert_eq!(
@@ -878,9 +918,20 @@ mod tests {
         assert_eq!(base_revision, 7);
         assert_eq!(candidate.search_mode, TaskbarSearchMode::Icon);
         assert_eq!(candidate.rows, settings.rows);
+        assert_eq!(candidate.locked, settings.locked);
         model.apply_saved(candidate.clone(), 8);
         assert_eq!(model.settings(), &candidate);
         assert_eq!(model.revision(), 8);
+
+        let Some(TaskbarSettingsEffect::Save {
+            candidate: unlocked,
+            base_revision: 8,
+        }) = model.activate(TaskbarSettingId::Locked)
+        else {
+            panic!("lock save effect")
+        };
+        assert!(!unlocked.locked);
+        assert_eq!(unlocked.rows, candidate.rows);
     }
 
     #[test]

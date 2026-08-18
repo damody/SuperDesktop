@@ -22,17 +22,17 @@ Rows already persist and the refresh loop resizes GPUI taskbar windows, but `Win
 
 `TaskbarSettings.locked` defaults to true and is encoded with the current settings schema. `ToggleLockTaskbar` is the first context-menu command and the same value is exposed in the owned settings behavior section.
 
-`platform-win` adds a safe `set_owned_taskbar_resizable` adapter. It verifies the HWND belongs to the current process, toggles only `WS_THICKFRAME`, and issues `SWP_FRAMECHANGED`. This activates the GPUI Windows backend’s existing `HTTOP` handling without custom mouse capture.
+`platform-win` adds a safe `set_owned_taskbar_resizable` adapter. It verifies the HWND belongs to the current process, toggles only `WS_THICKFRAME`, and issues `SWP_FRAMECHANGED`. Taskbar WindowOptions keep GPUI non-client hit testing enabled through `is_movable: true`; no caption drag area is defined, so only the existing `HTTOP` edge participates. Because DefWindowProc can still honor an application-provided `HTTOP` without the style bit, a same-HWND documented subclass returns `HTCLIENT` for `WM_NCHITTEST` while locked and forwards through `DefSubclassProc` while unlocked. It removes itself on `WM_NCDESTROY`.
 
 `TaskbarView` owns a top resize strip only while unlocked and stores a window-bounds subscription. The observer quantizes logical height to one, two, or three 40px rows and emits a typed callback only when the row differs.
 
-The app callback saves settings before applying exact geometry. In Shell mode it finds the same-thread controlled lease by owned HWND and calls `reserve_bottom` with the new physical height. Preview never registers or updates an AppBar.
+The app callback saves settings before applying exact geometry. In Shell mode it finds the same-thread controlled lease by owned HWND and calls `reserve_bottom` with the new physical height when the documented AppBar broker is available. Explorer-free admission can have no AppBar broker because that service is Explorer-owned; in that case SuperDesktop keeps exact monitor-bottom owned geometry, records `appbar-unavailable-owned-shell`, and never starts Explorer. Preview never registers or updates an AppBar. Cross-process maximize/work-area replacement without the Explorer AppBar broker is a separate follow-up capability.
 
 The renderer removes all row-separator elements and retains one outer top border.
 
 ## Blocking Gates
 
-- `G-TASKBAR-PLACEMENT`: Preview and Shell bottom anchors.
+- `G-TASKBAR-PLACEMENT`: Preview and Shell bottom anchors, including explicit Explorer-free AppBar-unavailable disposition.
 - `G-TASKBAR-RESIZE`: unlocked native sizing, quantization, persistence, DPI/topology.
 - `G-TASKBAR-LOCK`: context/settings state, native style, save failure.
 - `G-TASKBAR-CHROME`: no horizontal row separators.

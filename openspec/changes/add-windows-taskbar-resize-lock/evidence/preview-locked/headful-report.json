@@ -1,0 +1,57 @@
+{
+    "schema":  "taskbar-resize-lock-headful/v1",
+    "result":  "passed",
+    "shell":  false,
+    "locked":  true,
+    "app_sha256":  "68a72c7454ed7d3c98d59daa940c6da222f8c484f49a50a9b1ab71198d865163",
+    "explorer_before":  [
+                            43780
+                        ],
+    "explorer_absent_during_capture":  false,
+    "appbar_disposition":  "not-applicable-preview",
+    "initial_rect":  {
+                         "left":  -12,
+                         "top":  1878,
+                         "right":  3852,
+                         "bottom":  2030,
+                         "width":  3864,
+                         "height":  152
+                     },
+    "initial_client":  {
+                           "left":  0,
+                           "top":  1878,
+                           "width":  3840,
+                           "height":  140,
+                           "right":  3840,
+                           "bottom":  2018
+                       },
+    "three_rows_rect":  null,
+    "three_rows_client":  null,
+    "one_row_rect":  null,
+    "one_row_client":  null,
+    "locked_drag_rect":  {
+                             "left":  -12,
+                             "top":  1878,
+                             "right":  3852,
+                             "bottom":  2030,
+                             "width":  3864,
+                             "height":  152
+                         },
+    "initial_style":  348127232,
+    "final_settings":  {
+                           "rows":  2,
+                           "locked":  true
+                       },
+    "screenshots":  [
+                        {
+                            "name":  "taskbar-lock-context.png",
+                            "bytes":  1367153,
+                            "sha256":  "38b17e207e1c38cc8cfcf92a6bcd2024653308a69636eba5d28514d296b9f377"
+                        },
+                        {
+                            "name":  "taskbar-locked-two-rows.png",
+                            "bytes":  1368176,
+                            "sha256":  "fb70f945afc65c57e3a9e986dc3a2b1dbbc2dcc5b3424298c60379e22a931fbc"
+                        }
+                    ]
+}

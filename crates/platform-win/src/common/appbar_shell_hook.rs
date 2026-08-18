@@ -157,6 +157,14 @@ pub struct ControlledShellCapability {
 }
 
 impl ControlledShellCapability {
+    pub fn owns_window(&self, hwnd_identity: isize) -> bool {
+        self.hwnd.0 as isize == hwnd_identity
+    }
+
+    pub const fn appbar_registered(&self) -> bool {
+        self.appbar_registered
+    }
+
     /// Attaches only to a caller-owned HWND in this process and on this thread.
     pub fn attach_controlled_window(hwnd: isize) -> Result<Self, &'static str> {
         if hwnd == 0 {

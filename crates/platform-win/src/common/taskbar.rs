@@ -8,19 +8,24 @@ use std::{
 };
 
 use windows::Win32::{
-    Foundation::{CloseHandle, HWND, LPARAM, POINT, RECT},
+    Foundation::{CloseHandle, HWND, LPARAM, LRESULT, POINT, RECT, WPARAM},
     Graphics::Gdi::ClientToScreen,
     System::SystemInformation::GetWindowsDirectoryW,
     System::Threading::{
         GetCurrentProcessId, OpenProcess, PROCESS_NAME_FORMAT, PROCESS_QUERY_LIMITED_INFORMATION,
         QueryFullProcessImageNameW,
     },
-    UI::WindowsAndMessaging::{
-        EnumWindows, GW_OWNER, GWL_EXSTYLE, GetClientRect, GetForegroundWindow, GetWindow,
-        GetWindowLongPtrW, GetWindowRect, GetWindowTextLengthW, GetWindowTextW,
-        GetWindowThreadProcessId, HWND_TOPMOST, IsIconic, IsWindow, IsWindowVisible, PostMessageW,
-        SW_MINIMIZE, SW_RESTORE, SWP_NOACTIVATE, SWP_SHOWWINDOW, SetForegroundWindow,
-        SetWindowLongPtrW, SetWindowPos, ShowWindow, WM_CLOSE, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW,
+    UI::{
+        Shell::{DefSubclassProc, RemoveWindowSubclass, SetWindowSubclass},
+        WindowsAndMessaging::{
+            EnumWindows, GW_OWNER, GWL_EXSTYLE, GWL_STYLE, GetClientRect, GetForegroundWindow,
+            GetWindow, GetWindowLongPtrW, GetWindowRect, GetWindowTextLengthW, GetWindowTextW,
+            GetWindowThreadProcessId, HTCLIENT, HWND_TOPMOST, IsIconic, IsWindow, IsWindowVisible,
+            PostMessageW, SW_MINIMIZE, SW_RESTORE, SWP_FRAMECHANGED, SWP_NOACTIVATE, SWP_NOMOVE,
+            SWP_NOSIZE, SWP_NOZORDER, SWP_SHOWWINDOW, SetForegroundWindow, SetWindowLongPtrW,
+            SetWindowPos, ShowWindow, WM_CLOSE, WM_NCDESTROY, WM_NCHITTEST, WS_EX_NOACTIVATE,
+            WS_EX_TOOLWINDOW, WS_THICKFRAME,
+        },
     },
 };
 use windows::core::{BOOL, PWSTR};
@@ -33,10 +38,30 @@ const DWMWA_BORDER_COLOR: u32 = 34;
 const DWMWCP_DONOTROUND: u32 = 1;
 const DWMWA_COLOR_NONE: u32 = 0xffff_fffe;
 const FILE_ATTRIBUTE_REPARSE_POINT: u32 = 0x0000_0400;
+const TASKBAR_RESIZE_SUBCLASS_ID: usize = 0x5253_5a45;
 #[link(name = "dwmapi")]
 unsafe extern "system" {
     fn DwmGetWindowAttribute(hwnd: HWND, attribute: u32, value: *mut c_void, size: u32) -> i32;
     fn DwmSetWindowAttribute(hwnd: HWND, attribute: u32, value: *const c_void, size: u32) -> i32;
+}
+
+unsafe extern "system" fn taskbar_resize_subclass_proc(
+    hwnd: HWND,
+    message: u32,
+    wparam: WPARAM,
+    lparam: LPARAM,
+    id: usize,
+    ref_data: usize,
+) -> LRESULT {
+    if message == WM_NCDESTROY {
+        unsafe {
+            let _ = RemoveWindowSubclass(hwnd, Some(taskbar_resize_subclass_proc), id);
+        }
+    }
+    if message == WM_NCHITTEST && ref_data == 1 {
+        return LRESULT(HTCLIENT as isize);
+    }
+    unsafe { DefSubclassProc(hwnd, message, wparam, lparam) }
 }
 
 /// Resolves the inbox Task Manager from the Windows directory and launches the
@@ -79,6 +104,60 @@ pub fn launch_task_manager() -> Result<u32, &'static str> {
         .spawn()
         .map_err(|_| "task-manager-spawn")?;
     Ok(child.id())
+}
+
+pub fn set_owned_taskbar_resizable(hwnd_identity: isize, resizable: bool) -> Result<bool, String> {
+    if hwnd_identity == 0 {
+        return Err("taskbar-resize-hwnd-zero".into());
+    }
+    let hwnd = HWND(hwnd_identity as *mut c_void);
+    let mut owner_pid = 0;
+    // SAFETY: all mutation follows liveness and current-process ownership checks.
+    unsafe {
+        if !IsWindow(Some(hwnd)).as_bool() {
+            return Err("taskbar-resize-hwnd-invalid".into());
+        }
+        if GetWindowThreadProcessId(hwnd, Some(&mut owner_pid)) == 0
+            || owner_pid != GetCurrentProcessId()
+        {
+            return Err("taskbar-resize-hwnd-foreign".into());
+        }
+        if !SetWindowSubclass(
+            hwnd,
+            Some(taskbar_resize_subclass_proc),
+            TASKBAR_RESIZE_SUBCLASS_ID,
+            usize::from(!resizable),
+        )
+        .as_bool()
+        {
+            return Err("taskbar-resize-subclass-install".into());
+        }
+        let before = GetWindowLongPtrW(hwnd, GWL_STYLE);
+        let thick_frame = WS_THICKFRAME.0 as isize;
+        let after = if resizable {
+            before | thick_frame
+        } else {
+            before & !thick_frame
+        };
+        if before == after {
+            return Ok(false);
+        }
+        SetWindowLongPtrW(hwnd, GWL_STYLE, after);
+        if GetWindowLongPtrW(hwnd, GWL_STYLE) != after {
+            return Err("taskbar-resize-style-not-observed".into());
+        }
+        SetWindowPos(
+            hwnd,
+            None,
+            0,
+            0,
+            0,
+            0,
+            SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE,
+        )
+        .map_err(|error| error.to_string())?;
+    }
+    Ok(true)
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -286,6 +365,36 @@ pub fn configure_and_show_taskbar_window(
             SWP_NOACTIVATE | SWP_SHOWWINDOW,
         )
         .map_err(|error| error.to_string())?;
+
+        for _ in 0..3 {
+            let mut final_window = RECT::default();
+            let mut final_client = RECT::default();
+            let mut final_origin = POINT::default();
+            GetWindowRect(hwnd, &mut final_window).map_err(|error| error.to_string())?;
+            GetClientRect(hwnd, &mut final_client).map_err(|error| error.to_string())?;
+            if !ClientToScreen(hwnd, &mut final_origin).as_bool() {
+                return Err("taskbar-final-client-origin-unavailable".into());
+            }
+            let final_client_width = final_client.right - final_client.left;
+            let final_client_height = final_client.bottom - final_client.top;
+            let delta_x = left - final_origin.x;
+            let delta_y = top - final_origin.y;
+            let delta_width = width - final_client_width;
+            let delta_height = height - final_client_height;
+            if delta_x == 0 && delta_y == 0 && delta_width == 0 && delta_height == 0 {
+                break;
+            }
+            SetWindowPos(
+                hwnd,
+                Some(HWND_TOPMOST),
+                final_window.left + delta_x,
+                final_window.top + delta_y,
+                final_window.right - final_window.left + delta_width,
+                final_window.bottom - final_window.top + delta_height,
+                SWP_NOACTIVATE | SWP_SHOWWINDOW,
+            )
+            .map_err(|error| error.to_string())?;
+        }
     }
     Ok(())
 }
@@ -372,6 +481,36 @@ mod tests {
     #[test]
     fn retired_window_action_fails_closed() {
         assert!(apply_window_action(1, WindowAction::Activate).is_err())
+    }
+    #[test]
+    fn taskbar_resize_style_rejects_invalid_and_foreign_windows() {
+        assert!(set_owned_taskbar_resizable(0, true).is_err());
+        assert!(set_owned_taskbar_resizable(1, true).is_err());
+        assert!(set_owned_taskbar_resizable(1, false).is_err());
+        let foreground = unsafe { GetForegroundWindow() };
+        if !foreground.0.is_null() {
+            let mut process_id = 0;
+            unsafe { GetWindowThreadProcessId(foreground, Some(&mut process_id)) };
+            if process_id != 0 && process_id != unsafe { GetCurrentProcessId() } {
+                assert!(set_owned_taskbar_resizable(foreground.0 as isize, true).is_err());
+            }
+        }
+        let production = include_str!("taskbar.rs")
+            .split("#[cfg(test)]")
+            .next()
+            .unwrap();
+        for required in [
+            "owner_pid != GetCurrentProcessId()",
+            "WS_THICKFRAME",
+            "SWP_FRAMECHANGED",
+            "GetWindowLongPtrW(hwnd, GWL_STYLE)",
+            "SetWindowSubclass",
+            "message == WM_NCHITTEST && ref_data == 1",
+            "RemoveWindowSubclass",
+        ] {
+            assert!(production.contains(required));
+        }
+        assert!(!production.contains("Shell_TrayWnd"));
     }
     #[test]
     fn task_manager_path_is_canonical_system32_regular_file() {

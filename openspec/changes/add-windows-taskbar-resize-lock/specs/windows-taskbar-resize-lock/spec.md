@@ -33,12 +33,16 @@ An unlocked taskbar SHALL expose native top-edge resizing, quantize its logical 
 - **WHEN** the user attempts the same drag while locked
 - **THEN** no resize strip or native thick frame is active and row state does not change
 
-### Requirement: Shell AppBar follows runtime row changes
-Shell mode SHALL update the controlled AppBar reservation on the same owned HWND whenever rows change and SHALL leave Preview without AppBar registration.
+### Requirement: Shell reservation follows runtime row changes
+Shell mode SHALL update the controlled AppBar reservation on the same owned HWND whenever the documented AppBar broker is available. When Explorer is absent and no AppBar broker exists, Shell SHALL retain exact owned monitor-bottom geometry, expose the unavailable disposition, and MUST NOT start Explorer. Preview SHALL remain without AppBar registration.
 
 #### Scenario: Shell grows from one to three rows
 - **WHEN** an unlocked Shell taskbar changes from one row to three
-- **THEN** the work area and owned HWND reserve exactly 120 logical pixels converted at monitor DPI
+- **THEN** the owned HWND uses exactly 120 logical pixels converted at monitor DPI and the available AppBar reservation matches it
+
+#### Scenario: Explorer-free AppBar broker is absent
+- **WHEN** `ABM_NEW` is unavailable because Explorer is not running
+- **THEN** Shell keeps the exact owned bottom geometry, records AppBar unavailable, and does not launch Explorer
 
 ### Requirement: Multi-row chrome is continuous
 The taskbar SHALL draw one outer top border and MUST NOT draw horizontal separators between rows.

@@ -1,0 +1,24 @@
+{
+  "schema": "taskbar-resize-lock-automated-gates/v1",
+  "result": "passed",
+  "commands": [
+    "cargo fmt --all -- --check",
+    "cargo test --workspace --all-targets --locked --offline --no-fail-fast",
+    "cargo clippy --workspace --all-targets --locked --offline -- -D warnings",
+    "cargo build --workspace --all-targets --release --locked --offline",
+    "openspec validate add-windows-taskbar-resize-lock --strict"
+  ],
+  "release_app_sha256": "68a72c7454ed7d3c98d59daa940c6da222f8c484f49a50a9b1ab71198d865163",
+  "headful_profiles": [
+    "preview-unlocked",
+    "preview-locked",
+    "shell-unlocked"
+  ],
+  "host": {
+    "windows_build": 26200,
+    "dpi_percent": 175,
+    "monitor_client_width": 3840,
+    "physical_bottom": 2160,
+    "preview_work_bottom": 2018
+  }
+}

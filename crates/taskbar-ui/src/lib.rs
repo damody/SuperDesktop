@@ -64,7 +64,7 @@ pub use tracker::{
 };
 pub use view::{
     NotificationOverflowCallback, SystemFlyoutCallback, TaskbarBackgroundContextCallback,
-    TaskbarCallbacks, TaskbarView,
+    TaskbarCallbacks, TaskbarResizeCallback, TaskbarView,
 };
 
 pub const CRATE_ROLE: &str = "taskbar GPUI surface and window-management boundary";
