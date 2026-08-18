@@ -47,7 +47,7 @@
 - [x] 2.1.1 Enumerate installed input profiles with stable identity, language tag and display name.
 - [x] 2.1.2 Observe the foreground/current active input profile through an owned snapshot.
 - [x] 2.1.3 Activate a validated profile and wait for exact observed confirmation.
-- [ ] 2.1.4 Add missing-profile, wrong-session, timeout, stale-generation and callback-panic tests.
+- [x] 2.1.4 Add missing-profile, wrong-session, timeout, stale-generation and callback-panic tests.
 
 ### 2.2 Implement audio, network, power and clock providers
 
@@ -79,7 +79,7 @@
 
 - [x] 3.1.1 Add the `system-status-host` workspace crate and binary entry point.
 - [x] 3.1.2 Implement versioned handshake, client/session lease and initial full snapshot.
-- [ ] 3.1.3 Register provider callbacks with no-unwind/shutdown fencing.
+- [x] 3.1.3 Register provider callbacks with no-unwind/shutdown fencing.
 - [x] 3.1.4 Implement bounded coalescing queue, overflow event and authoritative reconciliation timer.
 - [x] 3.1.5 Implement exactly-once status command terminals and host-process malformed-input tests.
 

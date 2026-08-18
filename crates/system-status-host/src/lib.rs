@@ -4,7 +4,9 @@ use std::{
     sync::{
         Arc,
         atomic::{AtomicBool, Ordering},
+        mpsc::{Receiver, SyncSender, sync_channel},
     },
+    thread::{self, JoinHandle},
     time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 
@@ -25,6 +27,78 @@ pub enum ProviderEvent {
     Network,
     Power,
     Clock,
+}
+
+pub struct ProviderCallbackRegistration {
+    accepting: Arc<AtomicBool>,
+    worker: Option<JoinHandle<()>>,
+}
+
+impl Drop for ProviderCallbackRegistration {
+    fn drop(&mut self) {
+        self.accepting.store(false, Ordering::Release);
+        if let Some(worker) = self.worker.take() {
+            let _ = worker.join();
+        }
+    }
+}
+
+pub fn register_provider_callbacks() -> (Receiver<ProviderEvent>, ProviderCallbackRegistration) {
+    let (sender, receiver) = sync_channel(MAX_PENDING_PROVIDER_EVENTS * 2);
+    let accepting = Arc::new(AtomicBool::new(true));
+    let worker_accepting = Arc::clone(&accepting);
+    let worker = thread::spawn(move || provider_callback_loop(worker_accepting, sender));
+    (
+        receiver,
+        ProviderCallbackRegistration {
+            accepting,
+            worker: Some(worker),
+        },
+    )
+}
+
+fn provider_callback_loop(accepting: Arc<AtomicBool>, sender: SyncSender<ProviderEvent>) {
+    let mut previous = provider_fingerprints();
+    while accepting.load(Ordering::Acquire) {
+        thread::sleep(Duration::from_millis(200));
+        if !accepting.load(Ordering::Acquire) {
+            break;
+        }
+        let Some(current) = catch_unwind(AssertUnwindSafe(provider_fingerprints)).ok() else {
+            continue;
+        };
+        for (index, event) in [
+            ProviderEvent::Input,
+            ProviderEvent::Audio,
+            ProviderEvent::Network,
+            ProviderEvent::Power,
+            ProviderEvent::Clock,
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            if current[index] != previous[index] {
+                let _ = sender.try_send(event);
+            }
+        }
+        previous = current;
+    }
+}
+
+fn provider_fingerprints() -> [String; 5] {
+    [
+        format!("{:?}", platform_win::common::system_status::input_status()),
+        format!("{:?}", platform_win::common::system_status::audio_status()),
+        format!(
+            "{:?}",
+            platform_win::common::system_status::network_status()
+        ),
+        format!("{:?}", platform_win::common::system_status::power_status()),
+        format!(
+            "{:?}",
+            platform_win::common::system_status::clock_calendar_status()
+        ),
+    ]
 }
 
 #[derive(Clone, Debug)]
@@ -108,6 +182,7 @@ pub struct SystemStatusRuntime {
     overflowed: bool,
     callback_fence: CallbackFence,
     events: ProviderEventQueue,
+    callback_events: Option<Receiver<ProviderEvent>>,
 }
 
 impl Default for SystemStatusRuntime {
@@ -121,11 +196,25 @@ impl Default for SystemStatusRuntime {
             overflowed: false,
             callback_fence: CallbackFence::default(),
             events: ProviderEventQueue::default(),
+            callback_events: None,
         }
     }
 }
 
 impl SystemStatusRuntime {
+    pub fn attach_provider_callbacks(&mut self, events: Receiver<ProviderEvent>) {
+        self.callback_events = Some(events);
+    }
+
+    fn drain_provider_callbacks(&mut self) {
+        let Some(receiver) = &self.callback_events else {
+            return;
+        };
+        while let Ok(event) = receiver.try_recv() {
+            self.events.push(event);
+        }
+    }
+
     pub fn provider_callback(&mut self, callback: impl FnOnce() -> ProviderEvent) -> bool {
         let Some(event) = self.callback_fence.invoke(callback) else {
             return false;
@@ -139,6 +228,7 @@ impl SystemStatusRuntime {
     }
 
     pub fn apply(&mut self, request: SystemStatusHostRequest) -> SystemStatusHostResponse {
+        self.drain_provider_callbacks();
         self.events.schedule_if_due(Instant::now());
         if let Err(error) = request.validate() {
             return SystemStatusHostResponse::Rejected(error.to_string());

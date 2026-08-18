@@ -30,6 +30,7 @@ try {
         'shell-installer.exe' = Join-Path $workspace 'target/release/shell-installer.exe'
         'shell-provider-host.exe' = Join-Path $workspace 'target/release/shell-provider-host.exe'
         'notification-area-host.exe' = Join-Path $workspace 'target/release/notification-area-host.exe'
+        'system-status-host.exe' = Join-Path $workspace 'target/release/system-status-host.exe'
         'SuperExplorer.exe' = $superExplorer
     }
     $binaries = @()

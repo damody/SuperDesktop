@@ -36,6 +36,12 @@ use windows::Win32::{
 
 const LOCALE_NAME_CAPACITY: usize = 85;
 
+#[link(name = "kernel32")]
+unsafe extern "system" {
+    fn GetCurrentProcessId() -> u32;
+    fn ProcessIdToSessionId(process_id: u32, session_id: *mut u32) -> i32;
+}
+
 struct ComApartment(bool);
 
 impl ComApartment {
@@ -258,6 +264,26 @@ fn utf16_nul_terminated(value: &[u16]) -> Option<String> {
 }
 
 pub fn request_input_profile(profile_id: &str, timeout: Duration) -> Result<InputStatus, String> {
+    request_input_profile_for_session(profile_id, current_session_id()?, timeout)
+}
+
+pub fn current_session_id() -> Result<u32, String> {
+    let mut session_id = 0u32;
+    if unsafe { ProcessIdToSessionId(GetCurrentProcessId(), &mut session_id) } == 0 {
+        Err("interactive session identity is unavailable".into())
+    } else {
+        Ok(session_id)
+    }
+}
+
+pub fn request_input_profile_for_session(
+    profile_id: &str,
+    expected_session_id: u32,
+    timeout: Duration,
+) -> Result<InputStatus, String> {
+    if current_session_id()? != expected_session_id {
+        return Err("input profile request belongs to another session".into());
+    }
     let before = input_status()?;
     if !before
         .profiles
@@ -281,9 +307,17 @@ pub fn request_input_profile(profile_id: &str, timeout: Duration) -> Result<Inpu
     }
     .map_err(|error| format!("input profile request failed: {error}"))?;
 
+    wait_for_input_profile_observation(profile_id, timeout, input_status)
+}
+
+fn wait_for_input_profile_observation(
+    profile_id: &str,
+    timeout: Duration,
+    mut observe: impl FnMut() -> Result<InputStatus, String>,
+) -> Result<InputStatus, String> {
     let deadline = Instant::now() + timeout;
     loop {
-        let observed = input_status()?;
+        let observed = observe()?;
         if observed.active_profile_id == profile_id {
             return Ok(observed);
         }
@@ -392,6 +426,36 @@ mod tests {
         let observed =
             request_input_profile(&before.active_profile_id, Duration::from_millis(500)).unwrap();
         assert_eq!(observed.active_profile_id, before.active_profile_id);
+    }
+
+    #[test]
+    fn wrong_session_and_unobserved_activation_timeout_fail_closed() {
+        let session = current_session_id().unwrap();
+        let before = input_status().unwrap();
+        assert!(
+            request_input_profile_for_session(
+                &before.active_profile_id,
+                session.wrapping_add(1),
+                Duration::from_millis(1),
+            )
+            .unwrap_err()
+            .contains("another session")
+        );
+        let never_active = InputStatus {
+            active_profile_id: "hkl:0000000000000001".into(),
+            profiles: vec![InputProfile {
+                id: "hkl:0000000000000001".into(),
+                language_tag: "und".into(),
+                display_name: "fixture".into(),
+            }],
+        };
+        assert!(
+            wait_for_input_profile_observation("hkl:0000000000000002", Duration::ZERO, || Ok(
+                never_active.clone()
+            ),)
+            .unwrap_err()
+            .contains("before deadline")
+        );
     }
 
     #[test]
