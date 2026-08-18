@@ -32,37 +32,69 @@ const WRITE_SCRIPT: &str = r#"
 $p = 'Registry::HKEY_CURRENT_USER\Software\Microsoft\Windows NT\CurrentVersion\Winlogon'
 $v = [Environment]::GetEnvironmentVariable('SUPERDESKTOP_INSTALLER_SHELL_VALUE', 'Process')
 if ($null -eq $v) { [Console]::Error.Write('missing shell value environment'); exit 32 }
-Set-ItemProperty -LiteralPath $p -Name 'Shell' -Type String -Value $v -ErrorAction Stop
 $class = 'Registry::HKEY_CURRENT_USER\Software\Classes\CLSID\{56FDF344-FD6D-11d0-958A-006097C9A090}'
+$server = Join-Path $class 'LocalServer32'
+$hadClass = Test-Path -LiteralPath $class
+$oldOwner = if ($hadClass) { [string](Get-Item -LiteralPath $class -ErrorAction Stop).GetValue('') } else { $null }
+$oldServer = if (Test-Path -LiteralPath $server) { [string](Get-Item -LiteralPath $server -ErrorAction Stop).GetValue('') } else { $null }
+function Restore-TaskbarClass {
+    if (-not $hadClass) {
+        if (Test-Path -LiteralPath $class) { Remove-Item -LiteralPath $class -Recurse -Force -ErrorAction SilentlyContinue }
+        return
+    }
+    New-Item -Path $class -Force -ErrorAction Stop | Out-Null
+    Set-Item -LiteralPath $class -Value $oldOwner -ErrorAction Stop
+    if ($null -ne $oldServer) {
+        New-Item -Path $server -Force -ErrorAction Stop | Out-Null
+        Set-Item -LiteralPath $server -Value $oldServer -ErrorAction Stop
+    } elseif (Test-Path -LiteralPath $server) {
+        Remove-Item -LiteralPath $server -Recurse -Force -ErrorAction Stop
+    }
+}
 if ($v -match '^"([^"]+superdesktop-app\.exe)"\s+--shell(?:\s|$)') {
     $host = Join-Path (Split-Path -Parent $Matches[1]) 'taskbar-state-host.exe'
     if (-not (Test-Path -LiteralPath $host -PathType Leaf)) { [Console]::Error.Write('taskbar state host missing'); exit 34 }
-    if (Test-Path -LiteralPath $class) {
-        $owner = [string](Get-Item -LiteralPath $class -ErrorAction Stop).GetValue('')
-        if ($owner -and $owner -ne 'SuperDesktop Taskbar Communication') { [Console]::Error.Write('per-user taskbar COM registration already owned'); exit 35 }
+    if ($oldOwner -and $oldOwner -ne 'SuperDesktop Taskbar Communication') { [Console]::Error.Write('per-user taskbar COM registration already owned'); exit 35 }
+}
+try {
+    if ($v -match '^"([^"]+superdesktop-app\.exe)"\s+--shell(?:\s|$)') {
+        $host = Join-Path (Split-Path -Parent $Matches[1]) 'taskbar-state-host.exe'
+        New-Item -Path $class -Force -ErrorAction Stop | Out-Null
+        Set-Item -LiteralPath $class -Value 'SuperDesktop Taskbar Communication' -ErrorAction Stop
+        New-Item -Path $server -Force -ErrorAction Stop | Out-Null
+        Set-Item -LiteralPath $server -Value ('"' + $host + '"') -ErrorAction Stop
+    } elseif ($oldOwner -eq 'SuperDesktop Taskbar Communication') {
+        Remove-Item -LiteralPath $class -Recurse -Force -ErrorAction Stop
     }
-    New-Item -Path $class -Force -ErrorAction Stop | Out-Null
-    Set-Item -LiteralPath $class -Value 'SuperDesktop Taskbar Communication' -ErrorAction Stop
-    $server = Join-Path $class 'LocalServer32'
-    New-Item -Path $server -Force -ErrorAction Stop | Out-Null
-    Set-Item -LiteralPath $server -Value ('"' + $host + '"') -ErrorAction Stop
-} elseif (Test-Path -LiteralPath $class) {
-    $owner = [string](Get-Item -LiteralPath $class -ErrorAction Stop).GetValue('')
-    if ($owner -eq 'SuperDesktop Taskbar Communication') { Remove-Item -LiteralPath $class -Recurse -Force -ErrorAction Stop }
+    Set-ItemProperty -LiteralPath $p -Name 'Shell' -Type String -Value $v -ErrorAction Stop
+} catch {
+    Restore-TaskbarClass
+    throw
 }
 "#;
 const DELETE_SCRIPT: &str = r#"
-$p = 'Registry::HKEY_CURRENT_USER\Software\Microsoft\Windows NT\CurrentVersion\Winlogon'
-if (Test-Path -LiteralPath $p) {
-    $item = Get-ItemProperty -LiteralPath $p -ErrorAction Stop
-    if ($null -ne $item.PSObject.Properties['Shell']) {
-        Remove-ItemProperty -LiteralPath $p -Name 'Shell' -ErrorAction Stop
-    }
-}
 $class = 'Registry::HKEY_CURRENT_USER\Software\Classes\CLSID\{56FDF344-FD6D-11d0-958A-006097C9A090}'
-if (Test-Path -LiteralPath $class) {
-    $owner = [string](Get-Item -LiteralPath $class -ErrorAction Stop).GetValue('')
-    if ($owner -eq 'SuperDesktop Taskbar Communication') { Remove-Item -LiteralPath $class -Recurse -Force -ErrorAction Stop }
+$server = Join-Path $class 'LocalServer32'
+$hadClass = Test-Path -LiteralPath $class
+$oldOwner = if ($hadClass) { [string](Get-Item -LiteralPath $class -ErrorAction Stop).GetValue('') } else { $null }
+$oldServer = if (Test-Path -LiteralPath $server) { [string](Get-Item -LiteralPath $server -ErrorAction Stop).GetValue('') } else { $null }
+$p = 'Registry::HKEY_CURRENT_USER\Software\Microsoft\Windows NT\CurrentVersion\Winlogon'
+try {
+    if ($oldOwner -eq 'SuperDesktop Taskbar Communication') { Remove-Item -LiteralPath $class -Recurse -Force -ErrorAction Stop }
+    if (Test-Path -LiteralPath $p) {
+        $item = Get-ItemProperty -LiteralPath $p -ErrorAction Stop
+        if ($null -ne $item.PSObject.Properties['Shell']) { Remove-ItemProperty -LiteralPath $p -Name 'Shell' -ErrorAction Stop }
+    }
+} catch {
+    if ($hadClass) {
+        New-Item -Path $class -Force -ErrorAction Stop | Out-Null
+        Set-Item -LiteralPath $class -Value $oldOwner -ErrorAction Stop
+        if ($null -ne $oldServer) {
+            New-Item -Path $server -Force -ErrorAction Stop | Out-Null
+            Set-Item -LiteralPath $server -Value $oldServer -ErrorAction Stop
+        }
+    }
+    throw
 }
 "#;
 const IDENTITY_SCRIPT: &str = r#"
