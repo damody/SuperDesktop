@@ -1,0 +1,26 @@
+{
+  "schema": "taskbar-resize-lock-packaging/v1",
+  "result": "passed",
+  "version": "1.2026.8.19",
+  "superdesktop_revision": "e1feaf567e9bf7d91f5d534071e8e45f94874d10",
+  "artifacts": [
+    {
+      "path": "D:/SuperExplorer/SuperDesktop/target/release/superdesktop-app.exe",
+      "sha256": "68a72c7454ed7d3c98d59daa940c6da222f8c484f49a50a9b1ab71198d865163"
+    },
+    {
+      "path": "D:/SuperExplorer/dist/SuperDesktop-Test-Setup-1.2026.8.19-x64.exe",
+      "mode": "superdesktop-only",
+      "sha256": "987ed57f20e90d726ac917aea6db99f3b81c2dc68f8c96794b1799fe18499d51"
+    },
+    {
+      "path": "D:/SuperExplorer/dist/SuperExplorer-Setup-1.2026.8.19-x64.exe",
+      "mode": "superexplorer-plus-superdesktop",
+      "sha256": "503ca644736e1849defc1cee5c25c93af36646be45b696907eb909933f67c3ea"
+    }
+  ],
+  "commands": [
+    "build_desktop_test_install.bat --no-launch",
+    "build_install.bat --no-launch"
+  ]
+}

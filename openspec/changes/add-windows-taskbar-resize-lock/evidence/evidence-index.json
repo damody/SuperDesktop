@@ -1,0 +1,32 @@
+{
+  "schema": "openspec-leaf-evidence-index/v1",
+  "change": "add-windows-taskbar-resize-lock",
+  "result": "passed",
+  "leaf_count": 24,
+  "entries": [
+    {"task":"1.1.1","evidence_id":"E-LOCK-DEFAULT","artifact":"automated-gates.json","proof":"settings-store default and legacy tests passed"},
+    {"task":"1.1.2","evidence_id":"E-LOCK-CODEC","artifact":"automated-gates.json","proof":"schema encode/decode workspace tests passed"},
+    {"task":"1.1.3","evidence_id":"E-LOCK-ROUNDTRIP","artifact":"automated-gates.json","proof":"fallback and independent-field tests passed"},
+    {"task":"1.2.1","evidence_id":"E-HWND-OWNERSHIP","artifact":"automated-gates.json","proof":"invalid and foreign HWND tests passed"},
+    {"task":"1.2.2","evidence_id":"E-HWND-STYLE","artifact":"preview-unlocked/headful-report.json","proof":"unlocked WS_THICKFRAME style observed"},
+    {"task":"1.2.3","evidence_id":"E-HWND-NEGATIVE","artifact":"automated-gates.json","proof":"platform-win negative and idempotence suite passed"},
+    {"task":"2.1.1","evidence_id":"E-CONTEXT-LOCK","artifact":"preview-locked/taskbar-lock-context.png","proof":"first checked localized Lock the taskbar command rendered"},
+    {"task":"2.1.2","evidence_id":"E-SETTINGS-LOCK","artifact":"automated-gates.json","proof":"typed settings mutation tests passed"},
+    {"task":"2.1.3","evidence_id":"E-LOCK-INTERACTION","artifact":"preview-locked/headful-report.json","proof":"locked state persisted and native drag was rejected"},
+    {"task":"2.2.1","evidence_id":"E-RESIZE-STRIP","artifact":"preview-unlocked/headful-report.json","proof":"native top-edge pointer drag changed height"},
+    {"task":"2.2.2","evidence_id":"E-ROW-QUANTIZE","artifact":"preview-unlocked/headful-report.json","proof":"70, 140, and 210 client heights quantized to rows"},
+    {"task":"2.2.3","evidence_id":"E-ROW-THRESHOLDS","artifact":"automated-gates.json","proof":"threshold, duplicate, DPI, and negative-origin tests passed"},
+    {"task":"2.3.1","evidence_id":"E-PREVIEW-ANCHOR","artifact":"preview-unlocked/headful-report.json","proof":"all Preview rows retained work-area bottom 2018"},
+    {"task":"2.3.2","evidence_id":"E-SAVE-SNAP","artifact":"preview-unlocked/taskbar-resize-lock.log","proof":"save precedes exact resize-applied trace"},
+    {"task":"2.3.3","evidence_id":"E-SHELL-ANCHOR","artifact":"shell-unlocked/headful-report.json","proof":"Explorer-free fallback retained physical bottom 2160"},
+    {"task":"2.4.1","evidence_id":"E-NO-SEPARATORS","artifact":"preview-unlocked/taskbar-three-rows.png","proof":"three-row panel has no internal full-width separators"},
+    {"task":"2.4.2","evidence_id":"E-INDICATORS","artifact":"preview-unlocked/taskbar-one-row.png","proof":"outer chrome and per-task indicators remain visible"},
+    {"task":"2.4.3","evidence_id":"E-CHROME-SOURCE","artifact":"automated-gates.json","proof":"one/two/three-row source and geometry tests passed"},
+    {"task":"3.1.1","evidence_id":"E-AUTOMATED-GATES","artifact":"automated-gates.json","proof":"fmt, workspace tests, clippy, release, and strict validation passed"},
+    {"task":"3.1.2","evidence_id":"E-PREVIEW-MATRIX","artifact":"preview-locked/taskbar-locked-two-rows.png","proof":"locked and unlocked Preview matrix captured at 175 percent DPI"},
+    {"task":"3.1.3","evidence_id":"E-SHELL-MATRIX","artifact":"shell-unlocked/taskbar-three-rows.png","proof":"Explorer absent during owned Shell capture and restored afterward"},
+    {"task":"3.2.1","evidence_id":"E-RELEASE-HASH","artifact":"packaging.json","proof":"release executable SHA-256 recorded"},
+    {"task":"3.2.2","evidence_id":"E-INSTALLER-HASHES","artifact":"packaging.json","proof":"standalone and combined NSIS installers built without launch"},
+    {"task":"3.2.3","evidence_id":"E-TRACEABILITY","artifact":"evidence-index.json","proof":"24 unique leaf identifiers and strict OpenSpec validation"}
+  ]
+}
