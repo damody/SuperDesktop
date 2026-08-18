@@ -73,5 +73,5 @@
 **完成門檻：** Every leaf has unique evidence; standalone and combined installers pass.
 
 - [x] 3.2.1 Build release binaries and record hashes.
-- [ ] 3.2.2 Build standalone and combined installers without launch.
-- [ ] 3.2.3 Create unique evidence index and pass detailed/strict validation.
+- [x] 3.2.2 Build standalone and combined installers without launch.
+- [x] 3.2.3 Create unique evidence index and pass detailed/strict validation.

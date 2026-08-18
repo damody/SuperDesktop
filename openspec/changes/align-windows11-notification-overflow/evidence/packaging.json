@@ -1,0 +1,10 @@
+{
+  "schema":"windows11-notification-overflow-packaging/v1",
+  "revision":"9f3360a1a31a567faf1569803d9d6be7d78fb952",
+  "built_without_launch":true,
+  "artifacts":[
+    {"name":"superdesktop-app.exe","bytes":20851712,"sha256":"22424379f72196c081847fe55da260b6fe196e28d434e63bda52ec8a98f4e390"},
+    {"name":"SuperDesktop-Test-Setup-1.2026.8.18-x64.exe","bytes":5768737,"sha256":"e71de008c3e9ead90f97e43b6620159fcdb10eb89fd0da0f02c6d99e3d970938"},
+    {"name":"SuperExplorer-Setup-1.2026.8.18-x64.exe","bytes":13485749,"sha256":"9af336af0f30220a58886ac9a7e826318d8f5fbd03db6b5fb4b3ddf7ddd16818"}
+  ]
+}
