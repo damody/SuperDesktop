@@ -200,14 +200,26 @@ try {
     $network = Find-Element $taskbar { param($item) $item.Current.ControlType -eq $button -and $item.Current.Name.StartsWith('Network ') }
     $volume = Find-Element $taskbar { param($item) $item.Current.ControlType -eq $button -and $item.Current.Name.StartsWith('Volume ') }
     $calendar = Find-Element $taskbar { param($item) $item.Current.ControlType -eq $button -and $item.Current.Name -match '^\d{2}:\d{2} ' }
-    $start = Find-Element $taskbar { param($item) $item.Current.ControlType -eq $button -and $item.Current.Name -eq 'Start' }
+    $traditionalStart = -join @([char]0x958B, [char]0x59CB)
+    $start = Find-Element $taskbar {
+        param($item)
+        $item.Current.ControlType -eq $button -and
+            ($item.Current.Name -eq 'Start' -or $item.Current.Name -eq $traditionalStart)
+    }
     $startMissing = -not $SkipStartFocusVerification -and $null -eq $start
     if ($null -eq $input -or $null -eq $network -or $null -eq $volume -or $null -eq $calendar -or $startMissing) {
+        $missing = @(
+            if ($null -eq $input) { 'input' }
+            if ($null -eq $network) { 'network' }
+            if ($null -eq $volume) { 'volume' }
+            if ($null -eq $calendar) { 'calendar' }
+            if ($startMissing) { 'start' }
+        )
         $names = $taskbar.FindAll(
             [System.Windows.Automation.TreeScope]::Descendants,
             [System.Windows.Automation.Condition]::TrueCondition
         ) | ForEach-Object { [string]$_.Current.Name } | Where-Object { $_ }
-        throw "One or more owned taskbar status controls are missing. Visible names: $($names -join ' | ')"
+        throw "Owned taskbar controls missing: $($missing -join ', '). Visible names: $($names -join ' | ')"
     }
     $originalLanguage = ([string]$input.Current.Name).Substring('Input language '.Length)
 
@@ -267,12 +279,11 @@ try {
         Capture-Screen (Join-Path $EvidenceDirectory 'start-after-input-switch.png')
     }
 
-    $inputDialog = Find-OwnedPopupElement $process.Id $process.MainWindowHandle { param($item) $item.Current.ControlType -eq [System.Windows.Automation.ControlType]::Window } 500
-    if ($null -eq $inputDialog) {
-        $input = Find-Element $taskbar { param($item) $item.Current.ControlType -eq $button -and $item.Current.Name.StartsWith('Input language ') }
-        Invoke-Element $input
-        $inputDialog = Find-OwnedPopupElement $process.Id $process.MainWindowHandle { param($item) $item.Current.ControlType -eq [System.Windows.Automation.ControlType]::Window }
-    }
+    [System.Windows.Forms.SendKeys]::SendWait('{ESC}')
+    Start-Sleep -Milliseconds 150
+    $input = Find-Element $taskbar { param($item) $item.Current.ControlType -eq $button -and $item.Current.Name.StartsWith('Input language ') }
+    Invoke-Element $input
+    $inputDialog = Find-OwnedPopupElement $process.Id $process.MainWindowHandle { param($item) $item.Current.ControlType -eq [System.Windows.Automation.ControlType]::Window }
     if ($null -eq $inputDialog) { throw 'Owned input flyout did not remain available for profile restoration.' }
     $restore = Find-Element $inputDialog { param($item) $item.Current.ControlType -eq $button -and $item.Current.Name.StartsWith($originalLanguage) }
     Invoke-Element $restore

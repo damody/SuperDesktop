@@ -24,6 +24,6 @@
                         },
     "independent_review":  {
                                "status":  "blocked",
-                               "reason":  "Independent review was performed against f61a63c9; architecture/source and security-procedure findings are remediated, while two P0 and two P1 findings remain open. G-REVIEW cannot pass until remaining remediation, affected-gate reruns, and re-review complete."
+                               "reason":  "Independent review was performed against f61a63c9; architecture/source, security-procedure, and current-candidate Explorer-free findings are remediated, while two P0 and one live IME/RTL P1 finding remain open. G-REVIEW cannot pass until remaining remediation, affected-gate reruns, and re-review complete."
                            }
 }

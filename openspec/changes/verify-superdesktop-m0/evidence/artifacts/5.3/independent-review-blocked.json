@@ -61,9 +61,10 @@
     {
       "id": "M0-REVIEW-P1-EXPLORER-FREE-CANDIDATE",
       "severity": "P1",
-      "status": "open",
+      "status": "resolved",
       "summary": "No Explorer-absent lifecycle proof is bound to the current candidate.",
       "owner": "Shell lifecycle and owned-provider gate owner",
+      "resolution": "Rebuilt the current release candidate, suppressed Explorer under a watchdog, exercised owned network, power, input, volume, calendar, and Start UIA paths, switched a real zh-CN/zh-TW input profile round trip, retained Start focus, and restored Explorer after capture.",
       "required_reruns": ["G-SHELL-TAKEOVER", "G-GUARDIAN-RECOVERY", "G-DESKTOP", "G-TASKBAR"]
     }
   ],
@@ -85,6 +86,6 @@
     "final_independent_rereview_required": true
   },
   "unresolved_p0": 2,
-  "unresolved_p1": 2,
+  "unresolved_p1": 1,
   "g_review": "blocked"
 }

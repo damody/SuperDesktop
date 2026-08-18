@@ -1,46 +1,40 @@
 {
-    "schema":  "m0-accessibility/v1",
-    "desktop":  {
-                    "fixed":  {
-                                  "actions":  [
-                                                  "focus",
-                                                  "select",
-                                                  "invoke"
-                                              ],
-                                  "name":  "SuperExplorer",
-                                  "role":  "button"
-                              },
-                    "root":  "SuperDesktop"
-                },
-    "taskbar":  {
-                    "actions":  [
-                                    "focus",
-                                    "select",
-                                    "invoke",
-                                    "minimize",
-                                    "restore"
-                                ],
-                    "root":  "SuperTaskbar",
-                    "fixed":  "SuperExplorer",
-                    "task":  "button",
-                    "start":  "button"
-                },
-    "keyboard_only":  [
-                          "desktop-select-activate",
-                          "taskbar-navigation-group-start-bridge"
-                      ],
-    "deferred_not_exposed":  [
-                                 "rename",
-                                 "delete",
-                                 "refresh",
-                                 "context-menu"
-                             ],
-    "high_contrast_visual":  "passed",
-    "high_contrast_capture":  "evidence/artifacts/4.1/high-contrast-headful.png",
-    "high_contrast_sha256":  "1441CB6DD4635F8AAD662BF13C1DF0CB12BE4B943AF15688DC14E1CCBBF79798",
-    "black_fraction":  0.963652779329089,
-    "focus_indicator_yellow_pixels":  1600,
-    "focus_indicator":  "passed",
-    "minimum_hit_target":  40,
-    "tests":  "cargo :    Compiling desktop-ui v0.1.0 (D:\\SuperDesktop\\SuperDesktop\\crates\\desktop-ui)\r\nAt D:\\SuperDesktop\\SuperDesktop\\scripts\\capture-m0-local-evidence.ps1:38 char:41\r\n+ ... contracts\u0027 {cargo test --release -p desktop-ui -p taskbar-ui -p explo ...\r\n+                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n    + CategoryInfo          : NotSpecified: (   Compiling de...tes\\desktop-ui):String) [], RemoteException\r\n    + FullyQualifiedErrorId : NativeCommandError\r\n \r\n   Compiling taskbar-ui v0.1.0 (D:\\SuperDesktop\\SuperDesktop\\crates\\taskbar-ui)\r\n    Finished `release` profile [optimized] target(s) in 2.06s\r\n     Running unittests src\\lib.rs (target\\release\\deps\\desktop_ui-8770bbe39852676a.exe)\r\n\r\nrunning 22 tests\r\ntest context_menu::tests::pointer_keyboard_and_accessibility_share_typed_invocation ... ok\r\ntest geometry::tests::dpi_and_work_area_use_logical_units ... ok\r\ntest interaction::tests::fixed_entry_is_truthful_accessible_and_has_no_local_claim ... ok\r\ntest interaction::tests::context_menu_emits_typed_isolated_provider_request ... ok\r\ntest layout::tests::dpi_and_monitor_remap_keep_logical_positions_visible ... ok\r\ntest namespace::tests::same_identity_deduplicates_without_using_display_name ... ok\r\ntest interaction::tests::pointer_keyboard_and_uia_emit_equivalent_folder_commands ... ok\r\ntest view::tests::authoritative_refresh_restores_only_surviving_selection ... ok\r\ntest interaction::tests::first_terminal_wins_for_bridge_and_association ... ok\r\ntest layout::tests::grid_selection_and_collision_are_deterministic ... ok\r\ntest layout::tests::natural_sort_and_snapshot_restore_are_stable ... ok\r\ntest geometry::tests::one_surface_per_monitor_and_no_orphans_after_hotplug ... ok\r\ntest namespace::tests::same_name_different_identity_stays_distinct ... ok\r\ntest namespace::tests::unicode_hidden_and_system_rules_are_independent ... ok\r\ntest operations::tests::reconcile_keeps_only_surviving_stable_identities ... ok\r\ntest operations::tests::validation_lifecycle_cancel_and_first_terminal_are_deterministic ... ok\r\ntest layout::tests::ctrl_shift_and_rubber_band_match_expected_items ... ok\r\ntest view::tests::context_menu_invocation_uses_the_same_typed_command_for_pointer_and_keyboard ... ok\r\ntest wallpaper::tests::all_six_modes_have_deterministic_geometry ... ok\r\ntest wallpaper::tests::invalid_source_uses_semantic_fallback_and_cache_is_bounded ... ok\r\ntest watcher::tests::overflow_is_single_flight_and_stale_deltas_are_suppressed ... ok\r\ntest watcher::tests::rename_storm_coalesces_and_stays_bounded ... ok\r\n\r\ntest result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\r\n\r\n     Running unittests src\\lib.rs (target\\release\\deps\\explorer_bridge-41fc39fd2a477c7c.exe)\r\n\r\nrunning 13 tests\r\ntest admission::tests::cancel_beats_success_and_duplicate_callback_is_diagnostic ... ok\r\ntest admission::tests::deadline_is_five_seconds_and_timeout_beats_late_success ... ok\r\ntest admission::tests::duplicate_correlation_and_shutdown_rundown_are_bounded ... ok\r\ntest command::tests::default_is_truthful_and_has_no_initial_path ... ok\r\ntest launcher::tests::completion_callback_uses_frozen_no_unwind_fence ... ok\r\ntest launcher::tests::removed_or_changed_executable_fails_before_spawn ... ok\r\ntest repair::tests::diagnostics_redact_profile_path_and_environment_value ... ok\r\ntest repair::tests::every_failure_has_localized_keyboard_repair_without_explorer_fallback ... ok\r\ntest command::tests::unicode_space_and_special_folder_round_trip_without_parent_mutation ... ok\r\ntest resolver::tests::missing_directory_relative_and_path_substitution_fail_closed ... ok\r\ntest command::tests::relative_missing_and_regular_file_are_rejected_before_spawn ... ok\r\ntest resolver::tests::priority_is_setting_then_developer_then_adjacent ... ok\r\ntest launcher::tests::explicit_application_spawn_and_raii_handle_cleanup ... ok\r\n\r\ntest result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s\r\n\r\n     Running unittests src\\lib.rs (target\\release\\deps\\taskbar_ui-c52e0374d329fbcc.exe)\r\n\r\nrunning 24 tests\r\ntest interaction::tests::multi_window_selection_escapes_and_returns_focus ... ok\r\ntest advanced::tests::jump_lists_overlay_and_preferences_are_independent_and_bounded ... ok\r\ntest grouping::tests::identity_collision_and_snapshot_reorder_do_not_merge_or_reorder ... ok\r\ntest interaction::tests::active_minimizes_inactive_activates_and_minimized_restores ... ok\r\ntest advanced::tests::flyout_delay_reconcile_actions_and_fallback_are_stable ... ok\r\ntest surface::tests::registration_failure_returns_to_unreserved_state ... ok\r\ntest layout::tests::invalid_rows_fall_back_only_to_two_and_scale_with_dpi ... ok\r\ntest task_view::tests::stale_snapshot_and_stale_windows_are_ignored_or_reconciled ... ok\r\ntest layout::tests::slot_order_rows_hit_targets_and_overflow_are_deterministic ... ok\r\ntest notification_area::tests::snapshot_overflow_input_latency_and_unavailable_are_truthful ... ok\r\ntest start::tests::missing_refused_and_stale_are_truthful ... ok\r\ntest start::tests::owned_start_ime_generation_merge_navigation_and_accessibility ... ok\r\ntest grouping::tests::pin_order_round_trips_and_rejects_membership_drift ... ok\r\ntest interaction::tests::fixed_entry_sources_emit_equivalent_truthful_bridge_request ... ok\r\ntest status::tests::locale_clock_is_deterministic ... ok\r\ntest status::tests::unavailable_provider_is_independent_and_no_fake_tray_is_rendered ... ok\r\ntest surface::tests::preview_maps_one_bar_per_monitor_without_work_area_effects ... ok\r\ntest interaction::tests::pinned_without_windows_launches_and_fixed_failure_is_first_terminal ... ok\r\ntest surface::tests::shell_reconciles_dpi_remove_and_idempotent_teardown ... ok\r\ntest tracker::tests::authoritative_snapshot_preserves_membership_order_across_content_churn ... ok\r\ntest layout::tests::one_two_three_row_geometry_has_no_overlap ... ok\r\ntest tracker::tests::filters_all_excluded_window_classes ... ok\r\ntest tracker::tests::storm_is_bounded_overflow_single_flight_and_stale_snapshot_rejected ... ok\r\ntest task_view::tests::partial_capability_is_truthful_and_window_move_remains_available ... ok\r\n\r\ntest result: ok. 24 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\r\n\r\n   Doc-tests desktop_ui\r\n\r\nrunning 0 tests\r\n\r\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\r\n\r\n   Doc-tests explorer_bridge\r\n\r\nrunning 0 tests\r\n\r\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\r\n\r\n   Doc-tests taskbar_ui\r\n\r\nrunning 0 tests\r\n\r\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+  "schema": "m0-accessibility/v2",
+  "result": "partial-pass-live-ime-composition-pending",
+  "app_sha256": "6064816dd9689f6841618cb8d2675cfb2cd1ec73b80db546997c2ebecff1e281",
+  "desktop": {
+    "root": "SuperDesktop",
+    "fixed_entry": {"name":"SuperExplorer","role":"ControlType.Button","actions":["focus","pointer","keyboard","InvokePattern"]}
+  },
+  "taskbar": {
+    "root": "SuperTaskbar",
+    "fixed_entry": {"name":"SuperExplorer","role":"ControlType.Button","actions":["focus","pointer","keyboard","InvokePattern"]},
+    "owned_status_controls": ["network-power","input","volume","calendar"]
+  },
+  "live_input_routes": {
+    "artifact": "evidence/artifacts/4.1/current-real-input-routes.json",
+    "sha256": "d9b150252ddc071c786644cbefcb931f5903de1b6c75172da8dee9d5ddcdb197",
+    "route_count": 6,
+    "desktop": ["pointer","keyboard","uia"],
+    "taskbar": ["pointer","keyboard","uia"],
+    "all_launched_real_superexplorer": true
+  },
+  "explorer_free_status_and_input": {
+    "artifact": "evidence/artifacts/4.1/current-explorer-free-status/headful-report.json",
+    "sha256": "d40e2edfb5d6818834ea2361f02f6878f00de6db85dad1037f8b55bff0937b5b",
+    "explorer_absent_during_capture": true,
+    "real_profile_switch": "zh-CN -> zh-TW -> zh-CN",
+    "original_profile_restored": true,
+    "start_survived_switch": true,
+    "start_focus_restored_trace": true,
+    "uia_owned_flyouts": ["network-power","input","volume","calendar"]
+  },
+  "high_contrast": {
+    "capture": "evidence/artifacts/4.1/high-contrast-headful.png",
+    "sha256": "1441cb6dd4635f8aad662bf13c1df0cb12be4b943af15688dc14e1ccbbf79798",
+    "black_fraction": 0.963652779329089,
+    "focus_indicator_yellow_pixels": 1600,
+    "minimum_hit_target": 40
+  },
+  "remaining_live_requirement": "Capture real IME composition, commit, cancel, focus stability, and RTL reading-order geometry against the current candidate."
 }

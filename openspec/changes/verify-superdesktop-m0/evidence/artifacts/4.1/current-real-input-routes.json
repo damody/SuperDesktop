@@ -1,0 +1,105 @@
+{
+    "schema":  "m0-real-input-routes/v1",
+    "app_sha256":  "6064816DD9689F6841618CB8D2675CFB2CD1EC73B80DB546997C2EBECFF1E281",
+    "superexplorer_sha256":  "0488663EAB483D2AC87D941475D3ECFE7E73756BE4A02E8A4C06524CBB0C56C3",
+    "route_count":  6,
+    "all_passed":  true,
+    "routes":  [
+                   {
+                       "surface":  "desktop",
+                       "route":  "pointer",
+                       "result":  "passed",
+                       "control_name":  "SuperExplorer",
+                       "automation_id":  "",
+                       "control_type":  "ControlType.Button",
+                       "bounds":  {
+                                      "left":  14,
+                                      "top":  8,
+                                      "width":  182,
+                                      "height":  196
+                                  },
+                       "launched_process_count":  1,
+                       "trace_contains_launch":  true
+                   },
+                   {
+                       "surface":  "desktop",
+                       "route":  "keyboard",
+                       "result":  "passed",
+                       "control_name":  "SuperExplorer",
+                       "automation_id":  "",
+                       "control_type":  "ControlType.Button",
+                       "bounds":  {
+                                      "left":  14,
+                                      "top":  8,
+                                      "width":  182,
+                                      "height":  196
+                                  },
+                       "launched_process_count":  1,
+                       "trace_contains_launch":  true
+                   },
+                   {
+                       "surface":  "desktop",
+                       "route":  "uia",
+                       "result":  "passed",
+                       "control_name":  "SuperExplorer",
+                       "automation_id":  "",
+                       "control_type":  "ControlType.Button",
+                       "bounds":  {
+                                      "left":  14,
+                                      "top":  8,
+                                      "width":  182,
+                                      "height":  196
+                                  },
+                       "launched_process_count":  1,
+                       "trace_contains_launch":  true
+                   },
+                   {
+                       "surface":  "taskbar",
+                       "route":  "pointer",
+                       "result":  "passed",
+                       "control_name":  "SuperExplorer",
+                       "automation_id":  "",
+                       "control_type":  "ControlType.Button",
+                       "bounds":  {
+                                      "left":  154,
+                                      "top":  1880,
+                                      "width":  280,
+                                      "height":  70
+                                  },
+                       "launched_process_count":  1,
+                       "trace_contains_launch":  true
+                   },
+                   {
+                       "surface":  "taskbar",
+                       "route":  "keyboard",
+                       "result":  "passed",
+                       "control_name":  "SuperExplorer",
+                       "automation_id":  "",
+                       "control_type":  "ControlType.Button",
+                       "bounds":  {
+                                      "left":  154,
+                                      "top":  1880,
+                                      "width":  280,
+                                      "height":  70
+                                  },
+                       "launched_process_count":  3,
+                       "trace_contains_launch":  true
+                   },
+                   {
+                       "surface":  "taskbar",
+                       "route":  "uia",
+                       "result":  "passed",
+                       "control_name":  "SuperExplorer",
+                       "automation_id":  "",
+                       "control_type":  "ControlType.Button",
+                       "bounds":  {
+                                      "left":  154,
+                                      "top":  1880,
+                                      "width":  280,
+                                      "height":  70
+                                  },
+                       "launched_process_count":  1,
+                       "trace_contains_launch":  true
+                   }
+               ]
+}

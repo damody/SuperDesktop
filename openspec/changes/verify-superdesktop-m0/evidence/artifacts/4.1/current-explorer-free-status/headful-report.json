@@ -1,0 +1,43 @@
+{
+    "schema":  "system-status-headful/v1",
+    "result":  "passed",
+    "app_sha256":  "6064816dd9689f6841618cb8d2675cfb2cd1ec73b80db546997c2ebecff1e281",
+    "original_input_profile":  "zh-CN",
+    "switched_input_profile":  "zh-TW (zh-TW, hkl:0000000004040404)",
+    "original_profile_restored":  true,
+    "start_survived_switch":  true,
+    "start_focus_restored_trace":  true,
+    "owned_flyouts":  [
+                          "network-power",
+                          "input",
+                          "volume",
+                          "calendar"
+                      ],
+    "explorer_suppressed":  true,
+    "explorer_before":  [
+                            26712
+                        ],
+    "explorer_absent_during_capture":  true,
+    "screenshots":  [
+                        {
+                            "name":  "calendar-flyout.png",
+                            "sha256":  "8331b0846318e6878f8574f10e08ac92805251d5499e53dcc0970ecea7dcf4d0",
+                            "bytes":  749252
+                        },
+                        {
+                            "name":  "input-flyout.png",
+                            "sha256":  "48b87438818fb60397476da83f873cc77a9a633f7a03fcfe5578f99e69089aa8",
+                            "bytes":  737100
+                        },
+                        {
+                            "name":  "network-power-flyout.png",
+                            "sha256":  "0b8c138b6541d6b33e477d57a4b5f873bf83e02b1a698f27cc65229fe8b67efc",
+                            "bytes":  738434
+                        },
+                        {
+                            "name":  "volume-flyout.png",
+                            "sha256":  "1ce1b4782708ff3e057177e58329b51cd7ddd7bda050f4527d4a3db5cd80cb5e",
+                            "bytes":  724224
+                        }
+                    ]
+}
