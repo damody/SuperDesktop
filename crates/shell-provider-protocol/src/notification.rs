@@ -1,6 +1,210 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{MAX_COLLECTION_ITEMS, NotificationIcon, Validate, ValidationError};
+use crate::{
+    IconData, MAX_COLLECTION_ITEMS, MAX_TEXT_BYTES, NotificationIcon, Validate, ValidationError,
+};
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum NotifyIconLayoutVersion {
+    V1,
+    V2,
+    V3,
+    V4,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct NotifyIconClientIdentity {
+    pub process_id: u32,
+    pub session_id: u32,
+    pub window_identity: i64,
+}
+
+impl Validate for NotifyIconClientIdentity {
+    fn validate(&self) -> Result<(), ValidationError> {
+        if self.process_id == 0 || self.window_identity == 0 {
+            Err(ValidationError::OutOfRange("notify_icon.client_identity"))
+        } else {
+            Ok(())
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
+pub struct NotifyIconIdentity {
+    pub numeric_id: u32,
+    pub guid: Option<[u8; 16]>,
+}
+
+impl Validate for NotifyIconIdentity {
+    fn validate(&self) -> Result<(), ValidationError> {
+        if self.numeric_id == 0 && self.guid.is_none() {
+            Err(ValidationError::InvalidValue("notify_icon.icon_identity"))
+        } else {
+            Ok(())
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct NotifyIconCallbackRoute {
+    pub message_id: u32,
+    pub negotiated_version: NotifyIconLayoutVersion,
+}
+
+impl Validate for NotifyIconCallbackRoute {
+    fn validate(&self) -> Result<(), ValidationError> {
+        if self.message_id == 0 {
+            Err(ValidationError::OutOfRange("notify_icon.callback_message"))
+        } else {
+            Ok(())
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct OwnedNotifyIcon {
+    pub client: NotifyIconClientIdentity,
+    pub identity: NotifyIconIdentity,
+    pub callback: NotifyIconCallbackRoute,
+    pub tooltip: String,
+    pub visible: bool,
+    pub pixels: Option<IconData>,
+    pub generation: u64,
+}
+
+impl Validate for OwnedNotifyIcon {
+    fn validate(&self) -> Result<(), ValidationError> {
+        self.client.validate()?;
+        self.identity.validate()?;
+        self.callback.validate()?;
+        if self.tooltip.len() > MAX_TEXT_BYTES {
+            return Err(ValidationError::TextTooLong("notify_icon.tooltip"));
+        }
+        if self.generation == 0 {
+            return Err(ValidationError::OutOfRange("notify_icon.generation"));
+        }
+        if let Some(pixels) = &self.pixels {
+            pixels.validate()?;
+        }
+        Ok(())
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum NotifyIconCompatibilityOperation {
+    Add {
+        icon: OwnedNotifyIcon,
+    },
+    Modify {
+        icon: OwnedNotifyIcon,
+    },
+    Delete {
+        identity: NotifyIconIdentity,
+        generation: u64,
+    },
+    SetFocus {
+        identity: NotifyIconIdentity,
+        generation: u64,
+    },
+    SetVersion {
+        identity: NotifyIconIdentity,
+        version: NotifyIconLayoutVersion,
+        generation: u64,
+    },
+}
+
+impl Validate for NotifyIconCompatibilityOperation {
+    fn validate(&self) -> Result<(), ValidationError> {
+        match self {
+            Self::Add { icon } | Self::Modify { icon } => icon.validate(),
+            Self::Delete {
+                identity,
+                generation,
+            }
+            | Self::SetFocus {
+                identity,
+                generation,
+            }
+            | Self::SetVersion {
+                identity,
+                generation,
+                ..
+            } => {
+                identity.validate()?;
+                if *generation == 0 {
+                    Err(ValidationError::OutOfRange(
+                        "notify_icon.operation_generation",
+                    ))
+                } else {
+                    Ok(())
+                }
+            }
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct NotifyIconCompatibilityRequest {
+    pub correlation_id: String,
+    pub expected_host_generation: u64,
+    pub deadline_unix_ms: u64,
+    pub operation: NotifyIconCompatibilityOperation,
+}
+
+impl Validate for NotifyIconCompatibilityRequest {
+    fn validate(&self) -> Result<(), ValidationError> {
+        if self.correlation_id.trim().is_empty() {
+            return Err(ValidationError::Empty("notify_icon.correlation_id"));
+        }
+        if self.correlation_id.len() > MAX_TEXT_BYTES {
+            return Err(ValidationError::TextTooLong("notify_icon.correlation_id"));
+        }
+        if self.expected_host_generation == 0 || self.deadline_unix_ms == 0 {
+            return Err(ValidationError::OutOfRange(
+                "notify_icon.request_generation_or_deadline",
+            ));
+        }
+        self.operation.validate()
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum NotifyIconTerminalKind {
+    Applied,
+    NoChange,
+    InvalidRequest,
+    StaleGeneration,
+    Timeout,
+    Cancelled,
+    OwnerUnavailable,
+    Capacity,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct NotifyIconCompatibilityTerminal {
+    pub correlation_id: String,
+    pub host_generation: u64,
+    pub icon_generation: Option<u64>,
+    pub terminal: NotifyIconTerminalKind,
+    pub message: String,
+}
+
+impl Validate for NotifyIconCompatibilityTerminal {
+    fn validate(&self) -> Result<(), ValidationError> {
+        if self.correlation_id.trim().is_empty() || self.host_generation == 0 {
+            return Err(ValidationError::InvalidValue(
+                "notify_icon.terminal_identity",
+            ));
+        }
+        if self.message.len() > MAX_TEXT_BYTES {
+            return Err(ValidationError::TextTooLong("notify_icon.terminal_message"));
+        }
+        Ok(())
+    }
+}
 
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
 pub struct IconKey {
@@ -162,5 +366,73 @@ mod tests {
             rgba: vec![0; 3],
         };
         assert!(bad.validate().is_err());
+    }
+
+    fn compatibility_icon() -> OwnedNotifyIcon {
+        OwnedNotifyIcon {
+            client: NotifyIconClientIdentity {
+                process_id: 42,
+                session_id: 1,
+                window_identity: 100,
+            },
+            identity: NotifyIconIdentity {
+                numeric_id: 7,
+                guid: None,
+            },
+            callback: NotifyIconCallbackRoute {
+                message_id: 0x500,
+                negotiated_version: NotifyIconLayoutVersion::V4,
+            },
+            tooltip: "Controlled icon".into(),
+            visible: true,
+            pixels: Some(IconData {
+                width: 1,
+                height: 1,
+                rgba: vec![1, 2, 3, 255],
+            }),
+            generation: 1,
+        }
+    }
+
+    #[test]
+    fn compatibility_operations_round_trip_with_owned_bounded_identity() {
+        let request = NotifyIconCompatibilityRequest {
+            correlation_id: "notify-1".into(),
+            expected_host_generation: 9,
+            deadline_unix_ms: 100,
+            operation: NotifyIconCompatibilityOperation::Add {
+                icon: compatibility_icon(),
+            },
+        };
+        request.validate().unwrap();
+        let encoded = serde_json::to_vec(&request).unwrap();
+        assert!(encoded.len() <= crate::MAX_FRAME_BYTES);
+        assert_eq!(
+            serde_json::from_slice::<NotifyIconCompatibilityRequest>(&encoded).unwrap(),
+            request
+        );
+    }
+
+    #[test]
+    fn compatibility_bounds_and_generations_fail_closed() {
+        let mut icon = compatibility_icon();
+        icon.client.process_id = 0;
+        assert!(icon.validate().is_err());
+        let mut icon = compatibility_icon();
+        icon.tooltip = "x".repeat(MAX_TEXT_BYTES + 1);
+        assert!(icon.validate().is_err());
+        let request = NotifyIconCompatibilityRequest {
+            correlation_id: String::new(),
+            expected_host_generation: 0,
+            deadline_unix_ms: 0,
+            operation: NotifyIconCompatibilityOperation::Delete {
+                identity: NotifyIconIdentity {
+                    numeric_id: 0,
+                    guid: None,
+                },
+                generation: 0,
+            },
+        };
+        assert!(request.validate().is_err());
     }
 }

@@ -24,7 +24,10 @@ pub use envelope::{
 pub use jump_list::{JumpListRequest, JumpListResponse};
 pub use notification::{
     IconKey, NotificationEvent, NotificationEventKind, NotificationHostHealth,
-    NotificationHostResponse, NotificationMutation, NotificationSnapshot, RegisteredIcon,
+    NotificationHostResponse, NotificationMutation, NotificationSnapshot, NotifyIconCallbackRoute,
+    NotifyIconClientIdentity, NotifyIconCompatibilityOperation, NotifyIconCompatibilityRequest,
+    NotifyIconCompatibilityTerminal, NotifyIconIdentity, NotifyIconLayoutVersion,
+    NotifyIconTerminalKind, OwnedNotifyIcon, RegisteredIcon,
 };
 pub use search::{
     SearchBatch, SearchProvider, SearchProviderState, SearchQuery, rank_search_results,
