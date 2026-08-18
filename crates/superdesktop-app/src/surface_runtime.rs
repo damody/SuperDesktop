@@ -1802,6 +1802,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                 let taskbar_leases = Rc::clone(&leases);
                 let start_window = Rc::new(RefCell::new(None::<gpui::WindowHandle<StartView>>));
                 let start_window_for_taskbar = Rc::clone(&start_window);
+                let start_window_for_status = Rc::clone(&start_window);
                 let start_provider_for_taskbar = Rc::clone(&provider_client);
                 let start_settings_store = Rc::clone(&settings_store);
                 let start_settings_target = Rc::clone(&settings_target);
@@ -2259,7 +2260,11 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                     kind,
                                 )
                             }),
-                            system_status: Rc::new(move |action| {
+                            system_status: Rc::new(move |action, app| {
+                                let restore_start_focus = matches!(
+                                    &action,
+                                    SystemStatusAction::ActivateInputProfile(_)
+                                );
                                 let Some(expected_host_generation) = status_commands_for_taskbar
                                     .borrow()
                                     .snapshot()
@@ -2314,6 +2319,15 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                             .provider_unavailable();
                                         trace_action("status:command-provider-failed");
                                     }
+                                }
+                                if restore_start_focus
+                                    && let Some(start) = *start_window_for_status.borrow()
+                                {
+                                    let _ = start.update(app, |_, window, cx| {
+                                        window.activate_window();
+                                        cx.notify();
+                                    });
+                                    trace_action("start:ime-focus-restored");
                                 }
                             }),
                             rendered: Rc::new(trace_rendered_frame),
@@ -2655,6 +2669,24 @@ mod live_parity_tests {
         assert!(source.contains("if view.status != current_status"));
         assert!(source.contains("view.status = current_status.clone()"));
         assert!(!source.contains("year: 2026,\n            month: 8,\n            day: 14,"));
+    }
+
+    #[test]
+    fn input_profile_command_restores_owned_start_focus_without_mutating_composition() {
+        let source = include_str!("surface_runtime.rs");
+        let start = include_str!("../../taskbar-ui/src/start.rs");
+        assert!(source.contains("start:ime-focus-restored"));
+        assert!(source.contains("SystemStatusAction::ActivateInputProfile"));
+        assert!(source.contains(
+            "window.activate_window();\n                                        cx.notify();"
+        ));
+        assert!(start.contains("let composition = self.model.composition.clone();"));
+        let status_callback = source
+            .split("system_status: Rc::new")
+            .nth(1)
+            .and_then(|tail| tail.split("rendered: Rc::new").next())
+            .expect("system status callback source");
+        assert!(!status_callback.contains("composition"));
     }
 
     #[test]

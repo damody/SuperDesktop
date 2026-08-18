@@ -117,6 +117,10 @@ fn toggled_system_flyout(
     (current != Some(requested)).then_some(requested)
 }
 
+fn activates_button(key: &str) -> bool {
+    matches!(key, "enter" | "space")
+}
+
 pub struct TaskbarView {
     pub accessible_root_name: String,
     pub layout: TaskbarLayout,
@@ -135,7 +139,7 @@ pub struct TaskbarView {
 
 pub type TaskCallback = Rc<dyn Fn(&str, &mut App)>;
 pub type NotificationCallback = Rc<dyn Fn(&IconKey, NotificationEventKind)>;
-pub type SystemStatusCallback = Rc<dyn Fn(SystemStatusAction)>;
+pub type SystemStatusCallback = Rc<dyn Fn(SystemStatusAction, &mut App)>;
 
 struct NotificationTooltip {
     text: String,
@@ -199,6 +203,7 @@ impl Render for TaskbarView {
         let fixed_key = fixed.clone();
         let root_fixed_key = fixed.clone();
         let keyboard_focus = self.keyboard_focus.clone();
+        let dismiss_focus = self.keyboard_focus.clone();
         let overflow_open = self.notification_area.overflow_open();
         let notification_nodes = self.notification_area.accessible_nodes();
         let visible_notifications = notification_nodes
@@ -231,8 +236,11 @@ impl Render for TaskbarView {
             .aria_label(self.accessible_root_name.clone())
             .tab_index(0)
             .when_some(keyboard_focus, |element, focus| element.track_focus(&focus))
-            .on_key_down(_cx.listener(move |this, event: &gpui::KeyDownEvent, _, cx| {
+            .on_key_down(_cx.listener(move |this, event: &gpui::KeyDownEvent, window, cx| {
                 if event.keystroke.key == "escape" && this.system_flyout.take().is_some() {
+                    if let Some(focus) = &dismiss_focus {
+                        window.focus(focus, cx);
+                    }
                     cx.notify();
                     return;
                 }
@@ -710,6 +718,17 @@ impl Render for TaskbarView {
                                 );
                                 cx.notify();
                             }))
+                            .on_key_down(_cx.listener(
+                                |this, event: &gpui::KeyDownEvent, _, cx| {
+                                    if activates_button(&event.keystroke.key) {
+                                        this.system_flyout = toggled_system_flyout(
+                                            this.system_flyout,
+                                            SystemFlyoutKind::NetworkPower,
+                                        );
+                                        cx.notify();
+                                    }
+                                },
+                            ))
                             .child(match &self.status.core.network {
                                 crate::ProviderState::Available(_) => "Network",
                                 crate::ProviderState::Unavailable(_) => "Network —",
@@ -737,6 +756,17 @@ impl Render for TaskbarView {
                                 );
                                 cx.notify();
                             }))
+                            .on_key_down(_cx.listener(
+                                |this, event: &gpui::KeyDownEvent, _, cx| {
+                                    if activates_button(&event.keystroke.key) {
+                                        this.system_flyout = toggled_system_flyout(
+                                            this.system_flyout,
+                                            SystemFlyoutKind::Volume,
+                                        );
+                                        cx.notify();
+                                    }
+                                },
+                            ))
                             .child(match (&self.status.core.volume, &self.status.core.muted) {
                                 (crate::ProviderState::Available(volume), crate::ProviderState::Available(true)) => format!("Muted {volume}%"),
                                 (crate::ProviderState::Available(volume), _) => format!("Volume {volume}%"),
@@ -768,6 +798,17 @@ impl Render for TaskbarView {
                                 );
                                 cx.notify();
                             }))
+                            .on_key_down(_cx.listener(
+                                |this, event: &gpui::KeyDownEvent, _, cx| {
+                                    if activates_button(&event.keystroke.key) {
+                                        this.system_flyout = toggled_system_flyout(
+                                            this.system_flyout,
+                                            SystemFlyoutKind::Input,
+                                        );
+                                        cx.notify();
+                                    }
+                                },
+                            ))
                             .child(match &self.status.core.input_language {
                                 crate::ProviderState::Available(value) => value.clone(),
                                 crate::ProviderState::Unavailable(_) => "Input —".into(),
@@ -793,6 +834,17 @@ impl Render for TaskbarView {
                                 );
                                 cx.notify();
                             }))
+                            .on_key_down(_cx.listener(
+                                |this, event: &gpui::KeyDownEvent, _, cx| {
+                                    if activates_button(&event.keystroke.key) {
+                                        this.system_flyout = toggled_system_flyout(
+                                            this.system_flyout,
+                                            SystemFlyoutKind::Calendar,
+                                        );
+                                        cx.notify();
+                                    }
+                                },
+                            ))
                             .child(self.status.time.clone())
                             .child(self.status.date.clone()),
                     )
@@ -827,7 +879,9 @@ impl Render for TaskbarView {
                                                     .iter()
                                                     .map(|profile| {
                                                         let callback = input_callback.clone();
+                                                        let key_callback = input_callback.clone();
                                                         let id = profile.id.clone();
+                                                        let key_id = profile.id.clone();
                                                         div()
                                                             .id(format!("input-profile-{}", profile.id))
                                                             .role(gpui::Role::Button)
@@ -847,9 +901,23 @@ impl Render for TaskbarView {
                                                                 profile.id == input.active_profile_id,
                                                                 |element| element.bg(rgb(0xd6e8ff)),
                                                             )
-                                                            .on_click(move |_, _, _| {
+                                                            .on_click(move |_, _, cx| {
                                                                 if let Some(callback) = &callback {
-                                                                    callback(SystemStatusAction::ActivateInputProfile(id.clone()));
+                                                                    callback(SystemStatusAction::ActivateInputProfile(id.clone()), cx);
+                                                                }
+                                                            })
+                                                            .on_key_down(move |event, _, cx| {
+                                                                if activates_button(
+                                                                    &event.keystroke.key,
+                                                                ) && let Some(callback) =
+                                                                    &key_callback
+                                                                {
+                                                                    callback(
+                                                                        SystemStatusAction::ActivateInputProfile(
+                                                                            key_id.clone(),
+                                                                        ),
+                                                                        cx,
+                                                                    );
                                                                 }
                                                             })
                                                             .child(profile.display_name.clone())
@@ -874,9 +942,9 @@ impl Render for TaskbarView {
                                                 vec![
                                                     div().id("volume-value").child(format!("Volume {current}%")),
                                                     div().id("volume-actions").flex().gap_2()
-                                                        .child(div().id("volume-lower").role(gpui::Role::Button).aria_label("Lower volume").tab_index(0).p_2().on_click(move |_,_,_| { if let Some(callback)=&lower_callback { callback(SystemStatusAction::SetVolume(current.saturating_sub(10))); } }).child("-"))
-                                                        .child(div().id("volume-mute").role(gpui::Role::Button).aria_label(if muted {"Unmute"} else {"Mute"}).tab_index(0).p_2().on_click(move |_,_,_| { if let Some(callback)=&mute_callback { callback(SystemStatusAction::SetMute(!muted)); } }).child(if muted {"Unmute"} else {"Mute"}))
-                                                        .child(div().id("volume-higher").role(gpui::Role::Button).aria_label("Raise volume").tab_index(0).p_2().on_click(move |_,_,_| { if let Some(callback)=&higher_callback { callback(SystemStatusAction::SetVolume(current.saturating_add(10).min(100))); } }).child("+")),
+                                                        .child(div().id("volume-lower").role(gpui::Role::Button).aria_label("Lower volume").tab_index(0).p_2().on_click(move |_,_,cx| { if let Some(callback)=&lower_callback { callback(SystemStatusAction::SetVolume(current.saturating_sub(10)), cx); } }).child("-"))
+                                                        .child(div().id("volume-mute").role(gpui::Role::Button).aria_label(if muted {"Unmute"} else {"Mute"}).tab_index(0).p_2().on_click(move |_,_,cx| { if let Some(callback)=&mute_callback { callback(SystemStatusAction::SetMute(!muted), cx); } }).child(if muted {"Unmute"} else {"Mute"}))
+                                                        .child(div().id("volume-higher").role(gpui::Role::Button).aria_label("Raise volume").tab_index(0).p_2().on_click(move |_,_,cx| { if let Some(callback)=&higher_callback { callback(SystemStatusAction::SetVolume(current.saturating_add(10).min(100)), cx); } }).child("+")),
                                                 ]
                                             }
                                             _ => vec![div().id("volume-unavailable").child("Volume unavailable")],
@@ -899,7 +967,10 @@ impl Render for TaskbarView {
 
 #[cfg(test)]
 mod tests {
-    use super::{bc7_render_image, icon_render_image, task_display_label, toggled_system_flyout};
+    use super::{
+        activates_button, bc7_render_image, icon_render_image, task_display_label,
+        toggled_system_flyout,
+    };
     use crate::SystemFlyoutKind;
     use shell_provider_protocol::IconData;
 
@@ -922,6 +993,9 @@ mod tests {
 
     #[test]
     fn system_flyouts_are_exclusive_and_rapid_switches_are_deterministic() {
+        assert!(activates_button("enter"));
+        assert!(activates_button("space"));
+        assert!(!activates_button("tab"));
         let current = toggled_system_flyout(None, SystemFlyoutKind::Input);
         assert_eq!(current, Some(SystemFlyoutKind::Input));
         let current = toggled_system_flyout(current, SystemFlyoutKind::Volume);

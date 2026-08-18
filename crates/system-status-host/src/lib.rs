@@ -1,4 +1,12 @@
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::{
+    collections::BTreeSet,
+    panic::{AssertUnwindSafe, catch_unwind},
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
+    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
+};
 
 use shell_provider_protocol::{
     SystemStatusCommand, SystemStatusCommandRequest, SystemStatusCommandTerminal,
@@ -7,12 +15,99 @@ use shell_provider_protocol::{
 };
 
 pub const MAX_PENDING_COMMANDS: usize = 64;
+pub const MAX_PENDING_PROVIDER_EVENTS: usize = 4;
+const AUTHORITATIVE_RECONCILIATION_INTERVAL: Duration = Duration::from_secs(2);
+
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+pub enum ProviderEvent {
+    Input,
+    Audio,
+    Network,
+    Power,
+    Clock,
+}
+
+#[derive(Clone, Debug)]
+pub struct CallbackFence {
+    accepting: Arc<AtomicBool>,
+}
+
+impl Default for CallbackFence {
+    fn default() -> Self {
+        Self {
+            accepting: Arc::new(AtomicBool::new(true)),
+        }
+    }
+}
+
+impl CallbackFence {
+    pub fn invoke<T>(&self, callback: impl FnOnce() -> T) -> Option<T> {
+        if !self.accepting.load(Ordering::Acquire) {
+            return None;
+        }
+        catch_unwind(AssertUnwindSafe(callback)).ok()
+    }
+
+    pub fn shutdown(&self) {
+        self.accepting.store(false, Ordering::Release);
+    }
+}
+
+#[derive(Debug)]
+struct ProviderEventQueue {
+    pending: BTreeSet<ProviderEvent>,
+    overflowed: bool,
+    authoritative_pending: bool,
+    last_authoritative: Instant,
+}
+
+impl Default for ProviderEventQueue {
+    fn default() -> Self {
+        Self {
+            pending: BTreeSet::new(),
+            overflowed: false,
+            authoritative_pending: true,
+            last_authoritative: Instant::now(),
+        }
+    }
+}
+
+impl ProviderEventQueue {
+    fn push(&mut self, event: ProviderEvent) {
+        if self.pending.contains(&event) {
+            return;
+        }
+        if self.pending.len() == MAX_PENDING_PROVIDER_EVENTS {
+            self.overflowed = true;
+            self.authoritative_pending = true;
+            return;
+        }
+        self.pending.insert(event);
+    }
+
+    fn schedule_if_due(&mut self, now: Instant) {
+        if now.duration_since(self.last_authoritative) >= AUTHORITATIVE_RECONCILIATION_INTERVAL {
+            self.authoritative_pending = true;
+        }
+    }
+
+    fn take_for_snapshot(&mut self, now: Instant) -> bool {
+        self.schedule_if_due(now);
+        let overflowed = std::mem::take(&mut self.overflowed);
+        self.pending.clear();
+        self.authoritative_pending = false;
+        self.last_authoritative = now;
+        overflowed
+    }
+}
 
 #[derive(Debug)]
 pub struct SystemStatusRuntime {
     host_generation: u64,
     snapshot_generation: u64,
     overflowed: bool,
+    callback_fence: CallbackFence,
+    events: ProviderEventQueue,
 }
 
 impl Default for SystemStatusRuntime {
@@ -24,12 +119,27 @@ impl Default for SystemStatusRuntime {
             host_generation: generation,
             snapshot_generation: 0,
             overflowed: false,
+            callback_fence: CallbackFence::default(),
+            events: ProviderEventQueue::default(),
         }
     }
 }
 
 impl SystemStatusRuntime {
+    pub fn provider_callback(&mut self, callback: impl FnOnce() -> ProviderEvent) -> bool {
+        let Some(event) = self.callback_fence.invoke(callback) else {
+            return false;
+        };
+        self.events.push(event);
+        true
+    }
+
+    pub fn shutdown_callbacks(&self) {
+        self.callback_fence.shutdown();
+    }
+
     pub fn apply(&mut self, request: SystemStatusHostRequest) -> SystemStatusHostResponse {
+        self.events.schedule_if_due(Instant::now());
         if let Err(error) = request.validate() {
             return SystemStatusHostResponse::Rejected(error.to_string());
         }
@@ -47,7 +157,7 @@ impl SystemStatusRuntime {
                     snapshot_generation: self.snapshot_generation,
                     pending_commands: 0,
                     capacity: MAX_PENDING_COMMANDS,
-                    overflowed: self.overflowed,
+                    overflowed: self.overflowed || self.events.overflowed,
                 })
             }
             SystemStatusHostRequest::Snapshot => self.snapshot(),
@@ -65,6 +175,7 @@ impl SystemStatusRuntime {
     }
 
     fn snapshot(&mut self) -> SystemStatusHostResponse {
+        self.overflowed |= self.events.take_for_snapshot(Instant::now());
         self.snapshot_generation = self.snapshot_generation.saturating_add(1).max(1);
         match platform_win::common::system_status::system_status_snapshot(
             self.host_generation,
@@ -147,6 +258,12 @@ impl SystemStatusRuntime {
     }
 }
 
+impl Drop for SystemStatusRuntime {
+    fn drop(&mut self) {
+        self.shutdown_callbacks();
+    }
+}
+
 fn unix_ms() -> u64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -204,5 +321,49 @@ mod tests {
                 ..
             })
         ));
+    }
+
+    #[test]
+    fn callback_panic_shutdown_coalescing_and_overflow_are_bounded() {
+        let mut runtime = SystemStatusRuntime::default();
+        assert!(runtime.provider_callback(|| ProviderEvent::Audio));
+        assert!(runtime.provider_callback(|| ProviderEvent::Audio));
+        assert!(!runtime.provider_callback(|| panic!("fixture callback panic")));
+        for event in [
+            ProviderEvent::Input,
+            ProviderEvent::Network,
+            ProviderEvent::Power,
+            ProviderEvent::Clock,
+        ] {
+            runtime.provider_callback(|| event);
+        }
+        assert!(matches!(
+            runtime.apply(SystemStatusHostRequest::Health),
+            SystemStatusHostResponse::Health(SystemStatusHostHealth {
+                overflowed: true,
+                ..
+            })
+        ));
+        let snapshot = runtime.apply(SystemStatusHostRequest::Snapshot);
+        assert!(matches!(
+            snapshot,
+            SystemStatusHostResponse::Snapshot(shell_provider_protocol::SystemStatusSnapshot {
+                overflowed: true,
+                ..
+            })
+        ));
+        runtime.shutdown_callbacks();
+        assert!(!runtime.provider_callback(|| ProviderEvent::Audio));
+    }
+
+    #[test]
+    fn authoritative_reconciliation_timer_is_single_flight() {
+        let mut runtime = SystemStatusRuntime::default();
+        runtime.events.authoritative_pending = false;
+        runtime.events.last_authoritative = Instant::now() - AUTHORITATIVE_RECONCILIATION_INTERVAL;
+        let _ = runtime.apply(SystemStatusHostRequest::Health);
+        assert!(runtime.events.authoritative_pending);
+        let _ = runtime.apply(SystemStatusHostRequest::Snapshot);
+        assert!(!runtime.events.authoritative_pending);
     }
 }

@@ -80,7 +80,7 @@
 - [x] 3.1.1 Add the `system-status-host` workspace crate and binary entry point.
 - [x] 3.1.2 Implement versioned handshake, client/session lease and initial full snapshot.
 - [ ] 3.1.3 Register provider callbacks with no-unwind/shutdown fencing.
-- [ ] 3.1.4 Implement bounded coalescing queue, overflow event and authoritative reconciliation timer.
+- [x] 3.1.4 Implement bounded coalescing queue, overflow event and authoritative reconciliation timer.
 - [x] 3.1.5 Implement exactly-once status command terminals and host-process malformed-input tests.
 
 ### 3.2 Add SuperDesktop host client and restart recovery
@@ -143,7 +143,7 @@
 
 - [x] 4.3.1 Start/supervise the host and apply initial/live status snapshots.
 - [x] 4.3.2 Route input/audio flyout actions and observed terminal state back to views.
-- [ ] 4.3.3 Preserve Start IME composition and focus during taskbar profile changes.
+- [x] 4.3.3 Preserve Start IME composition and focus during taskbar profile changes.
 - [ ] 4.3.4 Add end-to-end provider unavailable/restart and mode-independent integration tests.
 
 ## 5. Verification and Packaging
