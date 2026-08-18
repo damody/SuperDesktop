@@ -15,11 +15,14 @@ use shell_provider_protocol::{
 pub const MAX_CLIENTS: usize = 64;
 pub const MAX_ICONS: usize = 256;
 pub const MAX_EVENTS: usize = 512;
+pub const MAX_COMPLETED_CALLBACKS: usize = 512;
+pub const MAX_CALLBACK_AGE_MS: u64 = 5_000;
 
 pub struct NativeCompatibilityRegistry {
     pub registry: NotificationRegistry,
     host_generation: u64,
     native: BTreeMap<IconKey, shell_provider_protocol::OwnedNotifyIcon>,
+    completed_callbacks: VecDeque<String>,
 }
 
 impl Default for NativeCompatibilityRegistry {
@@ -30,11 +33,112 @@ impl Default for NativeCompatibilityRegistry {
                 .duration_since(UNIX_EPOCH)
                 .map_or(1, |value| value.as_millis().max(1) as u64),
             native: BTreeMap::new(),
+            completed_callbacks: VecDeque::new(),
         }
     }
 }
 
 impl NativeCompatibilityRegistry {
+    pub const fn host_generation(&self) -> u64 {
+        self.host_generation
+    }
+
+    pub fn apply_mutation(
+        &mut self,
+        mutation: NotificationMutation,
+        now_unix_ms: u64,
+    ) -> NotificationHostResponse {
+        match mutation {
+            NotificationMutation::Event { event } => self.deliver_event(event, now_unix_ms),
+            NotificationMutation::CancelEvent { correlation_id } => {
+                if !self.completed_callbacks.contains(&correlation_id) {
+                    if self.completed_callbacks.len() >= MAX_COMPLETED_CALLBACKS {
+                        self.completed_callbacks.pop_front();
+                    }
+                    self.completed_callbacks.push_back(correlation_id.clone());
+                }
+                self.registry
+                    .apply(NotificationMutation::CancelEvent { correlation_id })
+            }
+            NotificationMutation::Disconnect { client_id } => {
+                self.native.retain(|key, _| key.client_id != client_id);
+                self.registry
+                    .apply(NotificationMutation::Disconnect { client_id })
+            }
+            other => self.registry.apply(other),
+        }
+    }
+
+    pub fn reconcile_dead_clients(&mut self) -> usize {
+        let dead = self
+            .native
+            .iter()
+            .filter_map(|(key, icon)| {
+                platform_win::common::notify_icon_compat::validate_window_owner(
+                    icon.client.window_identity as isize,
+                    icon.client.process_id,
+                    icon.client.session_id,
+                )
+                .is_err()
+                .then_some(key.client_id.clone())
+            })
+            .collect::<BTreeSet<_>>();
+        for client_id in &dead {
+            self.native.retain(|key, _| key.client_id != *client_id);
+            let _ = self.registry.apply(NotificationMutation::Disconnect {
+                client_id: client_id.clone(),
+            });
+        }
+        dead.len()
+    }
+
+    pub fn restart_generation(&mut self) {
+        self.registry = NotificationRegistry::default();
+        self.native.clear();
+        self.completed_callbacks.clear();
+        self.host_generation = self.host_generation.saturating_add(1).max(1);
+    }
+
+    fn deliver_event(
+        &mut self,
+        event: NotificationEvent,
+        now_unix_ms: u64,
+    ) -> NotificationHostResponse {
+        if event.validate().is_err() {
+            return NotificationHostResponse::Rejected("event-invalid".into());
+        }
+        if self.completed_callbacks.contains(&event.correlation_id) {
+            return NotificationHostResponse::Accepted {
+                changed: false,
+                generation: self.registry.generation,
+            };
+        }
+        if now_unix_ms.saturating_sub(event.admitted_unix_ms) > MAX_CALLBACK_AGE_MS {
+            return NotificationHostResponse::Rejected("event-timeout".into());
+        }
+        let Some(icon) = self.native.get(&event.key) else {
+            return NotificationHostResponse::Rejected("event-icon-not-registered".into());
+        };
+        if let Err(reason) =
+            platform_win::common::notify_icon_compat::deliver_callback(icon, event.kind)
+        {
+            let client_id = event.key.client_id.clone();
+            self.native.retain(|key, _| key.client_id != client_id);
+            let _ = self
+                .registry
+                .apply(NotificationMutation::Disconnect { client_id });
+            return NotificationHostResponse::Rejected(reason.into());
+        }
+        if self.completed_callbacks.len() >= MAX_COMPLETED_CALLBACKS {
+            self.completed_callbacks.pop_front();
+        }
+        self.completed_callbacks.push_back(event.correlation_id);
+        NotificationHostResponse::Accepted {
+            changed: false,
+            generation: self.registry.generation,
+        }
+    }
+
     pub fn apply_ingress(&mut self, ingress: NotifyIconIngress) -> NotifyIconCompatibilityTerminal {
         let generation = self.registry.generation.saturating_add(1).max(1);
         let identity = NotifyIconIdentity {
@@ -89,8 +193,11 @@ impl NativeCompatibilityRegistry {
                     let response = self
                         .registry
                         .apply(NotificationMutation::Add { icon: registered });
-                    self.native.insert(key, icon);
-                    terminal_kind(response)
+                    let terminal = terminal_kind(response);
+                    if terminal == NotifyIconTerminalKind::Applied {
+                        self.native.insert(key, icon);
+                    }
+                    terminal
                 } else {
                     let response = self.registry.apply(NotificationMutation::Modify {
                         icon: registered_icon(&key, &icon),
@@ -302,6 +409,10 @@ impl NotificationRegistry {
                     NotificationHostResponse::Rejected("event-capacity".into())
                 }
             }
+            NotificationMutation::CancelEvent { correlation_id } => {
+                let changed = self.events.cancel(&correlation_id);
+                self.accepted(changed)
+            }
             NotificationMutation::DrainEvents { client_id } => {
                 if !self.clients.contains(&client_id) {
                     return NotificationHostResponse::Rejected("client-not-registered".into());
@@ -407,6 +518,13 @@ impl NotificationEventQueue {
         }
         self.events = retained;
         drained
+    }
+
+    pub fn cancel(&mut self, correlation_id: &str) -> bool {
+        let before = self.events.len();
+        self.events
+            .retain(|event| event.correlation_id != correlation_id);
+        self.events.len() != before
     }
 }
 
@@ -585,5 +703,136 @@ mod tests {
                 .terminal,
             NotifyIconTerminalKind::NoChange
         );
+    }
+
+    #[test]
+    fn native_callbacks_timeout_deduplicate_disconnect_and_restart_fail_closed() {
+        let Some((process_id, session_id, window_identity)) =
+            platform_win::common::notify_icon_compat::current_console_owner()
+        else {
+            return;
+        };
+        let input = NotifyIconCopyInput {
+            cb_size: NotifyIconLayoutMatrix::current().v4_size,
+            flags: 1 | 4,
+            process_id,
+            session_id,
+            window_identity,
+            numeric_id: 91,
+            guid: None,
+            callback_message: 0x5a1,
+            requested_version: Some(shell_provider_protocol::NotifyIconLayoutVersion::V4),
+            tooltip_utf16: "Callback fixture".encode_utf16().collect(),
+            visible: true,
+            borrowed_hicon: 0,
+        };
+        let mut compatibility = NativeCompatibilityRegistry::default();
+        assert_eq!(
+            compatibility
+                .apply_ingress(NotifyIconIngress {
+                    message: 0,
+                    input: input.clone(),
+                })
+                .terminal,
+            NotifyIconTerminalKind::Applied
+        );
+        let key = compatibility.registry.snapshot().icons[0].key.clone();
+        let timed_out = NotificationEvent {
+            correlation_id: "expired".into(),
+            key: key.clone(),
+            kind: NotificationEventKind::Activate,
+            admitted_unix_ms: 1,
+        };
+        assert_eq!(
+            compatibility.apply_mutation(
+                NotificationMutation::Event { event: timed_out },
+                MAX_CALLBACK_AGE_MS + 2,
+            ),
+            NotificationHostResponse::Rejected("event-timeout".into())
+        );
+        let event = NotificationEvent {
+            correlation_id: "once".into(),
+            key: key.clone(),
+            kind: NotificationEventKind::Focus,
+            admitted_unix_ms: 10,
+        };
+        assert!(matches!(
+            compatibility.apply_mutation(
+                NotificationMutation::Event {
+                    event: event.clone(),
+                },
+                11,
+            ),
+            NotificationHostResponse::Accepted { changed: false, .. }
+        ));
+        assert!(matches!(
+            compatibility.apply_mutation(NotificationMutation::Event { event }, 12),
+            NotificationHostResponse::Accepted { changed: false, .. }
+        ));
+        assert!(matches!(
+            compatibility.apply_mutation(
+                NotificationMutation::CancelEvent {
+                    correlation_id: "cancelled".into(),
+                },
+                12,
+            ),
+            NotificationHostResponse::Accepted { .. }
+        ));
+        assert!(matches!(
+            compatibility.apply_mutation(
+                NotificationMutation::Disconnect {
+                    client_id: key.client_id,
+                },
+                13,
+            ),
+            NotificationHostResponse::Accepted { changed: true, .. }
+        ));
+        assert!(compatibility.registry.snapshot().icons.is_empty());
+        let generation = compatibility.host_generation();
+        compatibility.restart_generation();
+        assert!(compatibility.host_generation() > generation);
+        assert!(compatibility.registry.snapshot().icons.is_empty());
+    }
+
+    #[test]
+    fn registry_capacity_and_protected_overflow_remain_bounded() {
+        let mut registry = NotificationRegistry::default();
+        for index in 0..MAX_CLIENTS {
+            assert!(matches!(
+                registry.apply(NotificationMutation::RegisterClient {
+                    client_id: format!("client-{index}"),
+                }),
+                NotificationHostResponse::Accepted { changed: true, .. }
+            ));
+        }
+        assert_eq!(
+            registry.apply(NotificationMutation::RegisterClient {
+                client_id: "overflow".into(),
+            }),
+            NotificationHostResponse::Rejected("client-capacity".into())
+        );
+        let mut queue = NotificationEventQueue {
+            events: VecDeque::new(),
+            capacity: 2,
+        };
+        let event = |id: &str, kind| NotificationEvent {
+            correlation_id: id.into(),
+            key: IconKey {
+                client_id: "client".into(),
+                icon_id: 1,
+            },
+            kind,
+            admitted_unix_ms: 1,
+        };
+        assert!(queue.push(event("hover-1", NotificationEventKind::Hover)));
+        assert!(queue.push(event("hover-2", NotificationEventKind::Hover)));
+        assert!(queue.push(event("activate", NotificationEventKind::Activate)));
+        assert!(
+            queue
+                .events
+                .iter()
+                .any(|event| event.kind == NotificationEventKind::Activate)
+        );
+        assert!(queue.len() <= 2);
     }
 }

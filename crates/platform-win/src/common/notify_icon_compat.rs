@@ -13,8 +13,8 @@ use std::{
 };
 
 use shell_provider_protocol::{
-    NotifyIconCallbackRoute, NotifyIconClientIdentity, NotifyIconIdentity, NotifyIconLayoutVersion,
-    OwnedNotifyIcon, Validate,
+    NotificationEventKind, NotifyIconCallbackRoute, NotifyIconClientIdentity, NotifyIconIdentity,
+    NotifyIconLayoutVersion, OwnedNotifyIcon, Validate,
 };
 use windows::Win32::{
     Foundation::{HINSTANCE, HWND, LPARAM, LRESULT, WPARAM},
@@ -27,9 +27,10 @@ use windows::Win32::{
         WindowsAndMessaging::{
             CREATESTRUCTW, CS_HREDRAW, CS_VREDRAW, CreateWindowExW, DefWindowProcW, DestroyWindow,
             DispatchMessageW, FindWindowW, GWLP_USERDATA, GetMessageW, GetWindowLongPtrW,
-            GetWindowThreadProcessId, IsWindow, MSG, PostMessageW, PostQuitMessage, RegisterClassW,
-            SetWindowLongPtrW, TranslateMessage, UnregisterClassW, WINDOW_EX_STYLE, WINDOW_STYLE,
-            WM_CLOSE, WM_COPYDATA, WM_DESTROY, WM_NCCREATE, WNDCLASSW,
+            GetWindowThreadProcessId, HWND_BROADCAST, IsWindow, MSG, PostMessageW, PostQuitMessage,
+            RegisterClassW, RegisterWindowMessageW, SetWindowLongPtrW, TranslateMessage,
+            UnregisterClassW, WINDOW_EX_STYLE, WINDOW_STYLE, WM_CLOSE, WM_CONTEXTMENU, WM_COPYDATA,
+            WM_DESTROY, WM_LBUTTONUP, WM_MOUSEMOVE, WM_NCCREATE, WNDCLASSW,
         },
     },
 };
@@ -63,6 +64,25 @@ const COMPATIBILITY_CLASS: &[u16] = &[
     b'd' as u16,
     0,
 ];
+const TASKBAR_CREATED: &[u16] = &[
+    b'T' as u16,
+    b'a' as u16,
+    b's' as u16,
+    b'k' as u16,
+    b'b' as u16,
+    b'a' as u16,
+    b'r' as u16,
+    b'C' as u16,
+    b'r' as u16,
+    b'e' as u16,
+    b'a' as u16,
+    b't' as u16,
+    b'e' as u16,
+    b'd' as u16,
+    0,
+];
+const NIN_SELECT: u32 = 0x0400;
+const NIN_KEYSELECT: u32 = 0x0401;
 
 #[derive(Clone, Debug)]
 pub struct NotifyIconIngress {
@@ -524,6 +544,77 @@ pub fn validate_window_owner(
     Ok(())
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct NotifyIconCallbackPayload {
+    pub message: u32,
+    pub wparam: usize,
+    pub lparam: isize,
+}
+
+pub fn callback_payload(
+    icon: &OwnedNotifyIcon,
+    kind: NotificationEventKind,
+) -> NotifyIconCallbackPayload {
+    let event = match (icon.callback.negotiated_version, kind) {
+        (NotifyIconLayoutVersion::V4, NotificationEventKind::Activate) => NIN_SELECT,
+        (NotifyIconLayoutVersion::V4, NotificationEventKind::Focus) => NIN_KEYSELECT,
+        (_, NotificationEventKind::Activate) => WM_LBUTTONUP,
+        (_, NotificationEventKind::Context) => WM_CONTEXTMENU,
+        (_, NotificationEventKind::Hover) => WM_MOUSEMOVE,
+        (_, NotificationEventKind::Focus) => NIN_KEYSELECT,
+    };
+    let numeric_id = icon.identity.numeric_id;
+    if icon.callback.negotiated_version == NotifyIconLayoutVersion::V4 {
+        NotifyIconCallbackPayload {
+            message: icon.callback.message_id,
+            wparam: 0,
+            lparam: isize::try_from((event & 0xffff) | (numeric_id << 16)).unwrap_or_default(),
+        }
+    } else {
+        NotifyIconCallbackPayload {
+            message: icon.callback.message_id,
+            wparam: numeric_id as usize,
+            lparam: event as isize,
+        }
+    }
+}
+
+pub fn deliver_callback(
+    icon: &OwnedNotifyIcon,
+    kind: NotificationEventKind,
+) -> Result<(), &'static str> {
+    validate_window_owner(
+        icon.client.window_identity as isize,
+        icon.client.process_id,
+        icon.client.session_id,
+    )?;
+    let payload = callback_payload(icon, kind);
+    unsafe {
+        PostMessageW(
+            Some(HWND(icon.client.window_identity as isize as *mut _)),
+            payload.message,
+            WPARAM(payload.wparam),
+            LPARAM(payload.lparam),
+        )
+    }
+    .map_err(|_| "notify-icon-callback-post")
+}
+
+pub fn broadcast_taskbar_created() -> Result<u32, &'static str> {
+    let message = taskbar_created_message()?;
+    unsafe { PostMessageW(Some(HWND_BROADCAST), message, WPARAM(0), LPARAM(0)) }
+        .map_err(|_| "notify-icon-taskbar-created-broadcast")?;
+    Ok(message)
+}
+
+pub fn taskbar_created_message() -> Result<u32, &'static str> {
+    let message = unsafe { RegisterWindowMessageW(PCWSTR(TASKBAR_CREATED.as_ptr())) };
+    if message == 0 {
+        return Err("notify-icon-taskbar-created-register");
+    }
+    Ok(message)
+}
+
 pub fn current_console_owner() -> Option<(u32, u32, isize)> {
     use windows::Win32::System::{Console::GetConsoleWindow, Threading::GetCurrentProcessId};
     let hwnd = unsafe { GetConsoleWindow() };
@@ -740,5 +831,26 @@ mod tests {
         window.teardown();
         window.teardown();
         assert_eq!(window.hwnd_identity(), 0);
+    }
+
+    #[test]
+    fn callback_payload_negotiates_v4_and_legacy_without_borrowed_state() {
+        let mut input = fixture();
+        input.numeric_id = 77;
+        let mut icon = copy_notify_icon(&input, 1, false).unwrap();
+        let v4 = callback_payload(&icon, NotificationEventKind::Activate);
+        assert_eq!(v4.message, input.callback_message);
+        assert_eq!(v4.wparam, 0);
+        assert_eq!(v4.lparam as u32 & 0xffff, NIN_SELECT);
+        assert_eq!(v4.lparam as u32 >> 16, 77);
+        icon.callback.negotiated_version = NotifyIconLayoutVersion::V2;
+        let legacy = callback_payload(&icon, NotificationEventKind::Context);
+        assert_eq!(legacy.wparam, 77);
+        assert_eq!(legacy.lparam as u32, WM_CONTEXTMENU);
+        assert_eq!(
+            deliver_callback(&icon, NotificationEventKind::Activate),
+            Err("notify-icon-owner-window-dead")
+        );
+        assert!(taskbar_created_message().is_ok_and(|message| message >= 0xc000));
     }
 }

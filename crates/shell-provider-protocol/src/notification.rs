@@ -252,6 +252,7 @@ pub enum NotificationMutation {
     Focus { key: IconKey, generation: u64 },
     Disconnect { client_id: String },
     Event { event: NotificationEvent },
+    CancelEvent { correlation_id: String },
     DrainEvents { client_id: String },
     Snapshot,
     Health,
@@ -270,6 +271,15 @@ impl Validate for NotificationMutation {
             Self::Add { icon } | Self::Modify { icon } => icon.validate(),
             Self::Delete { key, .. } | Self::Focus { key, .. } => key.validate(),
             Self::Event { event } => event.validate(),
+            Self::CancelEvent { correlation_id } => {
+                if correlation_id.trim().is_empty() {
+                    Err(ValidationError::Empty("notification.correlation_id"))
+                } else if correlation_id.len() > crate::MAX_TEXT_BYTES {
+                    Err(ValidationError::TextTooLong("notification.correlation_id"))
+                } else {
+                    Ok(())
+                }
+            }
             Self::Snapshot | Self::Health => Ok(()),
         }
     }

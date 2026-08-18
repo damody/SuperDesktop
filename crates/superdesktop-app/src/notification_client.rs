@@ -8,12 +8,15 @@ use std::{
 
 use shell_provider_protocol::{NotificationHostResponse, NotificationMutation};
 
+const MAX_CONSECUTIVE_RESTARTS: u8 = 3;
+
 pub struct NotificationClient {
     executable: PathBuf,
     child: Option<Child>,
     input: Option<ChildStdin>,
     responses: Option<Receiver<NotificationHostResponse>>,
     compatibility_enabled: bool,
+    consecutive_failures: u8,
 }
 
 impl NotificationClient {
@@ -29,6 +32,7 @@ impl NotificationClient {
             input: None,
             responses: None,
             compatibility_enabled,
+            consecutive_failures: 0,
         })
     }
 
@@ -38,7 +42,13 @@ impl NotificationClient {
         timeout: Duration,
     ) -> Result<NotificationHostResponse, &'static str> {
         if self.child.is_none() {
-            self.start()?;
+            if self.consecutive_failures >= MAX_CONSECUTIVE_RESTARTS {
+                return Err("notification-restart-capacity");
+            }
+            if let Err(error) = self.start() {
+                self.consecutive_failures = self.consecutive_failures.saturating_add(1);
+                return Err(error);
+            }
         }
         let result = (|| {
             let input = self
@@ -58,7 +68,10 @@ impl NotificationClient {
                 .map_err(|_| "notification-response-timeout")
         })();
         if result.is_err() {
+            self.consecutive_failures = self.consecutive_failures.saturating_add(1);
             self.reset();
+        } else {
+            self.consecutive_failures = 0;
         }
         result
     }
@@ -132,5 +145,11 @@ mod tests {
         assert!(client.contains("command.arg(\"--shell-notifyicon\")"));
         assert!(composition.contains("NotificationClient::adjacent(shell)"));
         assert!(!composition.contains("NotificationClient::adjacent(true)"));
+        assert!(client.contains("MAX_CONSECUTIVE_RESTARTS"));
+        assert!(client.contains("notification-restart-capacity"));
+        assert!(composition.contains("notification-compatibility-handshake"));
+        assert!(
+            composition.contains("Ok(NotificationHostResponse::Health(health)) if health.healthy")
+        );
     }
 }

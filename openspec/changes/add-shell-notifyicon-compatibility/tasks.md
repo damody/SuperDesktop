@@ -160,8 +160,8 @@
 - [x] 3.1.1 Add client lease and host/icon generation tracking.
 - [x] 3.1.2 Map add and newer modify with stable ordering.
 - [x] 3.1.3 Map delete, set-focus and version negotiation terminals.
-- [ ] 3.1.4 Remove all icons for dead/disconnected client identity.
-- [ ] 3.1.5 Add capacity, stale, duplicate, disconnect and restart tests.
+- [x] 3.1.4 Remove all icons for dead/disconnected client identity.
+- [x] 3.1.5 Add capacity, stale, duplicate, disconnect and restart tests.
 
 ### 3.2 Deliver validated callback messages
 
@@ -189,10 +189,10 @@
 **Gate/Evidence:** `G-NOTIFY-COMPAT`, `G-NOTIFY-ISOLATION`; callback trace.
 **Completion threshold:** Activate/context/focus routes post once to the correct live HWND; stale owners receive nothing.
 
-- [ ] 3.2.1 Translate negotiated pointer/context/focus events to native callback payloads.
-- [ ] 3.2.2 Revalidate PID/session/HWND immediately before delivery.
-- [ ] 3.2.3 Add exactly-once terminal, timeout and cancellation handling.
-- [ ] 3.2.4 Add dead-client, HWND-reuse, wrong-session and callback-panic tests.
+- [x] 3.2.1 Translate negotiated pointer/context/focus events to native callback payloads.
+- [x] 3.2.2 Revalidate PID/session/HWND immediately before delivery.
+- [x] 3.2.3 Add exactly-once terminal, timeout and cancellation handling.
+- [x] 3.2.4 Add dead-client, HWND-reuse, wrong-session and callback-panic tests.
 
 ### 3.3 Recover registrations after takeover or restart
 
@@ -220,10 +220,10 @@
 **Gate/Evidence:** `G-NOTIFY-COMPAT`, `G-TRACE`; restart/re-registration record.
 **Completion threshold:** Old icons clear, one recovery broadcast occurs and only new-generation re-registrations return.
 
-- [ ] 3.3.1 Resolve/register the documented recovery message safely.
-- [ ] 3.3.2 Emit recovery only after admitted ownership or successful restart.
-- [ ] 3.3.3 Add dead-client timer and authoritative full reconciliation.
-- [ ] 3.3.4 Add overflow/restart/stale re-registration tests.
+- [x] 3.3.1 Resolve/register the documented recovery message safely.
+- [x] 3.3.2 Emit recovery only after admitted ownership or successful restart.
+- [x] 3.3.3 Add dead-client timer and authoritative full reconciliation.
+- [x] 3.3.4 Add overflow/restart/stale re-registration tests.
 
 ## 4. Product Integration and Owned UI
 
@@ -253,10 +253,10 @@
 **Gate/Evidence:** `G-NOTIFY-COMPAT`, `G-SHELL-NONINTERFERENCE`; integration record.
 **Completion threshold:** Shell mode requires healthy compatibility before Explorer exit; runtime failure clears only icons and restarts boundedly.
 
-- [ ] 4.1.1 Start compatibility ownership only after committed Shell admission.
-- [ ] 4.1.2 Gate Explorer-free transition on handshake and identity health.
-- [ ] 4.1.3 Clear stale icons and bound restart after host loss.
-- [ ] 4.1.4 Add preview/shell/crash/restart mode-independent integration tests.
+- [x] 4.1.1 Start compatibility ownership only after committed Shell admission.
+- [x] 4.1.2 Gate Explorer-free transition on handshake and identity health.
+- [x] 4.1.3 Clear stale icons and bound restart after host loss.
+- [x] 4.1.4 Add preview/shell/crash/restart mode-independent integration tests.
 
 ### 4.2 Complete accessible notification rendering
 

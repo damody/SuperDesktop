@@ -1,4 +1,7 @@
-use std::io::{self, BufRead, Write};
+use std::{
+    io::{self, BufRead, Write},
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 use notification_area_host::{CompatibilityAdmission, NativeCompatibilityRegistry};
 use shell_provider_protocol::{
@@ -7,14 +10,21 @@ use shell_provider_protocol::{
 
 fn main() -> io::Result<()> {
     let compatibility_admission = CompatibilityAdmission::from_process_args(std::env::args());
-    let mut compatibility_window = compatibility_admission
-        .owns_shell_identity()
-        .then(platform_win::common::notify_icon_compat::NotifyIconCompatibilityWindow::start)
-        .and_then(Result::ok);
+    let mut compatibility_window = if compatibility_admission.owns_shell_identity() {
+        let window =
+            platform_win::common::notify_icon_compat::NotifyIconCompatibilityWindow::start()
+                .map_err(io::Error::other)?;
+        platform_win::common::notify_icon_compat::broadcast_taskbar_created()
+            .map_err(io::Error::other)?;
+        Some(window)
+    } else {
+        None
+    };
     let mut registry = NativeCompatibilityRegistry::default();
     let input = io::stdin().lock();
     let mut output = io::stdout().lock();
     for frame in input.split(b'\n') {
+        let _ = registry.reconcile_dead_clients();
         if let Some((_, queue)) = compatibility_window.as_mut()
             && let Ok(mut queue) = queue.lock()
         {
@@ -30,7 +40,7 @@ fn main() -> io::Result<()> {
             NotificationHostResponse::Rejected("frame-too-large".into())
         } else {
             match serde_json::from_slice::<NotificationMutation>(&frame) {
-                Ok(mutation) => registry.registry.apply(mutation),
+                Ok(mutation) => registry.apply_mutation(mutation, unix_time_ms()),
                 Err(error) => NotificationHostResponse::Rejected(error.to_string()),
             }
         };
@@ -40,4 +50,10 @@ fn main() -> io::Result<()> {
     }
     let _ = MAX_FRAME_BYTES;
     Ok(())
+}
+
+fn unix_time_ms() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0, |value| value.as_millis() as u64)
 }

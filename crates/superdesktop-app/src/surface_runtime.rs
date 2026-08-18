@@ -1882,7 +1882,19 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
     let desktop_operations = Rc::new(RefCell::new(DesktopOperationController::default()));
     let desktop_transfers = ProductionTransferRuntime::default();
     let provider_client = Rc::new(RefCell::new(ProviderClient::adjacent()?));
-    let notification_client = Rc::new(RefCell::new(NotificationClient::adjacent(shell)?));
+    let mut initial_notification_client = NotificationClient::adjacent(shell)?;
+    if shell
+        && !matches!(
+            initial_notification_client.request(
+                &NotificationMutation::Health,
+                Duration::from_millis(750),
+            ),
+            Ok(NotificationHostResponse::Health(health)) if health.healthy
+        )
+    {
+        return Err("notification-compatibility-handshake");
+    }
+    let notification_client = Rc::new(RefCell::new(initial_notification_client));
     let status_client = Rc::new(RefCell::new(SystemStatusClient::adjacent()?));
     let mut initial_taskbar_state_client = TaskbarStateClient::adjacent(shell)?;
     initial_taskbar_state_client.ensure_started()?;
