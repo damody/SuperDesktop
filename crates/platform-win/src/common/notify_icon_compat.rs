@@ -2,6 +2,7 @@
 
 use std::{
     collections::VecDeque,
+    io::Write,
     mem::{offset_of, size_of},
     ptr,
     sync::{
@@ -46,7 +47,11 @@ const SUPPORTED_FLAGS: u32 = NIF_MESSAGE.0
     | NIF_SHOWTIP.0;
 const ICON_EDGE: u32 = 32;
 const COPYDATA_SIGNATURE: usize = 1;
-const MAX_COPYDATA_BYTES: usize = 8 + size_of::<NOTIFYICONDATAW>();
+const MAX_COPYDATA_BYTES: usize = 2_048;
+const PACKED_V1_SIZE: u32 = 152;
+const PACKED_V2_SIZE: u32 = 936;
+const PACKED_V3_SIZE: u32 = 952;
+const PACKED_V4_SIZE: u32 = 956;
 pub const MAX_NOTIFY_ICON_INGRESS: usize = 512;
 const COMPATIBILITY_CLASS: &[u16] = &[
     b'S' as u16,
@@ -291,6 +296,7 @@ unsafe extern "system" fn notify_icon_window_proc(
                     return LRESULT(0);
                 }
                 let copy = unsafe { &*(lparam.0 as *const COPYDATASTRUCT) };
+                trace_copydata(copy);
                 if let Ok(event) = unsafe { decode_copydata(copy, wparam.0 as isize) }
                     && context
                         .queue
@@ -323,6 +329,33 @@ unsafe extern "system" fn notify_icon_window_proc(
     })
 }
 
+fn trace_copydata(copy: &COPYDATASTRUCT) {
+    let Some(path) = std::env::var_os("SUPERDESKTOP_NOTIFYICON_TRACE") else {
+        return;
+    };
+    let length = (copy.cbData as usize).min(MAX_COPYDATA_BYTES).min(64);
+    let bytes = if copy.lpData.is_null() {
+        &[][..]
+    } else {
+        unsafe { std::slice::from_raw_parts(copy.lpData.cast::<u8>(), length) }
+    };
+    let hex = bytes
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect::<String>();
+    if let Ok(mut file) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(path)
+    {
+        let _ = writeln!(
+            file,
+            "dwData={} cbData={} bytes={hex}",
+            copy.dwData, copy.cbData
+        );
+    }
+}
+
 fn no_unwind(callback: impl FnOnce() -> LRESULT) -> LRESULT {
     std::panic::catch_unwind(std::panic::AssertUnwindSafe(callback)).unwrap_or(LRESULT(0))
 }
@@ -353,6 +386,79 @@ unsafe fn decode_copydata(
     } else {
         0
     };
+    let packed_size = (native_offset == 8)
+        .then(|| u32::from_ne_bytes(bytes[8..12].try_into().unwrap()))
+        .filter(|size| {
+            matches!(
+                *size,
+                PACKED_V1_SIZE | PACKED_V2_SIZE | PACKED_V3_SIZE | PACKED_V4_SIZE
+            )
+        });
+    if let Some(cb_size) = packed_size {
+        let read_u32 = |offset: usize| {
+            bytes
+                .get(offset..offset + 4)
+                .and_then(|value| value.try_into().ok())
+                .map(u32::from_ne_bytes)
+                .ok_or("notify-icon-copydata-truncated")
+        };
+        let owner_window = read_u32(12)? as isize;
+        let numeric_id = read_u32(16)?;
+        let flags = read_u32(20)?;
+        let callback_message = read_u32(24)?;
+        let borrowed_hicon = read_u32(28)? as isize;
+        let tip_units = if cb_size == PACKED_V1_SIZE { 64 } else { 128 };
+        let mut tooltip_utf16 = Vec::with_capacity(tip_units);
+        for offset in (32..32 + tip_units * 2).step_by(2) {
+            tooltip_utf16.push(u16::from_ne_bytes(
+                bytes
+                    .get(offset..offset + 2)
+                    .ok_or("notify-icon-copydata-truncated")?
+                    .try_into()
+                    .unwrap(),
+            ));
+        }
+        let state = if cb_size >= PACKED_V2_SIZE {
+            read_u32(288)?
+        } else {
+            0
+        };
+        let guid = if flags & NIF_GUID.0 != 0 && cb_size >= PACKED_V3_SIZE {
+            Some(
+                bytes
+                    .get(944..960)
+                    .ok_or("notify-icon-copydata-truncated")?
+                    .try_into()
+                    .unwrap(),
+            )
+        } else {
+            None
+        };
+        let requested_version = (message == 4).then_some(match read_u32(808)? {
+            4 => NotifyIconLayoutVersion::V4,
+            3 => NotifyIconLayoutVersion::V3,
+            2 => NotifyIconLayoutVersion::V2,
+            _ => NotifyIconLayoutVersion::V1,
+        });
+        let (process_id, session_id) = owner_process_session(owner_window);
+        return Ok(NotifyIconIngress {
+            message,
+            input: NotifyIconCopyInput {
+                cb_size,
+                flags,
+                process_id,
+                session_id,
+                window_identity: owner_window,
+                numeric_id,
+                guid,
+                callback_message,
+                requested_version,
+                tooltip_utf16,
+                visible: state & 1 == 0,
+                borrowed_hicon,
+            },
+        });
+    }
     let mut native = NOTIFYICONDATAW::default();
     let available = length
         .saturating_sub(native_offset)
@@ -369,18 +475,7 @@ unsafe fn decode_copydata(
     } else {
         native.hWnd.0 as isize
     };
-    let mut process_id = 0u32;
-    if owner_window != 0 {
-        unsafe {
-            GetWindowThreadProcessId(HWND(owner_window as *mut _), Some(&mut process_id));
-        }
-    }
-    let mut session_id = 0u32;
-    if process_id != 0 {
-        unsafe {
-            ProcessIdToSessionId(process_id, &mut session_id);
-        }
-    }
+    let (process_id, session_id) = owner_process_session(owner_window);
     let guid = (native.uFlags.0 & NIF_GUID.0 != 0).then(|| native.guidItem.to_u128().to_ne_bytes());
     let requested_version = (message == 4).then_some(match unsafe { native.Anonymous.uVersion } {
         4 => NotifyIconLayoutVersion::V4,
@@ -405,6 +500,22 @@ unsafe fn decode_copydata(
             borrowed_hicon: native.hIcon.0 as isize,
         },
     })
+}
+
+fn owner_process_session(owner_window: isize) -> (u32, u32) {
+    let mut process_id = 0u32;
+    if owner_window != 0 {
+        unsafe {
+            GetWindowThreadProcessId(HWND(owner_window as *mut _), Some(&mut process_id));
+        }
+    }
+    let mut session_id = 0u32;
+    if process_id != 0 {
+        unsafe {
+            ProcessIdToSessionId(process_id, &mut session_id);
+        }
+    }
+    (process_id, session_id)
 }
 
 #[link(name = "kernel32")]
@@ -432,10 +543,18 @@ impl NotifyIconLayoutMatrix {
 
     pub fn version_for_size(self, size: u32) -> Option<NotifyIconLayoutVersion> {
         match size {
-            value if value == self.v1_size => Some(NotifyIconLayoutVersion::V1),
-            value if value == self.v2_size => Some(NotifyIconLayoutVersion::V2),
-            value if value == self.v3_size => Some(NotifyIconLayoutVersion::V3),
-            value if value == self.v4_size => Some(NotifyIconLayoutVersion::V4),
+            value if value == self.v1_size || value == PACKED_V1_SIZE => {
+                Some(NotifyIconLayoutVersion::V1)
+            }
+            value if value == self.v2_size || value == PACKED_V2_SIZE => {
+                Some(NotifyIconLayoutVersion::V2)
+            }
+            value if value == self.v3_size || value == PACKED_V3_SIZE => {
+                Some(NotifyIconLayoutVersion::V3)
+            }
+            value if value == self.v4_size || value == PACKED_V4_SIZE => {
+                Some(NotifyIconLayoutVersion::V4)
+            }
             _ => None,
         }
     }

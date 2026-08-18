@@ -29,7 +29,8 @@ fn main() -> io::Result<()> {
             && let Ok(mut queue) = queue.lock()
         {
             while let Some(ingress) = queue.pop() {
-                let _ = registry.apply_ingress(ingress);
+                let terminal = registry.apply_ingress(ingress);
+                trace_compatibility(&format!("terminal={terminal:?}"));
             }
         }
         let frame = frame?;
@@ -40,7 +41,13 @@ fn main() -> io::Result<()> {
             NotificationHostResponse::Rejected("frame-too-large".into())
         } else {
             match serde_json::from_slice::<NotificationMutation>(&frame) {
-                Ok(mutation) => registry.apply_mutation(mutation, unix_time_ms()),
+                Ok(mutation) => {
+                    let response = registry.apply_mutation(mutation, unix_time_ms());
+                    if let NotificationHostResponse::Snapshot(snapshot) = &response {
+                        trace_compatibility(&format!("snapshot-icons={}", snapshot.icons.len()));
+                    }
+                    response
+                }
                 Err(error) => NotificationHostResponse::Rejected(error.to_string()),
             }
         };
@@ -50,6 +57,19 @@ fn main() -> io::Result<()> {
     }
     let _ = MAX_FRAME_BYTES;
     Ok(())
+}
+
+fn trace_compatibility(message: &str) {
+    let Some(path) = std::env::var_os("SUPERDESKTOP_NOTIFYICON_TRACE") else {
+        return;
+    };
+    if let Ok(mut file) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(path)
+    {
+        let _ = writeln!(file, "{message}");
+    }
 }
 
 fn unix_time_ms() -> u64 {

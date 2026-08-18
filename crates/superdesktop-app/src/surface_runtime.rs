@@ -3018,19 +3018,17 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                             };
                             notification_tick = notification_tick.wrapping_add(1);
                             let notification_update = notification_tick.is_multiple_of(10).then(|| {
-                                refresh_notification_client
-                                    .borrow_mut()
-                                    .request(
-                                        &NotificationMutation::Snapshot,
-                                        Duration::from_millis(100),
-                                    )
-                                    .ok()
-                                    .and_then(|response| match response {
-                                        NotificationHostResponse::Snapshot(snapshot) => {
-                                            Some(snapshot)
-                                        }
-                                        _ => None,
-                                    })
+                                match refresh_notification_client.borrow_mut().request(
+                                    &NotificationMutation::Snapshot,
+                                    Duration::from_millis(100),
+                                ) {
+                                    Ok(NotificationHostResponse::Snapshot(snapshot)) => Some(snapshot),
+                                    Ok(_) => None,
+                                    Err(reason) => {
+                                        trace_action(&format!("notification:provider-error:{reason}"));
+                                        None
+                                    }
+                                }
                             });
                             if notification_tick.is_multiple_of(10) {
                                 match refresh_status_client.borrow_mut().request(

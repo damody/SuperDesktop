@@ -1,0 +1,6 @@
+fixture-ready pid=25800 hwnd=3478136 icon_id=7001
+callback wparam=0 lparam=458818560
+taskbar-created
+fixture-reregistered
+callback wparam=0 lparam=458818560
+fixture-complete
