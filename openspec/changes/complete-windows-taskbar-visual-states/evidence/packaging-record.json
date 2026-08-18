@@ -13,14 +13,19 @@
       "sha256": "5a5c6f9158ee8e6d516b3e954fc1c44daf692f149052d2e8b5979428a9803268"
     },
     {
+      "name": "shell-installer.exe",
+      "bytes": 484352,
+      "sha256": "00a824622c37393b1e64c9d83accf75c4401cd2654049412adf9ae707411c554"
+    },
+    {
       "name": "SuperDesktop-Test-Setup-1.2026.8.18-x64.exe",
-      "bytes": 5727395,
-      "sha256": "68516f1c992d9cc6ca1d3d0cba2acdb20668927033f970de34f62af643dcdb7f"
+      "bytes": 5721829,
+      "sha256": "9b853eeefca5e5a16728360e1ef9702e0f1099541675264b98a7e2a6cf7a3af4"
     },
     {
       "name": "SuperExplorer-Setup-1.2026.8.18-x64.exe",
-      "bytes": 13437973,
-      "sha256": "db986e3ae7c3fc60afb25369d76848a47e5812aee29609edbb836d169b5e3391"
+      "bytes": 13427959,
+      "sha256": "f4ff7b296c3cabf92231b50b5c289accd350eedd3e85b5c5a02949bc20e61c77"
     }
   ]
 }
