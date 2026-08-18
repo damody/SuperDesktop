@@ -37,10 +37,10 @@ use shell_provider_protocol::{
 };
 use taskbar_ui::{
     AccessibleTask, ClockLocale, CoreStatus, FlyoutAction, JumpListModel, JumpListView,
-    NotificationAreaModel, PreviewCard, ProviderState, StartActions, StartPowerAction,
-    StartSnapshot, StartView, StatusRegion, SystemFlyoutKind, SystemFlyoutView, SystemStatusAction,
-    TaskAction, TaskFlyoutView, TaskViewEffect, TaskViewModel, TaskViewSurface, TaskbarCallbacks,
-    TaskbarLayout, TaskbarView, TestClock,
+    NotificationAreaModel, NotificationOverflowView, PreviewCard, ProviderState, StartActions,
+    StartPowerAction, StartSnapshot, StartView, StatusRegion, SystemFlyoutKind, SystemFlyoutView,
+    SystemStatusAction, TaskAction, TaskFlyoutView, TaskViewEffect, TaskViewModel, TaskViewSurface,
+    TaskbarCallbacks, TaskbarLayout, TaskbarView, TestClock,
 };
 
 use crate::{
@@ -1342,6 +1342,32 @@ fn system_flyout_options(
     }
 }
 
+fn notification_overflow_options(monitor: &MonitorRecord, icon_count: usize) -> WindowOptions {
+    let scale = monitor.dpi_x as f32 / 96.0;
+    let width = 336.0;
+    let rows = icon_count.max(1).div_ceil(6).min(6) as f32;
+    let height = 24.0 + rows * 48.0;
+    let right = monitor.work_area.right as f32 / scale;
+    WindowOptions {
+        window_bounds: Some(WindowBounds::Windowed(Bounds {
+            origin: point(
+                px((right - width).max(monitor.work_area.left as f32 / scale)),
+                px(monitor.work_area.bottom as f32 / scale - height),
+            ),
+            size: size(px(width), px(height)),
+        })),
+        titlebar: None,
+        focus: true,
+        show: true,
+        kind: WindowKind::PopUp,
+        is_movable: false,
+        is_resizable: false,
+        is_minimizable: false,
+        window_background: WindowBackgroundAppearance::Opaque,
+        ..Default::default()
+    }
+}
+
 fn jump_list_options(monitor: &MonitorRecord) -> WindowOptions {
     let scale = monitor.dpi_x as f32 / 96.0;
     let width = 360.0;
@@ -1930,6 +1956,13 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                 let task_view_window_for_taskbar = Rc::clone(&task_view_window);
                 let task_view_monitor = taskbar_monitor.clone();
                 let notification_client_for_taskbar = Rc::clone(&notification_client);
+                let notification_client_for_overflow = Rc::clone(&notification_client);
+                let notification_overflow_window = Rc::new(RefCell::new(None::<
+                    gpui::WindowHandle<NotificationOverflowView>,
+                >));
+                let notification_overflow_window_for_taskbar =
+                    Rc::clone(&notification_overflow_window);
+                let notification_overflow_monitor = taskbar_monitor.clone();
                 let status_for_taskbar = Rc::clone(&status_reconciler);
                 let status_client_for_taskbar = Rc::clone(&status_client);
                 let status_commands_for_taskbar = Rc::clone(&status_reconciler);
@@ -2374,6 +2407,58 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                     key,
                                     kind,
                                 )
+                            }),
+                            notification_overflow: Rc::new(move |nodes, app| {
+                                if let Some(open) = notification_overflow_window_for_taskbar
+                                    .borrow_mut()
+                                    .take()
+                                {
+                                    let _ = open.update(app, |_, window, _| window.remove_window());
+                                    trace_action("notification:overflow-closed");
+                                    return;
+                                }
+                                if nodes.is_empty() {
+                                    return;
+                                }
+                                let dismiss_slot =
+                                    Rc::clone(&notification_overflow_window_for_taskbar);
+                                let event_client = Rc::clone(&notification_client_for_overflow);
+                                let opened = app.open_window(
+                                    notification_overflow_options(
+                                        &notification_overflow_monitor,
+                                        nodes.len(),
+                                    ),
+                                    move |window, cx| {
+                                        window.activate_window();
+                                        let dismiss_slot = Rc::clone(&dismiss_slot);
+                                        cx.new(move |cx| {
+                                            NotificationOverflowView::new(
+                                                nodes,
+                                                Rc::new(move |key, kind| {
+                                                    send_notification_event(
+                                                        &event_client,
+                                                        key,
+                                                        kind,
+                                                    );
+                                                }),
+                                                Rc::new(move |window, _| {
+                                                    window.remove_window();
+                                                    *dismiss_slot.borrow_mut() = None;
+                                                    trace_action(
+                                                        "notification:overflow-dismissed",
+                                                    );
+                                                }),
+                                                window,
+                                                cx,
+                                            )
+                                        })
+                                    },
+                                );
+                                if let Ok(handle) = opened {
+                                    *notification_overflow_window_for_taskbar.borrow_mut() =
+                                        Some(handle);
+                                    trace_action("notification:owned-overflow-opened");
+                                }
                             }),
                             system_status: Rc::new(move |action, app| {
                                 apply_system_status_action(

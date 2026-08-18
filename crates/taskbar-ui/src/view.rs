@@ -13,8 +13,8 @@ use gpui::{
 };
 
 use crate::{
-    AccessibleTask, NotificationAreaModel, NotificationPlacement, ProgressState, StatusRegion,
-    SystemFlyoutKind, SystemStatusAction, TaskOverlay, TaskbarLayout,
+    AccessibleTask, NotificationAccessibleNode, NotificationAreaModel, NotificationPlacement,
+    ProgressState, StatusRegion, SystemFlyoutKind, SystemStatusAction, TaskOverlay, TaskbarLayout,
 };
 use shell_provider_protocol::{
     IconData, IconKey, NotificationEventKind, StatusAvailability, SystemStatusSnapshot,
@@ -139,6 +139,7 @@ pub struct TaskbarView {
 
 pub type TaskCallback = Rc<dyn Fn(&str, &mut App)>;
 pub type NotificationCallback = Rc<dyn Fn(&IconKey, NotificationEventKind)>;
+pub type NotificationOverflowCallback = Rc<dyn Fn(Vec<NotificationAccessibleNode>, &mut App)>;
 pub type SystemStatusCallback = Rc<dyn Fn(SystemStatusAction, &mut App)>;
 pub type SystemFlyoutCallback = Rc<dyn Fn(SystemFlyoutKind, &mut App)>;
 
@@ -166,6 +167,7 @@ pub struct TaskbarCallbacks {
     pub task: TaskCallback,
     pub task_context: TaskCallback,
     pub notification: NotificationCallback,
+    pub notification_overflow: NotificationOverflowCallback,
     pub system_status: SystemStatusCallback,
     pub system_flyout: SystemFlyoutCallback,
     pub rendered: Rc<dyn Fn()>,
@@ -191,6 +193,11 @@ impl Render for TaskbarView {
             .callbacks
             .as_ref()
             .map(|value| Rc::clone(&value.notification));
+        let notification_overflow_callback = self
+            .callbacks
+            .as_ref()
+            .map(|value| Rc::clone(&value.notification_overflow));
+        let notification_overflow_key_callback = notification_overflow_callback.clone();
         let system_status_callback = self
             .callbacks
             .as_ref()
@@ -220,7 +227,7 @@ impl Render for TaskbarView {
         let root_fixed_key = fixed.clone();
         let keyboard_focus = self.keyboard_focus.clone();
         let dismiss_focus = self.keyboard_focus.clone();
-        let overflow_open = self.notification_area.overflow_open();
+        let overflow_open = false;
         let notification_nodes = self.notification_area.accessible_nodes();
         let visible_notifications = notification_nodes
             .iter()
@@ -352,14 +359,51 @@ impl Render for TaskbarView {
                                 .flex()
                                 .items_center()
                                 .justify_center()
-                                .on_click(_cx.listener(|this, _, _, cx| {
+                                .text_size(px(0.))
+                                .on_click(_cx.listener(move |this, _, _, cx| {
                                     if this.notification_area.overflow_open() {
                                         this.notification_area.dismiss_overflow();
                                     } else {
                                         this.notification_area.open_overflow();
                                     }
+                                    if let Some(callback) = &notification_overflow_callback {
+                                        callback(
+                                            this.notification_area
+                                                .accessible_nodes()
+                                                .into_iter()
+                                                .filter(|node| node.placement == NotificationPlacement::Overflow)
+                                                .collect(),
+                                            cx,
+                                        );
+                                    }
                                     cx.notify();
                                 }))
+                                .on_key_down(_cx.listener(move |this, event: &gpui::KeyDownEvent, _, cx| {
+                                    if activates_button(&event.keystroke.key)
+                                        && let Some(callback) = &notification_overflow_key_callback
+                                    {
+                                        this.notification_area.open_overflow();
+                                        callback(
+                                            this.notification_area
+                                                .accessible_nodes()
+                                                .into_iter()
+                                                .filter(|node| node.placement == NotificationPlacement::Overflow)
+                                                .collect(),
+                                            cx,
+                                        );
+                                        cx.notify();
+                                    }
+                                }))
+                                .child(
+                                    svg()
+                                        .external_path(concat!(
+                                            env!("CARGO_MANIFEST_DIR"),
+                                            "/assets/chevron-up.svg"
+                                        ))
+                                        .w(px(16.))
+                                        .h(px(16.))
+                                        .text_color(rgb(0x202020)),
+                                )
                                 .child("⌃"),
                         )
                     })

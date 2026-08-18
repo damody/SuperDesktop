@@ -8,6 +8,7 @@ mod grouping;
 mod interaction;
 mod layout;
 mod notification_area;
+mod notification_overflow;
 mod start;
 mod status;
 mod surface;
@@ -29,6 +30,9 @@ pub use layout::{OverflowItem, SlotKind, TaskbarLayout, TaskbarRows, TaskbarSlot
 pub use notification_area::{
     NotificationAccessibleNode, NotificationAreaModel, NotificationPlacement,
 };
+pub use notification_overflow::{
+    NotificationOverflowAction, NotificationOverflowDismiss, NotificationOverflowView,
+};
 pub use start::{
     StartAccessibilityNode, StartActions, StartAvailability, StartControl, StartEffect,
     StartFailure, StartModel, StartPage, StartPowerAction, StartSnapshot, StartSource, StartView,
@@ -48,6 +52,6 @@ pub use task_view::{
 pub use tracker::{
     Eligibility, OwnedWindowEvent, TaskWindow, TrackerPush, WindowObservation, WindowTracker,
 };
-pub use view::{SystemFlyoutCallback, TaskbarCallbacks, TaskbarView};
+pub use view::{NotificationOverflowCallback, SystemFlyoutCallback, TaskbarCallbacks, TaskbarView};
 
 pub const CRATE_ROLE: &str = "taskbar GPUI surface and window-management boundary";

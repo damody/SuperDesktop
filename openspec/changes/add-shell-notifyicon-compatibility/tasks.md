@@ -284,10 +284,10 @@
 **Gate/Evidence:** `G-NOTIFY-A11Y`; UIA and headful records.
 **Completion threshold:** Real copied icons, tooltip, stable order, overflow, pointer/keyboard/UIA and unavailable behavior pass.
 
-- [ ] 4.2.1 Render copied icon pixels with truthful fallback and compact Windows 11 spacing.
-- [ ] 4.2.2 Route activate/context/focus through one typed action path.
-- [ ] 4.2.3 Add one owned overflow popup with Escape/outside dismissal and focus return.
-- [ ] 4.2.4 Add ordering, tooltip, pointer, keyboard, UIA, overflow and unavailable tests.
+- [x] 4.2.1 Render copied icon pixels with truthful fallback and compact Windows 11 spacing.
+- [x] 4.2.2 Route activate/context/focus through one typed action path.
+- [x] 4.2.3 Add one owned overflow popup with Escape/outside dismissal and focus return.
+- [x] 4.2.4 Add ordering, tooltip, pointer, keyboard, UIA, overflow and unavailable tests.
 
 ## 5. Verification and Packaging
 
