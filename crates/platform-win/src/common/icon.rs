@@ -302,6 +302,15 @@ fn icon_to_rgba(icon: HICON, edge: u32) -> Option<IconData> {
     }
 }
 
+/// Copies pixels from a borrowed notification icon. Ownership remains with
+/// the calling application; this function never destroys the HICON.
+pub fn borrowed_hicon_rgba(icon_identity: isize, edge: u32) -> Option<IconData> {
+    if icon_identity == 0 {
+        return None;
+    }
+    icon_to_rgba(HICON(icon_identity as *mut c_void), edge)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

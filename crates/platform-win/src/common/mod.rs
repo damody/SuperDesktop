@@ -11,6 +11,7 @@ pub mod icon;
 pub mod jump_list;
 pub mod monitor_dpi_start;
 pub mod native_window;
+pub mod notify_icon_compat;
 pub mod owner_lease;
 pub mod power;
 pub mod settings_file;

@@ -91,11 +91,11 @@
 **Gate/Evidence:** `G-NOTIFY-ISOLATION`; native adapter test record.
 **Completion threshold:** Supported versions copy exact identity/tooltip/state/icon and invalid inputs cause zero mutation.
 
-- [ ] 2.1.1 Define supported cbSize/version/flag matrix.
-- [ ] 2.1.2 Copy bounded tooltip, GUID/uID identity, callback message and state.
-- [ ] 2.1.3 Copy HICON pixels to owned RGBA with exact destruction ownership.
-- [ ] 2.1.4 Validate live same-session PID/HWND ownership and reuse resistance.
-- [ ] 2.1.5 Add null, truncated, oversize, wrong-session, dead-window and icon-failure tests.
+- [x] 2.1.1 Define supported cbSize/version/flag matrix.
+- [x] 2.1.2 Copy bounded tooltip, GUID/uID identity, callback message and state.
+- [x] 2.1.3 Copy HICON pixels to owned RGBA with exact destruction ownership.
+- [x] 2.1.4 Validate live same-session PID/HWND ownership and reuse resistance.
+- [x] 2.1.5 Add null, truncated, oversize, wrong-session, dead-window and icon-failure tests.
 
 ### 2.2 Own the exclusive compatibility window
 
@@ -123,11 +123,11 @@
 **Gate/Evidence:** `G-NOTIFY-COMPAT`, `G-NOTIFY-ISOLATION`; HWND/class trace.
 **Completion threshold:** Exactly one admitted identity receives traffic; callback panic and teardown never unwind or double-release.
 
-- [ ] 2.2.1 Register the owned compatibility class/window only in committed Shell mode.
-- [ ] 2.2.2 Add no-unwind window procedure and copied-message handoff.
-- [ ] 2.2.3 Add bounded coalescing ingress with protected terminal capacity.
-- [ ] 2.2.4 Fence shutdown, unregister class and destroy HWND idempotently.
-- [ ] 2.2.5 Add collision, panic, storm and teardown-race tests.
+- [x] 2.2.1 Register the owned compatibility class/window only in committed Shell mode.
+- [x] 2.2.2 Add no-unwind window procedure and copied-message handoff.
+- [x] 2.2.3 Add bounded coalescing ingress with protected terminal capacity.
+- [x] 2.2.4 Fence shutdown, unregister class and destroy HWND idempotently.
+- [x] 2.2.5 Add collision, panic, storm and teardown-race tests.
 
 ## 3. Host Registry, Callbacks and Recovery
 
@@ -157,9 +157,9 @@
 **Gate/Evidence:** `G-NOTIFY-COMPAT`, `G-TRACE`; lifecycle matrix.
 **Completion threshold:** Full lifecycle is deterministic; stale/duplicate operations cannot resurrect icons.
 
-- [ ] 3.1.1 Add client lease and host/icon generation tracking.
-- [ ] 3.1.2 Map add and newer modify with stable ordering.
-- [ ] 3.1.3 Map delete, set-focus and version negotiation terminals.
+- [x] 3.1.1 Add client lease and host/icon generation tracking.
+- [x] 3.1.2 Map add and newer modify with stable ordering.
+- [x] 3.1.3 Map delete, set-focus and version negotiation terminals.
 - [ ] 3.1.4 Remove all icons for dead/disconnected client identity.
 - [ ] 3.1.5 Add capacity, stale, duplicate, disconnect and restart tests.
 
