@@ -59,6 +59,10 @@ Visible flyout labels SHALL support Traditional Chinese and English with bounded
 - **WHEN** the active locale is `zh-TW`
 - **THEN** headings, status text, weekdays, and action labels use Traditional Chinese and profile UIA names retain their full observed names
 
+#### Scenario: Keyboard layout reference structure
+- **WHEN** the input flyout renders installed Traditional or Simplified Chinese profiles
+- **THEN** it shows the `Win + Space` hint, two-line localized rows, profile glyphs, and a left accent bar on the observed active row without inventing additional profiles
+
 #### Scenario: Unknown locale
 - **WHEN** the presentation locale is unsupported
 - **THEN** the flyout uses bounded English fallback without panicking or changing provider data

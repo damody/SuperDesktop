@@ -45,7 +45,10 @@ pub use status::{
 pub use surface::{
     AppBarEffect, AppBarMode, AppBarRegistry, MonitorBar, MonitorGeometry, SurfaceChange,
 };
-pub use system_flyout::{SystemFlyoutAction, SystemFlyoutDismiss, SystemFlyoutView};
+pub use system_flyout::{
+    SystemFlyoutAction, SystemFlyoutDismiss, SystemFlyoutPresentation, SystemFlyoutTheme,
+    SystemFlyoutView,
+};
 pub use task_view::{
     DesktopCard, TaskViewAccessibleNode, TaskViewEffect, TaskViewModel, TaskViewSurface,
     VirtualDesktopSnapshot,

@@ -104,6 +104,7 @@ pub struct SystemFlyoutView {
     pub snapshot: Option<SystemStatusSnapshot>,
     pub status: StatusRegion,
     presentation: SystemFlyoutPresentation,
+    keyboard_settings_open: bool,
     action: SystemFlyoutAction,
     dismiss: SystemFlyoutDismiss,
     focus: FocusHandle,
@@ -132,6 +133,7 @@ impl SystemFlyoutView {
             snapshot,
             status,
             presentation,
+            keyboard_settings_open: false,
             action,
             dismiss,
             focus: cx.focus_handle(),
@@ -152,6 +154,7 @@ fn localized<'a>(presentation: SystemFlyoutPresentation, zh_tw: &'a str, en: &'a
     }
 }
 
+#[cfg(test)]
 fn compact_profile_tag(language_tag: &str) -> String {
     let normalized = language_tag.replace('_', "-");
     let primary = normalized.split('-').next().unwrap_or_default();
@@ -170,6 +173,61 @@ fn compact_profile_tag(language_tag: &str) -> String {
         "—".into()
     } else {
         bounded
+    }
+}
+
+fn input_profile_glyph(language_tag: &str) -> &'static str {
+    let normalized = language_tag.replace('_', "-");
+    let primary = normalized.split('-').next().unwrap_or_default();
+    if primary.eq_ignore_ascii_case("zh") && normalized.to_ascii_lowercase().contains("-cn") {
+        "拼"
+    } else if primary.eq_ignore_ascii_case("zh") {
+        "ㄅ"
+    } else if primary.eq_ignore_ascii_case("en") {
+        "A"
+    } else {
+        "鍵"
+    }
+}
+
+fn input_profile_primary(
+    language_tag: &str,
+    fallback: &str,
+    presentation: SystemFlyoutPresentation,
+) -> String {
+    let normalized = language_tag.replace('_', "-").to_ascii_lowercase();
+    if normalized.starts_with("zh-tw") {
+        localized(
+            presentation,
+            "繁體中文（台灣）",
+            "Chinese (Traditional, Taiwan)",
+        )
+        .into()
+    } else if normalized.starts_with("zh-cn") {
+        localized(
+            presentation,
+            "簡體中文（中國）",
+            "Chinese (Simplified, China)",
+        )
+        .into()
+    } else if normalized.starts_with("en") {
+        localized(presentation, "英文", "English").into()
+    } else {
+        fallback.into()
+    }
+}
+
+fn input_profile_subtitle(
+    language_tag: &str,
+    presentation: SystemFlyoutPresentation,
+) -> &'static str {
+    let normalized = language_tag.replace('_', "-").to_ascii_lowercase();
+    if normalized.starts_with("zh-cn") {
+        localized(presentation, "微軟拼音", "Microsoft Pinyin")
+    } else if normalized.starts_with("zh-tw") {
+        localized(presentation, "微軟注音", "Microsoft Bopomofo")
+    } else {
+        localized(presentation, "鍵盤", "Keyboard")
     }
 }
 
@@ -234,7 +292,12 @@ fn network_summary(
         ),
         _ => (
             localized(presentation, "網路無法使用", "Network unavailable").into(),
-            localized(presentation, "狀態提供者無法使用", "Status provider unavailable").into(),
+            localized(
+                presentation,
+                "狀態提供者無法使用",
+                "Status provider unavailable",
+            )
+            .into(),
             false,
         ),
     }
@@ -351,6 +414,7 @@ impl Render for SystemFlyoutView {
         let snapshot = self.snapshot.clone();
         let action = self.action.clone();
         let presentation = self.presentation;
+        let keyboard_settings_open = self.keyboard_settings_open;
         let tokens = SystemFlyoutChromeTokens::new(presentation.theme);
         let volume = match (&self.status.core.volume, &self.status.core.muted) {
             (crate::ProviderState::Available(volume), crate::ProviderState::Available(muted)) => {
@@ -409,13 +473,56 @@ impl Render for SystemFlyoutView {
                         .child(
                             div()
                                 .id("owned-input-heading")
-                                .text_size(px(16.))
+                                .h(px(36.))
+                                .flex()
+                                .items_center()
+                                .text_size(px(18.))
                                 .mb_2()
-                                .child(localized(
-                                    presentation,
-                                    "鍵盤配置",
-                                    "Keyboard layout",
-                                )),
+                                .child(if keyboard_settings_open {
+                                    localized(presentation, "鍵盤設定", "Keyboard settings")
+                                } else {
+                                    localized(presentation, "鍵盤配置", "Keyboard layout")
+                                })
+                                .when(!keyboard_settings_open, |heading| {
+                                    heading.child(
+                                        div()
+                                            .ml_auto()
+                                            .flex()
+                                            .items_center()
+                                            .gap_1()
+                                            .text_size(px(12.))
+                                            .text_color(rgb(tokens.secondary))
+                                            .child(
+                                                div()
+                                                    .h(px(24.))
+                                                    .px_2()
+                                                    .rounded(px(4.))
+                                                    .border_1()
+                                                    .border_color(rgb(tokens.border))
+                                                    .bg(rgb(tokens.card))
+                                                    .flex()
+                                                    .items_center()
+                                                    .child("⊞"),
+                                            )
+                                            .child("+")
+                                            .child(
+                                                div()
+                                                    .h(px(24.))
+                                                    .px_2()
+                                                    .rounded(px(4.))
+                                                    .border_1()
+                                                    .border_color(rgb(tokens.border))
+                                                    .bg(rgb(tokens.card))
+                                                    .flex()
+                                                    .items_center()
+                                                    .child(localized(
+                                                        presentation,
+                                                        "空格鍵",
+                                                        "Space",
+                                                    )),
+                                            ),
+                                    )
+                                }),
                         )
                         .children(input.profiles.into_iter().map(|profile| {
                             let click_action = action.clone();
@@ -434,30 +541,52 @@ impl Render for SystemFlyoutView {
                                     ""
                                 }
                             );
-                            let tag = compact_profile_tag(&profile.language_tag);
+                            let glyph = input_profile_glyph(&profile.language_tag);
+                            let primary = input_profile_primary(
+                                &profile.language_tag,
+                                &profile.display_name,
+                                presentation,
+                            );
+                            let subtitle =
+                                input_profile_subtitle(&profile.language_tag, presentation);
+                            let detail = if keyboard_settings_open {
+                                format!("{subtitle} · {}", profile.id)
+                            } else {
+                                subtitle.into()
+                            };
                             div()
                                 .id(format!("owned-input-profile-{}", profile.id))
                                 .role(gpui::Role::Button)
                                 .aria_label(accessible_name)
                                 .tab_index(0)
-                                .h(px(52.))
-                                .px_3()
+                                .relative()
+                                .h(px(72.))
+                                .px_4()
                                 .rounded(px(8.))
                                 .flex()
                                 .items_center()
                                 .gap_3()
                                 .cursor_pointer()
                                 .when(active, |entry| {
-                                    entry
-                                        .bg(rgb(tokens.selected))
-                                        .border_2()
-                                        .border_color(rgb(if presentation.theme
-                                            == SystemFlyoutTheme::HighContrast
-                                        {
+                                    entry.bg(rgb(tokens.selected)).border_2().border_color(rgb(
+                                        if presentation.theme == SystemFlyoutTheme::HighContrast {
                                             tokens.accent
                                         } else {
                                             tokens.selected
-                                        }))
+                                        },
+                                    ))
+                                })
+                                .when(active, |entry| {
+                                    entry.child(
+                                        div()
+                                            .absolute()
+                                            .left_0()
+                                            .top(px(22.))
+                                            .w(px(4.))
+                                            .h(px(28.))
+                                            .rounded_full()
+                                            .bg(rgb(tokens.accent)),
+                                    )
                                 })
                                 .hover(move |style| style.bg(rgb(tokens.hover)))
                                 .active(move |style| style.bg(rgb(tokens.pressed)))
@@ -482,29 +611,90 @@ impl Render for SystemFlyoutView {
                                 })
                                 .child(
                                     div()
-                                        .w(px(42.))
-                                        .text_size(px(12.))
-                                        .text_color(rgb(tokens.secondary))
-                                        .child(tag),
+                                        .w(px(48.))
+                                        .text_size(px(25.))
+                                        .text_color(rgb(tokens.text))
+                                        .child(glyph),
                                 )
                                 .child(
                                     div()
                                         .min_w_0()
+                                        .flex()
+                                        .flex_col()
+                                        .gap_1()
                                         .overflow_hidden()
-                                        .whitespace_nowrap()
-                                        .text_ellipsis()
-                                        .child(profile.display_name),
+                                        .child(
+                                            div()
+                                                .whitespace_nowrap()
+                                                .text_ellipsis()
+                                                .text_size(px(15.))
+                                                .child(primary),
+                                        )
+                                        .child(
+                                            div()
+                                                .whitespace_nowrap()
+                                                .text_ellipsis()
+                                                .text_size(px(12.))
+                                                .text_color(rgb(tokens.secondary))
+                                                .child(detail),
+                                        ),
                                 )
-                                .when(active, |entry| {
-                                    entry.child(
-                                        div()
-                                            .ml_auto()
-                                            .text_color(rgb(tokens.accent))
-                                            .text_size(px(18.))
-                                            .child("✓"),
+                        }))
+                        .child(
+                            div()
+                                .id("owned-input-settings-footer")
+                                .role(gpui::Role::Button)
+                                .aria_label(if keyboard_settings_open {
+                                    localized(
+                                        presentation,
+                                        "返回鍵盤配置",
+                                        "Back to keyboard layouts",
+                                    )
+                                } else {
+                                    localized(
+                                        presentation,
+                                        "更多鍵盤設定",
+                                        "More keyboard settings",
                                     )
                                 })
-                        })),
+                                .tab_index(0)
+                                .h(px(46.))
+                                .mt_2()
+                                .border_t_1()
+                                .border_color(rgb(tokens.border))
+                                .flex()
+                                .items_center()
+                                .px_3()
+                                .rounded(px(6.))
+                                .cursor_pointer()
+                                .hover(move |style| style.bg(rgb(tokens.hover)))
+                                .active(move |style| style.bg(rgb(tokens.pressed)))
+                                .focus_visible(move |style| {
+                                    style.border_2().border_color(rgb(tokens.focus))
+                                })
+                                .on_click(cx.listener(|this, _, _, cx| {
+                                    this.keyboard_settings_open = !this.keyboard_settings_open;
+                                    cx.notify();
+                                }))
+                                .on_key_down(cx.listener(
+                                    |this, event: &gpui::KeyDownEvent, _, cx| {
+                                        if activates_button(&event.keystroke.key) {
+                                            this.keyboard_settings_open =
+                                                !this.keyboard_settings_open;
+                                            cx.notify();
+                                        }
+                                    },
+                                ))
+                                .child(if keyboard_settings_open {
+                                    localized(presentation, "返回", "Back")
+                                } else {
+                                    localized(
+                                        presentation,
+                                        "更多鍵盤設定",
+                                        "More keyboard settings",
+                                    )
+                                }),
+                        ),
                     None => root.child(
                         div()
                             .id("owned-input-unavailable")
@@ -636,11 +826,7 @@ impl Render for SystemFlyoutView {
                                 div()
                                     .id("owned-volume-lower")
                                     .role(gpui::Role::Button)
-                                    .aria_label(localized(
-                                        presentation,
-                                        "降低音量",
-                                        "Lower volume",
-                                    ))
+                                    .aria_label(localized(presentation, "降低音量", "Lower volume"))
                                     .tab_index(0)
                                     .w(px(48.))
                                     .h(px(34.))
@@ -720,11 +906,7 @@ impl Render for SystemFlyoutView {
                                 div()
                                     .id("owned-volume-higher")
                                     .role(gpui::Role::Button)
-                                    .aria_label(localized(
-                                        presentation,
-                                        "提高音量",
-                                        "Raise volume",
-                                    ))
+                                    .aria_label(localized(presentation, "提高音量", "Raise volume"))
                                     .tab_index(0)
                                     .w(px(48.))
                                     .h(px(34.))
@@ -776,94 +958,88 @@ impl Render for SystemFlyoutView {
                 ),
             })
             .when(kind == SystemFlyoutKind::NetworkPower, |root| {
-                root.child(
+                root.child(div().text_size(px(16.)).mb_2().child(localized(
+                    presentation,
+                    "快速設定",
+                    "Quick settings",
+                )))
+                .child(
                     div()
-                        .text_size(px(16.))
-                        .mb_2()
-                        .child(localized(presentation, "快速設定", "Quick settings")),
-                )
-                    .child(
-                        div()
-                            .id("owned-network-card")
-                            .role(gpui::Role::Status)
-                            .aria_label(format!("{network_name}. {network_detail}"))
-                            .h(px(82.))
-                            .p_3()
-                            .rounded(px(8.))
-                            .bg(rgb(if network_available {
-                                tokens.selected
-                            } else {
-                                tokens.card
-                            }))
-                            .border_1()
-                            .border_color(rgb(tokens.border))
-                            .flex()
-                            .items_center()
-                            .gap_3()
-                            .child(
+                        .id("owned-network-card")
+                        .role(gpui::Role::Status)
+                        .aria_label(format!("{network_name}. {network_detail}"))
+                        .h(px(82.))
+                        .p_3()
+                        .rounded(px(8.))
+                        .bg(rgb(if network_available {
+                            tokens.selected
+                        } else {
+                            tokens.card
+                        }))
+                        .border_1()
+                        .border_color(rgb(tokens.border))
+                        .flex()
+                        .items_center()
+                        .gap_3()
+                        .child(
+                            div()
+                                .w(px(44.))
+                                .h(px(44.))
+                                .rounded_full()
+                                .bg(rgb(if network_available {
+                                    tokens.accent
+                                } else {
+                                    tokens.border
+                                }))
+                                .flex()
+                                .items_center()
+                                .justify_center()
+                                .child(
+                                    svg()
+                                        .external_path(concat!(
+                                            env!("CARGO_MANIFEST_DIR"),
+                                            "/assets/network-status.svg"
+                                        ))
+                                        .w(px(22.))
+                                        .h(px(22.))
+                                        .text_color(rgb(if network_available {
+                                            tokens.accent_text
+                                        } else {
+                                            tokens.unavailable
+                                        })),
+                                ),
+                        )
+                        .child(
+                            div().flex().flex_col().gap_1().child(network_name).child(
                                 div()
-                                    .w(px(44.))
-                                    .h(px(44.))
-                                    .rounded_full()
-                                    .bg(rgb(if network_available {
-                                        tokens.accent
+                                    .text_size(px(12.))
+                                    .text_color(rgb(if network_available {
+                                        tokens.secondary
                                     } else {
-                                        tokens.border
+                                        tokens.unavailable
                                     }))
-                                    .flex()
-                                    .items_center()
-                                    .justify_center()
-                                    .child(
-                                        svg()
-                                            .external_path(concat!(
-                                                env!("CARGO_MANIFEST_DIR"),
-                                                "/assets/network-status.svg"
-                                            ))
-                                            .w(px(22.))
-                                            .h(px(22.))
-                                            .text_color(rgb(if network_available {
-                                                tokens.accent_text
-                                            } else {
-                                                tokens.unavailable
-                                            })),
-                                    ),
-                            )
-                            .child(
-                                div()
-                                    .flex()
-                                    .flex_col()
-                                    .gap_1()
-                                    .child(network_name)
-                                    .child(
-                                        div()
-                                            .text_size(px(12.))
-                                            .text_color(rgb(if network_available {
-                                                tokens.secondary
-                                            } else {
-                                                tokens.unavailable
-                                            }))
-                                            .child(network_detail),
-                                    ),
+                                    .child(network_detail),
                             ),
-                    )
-                    .child(
-                        div()
-                            .id("owned-power-summary")
-                            .role(gpui::Role::Status)
-                            .aria_label(power_text.clone())
-                            .mt_2()
-                            .p_3()
-                            .rounded(px(8.))
-                            .bg(rgb(tokens.card))
-                            .border_1()
-                            .border_color(rgb(tokens.border))
-                            .text_color(rgb(if power_available {
-                                tokens.text
-                            } else {
-                                tokens.unavailable
-                            }))
-                            .child(power_text),
-                    )
+                        ),
+                )
+                .child(
+                    div()
+                        .id("owned-power-summary")
+                        .role(gpui::Role::Status)
+                        .aria_label(power_text.clone())
+                        .mt_2()
+                        .p_3()
+                        .rounded(px(8.))
+                        .bg(rgb(tokens.card))
+                        .border_1()
+                        .border_color(rgb(tokens.border))
+                        .text_color(rgb(if power_available {
+                            tokens.text
+                        } else {
+                            tokens.unavailable
+                        }))
+                        .child(power_text),
+                )
             })
             .when(kind == SystemFlyoutKind::Calendar, |root| {
                 let metadata = snapshot
@@ -885,6 +1061,7 @@ impl Render for SystemFlyoutView {
                 let Some(calendar) = calendar.clone() else {
                     return root.child(
                         div()
+                            .id("owned-calendar-unavailable")
                             .role(gpui::Role::Status)
                             .text_color(rgb(tokens.unavailable))
                             .child(localized(
@@ -963,11 +1140,8 @@ impl Render for SystemFlyoutView {
                                         .bg(rgb(tokens.accent))
                                         .text_color(rgb(tokens.accent_text))
                                         .when(
-                                            presentation.theme
-                                                == SystemFlyoutTheme::HighContrast,
-                                            |cell| {
-                                                cell.border_2().border_color(rgb(tokens.focus))
-                                            },
+                                            presentation.theme == SystemFlyoutTheme::HighContrast,
+                                            |cell| cell.border_2().border_color(rgb(tokens.focus)),
                                         )
                                 })
                                 .child(day.map_or_else(String::new, |day| day.to_string()))
@@ -979,38 +1153,148 @@ impl Render for SystemFlyoutView {
 
 #[cfg(test)]
 mod tests {
-    use super::calendar_month;
+    use shell_provider_protocol::{PowerStatus, StatusAvailability, SystemStatusSnapshot};
 
     #[test]
     fn windows_style_calendar_grid_handles_leap_year_and_selected_day() {
-        let month = calendar_month("2028/02/29").unwrap();
+        let month = super::calendar_month("2028/02/29").unwrap();
         assert_eq!(month.cells.iter().flatten().count(), 29);
         assert!(month.cells.contains(&Some(29)));
         assert_eq!(month.selected_day, 29);
-        assert!(calendar_month("2026/13/01").is_none());
+        assert!(super::calendar_month("2026/13/01").is_none());
+        assert_eq!(super::calendar_month_heading(&month, true), "2028年2月");
+        assert_eq!(
+            super::calendar_month_heading(&month, false),
+            "February 2028"
+        );
+        assert_eq!(
+            super::calendar_weekdays(true),
+            ["一", "二", "三", "四", "五", "六", "日"]
+        );
+    }
+
+    #[test]
+    fn flyout_tokens_locale_and_profile_tags_are_bounded_and_distinct() {
+        let light = super::SystemFlyoutChromeTokens::new(super::SystemFlyoutTheme::Light);
+        let dark = super::SystemFlyoutChromeTokens::new(super::SystemFlyoutTheme::Dark);
+        let contrast = super::SystemFlyoutChromeTokens::new(super::SystemFlyoutTheme::HighContrast);
+        assert_ne!(light.panel, dark.panel);
+        assert_ne!(dark.panel, contrast.panel);
+        assert_ne!(contrast.focus, contrast.accent);
+        let zh = super::SystemFlyoutPresentation::new(super::SystemFlyoutTheme::Light, true);
+        let en = super::SystemFlyoutPresentation::new(super::SystemFlyoutTheme::Dark, false);
+        assert_eq!(super::localized(zh, "音量", "Volume"), "音量");
+        assert_eq!(super::localized(en, "音量", "Volume"), "Volume");
+        assert_eq!(super::compact_profile_tag("zh-TW"), "中");
+        assert_eq!(super::compact_profile_tag("en_US"), "ENG");
+        assert_eq!(super::compact_profile_tag("de-DE"), "DE");
+        assert_eq!(super::compact_profile_tag(""), "—");
+        assert!(super::compact_profile_tag("abcdef").chars().count() <= 3);
+        assert_eq!(super::input_profile_glyph("zh-TW"), "ㄅ");
+        assert_eq!(super::input_profile_glyph("zh-CN"), "拼");
+        assert_eq!(
+            super::input_profile_primary("zh-TW", "zh-TW", zh),
+            "繁體中文（台灣）"
+        );
+        assert_eq!(super::input_profile_subtitle("zh-CN", zh), "微軟拼音");
+    }
+
+    fn status_snapshot(power: StatusAvailability<PowerStatus>) -> SystemStatusSnapshot {
+        SystemStatusSnapshot {
+            host_generation: 1,
+            snapshot_generation: 1,
+            network: StatusAvailability::NotPresent,
+            audio: StatusAvailability::NotPresent,
+            power,
+            clock: StatusAvailability::NotPresent,
+            input: StatusAvailability::NotPresent,
+            overflowed: false,
+        }
+    }
+
+    #[test]
+    fn network_and_power_summaries_distinguish_not_present_from_failure() {
+        let presentation =
+            super::SystemFlyoutPresentation::new(super::SystemFlyoutTheme::Light, false);
+        let not_present = status_snapshot(StatusAvailability::NotPresent);
+        let (network, _, network_available) =
+            super::network_summary(Some(&not_present), presentation);
+        let (power, power_available) = super::power_summary(Some(&not_present), presentation);
+        assert!(network.contains("No network"));
+        assert!(!network_available);
+        assert!(power.contains("no battery"));
+        assert!(power_available);
+
+        let no_battery = status_snapshot(StatusAvailability::Available(PowerStatus {
+            ac_online: true,
+            charging: false,
+            battery_percent: None,
+        }));
+        assert!(
+            super::power_summary(Some(&no_battery), presentation)
+                .0
+                .contains("No battery")
+        );
+
+        let failed = status_snapshot(StatusAvailability::Unavailable {
+            reason: "fixture".into(),
+        });
+        let (_, available) = super::power_summary(Some(&failed), presentation);
+        assert!(!available);
     }
 
     #[test]
     fn owned_flyout_contract_is_keyboard_accessible_and_has_no_fake_unavailable_action() {
         let source = include_str!("system_flyout.rs");
+        let production = source.split("#[cfg(test)]").next().unwrap_or(source);
         for required in [
             "owned-system-flyout",
             "event.keystroke.key == \"escape\"",
             "owned-input-profile-",
+            "owned-input-settings-footer",
+            "More keyboard settings",
+            "⊞",
+            "input_profile_glyph",
+            "input_profile_primary",
+            "input_profile_subtitle",
             "owned-volume-actions",
             "owned-volume-slider",
             "Role::Slider",
+            "\"home\" => Some(0)",
+            "\"end\" => Some(100)",
             "observe_window_activation",
             "owned-input-unavailable",
             "owned-volume-unavailable",
             "owned-network-card",
             "owned-calendar-grid",
+            "SystemFlyoutChromeTokens",
+            ".hover(move |style|",
+            ".active(move |style|",
+            ".focus_visible(move |style|",
             "Keyboard layout",
         ] {
             assert!(
                 source.contains(required),
                 "missing owned flyout contract: {required}"
             );
+        }
+        let network_branch = source
+            .split(".when(kind == SystemFlyoutKind::NetworkPower")
+            .nth(1)
+            .expect("network branch")
+            .split(".when(kind == SystemFlyoutKind::Calendar")
+            .next()
+            .expect("network branch end");
+        assert!(!network_branch.contains(".on_click("));
+        assert!(!network_branch.contains("Role::Button"));
+        for forbidden in [
+            "explorer.exe",
+            "Shell_TrayWnd",
+            "ms-settings:",
+            "StartMenuExperienceHost",
+            "ShellExperienceHost",
+        ] {
+            assert!(!production.contains(forbidden));
         }
     }
 }

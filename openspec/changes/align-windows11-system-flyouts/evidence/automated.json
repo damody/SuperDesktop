@@ -1,0 +1,11 @@
+{
+  "schema": "windows11-system-flyout-automated/v1",
+  "recorded_at": "2026-08-19T01:05:00+08:00",
+  "result": "passed",
+  "commands": [
+    {"command": "cargo fmt --all -- --check", "exit_status": 0},
+    {"command": "cargo test --workspace --all-targets --locked --offline --no-fail-fast", "exit_status": 0, "taskbar_ui_tests": 53, "superdesktop_app_tests": 30},
+    {"command": "cargo clippy --workspace --all-targets --locked --offline -- -D warnings", "exit_status": 0}
+  ],
+  "gates": ["G-SYSTEM-FLYOUT-CHROME", "G-SYSTEM-FLYOUT-A11Y", "G-SYSTEM-FLYOUT-TRUTH", "G-SHELL-NONINTERFERENCE"]
+}

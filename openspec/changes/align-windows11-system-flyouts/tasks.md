@@ -12,9 +12,9 @@
 **Gate／Evidence：** `G-SYSTEM-FLYOUT-CHROME`, `G-SYSTEM-FLYOUT-A11Y`; automated record.
 **完成門檻：** Light, dark, high contrast, zh-TW, English, and fallback values are explicit and tested.
 
-- [ ] 1.1.1 Define complete light, dark, and high-contrast flyout tokens.
-- [ ] 1.1.2 Define localized visible strings and bounded input-profile tags.
-- [ ] 1.1.3 Add token, locale, fallback, and non-color state tests.
+- [x] 1.1.1 Define complete light, dark, and high-contrast flyout tokens.
+- [x] 1.1.2 Define localized visible strings and bounded input-profile tags.
+- [x] 1.1.3 Add token, locale, fallback, and non-color state tests.
 
 ### 1.2 Make popup geometry monitor- and taskbar-aware
 
@@ -26,9 +26,9 @@
 **Gate／Evidence：** `G-SYSTEM-FLYOUT-CHROME`; automated geometry record.
 **完成門檻：** Preferred and constrained positive/negative-origin cases stay above owned taskbar bounds.
 
-- [ ] 1.2.1 Define kind-specific preferred width and content-driven height.
-- [ ] 1.2.2 Clamp logical bounds using DPI, work area, taskbar rows, and popup gap.
-- [ ] 1.2.3 Add 175% reference, constrained, and negative-origin geometry tests.
+- [x] 1.2.1 Define kind-specific preferred width and content-driven height.
+- [x] 1.2.2 Clamp logical bounds using DPI, work area, taskbar rows, and popup gap.
+- [x] 1.2.3 Add 175% reference, constrained, and negative-origin geometry tests.
 
 ## 2. Owned Flyout Surfaces
 
@@ -42,9 +42,9 @@
 **Gate／Evidence：** `G-SYSTEM-FLYOUT-CHROME`, `G-SYSTEM-FLYOUT-A11Y`, `G-SYSTEM-FLYOUT-TRUTH`; automated and headful records.
 **完成門檻：** Pointer/keyboard/UIA routes emit only bounded typed actions and never mutate unavailable providers.
 
-- [ ] 2.1.1 Restyle localized input rows with full accessible provider identity.
-- [ ] 2.1.2 Restyle mute, slider, thumb, percentage, and observed unavailable audio state.
-- [ ] 2.1.3 Add Enter/Space, Arrow/Home/End, role/value, and typed-action tests.
+- [x] 2.1.1 Match the supplied Windows keyboard-layout header, shortcut hint, two-line profile rows, active accent bar, glyphs, and full accessible provider identity.
+- [x] 2.1.2 Restyle mute, slider, thumb, percentage, and observed unavailable audio state.
+- [x] 2.1.3 Add Enter/Space, Arrow/Home/End, role/value, and typed-action tests.
 
 ### 2.2 Align network/power and calendar flyouts
 
@@ -56,9 +56,9 @@
 **Gate／Evidence：** `G-SYSTEM-FLYOUT-CHROME`, `G-SYSTEM-FLYOUT-A11Y`, `G-SYSTEM-FLYOUT-TRUTH`; automated and headful records.
 **完成門檻：** Network/power distinguish real states, calendar boundaries pass, and unsupported mutation has no action.
 
-- [ ] 2.2.1 Restyle network and power summaries with not-present versus unavailable distinction.
-- [ ] 2.2.2 Localize date metadata, weekday labels, month heading, and selected-day geometry.
-- [ ] 2.2.3 Add leap-year, provider-failure, no-battery, and no-fake-action tests.
+- [x] 2.2.1 Restyle network and power summaries with not-present versus unavailable distinction.
+- [x] 2.2.2 Localize date metadata, weekday labels, month heading, and selected-day geometry.
+- [x] 2.2.3 Add leap-year, provider-failure, no-battery, and no-fake-action tests.
 
 ### 2.3 Wire explicit presentation and geometry into app composition
 
@@ -70,9 +70,9 @@
 **Gate／Evidence：** `G-SYSTEM-FLYOUT-CHROME`, `G-SYSTEM-FLYOUT-A11Y`; app integration record.
 **完成門檻：** All four kinds open with correct inputs, toggle/switch/dismiss deterministically, and preserve focus behavior.
 
-- [ ] 2.3.1 Pass explicit locale/theme/high-contrast presentation into each owned popup.
-- [ ] 2.3.2 Replace fixed window options with pure taskbar-aware geometry.
-- [ ] 2.3.3 Reverify toggle, kind switch, Escape, activation-loss, and creation-failure lifecycle.
+- [x] 2.3.1 Pass explicit locale/theme/high-contrast presentation into each owned popup.
+- [x] 2.3.2 Replace fixed window options with pure taskbar-aware geometry.
+- [x] 2.3.3 Reverify toggle, kind switch, Escape, activation-loss, and creation-failure lifecycle.
 
 ### 2.4 Enforce Explorer-free truthful composition
 
@@ -84,9 +84,9 @@
 **Gate／Evidence：** `G-SYSTEM-FLYOUT-TRUTH`, `G-SHELL-NONINTERFERENCE`; source/process records.
 **完成門檻：** Production sources contain only owned popup routes and ordinary failure never launches a shell surface.
 
-- [ ] 2.4.1 Guard against Explorer, shell hosts, Quick Settings, notification center, and Settings URI delegation.
-- [ ] 2.4.2 Guard network, power, calendar, and unavailable states against fake mutation controls.
-- [ ] 2.4.3 Preserve typed status actions and independent provider-loss recovery.
+- [x] 2.4.1 Guard against Explorer, shell hosts, Quick Settings, notification center, and Settings URI delegation.
+- [x] 2.4.2 Guard network, power, calendar, and unavailable states against fake mutation controls.
+- [x] 2.4.3 Preserve typed status actions and independent provider-loss recovery.
 
 ## 3. Verification and Packaging
 
@@ -100,9 +100,9 @@
 **Gate／Evidence：** `G-SYSTEM-FLYOUT-CHROME`, `G-SYSTEM-FLYOUT-A11Y`, `G-SYSTEM-FLYOUT-TRUTH`, `G-SHELL-NONINTERFERENCE`; `evidence/headful-*.json`.
 **完成門檻：** All kinds, themes, representative states, UIA routes, and Explorer absence pass on the reference host.
 
-- [ ] 3.1.1 Run fmt, locked/offline workspace tests, and clippy warnings-as-errors.
-- [ ] 3.1.2 Capture light and dark input, volume, network/power, and calendar matrices at 175% DPI.
-- [ ] 3.1.3 Capture high-contrast UIA/keyboard states and Explorer-free process/action evidence.
+- [x] 3.1.1 Run fmt, locked/offline workspace tests, and clippy warnings-as-errors.
+- [x] 3.1.2 Capture light and dark input, volume, network/power, and calendar matrices at 175% DPI.
+- [x] 3.1.3 Capture high-contrast UIA/keyboard states and Explorer-free process/action evidence.
 
 ### 3.2 Validate traceability, release, and installers
 

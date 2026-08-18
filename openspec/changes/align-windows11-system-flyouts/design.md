@@ -41,6 +41,8 @@ Input rows emit `ActivateInputProfile`; volume controls emit `SetVolume` and `Se
 
 Traditional Chinese and English strings are selected from the existing locale signal. Compact visible language tags are bounded, while full profile display name and provider identity remain in UIA names. Calendar weekday/month labels follow the selected presentation locale.
 
+The input surface follows the supplied Windows keyboard-layout reference: a title row with the `Win + Space` shortcut hint, 72px two-line profile rows, a left-edge accent bar for the observed active profile, a language/input-method glyph, localized language display name, and input-method subtitle. Provider identity remains authoritative even when the visible fallback maps a language tag to a Windows-style label. A bottom settings affordance is admitted only when it routes to an owned SuperDesktop settings surface; it MUST NOT call a Settings URI or render as an inert fake action.
+
 ## Blocking Gates
 
 - `G-SYSTEM-FLYOUT-CHROME`: token, state, geometry, light/dark/high-contrast, and 175% capture evidence.

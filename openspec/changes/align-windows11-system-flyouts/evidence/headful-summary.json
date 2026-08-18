@@ -1,0 +1,21 @@
+{
+  "schema": "windows11-system-flyout-headful-summary/v1",
+  "recorded_at": "2026-08-19T01:05:00+08:00",
+  "result": "passed",
+  "host": {"windows_build": 26200, "dpi_percent": 175, "locale": "zh-TW"},
+  "reports": [
+    {"theme": "light", "path": "evidence/light/headful-report.json", "sha256": "c9a64b5edf387ff6ede45b70592f675431898f6af8dbf18dd5e0b467688aefd8", "screenshots": 4},
+    {"theme": "dark", "path": "evidence/dark/headful-report.json", "sha256": "ce7478c446f0c1e4b2dcb47dd7c9208422f5199c1e548021dcc87b97bf51ac09", "screenshots": 4},
+    {"theme": "high-contrast", "path": "evidence/high-contrast/headful-report.json", "sha256": "e507859e5065a53dcf6907718edfec46f85d90c8ad3b25a8ad85a747a7a95363", "screenshots": 4},
+    {"theme": "explorer-free", "path": "evidence/explorer-free/headful-report.json", "sha256": "49ffb246467342b0afbb67ec9f9c38d585f571de3f95f64c14e5cbe4010613c3", "screenshots": 4, "explorer_suppressed": true, "explorer_absent_during_capture": true}
+  ],
+  "verified": {
+    "owned_flyouts": ["input", "volume", "network-power", "calendar"],
+    "input_profile_switch_and_restore": true,
+    "volume_slider_uia": true,
+    "popup_exclusivity": true,
+    "traditional_chinese_keyboard_reference_structure": true,
+    "explorer_restored_after_test": true
+  },
+  "gates": ["G-SYSTEM-FLYOUT-CHROME", "G-SYSTEM-FLYOUT-A11Y", "G-SYSTEM-FLYOUT-TRUTH", "G-SHELL-NONINTERFERENCE"]
+}

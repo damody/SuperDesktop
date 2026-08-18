@@ -42,10 +42,10 @@ use taskbar_ui::{
     AccessibleTask, ClockLocale, CoreStatus, FlyoutAction, JumpListModel, JumpListView,
     NotificationAreaModel, NotificationOverflowView, PreviewCard, ProgressState, ProviderState,
     StartActions, StartPowerAction, StartSnapshot, StartView, StatusRegion, SystemFlyoutKind,
-    SystemFlyoutView, SystemStatusAction, TaskAction, TaskFlyoutView, TaskViewEffect,
-    TaskViewModel, TaskViewSurface, TaskbarCallbacks, TaskbarContextCommand, TaskbarContextView,
-    TaskbarLayout, TaskbarSettingId, TaskbarSettingsEffect, TaskbarSettingsView, TaskbarView,
-    TestClock,
+    SystemFlyoutPresentation, SystemFlyoutTheme, SystemFlyoutView, SystemStatusAction, TaskAction,
+    TaskFlyoutView, TaskViewEffect, TaskViewModel, TaskViewSurface, TaskbarCallbacks,
+    TaskbarContextCommand, TaskbarContextView, TaskbarLayout, TaskbarSettingId,
+    TaskbarSettingsEffect, TaskbarSettingsView, TaskbarView, TestClock,
 };
 
 use crate::{
@@ -1440,29 +1440,57 @@ fn task_flyout_options(monitor: &MonitorRecord, card_count: usize) -> WindowOpti
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct SystemFlyoutGeometry {
+    left: f32,
+    top: f32,
+    width: f32,
+    height: f32,
+}
+
+fn system_flyout_geometry(
+    monitor: &MonitorRecord,
+    kind: SystemFlyoutKind,
+    input_profile_count: usize,
+    taskbar_rows: u8,
+) -> SystemFlyoutGeometry {
+    let scale = monitor.dpi_x as f32 / 96.0;
+    let work_left = monitor.work_area.left as f32 / scale;
+    let work_top = monitor.work_area.top as f32 / scale;
+    let work_right = monitor.work_area.right as f32 / scale;
+    let work_bottom = monitor.work_area.bottom as f32 / scale;
+    let (preferred_width, preferred_height): (f32, f32) = match kind {
+        SystemFlyoutKind::Input => (360.0, 154.0 + input_profile_count.clamp(1, 6) as f32 * 72.0),
+        SystemFlyoutKind::Volume => (360.0, 184.0),
+        SystemFlyoutKind::NetworkPower => (360.0, 228.0),
+        SystemFlyoutKind::Calendar => (376.0, 408.0),
+    };
+    let gap = 8.0;
+    let taskbar_height = 40.0 * f32::from(taskbar_rows.clamp(1, 3));
+    let usable_width = (work_right - work_left - gap * 2.0).max(1.0);
+    let popup_bottom = (work_bottom - taskbar_height - gap).max(work_top + 1.0);
+    let usable_height = (popup_bottom - work_top).max(1.0);
+    let width = preferred_width.min(usable_width);
+    let height = preferred_height.min(usable_height);
+    SystemFlyoutGeometry {
+        left: (work_right - gap - width).max(work_left),
+        top: (popup_bottom - height).max(work_top),
+        width,
+        height,
+    }
+}
+
 fn system_flyout_options(
     monitor: &MonitorRecord,
     kind: SystemFlyoutKind,
     input_profile_count: usize,
+    taskbar_rows: u8,
 ) -> WindowOptions {
-    let scale = monitor.dpi_x as f32 / 96.0;
-    let width = 380.0;
-    let available_height = (monitor.work_area.bottom - monitor.work_area.top) as f32 / scale;
-    let height = match kind {
-        SystemFlyoutKind::Input => 92.0 + input_profile_count.clamp(1, 6) as f32 * 52.0,
-        SystemFlyoutKind::Volume => 190.0,
-        SystemFlyoutKind::NetworkPower => 250.0,
-        SystemFlyoutKind::Calendar => 420.0,
-    }
-    .min(available_height);
-    let right = monitor.work_area.right as f32 / scale;
+    let geometry = system_flyout_geometry(monitor, kind, input_profile_count, taskbar_rows);
     WindowOptions {
         window_bounds: Some(WindowBounds::Windowed(Bounds {
-            origin: point(
-                px((right - width).max(monitor.work_area.left as f32 / scale)),
-                px(monitor.work_area.bottom as f32 / scale - height),
-            ),
-            size: size(px(width), px(height)),
+            origin: point(px(geometry.left), px(geometry.top)),
+            size: size(px(geometry.width), px(geometry.height)),
         })),
         titlebar: None,
         focus: true,
@@ -1846,6 +1874,19 @@ fn fixed_label() -> &'static str {
         Ok("zh-TW") => "超級檔案總管",
         _ => "SuperExplorer",
     }
+}
+
+fn system_flyout_presentation() -> SystemFlyoutPresentation {
+    let theme = match std::env::var("SUPERDESKTOP_THEME").as_deref() {
+        Ok("dark") => SystemFlyoutTheme::Dark,
+        Ok("high-contrast") => SystemFlyoutTheme::HighContrast,
+        _ => SystemFlyoutTheme::Light,
+    };
+    let traditional_chinese = std::env::var("SUPERDESKTOP_LOCALE")
+        .ok()
+        .or_else(platform_win::common::taskbar_status::user_locale_name)
+        .is_some_and(|locale| locale.eq_ignore_ascii_case("zh-TW"));
+    SystemFlyoutPresentation::new(theme, traditional_chinese)
 }
 
 fn fixed_node(monitor: &str, icon: Option<IconData>) -> AccessibleNode {
@@ -2252,6 +2293,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                 system_flyout_windows.push(Rc::clone(&system_flyout_window));
                 let system_flyout_window_for_taskbar = Rc::clone(&system_flyout_window);
                 let system_flyout_monitor = taskbar_monitor.clone();
+                let system_flyout_settings = Rc::clone(&persisted_settings);
                 let system_flyout_status = Rc::clone(&status_reconciler);
                 let system_flyout_client = Rc::clone(&status_client);
                 let system_flyout_start = Rc::clone(&start_window);
@@ -2903,11 +2945,15 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                 let action_start = Rc::clone(&system_flyout_start);
                                 let dismiss_slot =
                                     Rc::clone(&system_flyout_window_for_taskbar);
+                                let presentation = system_flyout_presentation();
+                                let taskbar_rows =
+                                    system_flyout_settings.borrow().taskbar.rows;
                                 let opened = app.open_window(
                                     system_flyout_options(
                                         &system_flyout_monitor,
                                         kind,
                                         input_profile_count,
+                                        taskbar_rows,
                                     ),
                                     move |window, cx| {
                                         window.activate_window();
@@ -2917,6 +2963,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                                 kind,
                                                 snapshot,
                                                 flyout_status,
+                                                presentation,
                                                 Rc::new(move |action, app| {
                                                     apply_system_status_action(
                                                         action,
@@ -2941,6 +2988,8 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                     *system_flyout_window_for_taskbar.borrow_mut() =
                                         Some((kind, handle));
                                     trace_action("status:owned-flyout-opened");
+                                } else {
+                                    trace_action("status:flyout-open-failed");
                                 }
                             }),
                             rendered: Rc::new(trace_rendered_frame),
@@ -3724,6 +3773,113 @@ mod live_parity_tests {
         assert!(bounds.left >= -20.0 && bounds.top >= 0.0);
         assert!(bounds.left + bounds.width <= 60.0);
         assert!(bounds.top + bounds.height <= 1.0);
+    }
+
+    #[test]
+    fn system_flyout_geometry_reserves_owned_taskbar_and_clamps_every_monitor_origin() {
+        let reference = MonitorRecord {
+            device_name: "reference".into(),
+            primary: true,
+            bounds: ScreenRect {
+                left: 0,
+                top: 0,
+                right: 1920,
+                bottom: 1080,
+            },
+            work_area: ScreenRect {
+                left: 0,
+                top: 0,
+                right: 1920,
+                bottom: 1080,
+            },
+            dpi_x: 168,
+            dpi_y: 168,
+        };
+        let geometry =
+            super::system_flyout_geometry(&reference, super::SystemFlyoutKind::Calendar, 1, 2);
+        let logical_right = 1920.0 / 1.75;
+        let logical_bottom = 1080.0 / 1.75;
+        assert_eq!((geometry.width, geometry.height), (376.0, 408.0));
+        assert!((geometry.left + geometry.width - (logical_right - 8.0)).abs() < 0.01);
+        assert!((geometry.top + geometry.height - (logical_bottom - 88.0)).abs() < 0.01);
+
+        let negative = MonitorRecord {
+            device_name: "negative".into(),
+            primary: false,
+            bounds: ScreenRect {
+                left: -1920,
+                top: -200,
+                right: 0,
+                bottom: 1080,
+            },
+            work_area: ScreenRect {
+                left: -1920,
+                top: -200,
+                right: 0,
+                bottom: 1080,
+            },
+            ..reference.clone()
+        };
+        let geometry =
+            super::system_flyout_geometry(&negative, super::SystemFlyoutKind::Input, 64, 3);
+        assert!(geometry.left >= -1920.0 / 1.75);
+        assert!(geometry.top >= -200.0 / 1.75);
+        assert!(geometry.left + geometry.width <= -8.0);
+        assert!(geometry.top + geometry.height <= 1080.0 / 1.75 - 128.0);
+
+        let constrained = MonitorRecord {
+            device_name: "constrained".into(),
+            bounds: ScreenRect {
+                left: -100,
+                top: 0,
+                right: 300,
+                bottom: 220,
+            },
+            work_area: ScreenRect {
+                left: -100,
+                top: 0,
+                right: 300,
+                bottom: 220,
+            },
+            dpi_x: 480,
+            dpi_y: 480,
+            ..reference
+        };
+        let geometry =
+            super::system_flyout_geometry(&constrained, super::SystemFlyoutKind::Calendar, 1, 3);
+        assert!(geometry.width >= 1.0 && geometry.height >= 1.0);
+        assert!(geometry.left >= -20.0 && geometry.top >= 0.0);
+        assert!(geometry.left + geometry.width <= 60.0);
+        assert!(geometry.top + geometry.height <= 44.0);
+    }
+
+    #[test]
+    fn system_flyout_composition_is_explicit_truthful_and_never_delegates() {
+        let source = include_str!("surface_runtime.rs");
+        let production = source.split("#[cfg(test)]").next().unwrap_or(source);
+        for required in [
+            "system_flyout_presentation()",
+            "SystemFlyoutPresentation::new",
+            "system_flyout_geometry(",
+            "system_flyout_settings.borrow().taskbar.rows",
+            "SystemFlyoutView::new",
+            "status:owned-flyout-opened",
+            "status:flyout-dismissed",
+            "status:flyout-open-failed",
+            "apply_system_status_action(",
+        ] {
+            assert!(production.contains(required), "missing {required}");
+        }
+        for forbidden in [
+            "explorer.exe",
+            "Shell_TrayWnd",
+            "StartMenuExperienceHost",
+            "ShellExperienceHost",
+            "QuickSettings",
+            "ms-settings:",
+        ] {
+            assert!(!production.contains(forbidden), "delegated {forbidden}");
+        }
     }
 
     #[test]
