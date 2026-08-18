@@ -303,6 +303,9 @@ pub enum ProgressState {
 pub struct TaskOverlay {
     pub progress: ProgressState,
     pub attention: bool,
+    pub attention_phase_on: bool,
+    pub attention_steady: bool,
+    pub animation_phase: u16,
     pub badge: Option<String>,
 }
 
@@ -311,7 +314,109 @@ impl Default for TaskOverlay {
         Self {
             progress: ProgressState::None,
             attention: false,
+            attention_phase_on: false,
+            attention_steady: false,
+            animation_phase: 0,
             badge: None,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct TaskVisualState {
+    pub indicator_width: f32,
+    pub indicator_height: f32,
+    pub indicator_color: u32,
+    pub second_indicator: bool,
+    pub indicator_opacity: f32,
+    pub progress_fraction: Option<f32>,
+    pub progress_color: Option<u32>,
+    pub progress_indeterminate: bool,
+    pub progress_offset: f32,
+    pub attention_surface: bool,
+    pub accessibility_suffix: String,
+}
+
+impl TaskVisualState {
+    pub fn compose(
+        available: bool,
+        active: bool,
+        minimized: bool,
+        group_size: usize,
+        overlay: &TaskOverlay,
+        high_contrast: bool,
+        reduced_motion: bool,
+    ) -> Self {
+        let (progress_fraction, progress_color, progress_indeterminate, progress_label) =
+            match overlay.progress {
+                ProgressState::None => (None, None, false, None),
+                ProgressState::Indeterminate => (
+                    Some(if reduced_motion { 1.0 } else { 0.22 }),
+                    Some(if high_contrast { 0x00ffff } else { 0x16a34a }),
+                    true,
+                    Some("indeterminate progress".to_owned()),
+                ),
+                ProgressState::Normal(value) => {
+                    let value = value.min(1000);
+                    (
+                        Some(f32::from(value) / 1000.0),
+                        Some(if high_contrast { 0x00ffff } else { 0x16a34a }),
+                        false,
+                        Some(format!("normal progress {} percent", value / 10)),
+                    )
+                }
+                ProgressState::Paused(value) => {
+                    let value = value.min(1000);
+                    (
+                        Some(f32::from(value) / 1000.0),
+                        Some(if high_contrast { 0xffff00 } else { 0xf9c74f }),
+                        false,
+                        Some(format!("paused progress {} percent", value / 10)),
+                    )
+                }
+                ProgressState::Error(value) => {
+                    let value = value.min(1000);
+                    (
+                        Some(f32::from(value) / 1000.0),
+                        Some(if high_contrast { 0xff00ff } else { 0xd13438 }),
+                        false,
+                        Some(format!("error progress {} percent", value / 10)),
+                    )
+                }
+            };
+        let attention_surface = overlay.attention
+            && (overlay.attention_phase_on || overlay.attention_steady || reduced_motion);
+        let mut labels = Vec::new();
+        if let Some(label) = progress_label {
+            labels.push(label);
+        }
+        if overlay.attention {
+            labels.push("requires attention".to_owned());
+        }
+        Self {
+            indicator_width: if active || group_size > 1 { 16.0 } else { 6.0 },
+            indicator_height: 3.0,
+            indicator_color: if !available {
+                0x7a7a7a
+            } else if overlay.attention {
+                if high_contrast { 0xffff00 } else { 0xff8c00 }
+            } else if active {
+                if high_contrast { 0x00ffff } else { 0x0067c0 }
+            } else {
+                0x5b8db8
+            },
+            second_indicator: group_size > 1,
+            indicator_opacity: if minimized { 0.55 } else { 1.0 },
+            progress_fraction,
+            progress_color,
+            progress_indeterminate,
+            progress_offset: if reduced_motion {
+                0.0
+            } else {
+                f32::from(overlay.animation_phase.min(1000)) / 1000.0
+            },
+            attention_surface,
+            accessibility_suffix: labels.join(", "),
         }
     }
 }
@@ -630,5 +735,90 @@ mod tests {
         let mut round_trip = TaskbarSettings::default();
         preferences.apply_to_settings(&mut round_trip);
         assert_eq!(round_trip.pins, vec!["one"]);
+    }
+
+    #[test]
+    fn windows11_indicator_geometry_covers_every_running_state() {
+        let overlay = TaskOverlay::default();
+        let inactive = TaskVisualState::compose(true, false, false, 1, &overlay, false, false);
+        let active = TaskVisualState::compose(true, true, false, 1, &overlay, false, false);
+        let grouped = TaskVisualState::compose(true, false, true, 3, &overlay, false, false);
+        assert_eq!(
+            (inactive.indicator_width, inactive.indicator_height),
+            (6.0, 3.0)
+        );
+        assert_eq!(
+            (active.indicator_width, active.indicator_height),
+            (16.0, 3.0)
+        );
+        assert!(grouped.second_indicator);
+        assert_eq!(grouped.indicator_opacity, 0.55);
+    }
+
+    #[test]
+    fn progress_attention_and_accessibility_remain_independent() {
+        for (progress, color, label) in [
+            (
+                ProgressState::Normal(400),
+                0x16a34a,
+                "normal progress 40 percent",
+            ),
+            (
+                ProgressState::Paused(400),
+                0xf9c74f,
+                "paused progress 40 percent",
+            ),
+            (
+                ProgressState::Error(400),
+                0xd13438,
+                "error progress 40 percent",
+            ),
+        ] {
+            let overlay = TaskOverlay {
+                progress,
+                attention: true,
+                attention_phase_on: true,
+                ..TaskOverlay::default()
+            };
+            let visual = TaskVisualState::compose(true, false, false, 1, &overlay, false, false);
+            assert_eq!(visual.progress_fraction, Some(0.4));
+            assert_eq!(visual.progress_color, Some(color));
+            assert!(visual.attention_surface);
+            assert!(visual.accessibility_suffix.contains(label));
+            assert!(visual.accessibility_suffix.contains("requires attention"));
+        }
+        let reduced = TaskVisualState::compose(
+            true,
+            false,
+            false,
+            1,
+            &TaskOverlay {
+                progress: ProgressState::Indeterminate,
+                ..TaskOverlay::default()
+            },
+            false,
+            true,
+        );
+        assert!(reduced.progress_indeterminate);
+        assert_eq!(reduced.progress_fraction, Some(1.0));
+    }
+
+    #[test]
+    fn high_contrast_and_unavailable_states_do_not_rely_on_opacity_or_color_alone() {
+        let overlay = TaskOverlay {
+            progress: ProgressState::Normal(500),
+            attention: true,
+            attention_steady: true,
+            ..TaskOverlay::default()
+        };
+        let high_contrast = TaskVisualState::compose(true, true, false, 2, &overlay, true, false);
+        assert_eq!(high_contrast.progress_color, Some(0x00ffff));
+        assert_eq!(high_contrast.indicator_color, 0xffff00);
+        assert!(high_contrast.second_indicator);
+        assert!(high_contrast.accessibility_suffix.contains("50 percent"));
+        let unavailable =
+            TaskVisualState::compose(false, false, false, 1, &TaskOverlay::default(), true, false);
+        assert_eq!(unavailable.indicator_color, 0x7a7a7a);
+        assert_eq!(unavailable.indicator_width, 6.0);
     }
 }

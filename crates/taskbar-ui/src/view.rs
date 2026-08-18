@@ -14,7 +14,8 @@ use gpui::{
 
 use crate::{
     AccessibleTask, NotificationAccessibleNode, NotificationAreaModel, NotificationPlacement,
-    ProgressState, StatusRegion, SystemFlyoutKind, SystemStatusAction, TaskOverlay, TaskbarLayout,
+    StatusRegion, SystemFlyoutKind, SystemStatusAction, TaskOverlay, TaskVisualState,
+    TaskbarLayout,
 };
 use shell_provider_protocol::{
     IconData, IconKey, NotificationEventKind, StatusAvailability, SystemStatusSnapshot,
@@ -241,6 +242,7 @@ impl Render for TaskbarView {
             .collect::<Vec<_>>();
         let has_overflow = !overflow_notifications.is_empty();
         let high_contrast = std::env::var("SUPERDESKTOP_THEME").as_deref() == Ok("high-contrast");
+        let reduced_motion = std::env::var("SUPERDESKTOP_REDUCED_MOTION").as_deref() == Ok("1");
         let start_color = if high_contrast {
             rgb(0xffff00)
         } else {
@@ -535,11 +537,10 @@ impl Render for TaskbarView {
                             .h(px(40.))
                             .flex_none()
                             .px_2()
+                            .relative()
                             .flex()
                             .items_center()
                             .cursor_pointer()
-                            .border_b_1()
-                            .border_color(rgb(0x0078d4))
                             .on_click(move |_, _, _| {
                                 if let Some(callback) = &fixed {
                                     callback();
@@ -565,7 +566,17 @@ impl Render for TaskbarView {
                                     )
                                 },
                             )
-                            .child(self.fixed_name.clone()),
+                            .child(self.fixed_name.clone())
+                            .child(
+                                div()
+                                    .absolute()
+                                    .left(px(72.))
+                                    .bottom_0()
+                                    .w(px(6.))
+                                    .h(px(3.))
+                                    .rounded_full()
+                                    .bg(rgb(if high_contrast { 0x00ffff } else { 0x5b8db8 })),
+                            ),
                     )
                     .children(self.tasks.iter().map(move |task| {
                         let callback = task_callback.clone();
@@ -583,6 +594,15 @@ impl Render for TaskbarView {
                                     attention: task.attention,
                                     ..TaskOverlay::default()
                                 });
+                        let visual = TaskVisualState::compose(
+                            available,
+                            task.active,
+                            task.minimized,
+                            task.group_size,
+                            &overlay,
+                            high_contrast,
+                            reduced_motion,
+                        );
                         let state = if !available {
                             "unavailable".to_owned()
                         } else if task.attention {
@@ -596,7 +616,11 @@ impl Render for TaskbarView {
                         } else {
                             "available".to_owned()
                         };
-                        let accessible_name = format!("{} [{state}]", task.name);
+                        let accessible_name = if visual.accessibility_suffix.is_empty() {
+                            format!("{} [{state}]", task.name)
+                        } else {
+                            format!("{} [{state}, {}]", task.name, visual.accessibility_suffix)
+                        };
                         let icon = task.icon.as_ref().and_then(icon_render_image);
                         let display_name = task_display_label(
                             &task.name,
@@ -604,19 +628,6 @@ impl Render for TaskbarView {
                             show_labels,
                             icon.is_some(),
                         );
-                        let underline = if !available {
-                            rgb(0x6b6b6b)
-                        } else if task.attention {
-                            rgb(0xff8c00)
-                        } else if task.group_size > 1 {
-                            rgb(0x744da9)
-                        } else if task.active {
-                            rgb(0x0067c0)
-                        } else if task.minimized {
-                            rgb(0x87949a)
-                        } else {
-                            rgb(0x1683d8)
-                        };
                         div()
                             .id(task.stable_id.clone())
                             .role(gpui::Role::Button)
@@ -632,8 +643,27 @@ impl Render for TaskbarView {
                             .cursor_pointer()
                             .overflow_hidden()
                             .whitespace_nowrap()
-                            .border_b_1()
-                            .border_color(underline)
+                            .when(task.active && !visual.attention_surface, |element| {
+                                element.bg(if high_contrast { rgb(0x000000) } else { rgb(0xe5e5e5) })
+                            })
+                            .when(visual.attention_surface, |element| {
+                                element.bg(if high_contrast { rgb(0x000000) } else { rgb(0xffd28a) })
+                            })
+                            .when_some(visual.progress_color, |element, color| {
+                                let fraction = visual.progress_fraction.unwrap_or(0.0);
+                                let width = if visual.progress_indeterminate && !reduced_motion { 42.0 } else { 190.0 * fraction };
+                                let left = if visual.progress_indeterminate && !reduced_motion { (190.0 - width) * visual.progress_offset } else { 0.0 };
+                                element.child(
+                                    div()
+                                        .absolute()
+                                        .left(px(left))
+                                        .top_0()
+                                        .bottom_0()
+                                        .w(px(width))
+                                        .bg(rgb(color))
+                                        .opacity(if high_contrast { 1.0 } else { 0.34 }),
+                                )
+                            })
                             .when(!available, |element| element.opacity(0.55))
                             .when(available, move |element| {
                                 element
@@ -686,28 +716,28 @@ impl Render for TaskbarView {
                                         .child(badge),
                                 )
                             })
-                            .when(overlay.progress != ProgressState::None, |element| {
-                                let (fraction, color) = match overlay.progress {
-                                    ProgressState::None => (0.0, rgb(0x1683d8)),
-                                    ProgressState::Indeterminate => (1.0, rgb(0x1683d8)),
-                                    ProgressState::Normal(value) => {
-                                        (f32::from(value.min(1000)) / 1000.0, rgb(0x1683d8))
-                                    }
-                                    ProgressState::Paused(value) => {
-                                        (f32::from(value.min(1000)) / 1000.0, rgb(0xffb900))
-                                    }
-                                    ProgressState::Error(value) => {
-                                        (f32::from(value.min(1000)) / 1000.0, rgb(0xd13438))
-                                    }
-                                };
+                            .child(
+                                div()
+                                    .absolute()
+                                    .left(px((190.0 - visual.indicator_width) / 2.0))
+                                    .bottom_0()
+                                    .w(px(visual.indicator_width))
+                                    .h(px(visual.indicator_height))
+                                    .rounded_full()
+                                    .bg(rgb(visual.indicator_color))
+                                    .opacity(visual.indicator_opacity),
+                            )
+                            .when(visual.second_indicator, |element| {
                                 element.child(
                                     div()
                                         .absolute()
-                                        .left_0()
-                                        .bottom_0()
-                                        .h(px(3.))
-                                        .w(px(190.0 * fraction))
-                                        .bg(color),
+                                        .left(px((190.0 - visual.indicator_width) / 2.0 + 2.0))
+                                        .bottom(px(4.))
+                                        .w(px((visual.indicator_width - 4.0).max(6.0)))
+                                        .h(px(1.))
+                                        .rounded_full()
+                                        .bg(rgb(visual.indicator_color))
+                                        .opacity(visual.indicator_opacity),
                                 )
                             })
                     })),
@@ -1108,6 +1138,31 @@ mod tests {
                 "missing system UI contract: {required}"
             );
         }
+    }
+
+    #[test]
+    fn task_visual_source_contract_uses_windows_indicators_and_background_progress() {
+        let source = include_str!("view.rs");
+        for required in [
+            "TaskVisualState::compose",
+            "(190.0 - visual.indicator_width) / 2.0",
+            "visual.second_indicator",
+            "visual.progress_fraction",
+            "visual.progress_indeterminate",
+            "visual.attention_surface",
+            "visual.accessibility_suffix",
+        ] {
+            assert!(
+                source.contains(required),
+                "missing visual-state contract: {required}"
+            );
+        }
+        let task_render = source
+            .split("TaskVisualState::compose")
+            .nth(1)
+            .and_then(|tail| tail.split("system-status-region").next())
+            .expect("task visual render source");
+        assert!(!task_render.contains(".border_b_1()"));
     }
 
     #[test]

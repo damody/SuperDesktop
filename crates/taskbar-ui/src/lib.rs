@@ -19,7 +19,7 @@ mod view;
 
 pub use advanced::{
     AdvancedTaskbarPreferences, FlyoutAction, FlyoutModel, JumpListGroup, JumpListModel,
-    JumpListView, PreviewCard, ProgressState, TaskFlyoutView, TaskOverlay,
+    JumpListView, PreviewCard, ProgressState, TaskFlyoutView, TaskOverlay, TaskVisualState,
 };
 pub use grouping::{GroupModel, PinChange, TaskGroup};
 pub use interaction::{

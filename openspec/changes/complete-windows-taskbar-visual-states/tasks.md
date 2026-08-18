@@ -12,10 +12,10 @@
 **Gate／Evidence：** `G-TASKBAR-ISOLATION`, `G-TRACE`; protocol test record.
 **完成門檻：** Every field/count/deadline is bounded and invalid or stale values reject deterministically.
 
-- [ ] 1.1.1 Add window identity, host generation and snapshot generation DTOs.
-- [ ] 1.1.2 Add none/indeterminate/normal/paused/error progress DTOs with checked values.
-- [ ] 1.1.3 Add attention cadence/count/foreground-stop and terminal DTOs.
-- [ ] 1.1.4 Add malformed, zero-total, overflow, stale and serialization tests.
+- [x] 1.1.1 Add window identity, host generation and snapshot generation DTOs.
+- [x] 1.1.2 Add none/indeterminate/normal/paused/error progress DTOs with checked values.
+- [x] 1.1.3 Add attention cadence/count/foreground-stop and terminal DTOs.
+- [x] 1.1.4 Add malformed, zero-total, overflow, stale and serialization tests.
 
 ### 1.2 Implement deterministic progress and attention reducers
 
@@ -27,11 +27,11 @@
 **Gate／Evidence：** `G-TASKBAR-PROGRESS`, `G-TASKBAR-ATTENTION`; reducer tests.
 **完成門檻：** Priority, least progress, flashing termination and state independence match every normative scenario.
 
-- [ ] 1.2.1 Implement checked completed/total to bounded permille conversion.
-- [ ] 1.2.2 Implement error/paused/normal/indeterminate group priority.
-- [ ] 1.2.3 Select least complete determinate progress for equal-priority groups.
-- [ ] 1.2.4 Implement finite and timer-no-foreground attention state transitions.
-- [ ] 1.2.5 Add activation, close, restart, HWND-reuse and independent-field tests.
+- [x] 1.2.1 Implement checked completed/total to bounded permille conversion.
+- [x] 1.2.2 Implement error/paused/normal/indeterminate group priority.
+- [x] 1.2.3 Select least complete determinate progress for equal-priority groups.
+- [x] 1.2.4 Implement finite and timer-no-foreground attention state transitions.
+- [x] 1.2.5 Add activation, close, restart, HWND-reuse and independent-field tests.
 
 ## 2. Windows Observation and Compatibility
 
@@ -126,10 +126,10 @@
 **Gate／Evidence：** `G-TASKBAR-INDICATOR`, `G-TASKBAR-A11Y`; render tests.
 **完成門檻：** Every running task has correct inactive/active/grouped/minimized/unavailable geometry at 100–200% DPI.
 
-- [ ] 4.1.1 Add pure `TaskVisualState` presentation model.
-- [ ] 4.1.2 Render centered 6px inactive and 16px active 3px indicators.
-- [ ] 4.1.3 Render grouped second layer and minimized/unavailable variants.
-- [ ] 4.1.4 Add DPI, high-contrast and grouped geometry tests.
+- [x] 4.1.1 Add pure `TaskVisualState` presentation model.
+- [x] 4.1.2 Render centered 6px inactive and 16px active 3px indicators.
+- [x] 4.1.3 Render grouped second layer and minimized/unavailable variants.
+- [x] 4.1.4 Add DPI, high-contrast and grouped geometry tests.
 
 ### 4.2 Render progress and attention layers
 
@@ -141,11 +141,11 @@
 **Gate／Evidence：** `G-TASKBAR-PROGRESS`, `G-TASKBAR-ATTENTION`, `G-TASKBAR-A11Y`; visual tests.
 **完成門檻：** All colors/fractions/animation/steady states preserve icon, label and indicator and expose exact UIA state.
 
-- [ ] 4.2.1 Render green/yellow/red determinate background fills.
-- [ ] 4.2.2 Render bounded indeterminate moving segment and reduced-motion state.
-- [ ] 4.2.3 Render amber flash phase and steady post-flash attention state.
-- [ ] 4.2.4 Add exact percentage, kind and attention UIA names/states.
-- [ ] 4.2.5 Add coexistence, priority, animation-stop and visual source-contract tests.
+- [x] 4.2.1 Render green/yellow/red determinate background fills.
+- [x] 4.2.2 Render bounded indeterminate moving segment and reduced-motion state.
+- [x] 4.2.3 Render amber flash phase and steady post-flash attention state.
+- [x] 4.2.4 Add exact percentage, kind and attention UIA names/states.
+- [x] 4.2.5 Add coexistence, priority, animation-stop and visual source-contract tests.
 
 ## 5. Verification and Packaging
 

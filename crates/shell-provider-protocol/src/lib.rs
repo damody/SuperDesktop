@@ -7,6 +7,7 @@ mod jump_list;
 mod notification;
 mod search;
 mod system_status;
+mod taskbar_state;
 mod validation;
 
 pub use context_menu::{
@@ -37,6 +38,11 @@ pub use system_status::{
     PowerStatus, StatusAvailability, SystemStatusCommand, SystemStatusCommandRequest,
     SystemStatusCommandTerminal, SystemStatusHostHealth, SystemStatusHostRequest,
     SystemStatusHostResponse, SystemStatusSnapshot, SystemStatusTerminalKind,
+};
+pub use taskbar_state::{
+    TaskbarAttentionMode, TaskbarAttentionState, TaskbarProgressKind, TaskbarProgressState,
+    TaskbarStateSnapshot, TaskbarStateTerminal, TaskbarStateTerminalKind, TaskbarWindowIdentity,
+    TaskbarWindowState, reduce_group_progress,
 };
 pub use validation::{
     MAX_COLLECTION_ITEMS, MAX_FRAME_BYTES, MAX_ICON_BYTES, MAX_TEXT_BYTES, Validate,
