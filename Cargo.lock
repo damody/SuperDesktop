@@ -3930,6 +3930,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "system-status-host"
+version = "0.1.0"
+dependencies = [
+ "platform-win",
+ "serde_json",
+ "shell-provider-protocol",
+]
+
+[[package]]
 name = "taffy"
 version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

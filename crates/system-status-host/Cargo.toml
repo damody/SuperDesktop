@@ -1,0 +1,14 @@
+[package]
+name = "system-status-host"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+serde_json.workspace = true
+platform-win = { path = "../platform-win" }
+shell-provider-protocol = { path = "../shell-provider-protocol" }

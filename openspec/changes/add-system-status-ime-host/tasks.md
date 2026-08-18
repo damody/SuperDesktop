@@ -77,11 +77,11 @@
 **Gate／Evidence：** `G-STATUS-ISOLATION`; process tests and resource snapshots.
 **完成門檻：** Handshake, initial/full snapshots, commands, callback coalescing, overflow and teardown are deterministic and bounded.
 
-- [ ] 3.1.1 Add the `system-status-host` workspace crate and binary entry point.
-- [ ] 3.1.2 Implement versioned handshake, client/session lease and initial full snapshot.
+- [x] 3.1.1 Add the `system-status-host` workspace crate and binary entry point.
+- [x] 3.1.2 Implement versioned handshake, client/session lease and initial full snapshot.
 - [ ] 3.1.3 Register provider callbacks with no-unwind/shutdown fencing.
 - [ ] 3.1.4 Implement bounded coalescing queue, overflow event and authoritative reconciliation timer.
-- [ ] 3.1.5 Implement exactly-once status command terminals and host-process malformed-input tests.
+- [x] 3.1.5 Implement exactly-once status command terminals and host-process malformed-input tests.
 
 ### 3.2 Add SuperDesktop host client and restart recovery
 

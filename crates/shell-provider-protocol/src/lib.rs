@@ -32,7 +32,8 @@ pub use search::{
 pub use system_status::{
     AudioStatus, ClockCalendarStatus, InputProfile, InputStatus, MAX_INPUT_PROFILES, NetworkStatus,
     PowerStatus, StatusAvailability, SystemStatusCommand, SystemStatusCommandRequest,
-    SystemStatusCommandTerminal, SystemStatusSnapshot, SystemStatusTerminalKind,
+    SystemStatusCommandTerminal, SystemStatusHostHealth, SystemStatusHostRequest,
+    SystemStatusHostResponse, SystemStatusSnapshot, SystemStatusTerminalKind,
 };
 pub use validation::{
     MAX_COLLECTION_ITEMS, MAX_FRAME_BYTES, MAX_ICON_BYTES, MAX_TEXT_BYTES, Validate,

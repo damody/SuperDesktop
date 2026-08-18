@@ -13,6 +13,7 @@ members = [
     "crates/superdesktop-app",
     "crates/superdesktop-guardian",
     "crates/superdesktop-test-support",
+    "crates/system-status-host",
     "crates/taskbar-ui",
 ]
 

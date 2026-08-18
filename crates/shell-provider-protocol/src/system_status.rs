@@ -244,6 +244,53 @@ pub struct SystemStatusCommandTerminal {
     pub message: String,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum SystemStatusHostRequest {
+    Handshake,
+    Health,
+    Snapshot,
+    Command { request: SystemStatusCommandRequest },
+    Cancel { correlation_id: String },
+}
+
+impl Validate for SystemStatusHostRequest {
+    fn validate(&self) -> Result<(), ValidationError> {
+        match self {
+            Self::Command { request } => request.validate(),
+            Self::Cancel { correlation_id } => {
+                validate_text(correlation_id, "system_status.cancel.correlation_id")
+            }
+            Self::Handshake | Self::Health | Self::Snapshot => Ok(()),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct SystemStatusHostHealth {
+    pub healthy: bool,
+    pub host_generation: u64,
+    pub snapshot_generation: u64,
+    pub pending_commands: usize,
+    pub capacity: usize,
+    pub overflowed: bool,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", content = "value", rename_all = "snake_case")]
+pub enum SystemStatusHostResponse {
+    Handshake {
+        protocol_major: u16,
+        protocol_minor: u16,
+        max_frame_bytes: usize,
+        max_pending_commands: usize,
+    },
+    Health(SystemStatusHostHealth),
+    Snapshot(SystemStatusSnapshot),
+    Terminal(SystemStatusCommandTerminal),
+    Rejected(String),
+}
+
 impl Validate for SystemStatusCommandTerminal {
     fn validate(&self) -> Result<(), ValidationError> {
         validate_text(
@@ -373,5 +420,11 @@ mod tests {
             message: String::new(),
         };
         assert!(terminal.validate().is_err());
+
+        let host_request = SystemStatusHostRequest::Command { request };
+        host_request.validate().unwrap();
+        let json = serde_json::to_string(&host_request).unwrap();
+        let decoded: SystemStatusHostRequest = serde_json::from_str(&json).unwrap();
+        assert_eq!(decoded, host_request);
     }
 }
