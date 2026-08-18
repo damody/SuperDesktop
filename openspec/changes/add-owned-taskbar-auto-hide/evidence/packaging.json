@@ -1,0 +1,12 @@
+{
+  "schema": "owned-taskbar-auto-hide-packaging/v1",
+  "result": "passed",
+  "version": "1.2026.8.19",
+  "superdesktop_revision": "d5ee36b1b5265ee5fba8262e91298650b4c17b24",
+  "artifacts": [
+    {"path":"D:/SuperExplorer/SuperDesktop/target/release/superdesktop-app.exe","sha256":"a9aff7a88105b9a5b1138355ce05292d8b4a7115642194592dae44f272c2eb1f"},
+    {"path":"D:/SuperExplorer/dist/SuperDesktop-Test-Setup-1.2026.8.19-x64.exe","mode":"superdesktop-only","sha256":"4534d34c96a72f2d5d905221f7056114206463bc5ba94f3d87b0a3d05506ab48"},
+    {"path":"D:/SuperExplorer/dist/SuperExplorer-Setup-1.2026.8.19-x64.exe","mode":"superexplorer-plus-superdesktop","sha256":"0e1d669d747a63b3df3f1fbd493f336d4844af7bfad8ffd0bfe36750449623ba"}
+  ],
+  "commands": ["build_desktop_test_install.bat --no-launch", "build_install.bat --no-launch"]
+}

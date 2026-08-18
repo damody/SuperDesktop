@@ -2,6 +2,8 @@
   "schema": "owned-taskbar-auto-hide-automated/v1",
   "result": "passed",
   "release_app_sha256": "1725de5a30f1a4ef461cd0c0c10972226d4acf2c9ff9b4b98bebd7830d146b02",
+  "packaged_release_app_sha256": "a9aff7a88105b9a5b1138355ce05292d8b4a7115642194592dae44f272c2eb1f",
+  "binary_lineage": "Both binaries were built from SuperDesktop revision d5ee36b1; PE linker output is not byte-reproducible across the installer rebuild.",
   "commands": [
     "cargo fmt --all -- --check",
     "cargo test --workspace --all-targets --locked --offline --no-fail-fast",

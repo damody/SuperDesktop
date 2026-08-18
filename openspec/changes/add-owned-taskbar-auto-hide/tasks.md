@@ -114,6 +114,6 @@
 **Gate／Evidence：** `G-TRACE`, `G-PACKAGE`; evidence and packaging records.
 **完成門檻：** Every leaf has unique evidence, both installers build without launch, strict/detailed validators pass, and the change stays unarchived.
 
-- [ ] 3.2.1 Record admitted release binary hashes and implementation revision.
-- [ ] 3.2.2 Build standalone and combined NSIS installers without launch and record hashes.
-- [ ] 3.2.3 Create the 24-leaf evidence index and pass detailed plus strict validation without archiving.
+- [x] 3.2.1 Record admitted release binary hashes and implementation revision.
+- [x] 3.2.2 Build standalone and combined NSIS installers without launch and record hashes.
+- [x] 3.2.3 Create the 24-leaf evidence index and pass detailed plus strict validation without archiving.
