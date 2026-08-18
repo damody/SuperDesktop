@@ -43,7 +43,9 @@ use taskbar_ui::{
     NotificationAreaModel, NotificationOverflowView, PreviewCard, ProgressState, ProviderState,
     StartActions, StartPowerAction, StartSnapshot, StartView, StatusRegion, SystemFlyoutKind,
     SystemFlyoutView, SystemStatusAction, TaskAction, TaskFlyoutView, TaskViewEffect,
-    TaskViewModel, TaskViewSurface, TaskbarCallbacks, TaskbarLayout, TaskbarView, TestClock,
+    TaskViewModel, TaskViewSurface, TaskbarCallbacks, TaskbarContextCommand, TaskbarContextView,
+    TaskbarLayout, TaskbarSettingId, TaskbarSettingsEffect, TaskbarSettingsView, TaskbarView,
+    TestClock,
 };
 
 use crate::{
@@ -1526,6 +1528,93 @@ fn jump_list_options(monitor: &MonitorRecord) -> WindowOptions {
     }
 }
 
+fn taskbar_context_options(
+    monitor: &MonitorRecord,
+    anchor: gpui::Point<gpui::Pixels>,
+) -> WindowOptions {
+    let scale = monitor.dpi_x as f32 / 96.0;
+    let (left, top, _, _) = taskbar_context_placement(monitor, anchor);
+    let width = 220.0;
+    let height = 80.0;
+    WindowOptions {
+        window_bounds: Some(WindowBounds::Windowed(Bounds {
+            origin: point(px(left as f32 / scale), px(top as f32 / scale)),
+            size: size(px(width), px(height)),
+        })),
+        titlebar: None,
+        focus: true,
+        show: true,
+        kind: WindowKind::PopUp,
+        is_movable: false,
+        is_resizable: false,
+        is_minimizable: false,
+        window_background: WindowBackgroundAppearance::Opaque,
+        ..Default::default()
+    }
+}
+
+fn taskbar_context_placement(
+    monitor: &MonitorRecord,
+    anchor: gpui::Point<gpui::Pixels>,
+) -> (i32, i32, i32, i32) {
+    let scale = monitor.dpi_x as f32 / 96.0;
+    let width = 220.0;
+    let height = 80.0;
+    let work_left = monitor.work_area.left as f32 / scale;
+    let work_right = monitor.work_area.right as f32 / scale;
+    let work_top = monitor.work_area.top as f32 / scale;
+    let work_bottom = monitor.work_area.bottom as f32 / scale;
+    let left = (work_left + anchor.x.as_f32() - width / 2.0)
+        .clamp(work_left, (work_right - width).max(work_left));
+    let top = (work_bottom - height - 8.0).max(work_top);
+    (
+        (left * scale).round() as i32,
+        (top * scale).round() as i32,
+        (width * scale).round() as i32,
+        (height * scale).round() as i32,
+    )
+}
+
+fn taskbar_settings_options(monitor: &MonitorRecord) -> WindowOptions {
+    let scale = monitor.dpi_x as f32 / 96.0;
+    let available_width = (monitor.work_area.right - monitor.work_area.left) as f32 / scale;
+    let available_height = (monitor.work_area.bottom - monitor.work_area.top) as f32 / scale;
+    let width = available_width.clamp(640.0, 980.0);
+    let height = available_height.clamp(480.0, 860.0);
+    let (left, top, _, _) = taskbar_settings_placement(monitor);
+    WindowOptions {
+        window_bounds: Some(WindowBounds::Windowed(Bounds {
+            origin: point(px(left as f32 / scale), px(top as f32 / scale)),
+            size: size(px(width), px(height)),
+        })),
+        titlebar: None,
+        focus: true,
+        show: true,
+        kind: WindowKind::PopUp,
+        is_movable: true,
+        is_resizable: true,
+        is_minimizable: false,
+        window_background: WindowBackgroundAppearance::Opaque,
+        ..Default::default()
+    }
+}
+
+fn taskbar_settings_placement(monitor: &MonitorRecord) -> (i32, i32, i32, i32) {
+    let scale = monitor.dpi_x as f32 / 96.0;
+    let available_width = (monitor.work_area.right - monitor.work_area.left) as f32 / scale;
+    let available_height = (monitor.work_area.bottom - monitor.work_area.top) as f32 / scale;
+    let width = available_width.clamp(640.0, 980.0);
+    let height = available_height.clamp(480.0, 860.0);
+    let left = monitor.work_area.left as f32 / scale + (available_width - width) / 2.0;
+    let top = monitor.work_area.top as f32 / scale + (available_height - height) / 2.0;
+    (
+        (left * scale).round() as i32,
+        (top * scale).round() as i32,
+        (width * scale).round() as i32,
+        (height * scale).round() as i32,
+    )
+}
+
 fn task_view_options(monitor: &MonitorRecord) -> WindowOptions {
     let scale = monitor.dpi_x as f32 / 96.0;
     let width = (monitor.work_area.right - monitor.work_area.left) as f32 / scale;
@@ -1816,6 +1905,10 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
             let mut system_flyout_windows = Vec::new();
             let leases = Rc::new(RefCell::new(Vec::<ControlledShellCapability>::new()));
             let attention_runtime = Rc::new(RefCell::new(AttentionRuntime::default()));
+            let taskbar_context_window =
+                Rc::new(RefCell::new(None::<gpui::WindowHandle<TaskbarContextView>>));
+            let taskbar_settings_window =
+                Rc::new(RefCell::new(None::<gpui::WindowHandle<TaskbarSettingsView>>));
             let init_error = Rc::new(RefCell::new(None::<&'static str>));
             for monitor in snapshot.monitors.clone() {
                 if verification_surface.as_deref() != Some("taskbar") {
@@ -2114,6 +2207,12 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                 let system_flyout_status = Rc::clone(&status_reconciler);
                 let system_flyout_client = Rc::clone(&status_client);
                 let system_flyout_start = Rc::clone(&start_window);
+                let context_window_for_taskbar = Rc::clone(&taskbar_context_window);
+                let settings_window_for_context = Rc::clone(&taskbar_settings_window);
+                let context_monitor = taskbar_monitor.clone();
+                let context_settings_store = Rc::clone(&settings_store);
+                let context_settings_target = Rc::clone(&settings_target);
+                let context_persisted_settings = Rc::clone(&persisted_settings);
                 let production_taskbar_settings = persisted_settings.borrow().taskbar.clone();
                 let taskbar = cx.open_window(
                     options(
@@ -2215,6 +2314,9 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                         notification_area: NotificationAreaModel::default(),
                         overlays: taskbar_overlays,
                         show_labels: production_taskbar_settings.show_labels,
+                        search_mode: production_taskbar_settings.search_mode,
+                        show_task_view: production_taskbar_settings.show_task_view,
+                        alignment: production_taskbar_settings.alignment,
                         callbacks: Some(TaskbarCallbacks {
                             start: Rc::new(move |app| {
                                 trace_action("start");
@@ -2541,6 +2643,121 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                     trace_action("taskbar:jump-list-opened");
                                 }
                             }),
+                            taskbar_context: Rc::new(move |anchor, app| {
+                                if let Some(existing) = *context_window_for_taskbar.borrow() {
+                                    let _ = existing.update(app, |_, window, _| window.remove_window());
+                                    *context_window_for_taskbar.borrow_mut() = None;
+                                }
+                                let context_slot = Rc::clone(&context_window_for_taskbar);
+                                let settings_slot = Rc::clone(&settings_window_for_context);
+                                let settings_monitor = context_monitor.clone();
+                                let settings_store = Rc::clone(&context_settings_store);
+                                let settings_target = Rc::clone(&context_settings_target);
+                                let live_settings = Rc::clone(&context_persisted_settings);
+                                let opened = app.open_window(
+                                    taskbar_context_options(&context_monitor, anchor),
+                                    move |window, cx| {
+                                        window.activate_window();
+                                        let dismiss_slot = Rc::clone(&context_slot);
+                                        let settings_slot_for_action = Rc::clone(&settings_slot);
+                                        let monitor_for_action = settings_monitor.clone();
+                                        let store_for_action = Rc::clone(&settings_store);
+                                        let target_for_action = Rc::clone(&settings_target);
+                                        let live_for_action = Rc::clone(&live_settings);
+                                        cx.new(move |cx| {
+                                            TaskbarContextView::new(
+                                                Rc::new(move |command, app| match command {
+                                                    TaskbarContextCommand::OpenTaskManager => {
+                                                        trace_action(if platform_win::common::taskbar::launch_task_manager().is_ok() {
+                                                            "taskbar:task-manager-launched"
+                                                        } else {
+                                                            "taskbar:task-manager-rejected"
+                                                        });
+                                                    }
+                                                    TaskbarContextCommand::OpenTaskbarSettings => {
+                                                        if let Some(existing) = *settings_slot_for_action.borrow() {
+                                                            if existing.update(app, |_, window, _| window.activate_window()).is_ok() {
+                                                                trace_action("taskbar:settings-activated");
+                                                                return;
+                                                            }
+                                                            *settings_slot_for_action.borrow_mut() = None;
+                                                        }
+                                                        let initial = live_for_action.borrow().clone();
+                                                        let save_store = Rc::clone(&store_for_action);
+                                                        let save_target = Rc::clone(&target_for_action);
+                                                        let save_live = Rc::clone(&live_for_action);
+                                                        let settings_dismiss_slot = Rc::clone(&settings_slot_for_action);
+                                                        let settings_dismiss_slot_for_view = Rc::clone(&settings_dismiss_slot);
+                                                        let settings_opened = app.open_window(
+                                                            taskbar_settings_options(&monitor_for_action),
+                                                            move |window, cx| {
+                                                                window.activate_window();
+                                                                cx.new(move |cx| TaskbarSettingsView::new(
+                                                                    initial.taskbar.clone(),
+                                                                    initial.revision,
+                                                                    Rc::new(move |effect| {
+                                                                        match effect {
+                                                                            TaskbarSettingsEffect::Save { candidate, base_revision } => {
+                                                                                let current = save_live.borrow().clone();
+                                                                                if current.revision != base_revision || !(1..=3).contains(&candidate.rows) {
+                                                                                    return Err("Settings changed in another window; reopen Taskbar settings".into());
+                                                                                }
+                                                                                let mut updated = current;
+                                                                                updated.taskbar = candidate;
+                                                                                match save_store.borrow_mut().save(&save_target, &updated) {
+                                                                                    Ok(saved) => {
+                                                                                        let result = (saved.taskbar.clone(), saved.revision);
+                                                                                        *save_live.borrow_mut() = saved;
+                                                                                        trace_action("taskbar:settings-saved");
+                                                                                        Ok(result)
+                                                                                    }
+                                                                                    Err(_) => Err("Taskbar settings could not be saved".into()),
+                                                                                }
+                                                                            }
+                                                                            TaskbarSettingsEffect::OpenOtherTrayIcons => {
+                                                                                let current = save_live.borrow();
+                                                                                trace_action("taskbar:settings-overflow-requested");
+                                                                                Ok((current.taskbar.clone(), current.revision))
+                                                                            }
+                                                                            TaskbarSettingsEffect::OpenRelated(id) => {
+                                                                                let current = save_live.borrow();
+                                                                                trace_action(match id {
+                                                                                    TaskbarSettingId::DateTime => "taskbar:settings-date-time-requested",
+                                                                                    _ => "taskbar:settings-notifications-requested",
+                                                                                });
+                                                                                Ok((current.taskbar.clone(), current.revision))
+                                                                            }
+                                                                        }
+                                                                    }),
+                                                                    Rc::new(move |window, _| {
+                                                                        window.remove_window();
+                                                                        *settings_dismiss_slot_for_view.borrow_mut() = None;
+                                                                    }),
+                                                                    cx,
+                                                                ))
+                                                            },
+                                                        );
+                                                        if let Ok(handle) = settings_opened {
+                                                            *settings_dismiss_slot.borrow_mut() = Some(handle);
+                                                            trace_action("taskbar:settings-opened");
+                                                        }
+                                                    }
+                                                }),
+                                                Rc::new(move |window, _| {
+                                                    window.remove_window();
+                                                    *dismiss_slot.borrow_mut() = None;
+                                                }),
+                                                window,
+                                                cx,
+                                            )
+                                        })
+                                    },
+                                );
+                                if let Ok(handle) = opened {
+                                    *context_window_for_taskbar.borrow_mut() = Some(handle);
+                                    trace_action("taskbar:context-opened");
+                                }
+                            }),
                             notification: Rc::new(move |key, kind| {
                                 send_notification_event(
                                     &notification_client_for_taskbar,
@@ -2844,8 +3061,68 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                 let mut alive = false;
                                 for handle in &refresh_handles {
                                     if handle
-                                        .update(app, |view, _, cx| {
+                                        .update(app, |view, window, cx| {
                                             alive = true;
+                                            let mut settings_changed = false;
+                                            if view.show_labels != taskbar_settings.show_labels {
+                                                view.show_labels = taskbar_settings.show_labels;
+                                                settings_changed = true;
+                                            }
+                                            if view.search_mode != taskbar_settings.search_mode {
+                                                view.search_mode = taskbar_settings.search_mode;
+                                                settings_changed = true;
+                                            }
+                                            if view.show_task_view != taskbar_settings.show_task_view {
+                                                view.show_task_view = taskbar_settings.show_task_view;
+                                                settings_changed = true;
+                                            }
+                                            if view.alignment != taskbar_settings.alignment {
+                                                view.alignment = taskbar_settings.alignment;
+                                                settings_changed = true;
+                                            }
+                                            if view.layout.rows.get() != taskbar_settings.rows {
+                                                let scale = window.scale_factor();
+                                                let bounds = window.bounds();
+                                                let physical_width =
+                                                    (bounds.size.width.as_f32() * scale).round() as i32;
+                                                let physical_bottom = ((bounds.origin.y
+                                                    + bounds.size.height)
+                                                    .as_f32()
+                                                    * scale)
+                                                    .round()
+                                                    as i32;
+                                                let physical_left =
+                                                    (bounds.origin.x.as_f32() * scale).round() as i32;
+                                                let physical_height = (40.0
+                                                    * f32::from(taskbar_settings.rows)
+                                                    * scale)
+                                                    .round()
+                                                    as i32;
+                                                if let Ok(raw) = hwnd(window) {
+                                                    let _ = configure_and_show_taskbar_window(
+                                                        raw,
+                                                        physical_left,
+                                                        physical_bottom - physical_height,
+                                                        physical_width,
+                                                        physical_height,
+                                                    );
+                                                }
+                                                settings_changed = true;
+                                            }
+                                            if settings_changed || view.tasks != tasks {
+                                                let running = tasks
+                                                    .iter()
+                                                    .map(|task| task.stable_id.clone())
+                                                    .collect::<Vec<_>>();
+                                                view.layout = TaskbarLayout::calculate(
+                                                    taskbar_settings.rows,
+                                                    (window.scale_factor() * 96.0).round() as u32,
+                                                    window.bounds().size.width.as_f32()
+                                                        * window.scale_factor(),
+                                                    &running,
+                                                    &taskbar_settings.pins,
+                                                );
+                                            }
                                             if view.status != current_status {
                                                 view.status = current_status.clone();
                                                 trace_action("clock:updated");
@@ -2902,7 +3179,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                                     .retain(|stable_id, _| live.contains(stable_id.as_str()));
                                                 trace_action("shell-event");
                                                 cx.notify();
-                                            } else if task_visual_changed {
+                                            } else if task_visual_changed || settings_changed {
                                                 cx.notify();
                                             }
                                             if let Some(snapshot) = notification_update.clone() {
@@ -2966,6 +3243,8 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                 let async_app = cx.to_async();
                 let terminal_for_timer = Rc::clone(&terminal_for_app);
                 let leases_for_timer = Rc::clone(&leases);
+                let context_for_timer = Rc::clone(&taskbar_context_window);
+                let settings_for_timer = Rc::clone(&taskbar_settings_window);
                 foreground
                     .spawn(async move {
                         background.timer(duration).await;
@@ -2983,6 +3262,12 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                 if let Some((_, handle)) = slot.borrow_mut().take() {
                                     let _ = handle.update(app, |_, window, _| window.remove_window());
                                 }
+                            }
+                            if let Some(handle) = context_for_timer.borrow_mut().take() {
+                                let _ = handle.update(app, |_, window, _| window.remove_window());
+                            }
+                            if let Some(handle) = settings_for_timer.borrow_mut().take() {
+                                let _ = handle.update(app, |_, window, _| window.remove_window());
                             }
                             *terminal_for_timer.borrow_mut() = Some(Ok(()));
                             app.quit();
@@ -3002,6 +3287,7 @@ mod live_parity_tests {
         start_window_geometry,
     };
     use desktop_ui::AccessibleNode;
+    use gpui::{WindowBounds, point, px};
     use platform_win::common::appbar_shell_hook::OwnedShellHookEvent;
     use platform_win::common::monitor_dpi_start::ScreenRect;
     use std::collections::{BTreeMap, BTreeSet};
@@ -3296,5 +3582,57 @@ mod live_parity_tests {
         let geometry = start_window_geometry(&small);
         assert_eq!((geometry.left, geometry.top), (12.0, 0.0));
         assert_eq!((geometry.width, geometry.height), (476.0, 388.0));
+    }
+
+    #[test]
+    fn taskbar_context_geometry_clamps_to_monitor_and_settings_fit_work_area() {
+        let monitor = MonitorRecord {
+            device_name: "fixture".into(),
+            primary: true,
+            bounds: ScreenRect {
+                left: -1920,
+                top: 0,
+                right: 0,
+                bottom: 1080,
+            },
+            work_area: ScreenRect {
+                left: -1920,
+                top: 0,
+                right: 0,
+                bottom: 1040,
+            },
+            dpi_x: 144,
+            dpi_y: 144,
+        };
+        let (left, _, width, _) =
+            super::taskbar_context_placement(&monitor, point(px(9_999.), px(0.)));
+        assert!(left >= -1920);
+        assert!(left + width <= 0);
+        let settings = super::taskbar_settings_options(&monitor);
+        let Some(WindowBounds::Windowed(settings)) = settings.window_bounds else {
+            panic!("bounds")
+        };
+        assert!(settings.size.width.as_f32() <= 980.0);
+        assert!(settings.size.height.as_f32() <= 860.0);
+    }
+
+    #[test]
+    fn owned_taskbar_context_settings_are_atomic_and_never_delegate_to_explorer() {
+        let source = include_str!("surface_runtime.rs");
+        let production = source.split("#[cfg(test)]").next().unwrap_or(source);
+        for token in [
+            "taskbar_context: Rc::new",
+            "TaskbarContextView::new",
+            "TaskbarSettingsView::new",
+            "current.revision != base_revision",
+            "save_store.borrow_mut().save",
+            "taskbar:settings-saved",
+            "launch_task_manager()",
+        ] {
+            assert!(production.contains(token), "missing {token}");
+        }
+        assert!(!production.contains("ms-settings:taskbar"));
+        assert!(!production.contains("Shell_TrayWnd"));
+        assert!(include_str!("../../taskbar-ui/src/view.rs").contains("cx.stop_propagation();"));
     }
 }

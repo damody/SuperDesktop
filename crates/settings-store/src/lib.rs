@@ -10,7 +10,8 @@ mod store;
 pub use schema::{
     AccessibilitySettings, DecodeOutcome, DesktopPosition, DesktopSettings, DesktopSortDirection,
     DesktopSortKey, ExecutionPreference, RuntimeMode, SettingsCorrection, SettingsError,
-    SettingsV1, StartSettings, TaskbarSettings, ThemePreference, WallpaperMode, WallpaperSettings,
+    SettingsV1, StartSettings, TaskbarAlignment, TaskbarSearchMode, TaskbarSettings,
+    ThemePreference, WallpaperMode, WallpaperSettings,
 };
 pub use store::{
     AtomicSettingsFileSystem, FixtureRootGuard, LoadOutcome, SettingsStore, StoreError,

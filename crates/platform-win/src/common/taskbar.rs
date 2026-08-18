@@ -1,10 +1,16 @@
 //! Owned taskbar window snapshots and validated foreground effects.
 
-use std::{ffi::c_void, mem::size_of};
+use std::{
+    ffi::c_void,
+    mem::size_of,
+    os::windows::fs::MetadataExt,
+    process::{Command, Stdio},
+};
 
 use windows::Win32::{
     Foundation::{CloseHandle, HWND, LPARAM, POINT, RECT},
     Graphics::Gdi::ClientToScreen,
+    System::SystemInformation::GetWindowsDirectoryW,
     System::Threading::{
         GetCurrentProcessId, OpenProcess, PROCESS_NAME_FORMAT, PROCESS_QUERY_LIMITED_INFORMATION,
         QueryFullProcessImageNameW,
@@ -26,10 +32,53 @@ const DWMWA_WINDOW_CORNER_PREFERENCE: u32 = 33;
 const DWMWA_BORDER_COLOR: u32 = 34;
 const DWMWCP_DONOTROUND: u32 = 1;
 const DWMWA_COLOR_NONE: u32 = 0xffff_fffe;
+const FILE_ATTRIBUTE_REPARSE_POINT: u32 = 0x0000_0400;
 #[link(name = "dwmapi")]
 unsafe extern "system" {
     fn DwmGetWindowAttribute(hwnd: HWND, attribute: u32, value: *mut c_void, size: u32) -> i32;
     fn DwmSetWindowAttribute(hwnd: HWND, attribute: u32, value: *const c_void, size: u32) -> i32;
+}
+
+/// Resolves the inbox Task Manager from the Windows directory and launches the
+/// exact canonical non-reparse file without shell parsing or environment lookup.
+pub fn task_manager_path() -> Result<std::path::PathBuf, &'static str> {
+    let mut buffer = vec![0_u16; 32_768];
+    // SAFETY: Windows copies at most the supplied writable buffer length.
+    let length = unsafe { GetWindowsDirectoryW(Some(&mut buffer)) } as usize;
+    if length == 0 || length >= buffer.len() {
+        return Err("task-manager-windows-directory");
+    }
+    let windows_directory = std::path::PathBuf::from(String::from_utf16_lossy(&buffer[..length]));
+    let expected = windows_directory.join("System32").join("Taskmgr.exe");
+    let canonical = expected
+        .canonicalize()
+        .map_err(|_| "task-manager-canonical")?;
+    let canonical_system32 = windows_directory
+        .join("System32")
+        .canonicalize()
+        .map_err(|_| "task-manager-system32")?;
+    if canonical.parent() != Some(canonical_system32.as_path()) {
+        return Err("task-manager-outside-system32");
+    }
+    let metadata = std::fs::symlink_metadata(&canonical).map_err(|_| "task-manager-metadata")?;
+    if !metadata.is_file()
+        || metadata.file_type().is_symlink()
+        || metadata.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT != 0
+    {
+        return Err("task-manager-file-identity");
+    }
+    Ok(canonical)
+}
+
+pub fn launch_task_manager() -> Result<u32, &'static str> {
+    let canonical = task_manager_path()?;
+    let child = Command::new(&canonical)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+        .map_err(|_| "task-manager-spawn")?;
+    Ok(child.id())
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -241,6 +290,35 @@ pub fn configure_and_show_taskbar_window(
     Ok(())
 }
 
+pub fn configure_and_show_popup_window(
+    hwnd_identity: isize,
+    left: i32,
+    top: i32,
+    width: i32,
+    height: i32,
+) -> Result<(), String> {
+    if hwnd_identity == 0 || width <= 0 || height <= 0 {
+        return Err("popup-window-invalid-geometry".into());
+    }
+    let hwnd = HWND(hwnd_identity as *mut c_void);
+    if !unsafe { IsWindow(Some(hwnd)).as_bool() } {
+        return Err("popup-window-retired".into());
+    }
+    // SAFETY: applies validated outer-window geometry to the caller-owned live popup.
+    unsafe {
+        SetWindowPos(
+            hwnd,
+            Some(HWND_TOPMOST),
+            left,
+            top,
+            width,
+            height,
+            SWP_SHOWWINDOW,
+        )
+    }
+    .map_err(|error| error.to_string())
+}
+
 pub fn apply_window_action(hwnd_identity: isize, action: WindowAction) -> Result<(), String> {
     let hwnd = HWND(hwnd_identity as *mut c_void);
     // SAFETY: mutation is admitted only for a currently valid top-level HWND.
@@ -294,5 +372,18 @@ mod tests {
     #[test]
     fn retired_window_action_fails_closed() {
         assert!(apply_window_action(1, WindowAction::Activate).is_err())
+    }
+    #[test]
+    fn task_manager_path_is_canonical_system32_regular_file() {
+        let path = task_manager_path().unwrap();
+        assert!(path.is_absolute());
+        assert_eq!(
+            path.file_name().and_then(|name| name.to_str()),
+            Some("Taskmgr.exe")
+        );
+        let metadata = std::fs::symlink_metadata(path).unwrap();
+        assert!(metadata.is_file());
+        assert!(!metadata.file_type().is_symlink());
+        assert_eq!(metadata.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT, 0);
     }
 }

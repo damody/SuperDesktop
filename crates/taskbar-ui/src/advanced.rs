@@ -14,6 +14,8 @@ use settings_store::TaskbarSettings;
 use shell_core::{ApplicationId, WindowId};
 use shell_provider_protocol::{CommandDescriptor, validate_command_tree};
 
+use crate::taskbar_settings::CommandSurfaceTokens;
+
 pub const HOVER_PREVIEW_DELAY_MS: u64 = 400;
 pub const MAX_JUMP_LIST_ITEMS: usize = 60;
 
@@ -87,7 +89,8 @@ impl Render for TaskFlyoutView {
             .aria_label("Window previews")
             .tab_index(0)
             .track_focus(&self.focus)
-            .size_full()
+            .w(px(360.))
+            .h(px(480.))
             .p_2()
             .flex()
             .gap_2()
@@ -338,6 +341,14 @@ pub struct TaskVisualState {
 }
 
 impl TaskVisualState {
+    pub fn indicator_width_for(&self, labeled_button: bool, button_width: f32) -> f32 {
+        if labeled_button {
+            (button_width - 16.0).max(self.indicator_width)
+        } else {
+            self.indicator_width
+        }
+    }
+
     pub fn compose(
         available: bool,
         active: bool,
@@ -550,23 +561,33 @@ impl Render for JumpListView {
             .entries()
             .into_iter()
             .enumerate()
-            .map(|(focus_index, (group, index, command))| {
-                (focus_index, group, index, command.clone())
+            .scan(None, |previous, (focus_index, (group, index, command))| {
+                let separator = previous.is_some_and(|value| value != group);
+                *previous = Some(group);
+                Some((focus_index, group, index, command.clone(), separator))
             })
             .collect::<Vec<_>>();
+        let tokens = CommandSurfaceTokens::current();
         div()
             .id("task-jump-list")
             .role(gpui::Role::Menu)
             .aria_label("Jump List")
             .tab_index(0)
             .track_focus(&self.focus)
+            .absolute()
+            .left_0()
+            .top_0()
             .size_full()
-            .p_2()
+            .p(px(4.))
+            .rounded(px(8.))
+            .border_1()
+            .border_color(rgb(tokens.border))
+            .shadow_lg()
             .flex()
             .flex_col()
-            .gap_1()
-            .bg(rgb(0x182028))
-            .text_color(rgb(0xf4f7fa))
+            .gap(px(2.))
+            .bg(rgb(tokens.background))
+            .text_color(rgb(tokens.foreground))
             .on_key_down(
                 cx.listener(move |this, event: &gpui::KeyDownEvent, window, cx| {
                     match event.keystroke.key.as_str() {
@@ -588,31 +609,52 @@ impl Render for JumpListView {
             .children(
                 entries
                     .into_iter()
-                    .map(|(focus_index, group, index, command)| {
+                    .map(|(focus_index, group, index, command, separator)| {
                         let invoke = self.invoke.clone();
                         let dismiss = self.dismiss.clone();
                         let enabled = command.enabled;
                         let label = command.label.clone();
+                        let invoked_command = command.clone();
+                        let risk = command.risk.clone();
                         div()
                             .id(format!("jump-list-{group:?}-{index}"))
                             .role(gpui::Role::MenuItem)
                             .aria_label(label.clone())
                             .tab_index(0)
-                            .px_3()
-                            .py_2()
-                            .rounded_md()
+                            .h(px(32.))
+                            .px(px(10.))
+                            .rounded(px(4.))
+                            .flex()
+                            .items_center()
+                            .gap(px(10.))
+                            .when(separator, |element| {
+                                element.border_t_1().border_color(rgb(tokens.border))
+                            })
                             .when(self.focused == focus_index, |element| {
-                                element.bg(rgb(0x285b8f))
+                                element
+                                    .bg(rgb(tokens.selected))
+                                    .text_color(rgb(tokens.selected_foreground))
                             })
                             .when(!enabled, |element| element.opacity(0.5))
+                            .when(
+                                risk == shell_provider_protocol::CommandRisk::Destructive,
+                                |element| element.text_color(rgb(tokens.destructive)),
+                            )
                             .when(enabled, |element| {
                                 element.cursor_pointer().on_click(cx.listener(
                                     move |_, _, window, cx| {
-                                        invoke(&command);
+                                        invoke(&invoked_command);
                                         dismiss(window, cx);
                                     },
                                 ))
                             })
+                            .child(div().w(px(16.)).flex_none().child(
+                                if risk == shell_provider_protocol::CommandRisk::Destructive {
+                                    "×"
+                                } else {
+                                    "•"
+                                },
+                            ))
                             .child(label)
                     }),
             )
@@ -753,6 +795,17 @@ mod tests {
         );
         assert!(grouped.second_indicator);
         assert_eq!(grouped.indicator_opacity, 0.55);
+    }
+
+    #[test]
+    fn labeled_buttons_use_long_reference_indicator_and_icon_only_stays_short() {
+        let visual =
+            TaskVisualState::compose(true, false, false, 1, &TaskOverlay::default(), false, false);
+        assert_eq!(visual.indicator_width_for(true, 190.0), 174.0);
+        assert_eq!(visual.indicator_width_for(false, 190.0), 6.0);
+        let grouped =
+            TaskVisualState::compose(true, false, false, 3, &TaskOverlay::default(), false, false);
+        assert_eq!(grouped.indicator_width_for(true, 190.0), 174.0);
     }
 
     #[test]

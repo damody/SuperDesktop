@@ -1,6 +1,8 @@
 //! Owned, query-only taskbar status values.
 
-use windows::Win32::System::SystemInformation::GetLocalTime;
+use windows::Win32::{
+    Globalization::GetUserDefaultLocaleName, System::SystemInformation::GetLocalTime,
+};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct LocalDateTime {
@@ -21,6 +23,13 @@ pub fn local_date_time() -> LocalDateTime {
         hour: value.wHour as u8,
         minute: value.wMinute as u8,
     }
+}
+
+pub fn user_locale_name() -> Option<String> {
+    let mut buffer = [0_u16; 85];
+    // SAFETY: Windows writes a NUL-terminated locale name into fixed local storage.
+    let length = unsafe { GetUserDefaultLocaleName(&mut buffer) };
+    (length > 1).then(|| String::from_utf16_lossy(&buffer[..length as usize - 1]))
 }
 
 #[cfg(test)]

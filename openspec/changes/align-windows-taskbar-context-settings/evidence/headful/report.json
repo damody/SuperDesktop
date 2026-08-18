@@ -1,0 +1,23 @@
+{
+  "schema": "taskbar-context-settings-headful/v1",
+  "host": "Windows 11 build 26200",
+  "result": "passed",
+  "captures": [
+    {"name":"context-light","sha256":"81a89c89e2bf6dd954d8da7036aadd2de339647f490867a4ee24e4c30522302b"},
+    {"name":"context-dark","sha256":"033615c5ffa3a324fabb66456bfea59641f62955812bd3ea0feeb703ca42b47b"},
+    {"name":"settings-zh-tw","sha256":"ce5fb31a74a9b86eb0f846a834c07e77ae6527092a3af51e9fe8a578087ad672"},
+    {"name":"settings-high-contrast","sha256":"b64e6fd82ed3dde8c6379d547b205da715aae52a123c9ece67239f7f9e92e209"},
+    {"name":"taskbar-long-indicators","sha256":"83dfca0e6f470a48905cf50570cf21711cb03d209b5a1ff4bb206ac0df8fdfca"}
+  ],
+  "uia": {
+    "context_role": "menu",
+    "settings_role": "dialog",
+    "disabled_reasons": true,
+    "exact_progress_names": true
+  },
+  "non_interference": {
+    "preview_explorer_running": true,
+    "explorer_menu_delegation": false,
+    "windows_settings_delegation": false
+  }
+}

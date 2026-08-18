@@ -112,6 +112,21 @@ All new surfaces SHALL remain usable in light, dark, high-contrast, reduced-moti
 - **WHEN** Traditional Chinese or English labels and explanations reach their bounded maximum
 - **THEN** supporting text wraps without overlapping controls or leaving the monitor work area
 
+### Requirement: Labeled task running indicator geometry
+Running indicators SHALL match the configured task-button presentation instead of using one fixed icon-only length.
+
+#### Scenario: Labeled wide task button
+- **WHEN** readable labels are enabled for a task button
+- **THEN** its bottom running indicator extends across the bounded button content width with Windows-reference horizontal insets
+
+#### Scenario: Icon-only task button
+- **WHEN** labels are hidden and the task has a real icon
+- **THEN** the indicator uses the short icon-only Windows geometry
+
+#### Scenario: State layers retain common width
+- **WHEN** a labeled task becomes active, grouped, minimized, progresses, or flashes for attention
+- **THEN** all indicator layers preserve the labeled-button width basis and do not collapse to the icon-only length
+
 ### Requirement: Mode independence and packaging
 The owned context and settings behavior SHALL be available in Preview and controlled Shell modes, SHALL create no Explorer-exclusive identity, and SHALL ship through standalone and combined installers.
 

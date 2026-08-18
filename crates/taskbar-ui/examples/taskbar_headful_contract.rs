@@ -9,6 +9,7 @@ use platform_win::common::{
     taskbar::configure_and_show_taskbar_window,
 };
 use raw_window_handle::{HasWindowHandle, RawWindowHandle};
+use settings_store::{TaskbarAlignment, TaskbarSearchMode};
 use taskbar_ui::{
     ClockLocale, CoreStatus, NotificationAreaModel, ProviderState, StartAvailability, StartControl,
     StatusRegion, TaskbarLayout, TaskbarView, TestClock,
@@ -70,7 +71,7 @@ fn run() -> Result<(), String> {
                 lease.reserve_bottom(ScreenRect{left:primary_for_window.bounds.left,top:primary_for_window.bounds.top,right:primary_for_window.bounds.right,bottom:primary_for_window.bounds.bottom},bar_height).map_err(str::to_owned)?;
                 *lease_for_window.borrow_mut()=Some(lease);Ok::<(),String>(())
             })();if let Err(error)=initialized{*init_error_for_window.borrow_mut()=Some(error)}
-            cx.new(|_|TaskbarView{accessible_root_name:"SuperTaskbar".into(),layout:TaskbarLayout::calculate(2,primary_for_window.dpi_x,(primary_for_window.bounds.right-primary_for_window.bounds.left) as f32,&[],&["superexplorer".into()]),tasks:Vec::new(),fixed_name:"SuperExplorer".into(),fixed_icon:None,status:status(),system_snapshot:None,system_flyout:None,notification_area:NotificationAreaModel::default(),overlays:Default::default(),show_labels:true,callbacks:None,keyboard_focus:None})
+            cx.new(|_|TaskbarView{accessible_root_name:"SuperTaskbar".into(),layout:TaskbarLayout::calculate(2,primary_for_window.dpi_x,(primary_for_window.bounds.right-primary_for_window.bounds.left) as f32,&[],&["superexplorer".into()]),tasks:Vec::new(),fixed_name:"SuperExplorer".into(),fixed_icon:None,status:status(),system_snapshot:None,system_flyout:None,notification_area:NotificationAreaModel::default(),overlays:Default::default(),show_labels:true,search_mode:TaskbarSearchMode::Hidden,show_task_view:true,alignment:TaskbarAlignment::Left,callbacks:None,keyboard_focus:None})
         });
         let Ok(handle)=opened else{*terminal_for_app.borrow_mut()=Some(Err("gpui-open-window".into()));cx.quit();return};
         if let Some(error)=init_error.borrow_mut().take(){*terminal_for_app.borrow_mut()=Some(Err(error));cx.quit();return}

@@ -66,6 +66,21 @@ pub struct DesktopSettings {
     pub sort_direction: DesktopSortDirection,
 }
 
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum TaskbarSearchMode {
+    #[default]
+    Hidden,
+    Icon,
+    Box,
+}
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum TaskbarAlignment {
+    #[default]
+    Left,
+    Center,
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TaskbarSettings {
     pub rows: u8,
@@ -74,6 +89,9 @@ pub struct TaskbarSettings {
     pub show_labels: bool,
     pub previews_enabled: bool,
     pub all_monitors: bool,
+    pub search_mode: TaskbarSearchMode,
+    pub show_task_view: bool,
+    pub alignment: TaskbarAlignment,
 }
 
 impl Default for TaskbarSettings {
@@ -85,6 +103,9 @@ impl Default for TaskbarSettings {
             show_labels: true,
             previews_enabled: true,
             all_monitors: true,
+            search_mode: TaskbarSearchMode::Hidden,
+            show_task_view: true,
+            alignment: TaskbarAlignment::Left,
         }
     }
 }
@@ -208,6 +229,23 @@ impl SettingsV1 {
             settings.taskbar.previews_enabled =
                 take_bool(&mut taskbar, "previews_enabled").unwrap_or(true);
             settings.taskbar.all_monitors = take_bool(&mut taskbar, "all_monitors").unwrap_or(true);
+            settings.taskbar.search_mode = take_string(&mut taskbar, "search_mode")
+                .and_then(|value| match value.as_str() {
+                    "hidden" => Some(TaskbarSearchMode::Hidden),
+                    "icon" => Some(TaskbarSearchMode::Icon),
+                    "box" => Some(TaskbarSearchMode::Box),
+                    _ => None,
+                })
+                .unwrap_or_default();
+            settings.taskbar.show_task_view =
+                take_bool(&mut taskbar, "show_task_view").unwrap_or(true);
+            settings.taskbar.alignment = take_string(&mut taskbar, "alignment")
+                .and_then(|value| match value.as_str() {
+                    "left" => Some(TaskbarAlignment::Left),
+                    "center" => Some(TaskbarAlignment::Center),
+                    _ => None,
+                })
+                .unwrap_or_default();
         }
         if let Some(Value::Object(mut start)) = object.remove("start") {
             settings.start.initialized = take_bool(&mut start, "initialized").unwrap_or(false);
@@ -324,6 +362,31 @@ impl SettingsV1 {
                 (
                     "all_monitors".into(),
                     Value::Bool(self.taskbar.all_monitors),
+                ),
+                (
+                    "search_mode".into(),
+                    Value::String(
+                        match self.taskbar.search_mode {
+                            TaskbarSearchMode::Hidden => "hidden",
+                            TaskbarSearchMode::Icon => "icon",
+                            TaskbarSearchMode::Box => "box",
+                        }
+                        .into(),
+                    ),
+                ),
+                (
+                    "show_task_view".into(),
+                    Value::Bool(self.taskbar.show_task_view),
+                ),
+                (
+                    "alignment".into(),
+                    Value::String(
+                        match self.taskbar.alignment {
+                            TaskbarAlignment::Left => "left",
+                            TaskbarAlignment::Center => "center",
+                        }
+                        .into(),
+                    ),
                 ),
             ])),
         );
@@ -640,6 +703,42 @@ mod tests {
                 .taskbar
                 .combine_groups
         );
+    }
+
+    #[test]
+    fn taskbar_context_fields_default_round_trip_and_isolate_invalid_enums() {
+        let defaults =
+            SettingsV1::decode(r#"{"schema_version":1,"taskbar":{"rows":2,"show_labels":false}}"#)
+                .unwrap()
+                .settings;
+        assert_eq!(defaults.taskbar.search_mode, TaskbarSearchMode::Hidden);
+        assert!(defaults.taskbar.show_task_view);
+        assert_eq!(defaults.taskbar.alignment, TaskbarAlignment::Left);
+        assert!(!defaults.taskbar.show_labels);
+
+        let configured = SettingsV1::decode(
+            r#"{"schema_version":1,"taskbar":{"rows":3,"search_mode":"box","show_task_view":false,"alignment":"center","combine_groups":true}}"#,
+        )
+        .unwrap()
+        .settings;
+        assert_eq!(configured.taskbar.search_mode, TaskbarSearchMode::Box);
+        assert!(!configured.taskbar.show_task_view);
+        assert_eq!(configured.taskbar.alignment, TaskbarAlignment::Center);
+        assert_eq!(
+            SettingsV1::decode(&configured.encode()).unwrap().settings,
+            configured
+        );
+
+        let invalid = SettingsV1::decode(
+            r#"{"schema_version":1,"taskbar":{"rows":1,"search_mode":"future","show_task_view":false,"alignment":"diagonal","previews_enabled":false}}"#,
+        )
+        .unwrap()
+        .settings;
+        assert_eq!(invalid.taskbar.search_mode, TaskbarSearchMode::Hidden);
+        assert_eq!(invalid.taskbar.alignment, TaskbarAlignment::Left);
+        assert!(!invalid.taskbar.show_task_view);
+        assert!(!invalid.taskbar.previews_enabled);
+        assert_eq!(invalid.taskbar.rows, 1);
     }
 
     #[test]

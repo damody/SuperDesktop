@@ -63,6 +63,10 @@ Blocking gates are `G-TASKBAR-CONTEXT`, `G-TASKBAR-SETTINGS`, `G-TASKBAR-A11Y`, 
 
 No adjustment may silently lower a blocking gate. Stale evidence remains recorded and dependent completed tasks reopen.
 
+### 8. Match indicator length to the configured task-button presentation
+
+The earlier fixed 6 px/16 px running indicators describe Windows icon-only buttons, but the approved reference uses readable labels and uncombined wide buttons. When labels are visible, the running indicator therefore spans the task button content width minus bounded horizontal insets; active/grouped state may increase thickness or layer count but does not collapse back to icon-only length. When labels are hidden and a real icon exists, the short icon-only indicator remains. Progress and attention reuse the same button geometry.
+
 ## Risks / Trade-offs
 
 - **[Risk] GPUI popup windows differ from native MenuHost shadow/composition** → Use fixed geometry/theme matrices and headful comparison; do not claim pixel identity where GPUI lacks backdrop APIs.
@@ -71,6 +75,7 @@ No adjustment may silently lower a blocking gate. Stale evidence remains recorde
 - **[Risk] Right-click reaches both a task and the background** → Task handlers stop propagation; source-contract and headful tests require exactly one menu.
 - **[Risk] Task Manager path substitution** → Resolve the inbox executable from the Windows directory, validate it as a regular non-reparse file, and launch with no shell expansion.
 - **[Risk] Long localized strings overflow cards** → Enforce bounded text, wrap supporting text, test Traditional Chinese/English and 100–500% scale.
+- **[Risk] A fixed short indicator contradicts labeled reference captures** → Derive indicator width from labeled/icon-only presentation and add exact source/headful geometry evidence for both modes.
 
 ## Migration Plan
 

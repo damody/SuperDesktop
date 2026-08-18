@@ -17,6 +17,7 @@ use crate::{
     StatusRegion, SystemFlyoutKind, SystemStatusAction, TaskOverlay, TaskVisualState,
     TaskbarLayout,
 };
+use settings_store::{TaskbarAlignment, TaskbarSearchMode};
 use shell_provider_protocol::{
     IconData, IconKey, NotificationEventKind, StatusAvailability, SystemStatusSnapshot,
 };
@@ -134,6 +135,9 @@ pub struct TaskbarView {
     pub notification_area: NotificationAreaModel,
     pub overlays: BTreeMap<String, TaskOverlay>,
     pub show_labels: bool,
+    pub search_mode: TaskbarSearchMode,
+    pub show_task_view: bool,
+    pub alignment: TaskbarAlignment,
     pub callbacks: Option<TaskbarCallbacks>,
     pub keyboard_focus: Option<FocusHandle>,
 }
@@ -143,6 +147,7 @@ pub type NotificationCallback = Rc<dyn Fn(&IconKey, NotificationEventKind)>;
 pub type NotificationOverflowCallback = Rc<dyn Fn(Vec<NotificationAccessibleNode>, &mut App)>;
 pub type SystemStatusCallback = Rc<dyn Fn(SystemStatusAction, &mut App)>;
 pub type SystemFlyoutCallback = Rc<dyn Fn(SystemFlyoutKind, &mut App)>;
+pub type TaskbarBackgroundContextCallback = Rc<dyn Fn(gpui::Point<gpui::Pixels>, &mut App)>;
 
 struct NotificationTooltip {
     text: String,
@@ -167,6 +172,7 @@ pub struct TaskbarCallbacks {
     pub fixed: Rc<dyn Fn()>,
     pub task: TaskCallback,
     pub task_context: TaskCallback,
+    pub taskbar_context: TaskbarBackgroundContextCallback,
     pub notification: NotificationCallback,
     pub notification_overflow: NotificationOverflowCallback,
     pub system_status: SystemStatusCallback,
@@ -188,8 +194,15 @@ impl Render for TaskbarView {
             .callbacks
             .as_ref()
             .map(|value| Rc::clone(&value.task_context));
+        let taskbar_context_callback = self
+            .callbacks
+            .as_ref()
+            .map(|value| Rc::clone(&value.taskbar_context));
         let overlays = self.overlays.clone();
         let show_labels = self.show_labels;
+        let search_mode = self.search_mode;
+        let show_task_view = self.show_task_view;
+        let alignment = self.alignment;
         let notification_callback = self
             .callbacks
             .as_ref()
@@ -223,6 +236,7 @@ impl Render for TaskbarView {
         // the inline branch disabled so the taskbar HWND never clips it.
         let system_flyout: Option<SystemFlyoutKind> = None;
         let start_key = start.clone();
+        let search_callback = start.clone();
         let task_view_key = task_view.clone();
         let fixed_key = fixed.clone();
         let root_fixed_key = fixed.clone();
@@ -261,6 +275,12 @@ impl Render for TaskbarView {
             .aria_label(self.accessible_root_name.clone())
             .tab_index(0)
             .when_some(keyboard_focus, |element, focus| element.track_focus(&focus))
+            .on_mouse_down(gpui::MouseButton::Right, move |event, _, cx| {
+                if let Some(callback) = &taskbar_context_callback {
+                    callback(event.position, cx);
+                    cx.stop_propagation();
+                }
+            })
             .on_key_down(_cx.listener(move |this, event: &gpui::KeyDownEvent, window, cx| {
                 if event.keystroke.key == "escape" && this.system_flyout.take().is_some() {
                     if let Some(focus) = &dismiss_focus {
@@ -496,7 +516,31 @@ impl Render for TaskbarView {
                             .text_color(start_color),
                     ),
             )
-            .child(
+            .when(search_mode != TaskbarSearchMode::Hidden, |element| {
+                let search = search_callback.clone();
+                element.child(
+                    div()
+                        .id("taskbar-search-control")
+                        .role(gpui::Role::Button)
+                        .aria_label("Search")
+                        .tab_index(0)
+                        .h(bar_height)
+                        .w(px(if search_mode == TaskbarSearchMode::Box { 168.0 } else { 44.0 }))
+                        .px(px(12.))
+                        .flex_none()
+                        .flex()
+                        .items_center()
+                        .justify_center()
+                        .gap(px(8.))
+                        .cursor_pointer()
+                        .on_click(move |_, _, cx| {
+                            if let Some(callback) = &search { callback(cx); }
+                        })
+                        .child("⌕")
+                        .when(search_mode == TaskbarSearchMode::Box, |element| element.child("Search")),
+                )
+            })
+            .when(show_task_view, |element| element.child(
                 div()
                     .id("task-view-control")
                     .role(gpui::Role::Button)
@@ -515,7 +559,7 @@ impl Render for TaskbarView {
                         }
                     })
                     .child("▣"),
-            )
+            ))
             .child(
                 div()
                     .h(bar_height)
@@ -524,7 +568,8 @@ impl Render for TaskbarView {
                     .flex()
                     .flex_col()
                     .flex_wrap()
-                    .content_start()
+                    .when(alignment == TaskbarAlignment::Left, |element| element.content_start())
+                    .when(alignment == TaskbarAlignment::Center, |element| element.content_center())
                     .items_start()
                     .overflow_hidden()
                     .child(
@@ -570,9 +615,9 @@ impl Render for TaskbarView {
                             .child(
                                 div()
                                     .absolute()
-                                    .left(px(72.))
+                                    .left(px(8.))
                                     .bottom_0()
-                                    .w(px(6.))
+                                    .w(px(134.))
                                     .h(px(3.))
                                     .rounded_full()
                                     .bg(rgb(if high_contrast { 0x00ffff } else { 0x5b8db8 })),
@@ -628,6 +673,8 @@ impl Render for TaskbarView {
                             show_labels,
                             icon.is_some(),
                         );
+                        let indicator_width =
+                            visual.indicator_width_for(show_labels || icon.is_none(), 190.0);
                         div()
                             .id(task.stable_id.clone())
                             .role(gpui::Role::Button)
@@ -683,6 +730,7 @@ impl Render for TaskbarView {
                                         if let Some(callback) = &context_callback {
                                             callback(&context_stable_id, cx);
                                         }
+                                        cx.stop_propagation();
                                     })
                             })
                             .when_some(icon, |element, icon| {
@@ -719,9 +767,9 @@ impl Render for TaskbarView {
                             .child(
                                 div()
                                     .absolute()
-                                    .left(px((190.0 - visual.indicator_width) / 2.0))
+                                    .left(px((190.0 - indicator_width) / 2.0))
                                     .bottom_0()
-                                    .w(px(visual.indicator_width))
+                                    .w(px(indicator_width))
                                     .h(px(visual.indicator_height))
                                     .rounded_full()
                                     .bg(rgb(visual.indicator_color))
@@ -731,9 +779,9 @@ impl Render for TaskbarView {
                                 element.child(
                                     div()
                                         .absolute()
-                                        .left(px((190.0 - visual.indicator_width) / 2.0 + 2.0))
+                                        .left(px((190.0 - indicator_width) / 2.0 + 2.0))
                                         .bottom(px(4.))
-                                        .w(px((visual.indicator_width - 4.0).max(6.0)))
+                                        .w(px((indicator_width - 4.0).max(6.0)))
                                         .h(px(1.))
                                         .rounded_full()
                                         .bg(rgb(visual.indicator_color))
