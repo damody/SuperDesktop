@@ -1,8 +1,9 @@
 {
   "schema": "windows11-taskbar-settings-layout-automated/v1",
   "result": "passed",
-  "superdesktop_revision": "bd52cf0d384372e0277e3b395f5a0058be55c736",
-  "release_app_sha256": "555b2ea7d5ef1bf4873f5c986719e0c7043654f6e9557420c2849fa8adf3edeb",
+  "implementation_revision": "bd52cf0d384372e0277e3b395f5a0058be55c736",
+  "latest_integration_revision": "34b9210070c420e18c7c136225af4fe33ba640b7",
+  "release_app_sha256": "6064816dd9689f6841618cb8d2675cfb2cd1ec73b80db546997c2ebecff1e281",
   "commands": [
     "cargo fmt --all -- --check",
     "cargo test --workspace --all-targets --locked --offline --no-fail-fast",

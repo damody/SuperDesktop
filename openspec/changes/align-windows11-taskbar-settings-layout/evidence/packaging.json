@@ -2,25 +2,26 @@
   "schema": "windows11-taskbar-settings-layout-packaging/v1",
   "result": "passed",
   "version": "1.2026.8.19",
-  "superdesktop_revision": "bd52cf0d384372e0277e3b395f5a0058be55c736",
-  "superexplorer_revision": "1e6dcb65b2ac08253e4557d2908b9170c3f565c9",
+  "implementation_revision": "bd52cf0d384372e0277e3b395f5a0058be55c736",
+  "packaging_revision": "34b9210070c420e18c7c136225af4fe33ba640b7",
+  "superexplorer_revision": "05cfb53f860aed1fba9a5ebe1484599502f57dfb",
   "artifacts": [
     {
       "path": "D:/SuperExplorer/SuperDesktop/target/release/superdesktop-app.exe",
       "bytes": 21042176,
-      "sha256": "555b2ea7d5ef1bf4873f5c986719e0c7043654f6e9557420c2849fa8adf3edeb"
+      "sha256": "6064816dd9689f6841618cb8d2675cfb2cd1ec73b80db546997c2ebecff1e281"
     },
     {
       "path": "D:/SuperExplorer/dist/SuperDesktop-Test-Setup-1.2026.8.19-x64.exe",
       "mode": "superdesktop-only",
-      "bytes": 5810568,
-      "sha256": "984759bac38d8e239d08a1eff9f472cff70646939a89793384ed97b3909da67e"
+      "bytes": 5812173,
+      "sha256": "1ee72006f64e98ca02c7fb1ebc4a9d0ac8eb12dff6b620bbf51f7783cbb96ce8"
     },
     {
       "path": "D:/SuperExplorer/dist/SuperExplorer-Setup-1.2026.8.19-x64.exe",
       "mode": "superexplorer-plus-superdesktop",
-      "bytes": 13547159,
-      "sha256": "b8c6957b9db0f2bc337e4a97dc2bfe8ed3de7388f345e0bc7bd34bc4b9034ad8"
+      "bytes": 13547358,
+      "sha256": "bd0b2f5af4929c0d99608e69aae9ce3b7e7c8af465b48d7a5d6563c01f8231ca"
     }
   ],
   "commands": [
