@@ -1,0 +1,12 @@
+{
+  "schema": "taskbar-context-settings-packaging/v1",
+  "built_without_launch": true,
+  "artifacts": [
+    {"name":"superdesktop-app.exe","bytes":20837888,"sha256":"55f7e126879c362c0a0da0b875078687bd0715f8bd52cd0da7f71d31579e330a"},
+    {"name":"taskbar_settings_headful.exe","bytes":15776768,"sha256":"51071cb653f9db4578cdebaba4e18bdc6e3fdd75f9bd56221d8faa75c74b9932"},
+    {"name":"SuperDesktop-Test-Setup-1.2026.8.18-x64.exe","bytes":5765037,"sha256":"c3b173372a5759a377dc10a91e887af989a9a4659d7239f8efdb9e423f32b0a5"},
+    {"name":"SuperExplorer-Setup-1.2026.8.18-x64.exe","bytes":13487921,"sha256":"41961e8dbf208a425a414c429b32c9b8246641bead169db3ea6b5d3c64ed310f"}
+  ],
+  "new_provider_required": false,
+  "feature_specific_registry_residue": false
+}

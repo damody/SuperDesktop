@@ -1,0 +1,123 @@
+{
+  "schema": "taskbar-context-settings-evidence/v2",
+  "change": "align-windows-taskbar-context-settings",
+  "host": "Windows 11 build 26200",
+  "recorded_at": "2026-08-18T18:14:25+08:00",
+  "result": "passed",
+  "gates": {
+    "G-TASKBAR-CONTEXT": "passed",
+    "G-TASKBAR-SETTINGS": "passed",
+    "G-TASKBAR-A11Y": "passed",
+    "G-TASKBAR-PERSISTENCE": "passed",
+    "G-SHELL-NONINTERFERENCE": "passed",
+    "G-PACKAGE": "passed"
+  },
+  "shared_records": {
+    "settings-store-tests": {
+      "command": "cargo test -p settings-store taskbar --locked --offline",
+      "expected": "Taskbar settings defaults, migration, validation and round-trip tests pass.",
+      "actual": "All selected settings-store tests passed.",
+      "exit_status": 0,
+      "gates": ["G-TASKBAR-PERSISTENCE"]
+    },
+    "taskbar-ui-tests": {
+      "command": "cargo test -p taskbar-ui --locked --offline",
+      "expected": "Owned menu, settings, keyboard, UIA and taskbar visual-state tests pass.",
+      "actual": "All taskbar-ui tests passed, including long labeled indicators and short icon-only indicators.",
+      "exit_status": 0,
+      "gates": ["G-TASKBAR-CONTEXT", "G-TASKBAR-SETTINGS", "G-TASKBAR-A11Y"]
+    },
+    "headful-report": {
+      "artifact": "evidence/headful/report.json",
+      "artifact_sha256": "3cee15c785dbede2162493df2ed4a72030ec037e46b9940d2358b9f92ea43899",
+      "expected": "Windows 11 light, dark, high-contrast, Traditional Chinese and UIA captures pass without Explorer delegation.",
+      "actual": "Headful report passed and all capture hashes were independently verified.",
+      "reviewer": "Primary integrator",
+      "gates": ["G-TASKBAR-CONTEXT", "G-TASKBAR-SETTINGS", "G-TASKBAR-A11Y", "G-SHELL-NONINTERFERENCE"]
+    },
+    "taskbar-reference-report": {
+      "artifact": "evidence/taskbar-reference/report.json",
+      "artifact_sha256": "1250e032177cf86673b339a236fe2a7c77157b597a5c74c7c27f76444d806db3",
+      "expected": "Labeled buttons use long indicators while icon-only buttons retain short indicators across all task states.",
+      "actual": "Five UIA state controls passed and the checked-in screenshot shows the reference indicator geometry.",
+      "reviewer": "Primary integrator",
+      "gates": ["G-TASKBAR-SETTINGS", "G-TASKBAR-A11Y"]
+    },
+    "app-integration-tests": {
+      "command": "cargo test -p superdesktop-app --lib --locked --offline",
+      "expected": "Owned windows, atomic saves, Task Manager admission, DPI geometry and Explorer independence pass.",
+      "actual": "27 tests passed after correcting the high-DPI physical-size assertion.",
+      "exit_status": 0,
+      "gates": ["G-TASKBAR-CONTEXT", "G-TASKBAR-PERSISTENCE", "G-SHELL-NONINTERFERENCE"]
+    },
+    "workspace-quality": {
+      "command": "cargo fmt --all -- --check; cargo test --workspace --all-targets --locked --offline --no-fail-fast; cargo clippy --workspace --all-targets --locked --offline -- -D warnings",
+      "expected": "Formatting, every workspace test target and warnings-as-errors clippy pass.",
+      "actual": "All three quality gates passed.",
+      "exit_status": 0,
+      "gates": ["G-TASKBAR-CONTEXT", "G-TASKBAR-SETTINGS", "G-TASKBAR-A11Y", "G-TASKBAR-PERSISTENCE", "G-SHELL-NONINTERFERENCE"]
+    },
+    "openspec-validation": {
+      "command": "python C:/Users/Damody/.codex/skills/openspec-propose/scripts/validate_tasks.py openspec/changes/align-windows-taskbar-context-settings/tasks.md; openspec validate align-windows-taskbar-context-settings --strict",
+      "expected": "The 4/10/45 detailed task tree and strict OpenSpec schema validate.",
+      "actual": "Detailed task validator and strict OpenSpec validation passed.",
+      "exit_status": 0,
+      "gates": ["G-TASKBAR-CONTEXT", "G-TASKBAR-SETTINGS", "G-TASKBAR-A11Y", "G-TASKBAR-PERSISTENCE", "G-SHELL-NONINTERFERENCE", "G-PACKAGE"]
+    },
+    "packaging-report": {
+      "artifact": "evidence/packaging-record.json",
+      "artifact_sha256": "2a2e1590ee98686c66191bab9c3ee716a17958151885aa338c399c927a1dff82",
+      "expected": "Release binaries and standalone/combined installers build without launch, have stable hashes and leave no feature-specific residue.",
+      "actual": "Four artifacts were built and their recorded SHA-256 hashes were independently rechecked.",
+      "reviewer": "Primary integrator",
+      "gates": ["G-PACKAGE"]
+    }
+  },
+  "task_links": [
+    {"task_id":"1.1.1","record":"settings-store-tests","subcheck":"bounded-enums"},
+    {"task_id":"1.1.2","record":"settings-store-tests","subcheck":"stable-defaults"},
+    {"task_id":"1.1.3","record":"settings-store-tests","subcheck":"additive-codec"},
+    {"task_id":"1.1.4","record":"settings-store-tests","subcheck":"migration-invalid-roundtrip"},
+    {"task_id":"1.2.1","record":"taskbar-ui-tests","subcheck":"context-command-model"},
+    {"task_id":"1.2.2","record":"taskbar-ui-tests","subcheck":"settings-row-effects"},
+    {"task_id":"1.2.3","record":"taskbar-ui-tests","subcheck":"disabled-explanations"},
+    {"task_id":"1.2.4","record":"taskbar-ui-tests","subcheck":"navigation-dismissal"},
+    {"task_id":"2.1.1","record":"headful-report","subcheck":"context-geometry-palette-shadow"},
+    {"task_id":"2.1.2","record":"headful-report","subcheck":"context-input-uia"},
+    {"task_id":"2.1.3","record":"app-integration-tests","subcheck":"context-dismissal"},
+    {"task_id":"2.1.4","record":"headful-report","subcheck":"context-theme-scale"},
+    {"task_id":"2.2.1","record":"taskbar-ui-tests","subcheck":"shared-command-tokens"},
+    {"task_id":"2.2.2","record":"taskbar-ui-tests","subcheck":"jump-list-layout"},
+    {"task_id":"2.2.3","record":"taskbar-ui-tests","subcheck":"disabled-destructive-commands"},
+    {"task_id":"2.2.4","record":"taskbar-ui-tests","subcheck":"jump-list-provider-failure"},
+    {"task_id":"2.3.1","record":"headful-report","subcheck":"settings-hierarchy"},
+    {"task_id":"2.3.2","record":"headful-report","subcheck":"settings-controls"},
+    {"task_id":"2.3.3","record":"taskbar-ui-tests","subcheck":"settings-model-binding"},
+    {"task_id":"2.3.4","record":"headful-report","subcheck":"settings-label-keyboard-uia-theme-scale"},
+    {"task_id":"3.1.1","record":"app-integration-tests","subcheck":"background-context-routing"},
+    {"task_id":"3.1.2","record":"app-integration-tests","subcheck":"monitor-clamped-options"},
+    {"task_id":"3.1.3","record":"app-integration-tests","subcheck":"singleton-lifecycle"},
+    {"task_id":"3.1.4","record":"app-integration-tests","subcheck":"preview-shell-lifecycle"},
+    {"task_id":"3.2.1","record":"app-integration-tests","subcheck":"task-manager-admission"},
+    {"task_id":"3.2.2","record":"app-integration-tests","subcheck":"candidate-validation"},
+    {"task_id":"3.2.3","record":"app-integration-tests","subcheck":"atomic-save-revision"},
+    {"task_id":"3.2.4","record":"app-integration-tests","subcheck":"failure-stale-independence"},
+    {"task_id":"3.3.1","record":"taskbar-ui-tests","subcheck":"search-modes-owned-route"},
+    {"task_id":"3.3.2","record":"taskbar-ui-tests","subcheck":"task-view-removal"},
+    {"task_id":"3.3.3","record":"taskbar-ui-tests","subcheck":"cluster-alignment"},
+    {"task_id":"3.3.4","record":"app-integration-tests","subcheck":"live-save-reconcile"},
+    {"task_id":"3.3.5","record":"taskbar-ui-tests","subcheck":"rows-width-monitors-live-update"},
+    {"task_id":"3.3.6","record":"taskbar-reference-report","subcheck":"long-labeled-short-icon-indicators"},
+    {"task_id":"4.1.1","record":"workspace-quality","subcheck":"fmt-test-clippy"},
+    {"task_id":"4.1.2","record":"headful-report","subcheck":"context-light-dark-captures"},
+    {"task_id":"4.1.3","record":"headful-report","subcheck":"settings-card-captures"},
+    {"task_id":"4.1.4","record":"headful-report","subcheck":"contrast-motion-locale-uia"},
+    {"task_id":"4.1.5","record":"app-integration-tests","subcheck":"admission-save-stale-traces"},
+    {"task_id":"4.1.6","record":"headful-report","subcheck":"preview-explorer-free"},
+    {"task_id":"4.1.7","record":"openspec-validation","subcheck":"unique-evidence-strict-validation"},
+    {"task_id":"4.2.1","record":"packaging-report","subcheck":"release-binary-hashes"},
+    {"task_id":"4.2.2","record":"packaging-report","subcheck":"standalone-installer"},
+    {"task_id":"4.2.3","record":"packaging-report","subcheck":"combined-installer"},
+    {"task_id":"4.2.4","record":"packaging-report","subcheck":"uninstall-residue"}
+  ]
+}

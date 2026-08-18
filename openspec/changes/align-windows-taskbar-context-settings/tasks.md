@@ -146,7 +146,7 @@
 - [x] 4.1.4 Capture high-contrast, reduced-motion, Traditional Chinese and UIA evidence.
 - [x] 4.1.5 Verify Task Manager admission, save failure and stale revision traces.
 - [x] 4.1.6 Verify Preview non-interference and controlled Explorer-free behavior.
-- [ ] 4.1.7 Create unique task-linked evidence and pass strict OpenSpec validation.
+- [x] 4.1.7 Create unique task-linked evidence and pass strict OpenSpec validation.
 
 ### 4.2 Build standalone and combined installers
 
@@ -158,7 +158,7 @@
 **Gate／Evidence：** `G-PACKAGE`; `evidence/packaging-record.json`.
 **完成門檻：** Both installers contain updated binaries, build without launch, and uninstall declares no feature-specific residue.
 
-- [ ] 4.2.1 Build the release workspace and hash modified binaries.
-- [ ] 4.2.2 Build and hash the standalone SuperDesktop installer without launching it.
-- [ ] 4.2.3 Build and hash the combined SuperExplorer installer without launching it.
-- [ ] 4.2.4 Verify install/uninstall manifests and record final package evidence.
+- [x] 4.2.1 Build the release workspace and hash modified binaries.
+- [x] 4.2.2 Build and hash the standalone SuperDesktop installer without launching it.
+- [x] 4.2.3 Build and hash the combined SuperExplorer installer without launching it.
+- [x] 4.2.4 Verify install/uninstall manifests and record final package evidence.

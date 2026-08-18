@@ -3616,8 +3616,12 @@ mod live_parity_tests {
         let Some(WindowBounds::Windowed(settings)) = settings.window_bounds else {
             panic!("bounds")
         };
-        assert!(settings.size.width.as_f32() <= 980.0);
-        assert!(settings.size.height.as_f32() <= 860.0);
+        let work_width = (monitor.work_area.right - monitor.work_area.left) as f32;
+        let work_height = (monitor.work_area.bottom - monitor.work_area.top) as f32;
+        assert_eq!(settings.size.width.as_f32(), 980.0 * 1.5);
+        assert_eq!(settings.size.height.as_f32(), work_height);
+        assert!(settings.size.width.as_f32() <= work_width);
+        assert!(settings.size.height.as_f32() <= work_height);
     }
 
     #[test]
