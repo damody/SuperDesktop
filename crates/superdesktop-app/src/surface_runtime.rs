@@ -1630,7 +1630,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
     let desktop_operations = Rc::new(RefCell::new(DesktopOperationController::default()));
     let desktop_transfers = ProductionTransferRuntime::default();
     let provider_client = Rc::new(RefCell::new(ProviderClient::adjacent()?));
-    let notification_client = Rc::new(RefCell::new(NotificationClient::adjacent()?));
+    let notification_client = Rc::new(RefCell::new(NotificationClient::adjacent(shell)?));
     let status_client = Rc::new(RefCell::new(SystemStatusClient::adjacent()?));
     let status_reconciler = Rc::new(RefCell::new(StatusReconciler::default()));
     if let Ok(response) = status_client.borrow_mut().request(

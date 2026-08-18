@@ -1,11 +1,13 @@
 use std::io::{self, BufRead, Write};
 
-use notification_area_host::NotificationRegistry;
+use notification_area_host::{CompatibilityAdmission, NotificationRegistry};
 use shell_provider_protocol::{
     MAX_FRAME_BYTES, NotificationHostResponse, NotificationMutation, validate_frame_size,
 };
 
 fn main() -> io::Result<()> {
+    let compatibility_admission = CompatibilityAdmission::from_process_args(std::env::args());
+    let _owns_shell_identity = compatibility_admission.owns_shell_identity();
     let mut registry = NotificationRegistry::default();
     let input = io::stdin().lock();
     let mut output = io::stdout().lock();

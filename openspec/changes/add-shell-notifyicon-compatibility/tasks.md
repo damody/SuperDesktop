@@ -59,9 +59,9 @@
 **Gate/Evidence:** `G-SHELL-NONINTERFERENCE`; source/admission fixture record.
 **Completion threshold:** Preview fixtures prove zero compatibility classes, broadcasts and registry mutations.
 
-- [ ] 1.2.1 Add explicit preview/shell compatibility admission states.
-- [ ] 1.2.2 Add negative fixtures for Explorer-present identity collision.
-- [ ] 1.2.3 Add product source guard forbidding preview compatibility creation.
+- [x] 1.2.1 Add explicit preview/shell compatibility admission states.
+- [x] 1.2.2 Add negative fixtures for Explorer-present identity collision.
+- [x] 1.2.3 Add product source guard forbidding preview compatibility creation.
 
 ## 2. Native Compatibility Adapter
 

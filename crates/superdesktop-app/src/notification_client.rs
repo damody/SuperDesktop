@@ -13,10 +13,11 @@ pub struct NotificationClient {
     child: Option<Child>,
     input: Option<ChildStdin>,
     responses: Option<Receiver<NotificationHostResponse>>,
+    compatibility_enabled: bool,
 }
 
 impl NotificationClient {
-    pub fn adjacent() -> Result<Self, &'static str> {
+    pub fn adjacent(compatibility_enabled: bool) -> Result<Self, &'static str> {
         let executable = std::env::current_exe()
             .map_err(|_| "notification-current-executable")?
             .parent()
@@ -27,6 +28,7 @@ impl NotificationClient {
             child: None,
             input: None,
             responses: None,
+            compatibility_enabled,
         })
     }
 
@@ -65,7 +67,11 @@ impl NotificationClient {
         if !self.executable.is_file() {
             return Err("notification-executable-missing");
         }
-        let mut child = Command::new(&self.executable)
+        let mut command = Command::new(&self.executable);
+        if self.compatibility_enabled {
+            command.arg("--shell-notifyicon");
+        }
+        let mut child = command
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::null())
@@ -113,5 +119,18 @@ impl NotificationClient {
 impl Drop for NotificationClient {
     fn drop(&mut self) {
         self.reset();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn compatibility_switch_is_explicit_and_never_enabled_by_preview_default() {
+        let client = include_str!("notification_client.rs");
+        let composition = include_str!("surface_runtime.rs");
+        assert!(client.contains("if self.compatibility_enabled"));
+        assert!(client.contains("command.arg(\"--shell-notifyicon\")"));
+        assert!(composition.contains("NotificationClient::adjacent(shell)"));
+        assert!(!composition.contains("NotificationClient::adjacent(true)"));
     }
 }

@@ -9,6 +9,26 @@ pub const MAX_CLIENTS: usize = 64;
 pub const MAX_ICONS: usize = 256;
 pub const MAX_EVENTS: usize = 512;
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum CompatibilityAdmission {
+    Preview,
+    CommittedShell,
+}
+
+impl CompatibilityAdmission {
+    pub const fn owns_shell_identity(self) -> bool {
+        matches!(self, Self::CommittedShell)
+    }
+
+    pub fn from_process_args(args: impl IntoIterator<Item = String>) -> Self {
+        if args.into_iter().any(|arg| arg == "--shell-notifyicon") {
+            Self::CommittedShell
+        } else {
+            Self::Preview
+        }
+    }
+}
+
 #[derive(Clone, Debug, Default)]
 pub struct NotificationRegistry {
     clients: BTreeSet<String>,
@@ -272,5 +292,19 @@ mod tests {
             }),
             NotificationHostResponse::Rejected(_)
         ));
+    }
+
+    #[test]
+    fn compatibility_identity_is_explicitly_shell_only() {
+        assert!(!CompatibilityAdmission::Preview.owns_shell_identity());
+        assert!(CompatibilityAdmission::CommittedShell.owns_shell_identity());
+        assert_eq!(
+            CompatibilityAdmission::from_process_args(Vec::<String>::new()),
+            CompatibilityAdmission::Preview
+        );
+        assert_eq!(
+            CompatibilityAdmission::from_process_args(["--shell-notifyicon".into()]),
+            CompatibilityAdmission::CommittedShell
+        );
     }
 }
