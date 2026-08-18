@@ -1,11 +1,11 @@
 ## ADDED Requirements
 
 ### Requirement: Overflow floats above the taskbar at every DPI
-SuperDesktop SHALL convert logical overflow geometry to physical native bounds, clamp it to the active monitor work area and leave an eight-logical-pixel edge gap.
+SuperDesktop SHALL provide logical overflow bounds for GPUI DPI conversion, clamp them to the active monitor and reserve the owned taskbar's current logical row height plus an eight-pixel edge gap.
 
 #### Scenario: Host 175 percent DPI
 - **WHEN** hidden notification icons open on a 168-DPI monitor
-- **THEN** the native popup has 1.75-scaled outer dimensions and is fully above rather than overlapping the taskbar edge
+- **THEN** GPUI produces 1.75-scaled native dimensions exactly once and the popup is fully above rather than overlapping the taskbar edge
 
 #### Scenario: Negative-origin or constrained monitor
 - **WHEN** the active monitor has a negative origin or less space than the preferred popup

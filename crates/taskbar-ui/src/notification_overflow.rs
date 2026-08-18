@@ -47,6 +47,12 @@ impl NotificationOverflowView {
 impl Render for NotificationOverflowView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         window.focus(&self.focus, cx);
+        let high_contrast = std::env::var("SUPERDESKTOP_THEME")
+            .is_ok_and(|value| value.eq_ignore_ascii_case("high-contrast"));
+        let panel_background = if high_contrast { 0x000000 } else { 0xf3f3f3 };
+        let panel_border = if high_contrast { 0xffffff } else { 0xd0d0d0 };
+        let hover_background = if high_contrast { 0x1a1a1a } else { 0xe7e7e7 };
+        let pressed_background = if high_contrast { 0x303030 } else { 0xdcdcdc };
         let dismiss = self.dismiss.clone();
         let action = self.action.clone();
         div()
@@ -56,11 +62,11 @@ impl Render for NotificationOverflowView {
             .tab_index(0)
             .track_focus(&self.focus)
             .size_full()
-            .p_3()
+            .p(px(12.))
             .rounded(px(12.))
             .border_1()
-            .border_color(rgb(0xd0d0d0))
-            .bg(rgb(0xf3f3f3))
+            .border_color(rgb(panel_border))
+            .bg(rgb(panel_background))
             .shadow_lg()
             .flex()
             .flex_wrap()
@@ -89,10 +95,15 @@ impl Render for NotificationOverflowView {
                     .w(px(48.))
                     .h(px(48.))
                     .rounded(px(6.))
+                    .border_1()
+                    .border_color(rgb(panel_background))
                     .flex()
                     .items_center()
                     .justify_center()
                     .cursor_pointer()
+                    .hover(move |style| style.bg(rgb(hover_background)))
+                    .active(move |style| style.bg(rgb(pressed_background)))
+                    .focus_visible(move |style| style.border_2().border_color(rgb(panel_border)))
                     .on_click(move |_, _, _| {
                         click_action(&click_key, NotificationEventKind::Activate);
                     })
@@ -128,6 +139,10 @@ mod tests {
             "event.keystroke.key == \"escape\"",
             "NotificationEventKind::Activate",
             "NotificationEventKind::Context",
+            ".hover(move |style|",
+            ".active(move |style|",
+            ".focus_visible(move |style|",
+            "high-contrast",
             ".w(px(24.))",
         ] {
             assert!(

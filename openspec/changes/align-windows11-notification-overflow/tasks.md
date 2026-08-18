@@ -12,9 +12,9 @@
 **Gate／Evidence：** `G-OVERFLOW-GEOMETRY`; automated geometry tests.
 **完成門檻：** Preferred and constrained bounds pass at 96–480 DPI and negative origins.
 
-- [ ] 1.1.1 Extract bounded logical overflow dimensions and row calculation.
-- [ ] 1.1.2 Convert width, height, origin and eight-pixel gap to physical coordinates.
-- [ ] 1.1.3 Add DPI, negative-origin and constrained-work-area tests.
+- [x] 1.1.1 Extract bounded logical overflow dimensions, row calculation and current taskbar height.
+- [x] 1.1.2 Keep `WindowOptions` logical so GPUI scales once, then reserve taskbar height and eight-pixel gap.
+- [x] 1.1.3 Add DPI, negative-origin, row-height and constrained-work-area tests.
 
 ## 2. Windows 11 Surface
 
@@ -28,9 +28,9 @@
 **Gate／Evidence：** `G-OVERFLOW-VISUAL`; source tests and screenshot.
 **完成門檻：** Six-column grid, 48px cells, 24px icons, rounded border and shadow render without clipping.
 
-- [ ] 2.1.1 Apply preferred width, padding, radius, border, background and shadow.
-- [ ] 2.1.2 Preserve bounded six-column wrapping and icon sizing.
-- [ ] 2.1.3 Add light and high-contrast token tests.
+- [x] 2.1.1 Apply preferred width, padding, radius, border, background and shadow.
+- [x] 2.1.2 Preserve bounded six-column wrapping and icon sizing.
+- [x] 2.1.3 Add light and high-contrast token tests.
 
 ### 2.2 Align interaction and accessibility states
 
@@ -42,9 +42,9 @@
 **Gate／Evidence：** `G-OVERFLOW-A11Y`; automated/UIA evidence.
 **完成門檻：** Equivalent routes emit once and Escape/focus-loss dismiss correctly.
 
-- [ ] 2.2.1 Add hover, focus and pressed state geometry/colors.
-- [ ] 2.2.2 Preserve activate/context/keyboard/UIA typed routes.
-- [ ] 2.2.3 Verify Escape, focus-loss and focus-return behavior.
+- [x] 2.2.1 Add hover, focus and pressed state geometry/colors.
+- [x] 2.2.2 Preserve activate/context/keyboard/UIA typed routes.
+- [x] 2.2.3 Verify Escape, focus-loss and focus-return behavior.
 
 ## 3. Product Verification
 
@@ -58,9 +58,9 @@
 **Gate／Evidence：** `G-OVERFLOW-GEOMETRY`, `G-OVERFLOW-VISUAL`, `G-OVERFLOW-A11Y`, `G-SHELL-NONINTERFERENCE`; `evidence/headful.json`.
 **完成門檻：** Popup floats above taskbar at 175%, callbacks pass and Explorer is absent.
 
-- [ ] 3.1.1 Run fmt, locked/offline workspace tests and clippy warnings-as-errors.
-- [ ] 3.1.2 Capture corrected 175% overflow with ordinary-client UIA/context callbacks.
-- [ ] 3.1.3 Verify Explorer absence and host restart non-regression.
+- [x] 3.1.1 Run fmt, locked/offline workspace tests and clippy warnings-as-errors.
+- [x] 3.1.2 Capture corrected 175% overflow with ordinary-client UIA/context callbacks.
+- [x] 3.1.3 Verify Explorer absence and host restart non-regression.
 
 ### 3.2 Validate and package
 
@@ -72,6 +72,6 @@
 **Gate／Evidence：** `G-TRACE`, `G-PACKAGE`; evidence/package records.
 **完成門檻：** Every leaf has unique evidence; standalone and combined installers pass.
 
-- [ ] 3.2.1 Build release binaries and record hashes.
+- [x] 3.2.1 Build release binaries and record hashes.
 - [ ] 3.2.2 Build standalone and combined installers without launch.
 - [ ] 3.2.3 Create unique evidence index and pass detailed/strict validation.

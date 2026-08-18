@@ -1,0 +1,26 @@
+{
+    "schema":  "explorer-free-notifyicon/v1",
+    "result":  "passed",
+    "explorer_absent_during_measurement":  true,
+    "explorer_pids_before":  [
+                                 39840
+                             ],
+    "explorer_pids_after":  [
+
+                            ],
+    "shell_pid":  10092,
+    "fixture_pid":  8712,
+    "host_pids_before":  [
+                             39316
+                         ],
+    "host_pids_after":  [
+                            41760
+                        ],
+    "host_restart_verified":  true,
+    "app_sha256":  "1873CDB98DD299E58670D3B300C185B52CDDD12DB1BFB08FDD1383B9D44B88C8",
+    "fixture_sha256":  "DEBF4D59E08B59B063761D5DA48F577BC6FC9D7024A9C7D27CE16FB9E69A6C26",
+    "icon_name":  "SuperDesktop compatibility fixture modified",
+    "callback_trace":  "fixture-ready pid=8712 hwnd=3543586 icon_id=7001\ncallback wparam=0 lparam=458818560\ncallback wparam=0 lparam=458817659\ntaskbar-created\nfixture-reregistered\ncallback wparam=0 lparam=458818560\nfixture-complete",
+    "screenshot":  "overflow-175.png",
+    "screenshot_sha256":  "533F18E8CBEE77E7C4B9678A8F564EADDF595174C47B43C8C0529AAFEEA0050F"
+}

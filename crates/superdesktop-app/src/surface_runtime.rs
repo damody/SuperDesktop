@@ -1476,19 +1476,50 @@ fn system_flyout_options(
     }
 }
 
-fn notification_overflow_options(monitor: &MonitorRecord, icon_count: usize) -> WindowOptions {
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct NotificationOverflowBounds {
+    left: f32,
+    top: f32,
+    width: f32,
+    height: f32,
+}
+
+fn notification_overflow_bounds(
+    monitor: &MonitorRecord,
+    icon_count: usize,
+    taskbar_rows: u8,
+) -> NotificationOverflowBounds {
     let scale = monitor.dpi_x as f32 / 96.0;
-    let width = 336.0;
+    let logical_width: f32 = 344.0;
     let rows = icon_count.max(1).div_ceil(6).min(6) as f32;
-    let height = 24.0 + rows * 48.0;
-    let right = monitor.work_area.right as f32 / scale;
+    let logical_height = 24.0 + rows * 48.0;
+    let work_left = monitor.work_area.left as f32 / scale;
+    let work_top = monitor.work_area.top as f32 / scale;
+    let work_right = monitor.work_area.right as f32 / scale;
+    let work_bottom = monitor.work_area.bottom as f32 / scale;
+    let taskbar_height = 40.0 * f32::from(taskbar_rows.clamp(1, 3));
+    let width = logical_width.min(work_right - work_left);
+    let height = logical_height.min((work_bottom - work_top - taskbar_height - 8.0).max(1.0));
+    let right = work_right - 8.0;
+    let bottom = work_bottom - taskbar_height - 8.0;
+    NotificationOverflowBounds {
+        left: (right - width).max(work_left),
+        top: (bottom - height).max(work_top),
+        width,
+        height,
+    }
+}
+
+fn notification_overflow_options(
+    monitor: &MonitorRecord,
+    icon_count: usize,
+    taskbar_rows: u8,
+) -> WindowOptions {
+    let bounds = notification_overflow_bounds(monitor, icon_count, taskbar_rows);
     WindowOptions {
         window_bounds: Some(WindowBounds::Windowed(Bounds {
-            origin: point(
-                px((right - width).max(monitor.work_area.left as f32 / scale)),
-                px(monitor.work_area.bottom as f32 / scale - height),
-            ),
-            size: size(px(width), px(height)),
+            origin: point(px(bounds.left), px(bounds.top)),
+            size: size(px(bounds.width), px(bounds.height)),
         })),
         titlebar: None,
         focus: true,
@@ -2175,6 +2206,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                     continue;
                 }
                 let taskbar_monitor = monitor.clone();
+                let notification_overflow_settings = Rc::clone(&persisted_settings);
                 let taskbar_tasks = initial_tasks.clone();
                 let taskbar_error = Rc::clone(&init_error);
                 let taskbar_leases = Rc::clone(&leases);
@@ -2800,6 +2832,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                     notification_overflow_options(
                                         &notification_overflow_monitor,
                                         nodes.len(),
+                                        notification_overflow_settings.borrow().taskbar.rows,
                                     ),
                                     move |window, cx| {
                                         window.activate_window();
@@ -3632,6 +3665,53 @@ mod live_parity_tests {
         assert_eq!(settings.size.height.as_f32(), work_height);
         assert!(settings.size.width.as_f32() <= work_width);
         assert!(settings.size.height.as_f32() <= work_height);
+    }
+
+    #[test]
+    fn notification_overflow_uses_logical_bounds_and_reserves_owned_taskbar() {
+        let monitor = MonitorRecord {
+            device_name: "fixture".into(),
+            primary: false,
+            bounds: ScreenRect {
+                left: -1920,
+                top: -200,
+                right: 0,
+                bottom: 1080,
+            },
+            work_area: ScreenRect {
+                left: -1920,
+                top: -200,
+                right: 0,
+                bottom: 1000,
+            },
+            dpi_x: 168,
+            dpi_y: 168,
+        };
+        let bounds = super::notification_overflow_bounds(&monitor, 24, 2);
+        assert_eq!(bounds.width, 344.0);
+        assert_eq!(bounds.height, 216.0);
+        assert!((bounds.left + bounds.width - (-8.0)).abs() < 0.01);
+        assert!((bounds.top + bounds.height - (1000.0 / 1.75 - 88.0)).abs() < 0.01);
+        assert!(bounds.left >= monitor.work_area.left as f32 / 1.75);
+        assert!(bounds.top >= monitor.work_area.top as f32 / 1.75);
+
+        let constrained = MonitorRecord {
+            work_area: ScreenRect {
+                left: -100,
+                top: 0,
+                right: 300,
+                bottom: 220,
+            },
+            dpi_x: 480,
+            dpi_y: 480,
+            ..monitor
+        };
+        let bounds = super::notification_overflow_bounds(&constrained, usize::MAX, 3);
+        assert!(bounds.width <= 80.0);
+        assert!(bounds.height <= 1.0);
+        assert!(bounds.left >= -20.0 && bounds.top >= 0.0);
+        assert!(bounds.left + bounds.width <= 60.0);
+        assert!(bounds.top + bounds.height <= 1.0);
     }
 
     #[test]
