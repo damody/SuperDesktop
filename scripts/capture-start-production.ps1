@@ -46,12 +46,15 @@ function Save-Window($Root,[string]$Path) {
     $graphics.Dispose();$bitmap.Dispose()
     $bounds
 }
+function Get-SystemStartProcessIds {
+    @('StartMenuExperienceHost','ShellExperienceHost','SearchHost') | ForEach-Object {
+        Get-Process -Name $_ -ErrorAction SilentlyContinue | ForEach-Object Id
+    } | Sort-Object -Unique
+}
 
 $priorSurface=$env:SUPERDESKTOP_VERIFICATION_SURFACE
-$priorOwned=$env:SUPERDESKTOP_VERIFICATION_OWNED_START
 $priorTrace=$env:SUPERDESKTOP_ACTION_TRACE
 $env:SUPERDESKTOP_VERIFICATION_SURFACE='taskbar'
-$env:SUPERDESKTOP_VERIFICATION_OWNED_START='1'
 $env:SUPERDESKTOP_ACTION_TRACE=$tracePath
 Remove-Item -LiteralPath $tracePath -ErrorAction SilentlyContinue
 try {
@@ -63,6 +66,7 @@ try {
     $taskbar=[System.Windows.Automation.AutomationElement]::FromHandle($process.MainWindowHandle)
     $start=Find-Named $taskbar 'Start'
     if($null -eq $start){throw 'Start button is missing.'}
+    $systemStartBefore=@(Get-SystemStartProcessIds)
     $invoke=$start.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)
     $invoke.Invoke()
     $startHandle=[IntPtr]::Zero
@@ -74,6 +78,10 @@ try {
         }
     } while($startHandle -eq [IntPtr]::Zero -and [DateTime]::UtcNow -lt $deadline)
     if($startHandle -eq [IntPtr]::Zero){throw 'Owned Start window did not appear.'}
+    [uint32]$ownedStartPid=0
+    [void][StartWindows]::GetWindowThreadProcessId($startHandle,[ref]$ownedStartPid)
+    if($ownedStartPid -ne $process.Id){throw "Start window belongs to unexpected PID $ownedStartPid."}
+    $systemStartAfter=@(Get-SystemStartProcessIds)
     $root=[System.Windows.Automation.AutomationElement]::FromHandle($startHandle)
     Start-Sleep -Milliseconds 700
     foreach($name in @('Pinned','Recommended','All apps','Settings','Power')){if($null -eq (Find-Named $root $name)){throw "Start home is missing $name."}}
@@ -92,7 +100,8 @@ try {
     $trace=Get-Content -Raw -Encoding UTF8 -LiteralPath $tracePath
     if($trace -notmatch 'start:owned-opened'){throw 'Trace lacks owned Start opening.'}
     $report=[ordered]@{
-        schema='windows11-start-production/v1';result='passed';app_sha256=(Get-FileHash -Algorithm SHA256 $appPath).Hash
+        schema='windows11-owned-start-production/v2';result='passed';app_sha256=(Get-FileHash -Algorithm SHA256 $appPath).Hash
+        owned_start_pid=$ownedStartPid;taskbar_pid=$process.Id;system_start_process_ids_before=$systemStartBefore;system_start_process_ids_after=$systemStartAfter
         home_sections=@('Search','Pinned','Recommended','Account','Settings','Power');power_collapsed=$true;all_apps_count=$allItems.Count
         centered_home_bounds=[ordered]@{left=[int]$homeBounds.Left;top=[int]$homeBounds.Top;width=[int]$homeBounds.Width;height=[int]$homeBounds.Height}
         home_screenshot=(Split-Path -Leaf $HomeScreenshotPath);home_sha256=(Get-FileHash -Algorithm SHA256 $HomeScreenshotPath).Hash
@@ -102,6 +111,5 @@ try {
     $report|ConvertTo-Json -Depth 8
 } finally {
     if($null -eq $priorSurface){Remove-Item Env:SUPERDESKTOP_VERIFICATION_SURFACE -ErrorAction SilentlyContinue}else{$env:SUPERDESKTOP_VERIFICATION_SURFACE=$priorSurface}
-    if($null -eq $priorOwned){Remove-Item Env:SUPERDESKTOP_VERIFICATION_OWNED_START -ErrorAction SilentlyContinue}else{$env:SUPERDESKTOP_VERIFICATION_OWNED_START=$priorOwned}
     if($null -eq $priorTrace){Remove-Item Env:SUPERDESKTOP_ACTION_TRACE -ErrorAction SilentlyContinue}else{$env:SUPERDESKTOP_ACTION_TRACE=$priorTrace}
 }

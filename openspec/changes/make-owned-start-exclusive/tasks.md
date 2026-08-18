@@ -12,9 +12,9 @@
 **Gate／Evidence：** `G-OWNED-START`; `evidence/evidence-index.json` automated record.
 **完成門檻：** Tests reject product Start-host calls while allowing the isolated historical capability adapter.
 
-- [ ] 1.1.1 Add a source guard that scans product composition for system Start-host invocation.
-- [ ] 1.1.2 Add a mode-contract test proving preview, Shell and verification select one owned renderer.
-- [ ] 1.1.3 Add a negative fixture proving the guard rejects a delegated Start callback.
+- [x] 1.1.1 Add a source guard that scans product composition for system Start-host invocation.
+- [x] 1.1.2 Add a mode-contract test proving preview, Shell and verification select one owned renderer.
+- [x] 1.1.3 Add a negative fixture proving the guard rejects a delegated Start callback.
 
 ### 1.2 Route every Start action to StartView
 
@@ -26,9 +26,9 @@
 **Gate／Evidence：** `G-OWNED-START`; focused test output and source diff.
 **完成門檻：** No execution mode returns through `invoke_start_host_controlled`; all modes toggle one owned window slot.
 
-- [ ] 1.2.1 Remove the Shell/environment renderer-selection branch from the Start callback.
-- [ ] 1.2.2 Preserve exactly-once owned open/close traces and stale-window cleanup.
-- [ ] 1.2.3 Remove now-unused product imports/closures without deleting the historical platform capability adapter.
+- [x] 1.2.1 Remove the Shell/environment renderer-selection branch from the Start callback.
+- [x] 1.2.2 Preserve exactly-once owned open/close traces and stale-window cleanup.
+- [x] 1.2.3 Remove now-unused product imports/closures without deleting the historical platform capability adapter.
 
 ## 2. Owned Start Behavior
 
@@ -42,10 +42,10 @@
 **Gate／Evidence：** `G-OWNED-START`, `G-START-INPUT`; automated test record.
 **完成門檻：** Home, All apps, Search, activation, persistence, power, placement and dismissal tests pass in mode-independent fixtures.
 
-- [ ] 2.1.1 Verify Home section bounds, native icons, All apps ordering and truthful unavailable search state.
-- [ ] 2.1.2 Verify app/file/folder/Settings activation and pin/recent persistence remain exactly once.
-- [ ] 2.1.3 Verify Power is collapsed by default and every destructive action retains explicit confirmation.
-- [ ] 2.1.4 Verify Escape, arrows, Enter, repeated toggle, IME generation, UIA focus and 175% placement.
+- [x] 2.1.1 Verify Home section bounds, native icons, All apps ordering and truthful unavailable search state.
+- [x] 2.1.2 Verify app/file/folder/Settings activation and pin/recent persistence remain exactly once.
+- [x] 2.1.3 Verify Power is collapsed by default and every destructive action retains explicit confirmation.
+- [x] 2.1.4 Verify Escape, arrows, Enter, repeated toggle, IME generation, UIA focus and 175% placement.
 
 ### 2.2 Capture owned Start headful evidence
 
@@ -57,9 +57,9 @@
 **Gate／Evidence：** `G-OWNED-START`, `G-START-INPUT`; `evidence/start-*.png`, JSON and logs.
 **完成門檻：** Preview and Shell-safe owned routes show the same sections and no system Start-host invocation/process transition.
 
-- [ ] 2.2.1 Update the Start capture harness so no environment variable is required to select owned Start.
-- [ ] 2.2.2 Capture and inspect Start Home and All apps at host 175% DPI through pointer/UIA routes.
-- [ ] 2.2.3 Record taskbar Start traces and process observations proving exclusive owned presentation.
+- [x] 2.2.1 Update the Start capture harness so no environment variable is required to select owned Start.
+- [x] 2.2.2 Capture and inspect Start Home and All apps at host 175% DPI through pointer/UIA routes.
+- [x] 2.2.3 Record taskbar Start traces and process observations proving exclusive owned presentation.
 
 ## 3. Desktop Non-Regression
 
@@ -73,9 +73,9 @@
 **Gate／Evidence：** `G-DESKTOP-MARQUEE`; desktop JSON/log/screenshot.
 **完成門檻：** Normal/reverse/Ctrl selection passes and pointer activation targets the reserved SuperExplorer cell.
 
-- [ ] 3.1.1 Rerun normal, reverse, threshold, Ctrl-union and lost-button marquee tests.
-- [ ] 3.1.2 Rerun desktop pointer/keyboard/UIA fixed-entry activation with overlapping-position reconciliation.
-- [ ] 3.1.3 Capture and inspect an active reverse marquee with at least two selected UIA items after Start closes.
+- [x] 3.1.1 Rerun normal, reverse, threshold, Ctrl-union and lost-button marquee tests.
+- [x] 3.1.2 Rerun desktop pointer/keyboard/UIA fixed-entry activation with overlapping-position reconciliation.
+- [x] 3.1.3 Capture and inspect an active reverse marquee with at least two selected UIA items after Start closes.
 
 ## 4. Verification and Packaging
 
@@ -89,9 +89,9 @@
 **Gate／Evidence：** All change gates; `evidence/evidence-index.json`.
 **完成門檻：** Complete workspace commands exit zero, all artifacts hash correctly, every leaf has a unique record and strict validation passes.
 
-- [ ] 4.1.1 Run `cargo fmt --check` and complete locked/offline workspace check and tests.
-- [ ] 4.1.2 Run complete locked/offline clippy with warnings denied.
-- [ ] 4.1.3 Build release binaries and record product hashes plus headful artifact hashes.
+- [x] 4.1.1 Run `cargo fmt --check` and complete locked/offline workspace check and tests.
+- [x] 4.1.2 Run complete locked/offline clippy with warnings denied.
+- [x] 4.1.3 Build release binaries and record product hashes plus headful artifact hashes.
 - [ ] 4.1.4 Create the unique task-linked evidence index and pass strict OpenSpec validation.
 
 ### 4.2 Refresh installers

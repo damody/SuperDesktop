@@ -1862,14 +1862,6 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                         callbacks: Some(TaskbarCallbacks {
                             start: Rc::new(move |app| {
                                 trace_action("start");
-                                let verification_owned_start = std::env::var_os(
-                                    "SUPERDESKTOP_VERIFICATION_OWNED_START",
-                                )
-                                .is_some();
-                                if !shell && !verification_owned_start {
-                                    let _ = platform_win::common::monitor_dpi_start::invoke_start_host_controlled();
-                                    return;
-                                }
                                 if let Some(existing) = *start_window_for_taskbar.borrow() {
                                     if existing
                                         .update(app, |_, window, _| window.remove_window())
@@ -2410,6 +2402,43 @@ mod live_parity_tests {
     use platform_win::common::monitor_dpi_start::ScreenRect;
     use std::collections::{BTreeMap, BTreeSet};
     use std::path::Path;
+
+    fn product_start_composition_is_owned(source: &str) -> bool {
+        let production = source.split("#[cfg(test)]").next().unwrap_or(source);
+        production.contains("StartView::new")
+            && production.contains("start:owned-opened")
+            && production.contains("start:closed")
+            && !production.contains("invoke_start_host_controlled")
+            && !production.contains("SUPERDESKTOP_VERIFICATION_OWNED_START")
+    }
+
+    #[test]
+    fn product_start_source_is_exclusively_owned_in_every_mode() {
+        let source = include_str!("surface_runtime.rs");
+        let production = source.split("#[cfg(test)]").next().unwrap_or(source);
+        assert!(product_start_composition_is_owned(source));
+        assert_eq!(production.matches("StartView::new").count(), 1);
+        assert!(!production.contains("if !shell"));
+    }
+
+    #[test]
+    fn owned_start_guard_rejects_a_delegated_callback_fixture() {
+        let delegated = r#"
+            start: Rc::new(move |_| {
+                platform_win::common::monitor_dpi_start::invoke_start_host_controlled();
+            })
+        "#;
+        assert!(!product_start_composition_is_owned(delegated));
+    }
+
+    #[test]
+    fn historical_platform_start_probe_remains_isolated_from_product_composition() {
+        let adapter = include_str!("../../platform-win/src/common/monitor_dpi_start.rs");
+        assert!(adapter.contains("invoke_start_host_controlled"));
+        assert!(product_start_composition_is_owned(include_str!(
+            "surface_runtime.rs"
+        )));
+    }
 
     #[test]
     fn production_status_uses_platform_clock_and_refreshes_changed_values() {

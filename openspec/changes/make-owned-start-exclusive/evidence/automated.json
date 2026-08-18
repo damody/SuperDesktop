@@ -1,0 +1,25 @@
+{
+  "schema": "owned-start-automated/v1",
+  "result": "passed",
+  "commands": [
+    "cargo fmt --all -- --check",
+    "cargo check --workspace --all-targets --locked --offline",
+    "cargo test --workspace --all-targets --locked --offline",
+    "cargo clippy --workspace --all-targets --locked --offline -- -D warnings",
+    "cargo build --workspace --all-targets --release --locked --offline"
+  ],
+  "focused_counts": {
+    "superdesktop-app": 15,
+    "taskbar-ui": 33,
+    "desktop-ui": 28,
+    "platform-win": 55
+  },
+  "source_contract": {
+    "product_has_owned_start_view": true,
+    "product_has_system_start_invocation": false,
+    "product_has_renderer_selection_environment_branch": false,
+    "historical_platform_probe_retained": true,
+    "delegated_negative_fixture_rejected": true
+  },
+  "exit_status": 0
+}

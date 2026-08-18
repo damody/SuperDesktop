@@ -1,0 +1,11 @@
+{
+    "schema":  "desktop-marquee-production/v1",
+    "result":  "passed",
+    "app_sha256":  "D89FDF86A19BAB00CC1871875625F42E4B55199EE36CDF055A5AF2CA35E9230C",
+    "reverse_drag":  true,
+    "selected_count":  15,
+    "raw_names_persisted":  false,
+    "screenshot":  "desktop-marquee.png",
+    "screenshot_sha256":  "C472E706DBA3449C9EE36E90908FB5D607B070DBEEABF3ED8F4DDC07E5674031",
+    "frame_visible":  true
+}

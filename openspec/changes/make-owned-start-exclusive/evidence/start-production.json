@@ -1,0 +1,37 @@
+{
+    "schema":  "windows11-owned-start-production/v2",
+    "result":  "passed",
+    "app_sha256":  "D89FDF86A19BAB00CC1871875625F42E4B55199EE36CDF055A5AF2CA35E9230C",
+    "owned_start_pid":  48412,
+    "taskbar_pid":  48412,
+    "system_start_process_ids_before":  [
+                                            18320,
+                                            42616,
+                                            49000
+                                        ],
+    "system_start_process_ids_after":  [
+                                           18320,
+                                           42616,
+                                           49000
+                                       ],
+    "home_sections":  [
+                          "Search",
+                          "Pinned",
+                          "Recommended",
+                          "Account",
+                          "Settings",
+                          "Power"
+                      ],
+    "power_collapsed":  true,
+    "all_apps_count":  75,
+    "centered_home_bounds":  {
+                                 "left":  1348,
+                                 "top":  731,
+                                 "width":  1144,
+                                 "height":  1272
+                             },
+    "home_screenshot":  "start-home.png",
+    "home_sha256":  "DFC171254A0208F0649EDBF720D56E90AAF58B46C45F24A20DEE3E4FF67D3CA4",
+    "all_apps_screenshot":  "start-all-apps.png",
+    "all_apps_sha256":  "B2AD5A398BB514D5AD9C8A0EAD6BBDC17B173A1B0EAE1C21067EFA952BFF8DAD"
+}
