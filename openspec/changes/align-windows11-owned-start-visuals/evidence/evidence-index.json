@@ -1,0 +1,20 @@
+{
+  "schema":"windows11-owned-start-visuals-evidence/v1",
+  "change":"align-windows11-owned-start-visuals",
+  "recorded_at":"2026-08-18T21:00:00+08:00",
+  "result":"passed",
+  "records":{
+    "automated":{"command":"cargo fmt --all -- --check; cargo test --workspace --all-targets --locked --offline --no-fail-fast; cargo clippy --workspace --all-targets --locked --offline -- -D warnings","expected":"Locale, token, route, ownership and complete workspace gates pass.","actual":"All commands exited zero; taskbar-ui has 49 passing tests.","exit_status":0,"gates":["G-START-LOCALE","G-START-VISUAL","G-START-A11Y","G-SHELL-NONINTERFERENCE"]},
+    "headful":{"artifact":"evidence/headful.json","artifact_sha256":"095f5710b32ccf390e96213e4f2a77e5cc0510875234ebb1f3b52fa41a66bcfb","expected":"Traditional Chinese Home, All apps and Power fit at 175% and remain exclusively owned.","actual":"All localized controls and 75 All apps items passed; owned PID equals taskbar PID and system Start PIDs were unchanged.","reviewer":"Primary integrator","gates":["G-START-LOCALE","G-START-VISUAL","G-START-A11Y","G-SHELL-NONINTERFERENCE"]},
+    "package":{"artifact":"evidence/packaging.json","expected":"Release and both installers build without launch from the admitted revision.","actual":"All artifacts built and hashes were rechecked.","reviewer":"Primary integrator","gates":["G-PACKAGE","G-TRACE"]}
+  },
+  "task_links":[
+    {"task_id":"1.1.1","record":"automated","subcheck":"complete-string-tables"},{"task_id":"1.1.2","record":"automated","subcheck":"locale-selection"},{"task_id":"1.1.3","record":"automated","subcheck":"fallback-long-labels"},
+    {"task_id":"1.2.1","record":"automated","subcheck":"light-tokens"},{"task_id":"1.2.2","record":"automated","subcheck":"contrast-tokens"},{"task_id":"1.2.3","record":"automated","subcheck":"styled-source-guard"},
+    {"task_id":"2.1.1","record":"headful","subcheck":"localized-search-headings"},{"task_id":"2.1.2","record":"headful","subcheck":"pinned-recommended-states"},{"task_id":"2.1.3","record":"headful","subcheck":"all-apps-navigation"},
+    {"task_id":"2.2.1","record":"headful","subcheck":"compact-footer"},{"task_id":"2.2.2","record":"headful","subcheck":"localized-power-flyout"},{"task_id":"2.2.3","record":"automated","subcheck":"collapsed-confirmation"},
+    {"task_id":"2.3.1","record":"automated","subcheck":"route-equivalence"},{"task_id":"2.3.2","record":"automated","subcheck":"owned-unavailable-states"},{"task_id":"2.3.3","record":"automated","subcheck":"forbidden-start-delegation"},
+    {"task_id":"3.1.1","record":"automated","subcheck":"workspace-quality"},{"task_id":"3.1.2","record":"headful","subcheck":"zh-tw-three-captures"},{"task_id":"3.1.3","record":"headful","subcheck":"uia-process-proof"},
+    {"task_id":"3.2.1","record":"package","subcheck":"release-hash"},{"task_id":"3.2.2","record":"package","subcheck":"installer-hashes"},{"task_id":"3.2.3","record":"package","subcheck":"unique-evidence-validation"}
+  ]
+}

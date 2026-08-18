@@ -1,0 +1,10 @@
+{
+  "schema":"windows11-owned-start-visuals-packaging/v1",
+  "revision":"484d6202aefd7d9b11cc12bad9e49e50fcf98eba",
+  "built_without_launch":true,
+  "artifacts":[
+    {"name":"superdesktop-app.exe","bytes":20836864,"sha256":"7d796fedb5cc5e70e5e2cee047f63d2c56eb5185fd262cdc41e5ee9986888038"},
+    {"name":"SuperDesktop-Test-Setup-1.2026.8.18-x64.exe","bytes":5768167,"sha256":"5b9400b158e84b83420543c3bdb261a885dfec3861142b4746cf89c5c66e8d44"},
+    {"name":"SuperExplorer-Setup-1.2026.8.18-x64.exe","bytes":13488079,"sha256":"2f0083218c4c27c25bf51ed795f89acf695c38dec566c2da97a886273faebae1"}
+  ]
+}
