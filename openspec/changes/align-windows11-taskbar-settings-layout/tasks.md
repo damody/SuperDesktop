@@ -12,9 +12,9 @@
 **Gate／Evidence：** `G-SETTINGS-DPI`; automated geometry evidence.
 **完成門檻：** 100–225% and negative/small monitor cases pass with one conversion.
 
-- [ ] 1.1.1 Return logical origin and dimensions from settings placement.
-- [ ] 1.1.2 Pass logical bounds directly into GPUI WindowOptions.
-- [ ] 1.1.3 Add DPI matrix, negative-origin, compact, and source-contract tests.
+- [x] 1.1.1 Return logical origin and dimensions from settings placement.
+- [x] 1.1.2 Pass logical bounds directly into GPUI WindowOptions.
+- [x] 1.1.3 Add DPI matrix, negative-origin, compact, and source-contract tests.
 
 ### 1.2 Define responsive layout and Windows tokens
 
@@ -26,9 +26,9 @@
 **Gate／Evidence：** `G-SETTINGS-LAYOUT`, `G-SETTINGS-THEME`; unit evidence.
 **完成門檻：** Wide/compact geometry and light/dark/high-contrast metrics are exact.
 
-- [ ] 1.2.1 Add responsive padding/content-width metrics.
-- [ ] 1.2.2 Centralize card, typography, focus, border, and switch tokens.
-- [ ] 1.2.3 Add wide, compact, theme, and high-contrast distinction tests.
+- [x] 1.2.1 Add responsive padding/content-width metrics.
+- [x] 1.2.2 Centralize card, typography, focus, border, and switch tokens.
+- [x] 1.2.3 Add wide, compact, theme, and high-contrast distinction tests.
 
 ## 2. Owned responsive page implementation
 
@@ -42,9 +42,9 @@
 **Gate／Evidence：** `G-SETTINGS-LAYOUT`; source/headful evidence.
 **完成門檻：** Top and bottom cards fit horizontally and all controls scroll into view.
 
-- [ ] 2.1.1 Change the root to fill actual window width and height.
-- [ ] 2.1.2 Center a max-width responsive content column with compact padding.
-- [ ] 2.1.3 Preserve one vertical scroll owner and bottom clearance.
+- [x] 2.1.1 Change the root to fill actual window width and height.
+- [x] 2.1.2 Center a max-width responsive content column with compact padding.
+- [x] 2.1.3 Preserve one vertical scroll owner and bottom clearance.
 
 ### 2.2 Align cards, rows, switches, focus, and accessibility
 
@@ -56,9 +56,9 @@
 **Gate／Evidence：** `G-SETTINGS-VISUAL`, `G-A11Y-I18N`; UIA/headful evidence.
 **完成門檻：** Geometry matches tokens, focus is visible, and authoritative actions remain equivalent.
 
-- [ ] 2.2.1 Apply card/header/row/text/switch Windows metrics.
-- [ ] 2.2.2 Add visible keyboard focus and high-contrast non-color cues.
-- [ ] 2.2.3 Re-run localization, UIA toggle, save-failure, and non-delegation tests.
+- [x] 2.2.1 Apply card/header/row/text/switch Windows metrics.
+- [x] 2.2.2 Add visible keyboard focus and high-contrast non-color cues.
+- [x] 2.2.3 Re-run localization, UIA toggle, save-failure, and non-delegation tests.
 
 ## 3. Headful verification and packaging
 
@@ -72,9 +72,9 @@
 **Gate／Evidence：** `G-SETTINGS-DPI`, `G-SETTINGS-LAYOUT`, `G-SETTINGS-VISUAL`, `G-A11Y-I18N`; headful evidence.
 **完成門檻：** No dead canvas/clipping; auto-hide and related rows are visible and operable.
 
-- [ ] 3.1.1 Run fmt, locked/offline workspace tests, clippy, and release build.
-- [ ] 3.1.2 Capture top, scrolled bottom, light/dark, and 175% geometry evidence.
-- [ ] 3.1.3 Capture keyboard/UIA reachability, save error, and zero-delegation evidence.
+- [x] 3.1.1 Run fmt, locked/offline workspace tests, clippy, and release build.
+- [x] 3.1.2 Capture top, scrolled bottom, light/dark, and 175% geometry evidence.
+- [x] 3.1.3 Capture keyboard/UIA reachability, save error, and zero-delegation evidence.
 
 ### 3.2 Admit the revision and installers
 

@@ -66,6 +66,119 @@ impl CommandSurfaceTokens {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(crate) struct TaskbarSettingsLayout {
+    pub outer_padding: f32,
+    pub content_width: f32,
+    pub bottom_padding: f32,
+}
+
+impl TaskbarSettingsLayout {
+    pub fn for_width(width: f32) -> Self {
+        let width = width.max(1.0);
+        let outer_padding = if width < 720.0 { 16.0 } else { 32.0 };
+        Self {
+            outer_padding,
+            content_width: (width - outer_padding * 2.0).clamp(1.0, 1000.0),
+            bottom_padding: 48.0,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) struct TaskbarSettingsTokens {
+    pub background: u32,
+    pub card: u32,
+    pub foreground: u32,
+    pub secondary: u32,
+    pub border: u32,
+    pub focus: u32,
+    pub switch_on: u32,
+    pub switch_off: u32,
+    pub card_radius: u8,
+    pub section_height: u8,
+    pub row_height: u8,
+}
+
+impl TaskbarSettingsTokens {
+    pub fn current() -> Self {
+        let theme = std::env::var("SUPERDESKTOP_THEME");
+        Self::for_theme(
+            theme.as_deref() == Ok("dark"),
+            theme.as_deref() == Ok("high-contrast"),
+        )
+    }
+
+    pub const fn for_theme(dark: bool, high_contrast: bool) -> Self {
+        Self {
+            background: if high_contrast {
+                0x000000
+            } else if dark {
+                0x202020
+            } else {
+                0xf3f3f3
+            },
+            card: if high_contrast {
+                0x000000
+            } else if dark {
+                0x2b2b2b
+            } else {
+                0xfbfbfb
+            },
+            foreground: if dark || high_contrast {
+                0xffffff
+            } else {
+                0x1b1b1b
+            },
+            secondary: if dark || high_contrast {
+                0xc8c8c8
+            } else {
+                0x626262
+            },
+            border: if high_contrast {
+                0xffffff
+            } else if dark {
+                0x454545
+            } else {
+                0xe0e0e0
+            },
+            focus: if high_contrast { 0xffff00 } else { 0x0067c0 },
+            switch_on: if high_contrast { 0xffff00 } else { 0x0067c0 },
+            switch_off: if high_contrast {
+                0x000000
+            } else if dark {
+                0x6b6b6b
+            } else {
+                0x8a8a8a
+            },
+            card_radius: 8,
+            section_height: 64,
+            row_height: 56,
+        }
+    }
+}
+
+const fn setting_glyph(id: TaskbarSettingId) -> &'static str {
+    match id {
+        TaskbarSettingId::Search => "⌕",
+        TaskbarSettingId::TaskView => "▣",
+        TaskbarSettingId::Widgets => "▦",
+        TaskbarSettingId::PenMenu => "✎",
+        TaskbarSettingId::TouchKeyboard => "⌨",
+        TaskbarSettingId::OtherTrayIcons => "⋯",
+        TaskbarSettingId::Alignment => "↔",
+        TaskbarSettingId::Labels => "Aa",
+        TaskbarSettingId::CombineGroups => "▤",
+        TaskbarSettingId::Previews => "▧",
+        TaskbarSettingId::AllMonitors => "▣",
+        TaskbarSettingId::Locked => "◇",
+        TaskbarSettingId::Rows => "≡",
+        TaskbarSettingId::AutoHide => "↕",
+        TaskbarSettingId::DateTime => "◷",
+        TaskbarSettingId::Notifications => "♧",
+    }
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum TaskbarContextCommand {
     ToggleLockTaskbar,
@@ -707,39 +820,14 @@ impl TaskbarSettingsView {
 impl Render for TaskbarSettingsView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         window.focus(&self.focus, cx);
-        let high_contrast = std::env::var("SUPERDESKTOP_THEME").as_deref() == Ok("high-contrast");
-        let dark = std::env::var("SUPERDESKTOP_THEME").as_deref() == Ok("dark");
-        let background = if high_contrast {
-            0x000000
-        } else if dark {
-            0x202020
-        } else {
-            0xf3f3f3
-        };
-        let card = if high_contrast {
-            0x000000
-        } else if dark {
-            0x2b2b2b
-        } else {
-            0xfbfbfb
-        };
-        let foreground = if dark || high_contrast {
-            0xffffff
-        } else {
-            0x1b1b1b
-        };
-        let secondary = if dark || high_contrast {
-            0xc8c8c8
-        } else {
-            0x626262
-        };
-        let border = if high_contrast {
-            0xffffff
-        } else if dark {
-            0x454545
-        } else {
-            0xe0e0e0
-        };
+        let tokens = TaskbarSettingsTokens::current();
+        let background = tokens.background;
+        let card = tokens.card;
+        let foreground = tokens.foreground;
+        let secondary = tokens.secondary;
+        let border = tokens.border;
+        let focus = tokens.focus;
+        let layout = TaskbarSettingsLayout::for_width(window.bounds().size.width.as_f32());
         let zh = traditional_chinese();
         let dismiss = self.dismiss.clone();
         let sections = [
@@ -818,8 +906,10 @@ impl Render for TaskbarSettingsView {
             .absolute()
             .left_0()
             .top_0()
-            .w(px(900.))
-            .h(px(760.))
+            .w_full()
+            .h_full()
+            .p(px(layout.outer_padding))
+            .pb(px(layout.bottom_padding))
             .bg(rgb(background))
             .text_color(rgb(foreground))
             .overflow_x_hidden()
@@ -840,11 +930,12 @@ impl Render for TaskbarSettingsView {
                 cx.notify();
             }))
             .child(
-                div().w(px(836.)).min_w_0().p(px(32.)).flex().flex_col().gap(px(16.))
+                div().w_full().min_w_0().flex().justify_center().child(
+                div().w(px(layout.content_width)).min_w_0().flex().flex_col().gap(px(16.))
                     .child(div().text_size(px(14.)).text_color(rgb(secondary)).child(if zh { "個人化  ›  工作列" } else { "Personalization  ›  Taskbar" }))
                     .child(div().text_size(px(28.)).child(if zh { "工作列" } else { "Taskbar" }))
                     .child(
-                        div().p(px(16.)).rounded(px(8.)).border_1().border_color(rgb(border)).bg(rgb(card))
+                        div().p(px(16.)).rounded(px(tokens.card_radius as f32)).border_1().border_color(rgb(border)).bg(rgb(card))
                             .flex().items_center().gap(px(12.)).child("ⓘ").child(div().flex_1().min_w_0().whitespace_normal().child(if zh { "部分 Windows 內建介面仍待 SuperDesktop 完整接管。" } else { "Some Windows inbox surfaces are unavailable until SuperDesktop owns them." })),
                     )
                     .when_some(self.model.error().map(str::to_owned), |element, error| {
@@ -853,10 +944,11 @@ impl Render for TaskbarSettingsView {
                     .children(sections.into_iter().map(|(section, title, description)| {
                         let rows = self.model.rows().into_iter().filter(|row| row.section == section).collect::<Vec<_>>();
                         let expanded = self.model.expanded(section);
-                        div().w_full().min_w_0().rounded(px(8.)).border_1().border_color(rgb(border)).bg(rgb(card)).overflow_hidden().flex().flex_col()
+                        div().w_full().min_w_0().rounded(px(tokens.card_radius as f32)).border_1().border_color(rgb(border)).bg(rgb(card)).overflow_hidden().flex().flex_col()
                             .child(
                                 div().id(format!("taskbar-settings-section-{section:?}")).role(gpui::Role::Button).aria_label(format!("{title}, {}", if expanded { "expanded" } else { "collapsed" })).tab_index(0)
-                                    .h(px(64.)).px(px(16.)).flex().items_center().cursor_pointer()
+                                    .h(px(tokens.section_height as f32)).px(px(16.)).flex().items_center().cursor_pointer()
+                                    .focus_visible(move |style| style.border_2().border_color(rgb(focus)))
                                     .on_click(cx.listener(move |this, _, _, cx| { this.model.toggle_section(section); cx.notify(); }))
                                     .child(div().flex_1().flex().flex_col().child(title).child(div().text_size(px(12.)).text_color(rgb(secondary)).child(description)))
                                     .child(if expanded { "⌃" } else { "⌄" }),
@@ -870,17 +962,20 @@ impl Render for TaskbarSettingsView {
                                 let aria = if let Some(reason) = row.unavailable_reason { format!("{title}, unavailable: {reason}") } else { format!("{title}, {value}") };
                                 div().id(format!("taskbar-setting-{id:?}")).role(if is_switch { gpui::Role::CheckBox } else { gpui::Role::Button }).aria_label(aria).tab_index(0)
                                     .when(is_switch, |element| element.aria_toggled(Toggled::from(switch_on)))
-                                    .min_h(px(56.)).px(px(16.)).py(px(10.)).border_t_1().border_color(rgb(border)).flex().items_center().gap(px(16.))
+                                    .min_h(px(tokens.row_height as f32)).px(px(16.)).py(px(10.)).border_t_1().border_color(rgb(border)).flex().items_center().gap(px(16.))
+                                    .focus_visible(move |style| style.border_2().border_color(rgb(focus)))
                                     .when(!enabled, |element| element.opacity(0.5))
                                     .when(enabled, |element| element.cursor_pointer().on_click(cx.listener(move |this, _, _, cx| { if let Some(effect) = this.model.activate(id) { this.apply(effect); } cx.notify(); })))
+                                    .child(div().w(px(32.)).flex_none().text_size(px(18.)).text_color(rgb(secondary)).child(setting_glyph(id)))
                                     .child(div().flex_1().min_w_0().flex().flex_col().child(title).child(div().min_w_0().whitespace_normal().text_size(px(12.)).text_color(rgb(secondary)).child(if zh && !enabled { "此功能尚未由 SuperDesktop 擁有".to_owned() } else { description })))
                                     .child(
                                         div().flex_none()
-                                            .when(is_switch, |element| element.w(px(44.)).h(px(24.)).p(px(3.)).rounded_full().bg(rgb(if switch_on { 0x0067c0 } else { 0x8a8a8a })).flex().items_center().when(switch_on, |element| element.justify_end()).child(div().w(px(18.)).h(px(18.)).rounded_full().bg(rgb(0xffffff))))
+                                            .when(is_switch, |element| element.w(px(44.)).h(px(24.)).p(px(3.)).rounded_full().border_1().border_color(rgb(if switch_on { tokens.switch_on } else { border })).bg(rgb(if switch_on { tokens.switch_on } else { tokens.switch_off })).flex().items_center().when(switch_on, |element| element.justify_end()).child(div().w(px(18.)).h(px(18.)).rounded_full().bg(rgb(if switch_on && tokens.switch_on == 0xffff00 { 0x000000 } else { 0xffffff }))))
                                             .when(!is_switch, |element| element.px(px(10.)).py(px(6.)).rounded(px(6.)).border_1().border_color(rgb(border)).child(value)),
                                     )
                             })))
                     }))
+                )
             )
     }
 }
@@ -990,8 +1085,42 @@ mod tests {
             "Role::Alert",
             "Role::CheckBox",
             "aria_toggled",
+            ".w_full()",
+            ".h_full()",
+            ".justify_center()",
+            ".overflow_y_scroll()",
+            ".focus_visible(move |style|",
         ] {
             assert!(source.contains(token), "missing {token}");
         }
+    }
+
+    #[test]
+    fn responsive_layout_uses_compact_padding_and_bounded_centered_content() {
+        let compact = TaskbarSettingsLayout::for_width(640.0);
+        assert_eq!(compact.outer_padding, 16.0);
+        assert_eq!(compact.content_width, 608.0);
+        assert_eq!(compact.bottom_padding, 48.0);
+        let normal = TaskbarSettingsLayout::for_width(1100.0);
+        assert_eq!(normal.outer_padding, 32.0);
+        assert_eq!(normal.content_width, 1000.0);
+        let wide = TaskbarSettingsLayout::for_width(2200.0);
+        assert_eq!(wide.content_width, 1000.0);
+    }
+
+    #[test]
+    fn settings_tokens_keep_geometry_stable_and_high_contrast_explicit() {
+        let light = TaskbarSettingsTokens::for_theme(false, false);
+        let dark = TaskbarSettingsTokens::for_theme(true, false);
+        let contrast = TaskbarSettingsTokens::for_theme(false, true);
+        for value in [light, dark, contrast] {
+            assert_eq!(value.card_radius, 8);
+            assert_eq!(value.section_height, 64);
+            assert_eq!(value.row_height, 56);
+        }
+        assert_ne!(light.background, dark.background);
+        assert_eq!(contrast.border, 0xffffff);
+        assert_eq!(contrast.focus, 0xffff00);
+        assert_eq!(contrast.switch_on, 0xffff00);
     }
 }

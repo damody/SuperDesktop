@@ -1,0 +1,37 @@
+{
+    "schema":  "taskbar-settings-layout-headful/v1",
+    "result":  "passed",
+    "theme":  "light",
+    "locale":  "zh-TW",
+    "physical_bounds":  {
+                            "left":  -12,
+                            "width":  1949,
+                            "top":  -6,
+                            "height":  1517
+                        },
+    "capture_bounds":  {
+                           "left":  0,
+                           "width":  1937,
+                           "top":  0,
+                           "height":  1511
+                       },
+    "window_dpi":  168,
+    "inferred_dpi_scale":  1.75,
+    "expected_logical_width":  1100,
+    "expected_logical_height":  860,
+    "top_capture":  "light-top.png",
+    "bottom_capture":  "light-bottom.png",
+    "auto_hide_uia":  {
+                          "before":  "Off",
+                          "control_type":  "ControlType.CheckBox",
+                          "pattern":  "TogglePattern",
+                          "visible_after_scroll":  true,
+                          "after":  "On"
+                      },
+    "keyboard_focus_contract":  "focus_visible styling and GPUI focusable rows are covered by taskbar-ui source-contract tests",
+    "save_failure_contract":  "TaskbarSettingsView retains authoritative state on rejected save; covered by taskbar-ui model tests",
+    "delegated_processes_started":  [
+
+                                    ],
+    "explorer_ui_invoked":  false
+}

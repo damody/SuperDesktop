@@ -1851,20 +1851,11 @@ fn taskbar_context_placement(
 }
 
 fn taskbar_settings_options(monitor: &MonitorRecord) -> WindowOptions {
-    let scale = monitor.dpi_x as f32 / 96.0;
-    let available_width = (monitor.work_area.right - monitor.work_area.left) as f32 / scale;
-    let available_height = (monitor.work_area.bottom - monitor.work_area.top) as f32 / scale;
-    let width = available_width.clamp(640.0, 980.0);
-    let height = available_height.clamp(480.0, 860.0);
-    let (left, top, _, _) = taskbar_settings_placement(monitor);
-    let physical_width =
-        (width * scale).min((monitor.work_area.right - monitor.work_area.left) as f32);
-    let physical_height =
-        (height * scale).min((monitor.work_area.bottom - monitor.work_area.top) as f32);
+    let (left, top, width, height) = taskbar_settings_placement(monitor);
     WindowOptions {
         window_bounds: Some(WindowBounds::Windowed(Bounds {
-            origin: point(px(left as f32), px(top as f32)),
-            size: size(px(physical_width), px(physical_height)),
+            origin: point(px(left), px(top)),
+            size: size(px(width), px(height)),
         })),
         titlebar: None,
         focus: true,
@@ -1878,20 +1869,22 @@ fn taskbar_settings_options(monitor: &MonitorRecord) -> WindowOptions {
     }
 }
 
-fn taskbar_settings_placement(monitor: &MonitorRecord) -> (i32, i32, i32, i32) {
-    let scale = monitor.dpi_x as f32 / 96.0;
+fn taskbar_settings_placement(monitor: &MonitorRecord) -> (f32, f32, f32, f32) {
+    let scale = (monitor.dpi_x.max(96)) as f32 / 96.0;
     let available_width = (monitor.work_area.right - monitor.work_area.left) as f32 / scale;
     let available_height = (monitor.work_area.bottom - monitor.work_area.top) as f32 / scale;
-    let width = available_width.clamp(640.0, 980.0);
-    let height = available_height.clamp(480.0, 860.0);
+    let bounded = |available: f32, minimum: f32, preferred: f32| {
+        if available >= minimum {
+            available.min(preferred).max(minimum)
+        } else {
+            available.max(1.0)
+        }
+    };
+    let width = bounded(available_width, 640.0, 1100.0);
+    let height = bounded(available_height, 480.0, 860.0);
     let left = monitor.work_area.left as f32 / scale + (available_width - width) / 2.0;
     let top = monitor.work_area.top as f32 / scale + (available_height - height) / 2.0;
-    (
-        (left * scale).round() as i32,
-        (top * scale).round() as i32,
-        (width * scale).round() as i32,
-        (height * scale).round() as i32,
-    )
+    (left, top, width, height)
 }
 
 fn task_view_options(monitor: &MonitorRecord) -> WindowOptions {
@@ -4574,12 +4567,73 @@ mod live_parity_tests {
         let Some(WindowBounds::Windowed(settings)) = settings.window_bounds else {
             panic!("bounds")
         };
-        let work_width = (monitor.work_area.right - monitor.work_area.left) as f32;
-        let work_height = (monitor.work_area.bottom - monitor.work_area.top) as f32;
-        assert_eq!(settings.size.width.as_f32(), 980.0 * 1.5);
-        assert_eq!(settings.size.height.as_f32(), work_height);
-        assert!(settings.size.width.as_f32() <= work_width);
-        assert!(settings.size.height.as_f32() <= work_height);
+        let logical_work_width = (monitor.work_area.right - monitor.work_area.left) as f32 / 1.5;
+        let logical_work_height = (monitor.work_area.bottom - monitor.work_area.top) as f32 / 1.5;
+        assert_eq!(settings.size.width.as_f32(), 1100.0);
+        assert!((settings.size.height.as_f32() - logical_work_height).abs() < 0.01);
+        assert!(settings.size.width.as_f32() <= logical_work_width);
+        assert!(settings.size.height.as_f32() <= logical_work_height);
+    }
+
+    #[test]
+    fn taskbar_settings_geometry_is_logical_once_across_dpi_and_small_monitors() {
+        for dpi in [96, 120, 144, 168, 192, 216] {
+            let monitor = MonitorRecord {
+                device_name: format!("dpi-{dpi}"),
+                primary: true,
+                bounds: ScreenRect {
+                    left: -1920,
+                    top: 0,
+                    right: 1920,
+                    bottom: 2160,
+                },
+                work_area: ScreenRect {
+                    left: -1920,
+                    top: 0,
+                    right: 1920,
+                    bottom: 2040,
+                },
+                dpi_x: dpi,
+                dpi_y: dpi,
+            };
+            let (_, _, width, height) = super::taskbar_settings_placement(&monitor);
+            let scale = dpi as f32 / 96.0;
+            assert!(width <= 3840.0 / scale);
+            assert!(height <= 2040.0 / scale);
+            assert!(width <= 1100.0);
+            assert!(height <= 860.0);
+        }
+        let compact = MonitorRecord {
+            device_name: "compact".into(),
+            primary: false,
+            bounds: ScreenRect {
+                left: -500,
+                top: -300,
+                right: 0,
+                bottom: 100,
+            },
+            work_area: ScreenRect {
+                left: -500,
+                top: -300,
+                right: 0,
+                bottom: 100,
+            },
+            dpi_x: 96,
+            dpi_y: 96,
+        };
+        let (left, top, width, height) = super::taskbar_settings_placement(&compact);
+        assert_eq!((left, top, width, height), (-500.0, -300.0, 500.0, 400.0));
+        let source = include_str!("surface_runtime.rs")
+            .split("#[cfg(test)]")
+            .next()
+            .unwrap();
+        let options = source
+            .split("fn taskbar_settings_options")
+            .nth(1)
+            .and_then(|tail| tail.split("fn taskbar_settings_placement").next())
+            .unwrap();
+        assert!(!options.contains("* scale"));
+        assert!(options.contains("size(px(width), px(height))"));
     }
 
     #[test]

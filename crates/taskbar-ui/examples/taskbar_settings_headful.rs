@@ -10,17 +10,8 @@ use settings_store::TaskbarSettings;
 use taskbar_ui::{TaskbarContextView, TaskbarSettingsEffect, TaskbarSettingsView};
 
 fn options(surface: &str, _cx: &App) -> WindowOptions {
-    let scale = platform_win::common::monitor_dpi_start::snapshot_real_monitors()
-        .ok()
-        .and_then(|snapshot| {
-            snapshot
-                .monitors
-                .into_iter()
-                .find(|monitor| monitor.primary)
-        })
-        .map_or(1.0, |monitor| monitor.dpi_x as f32 / 96.0);
-    let width = if surface == "context" { 220.0 } else { 900.0 } * scale;
-    let height = (if surface == "context" { 80.0 } else { 760.0 } * scale).min(1080.0);
+    let width = if surface == "context" { 220.0 } else { 1100.0 };
+    let height = if surface == "context" { 114.0 } else { 860.0 };
     WindowOptions {
         window_bounds: Some(WindowBounds::Windowed(Bounds {
             origin: point(px(0.), px(0.)),
