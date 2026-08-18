@@ -1538,8 +1538,8 @@ fn taskbar_context_options(
     let height = 80.0;
     WindowOptions {
         window_bounds: Some(WindowBounds::Windowed(Bounds {
-            origin: point(px(left as f32 / scale), px(top as f32 / scale)),
-            size: size(px(width), px(height)),
+            origin: point(px(left as f32), px(top as f32)),
+            size: size(px(width * scale), px(height * scale)),
         })),
         titlebar: None,
         focus: true,
@@ -1582,10 +1582,14 @@ fn taskbar_settings_options(monitor: &MonitorRecord) -> WindowOptions {
     let width = available_width.clamp(640.0, 980.0);
     let height = available_height.clamp(480.0, 860.0);
     let (left, top, _, _) = taskbar_settings_placement(monitor);
+    let physical_width =
+        (width * scale).min((monitor.work_area.right - monitor.work_area.left) as f32);
+    let physical_height =
+        (height * scale).min((monitor.work_area.bottom - monitor.work_area.top) as f32);
     WindowOptions {
         window_bounds: Some(WindowBounds::Windowed(Bounds {
-            origin: point(px(left as f32 / scale), px(top as f32 / scale)),
-            size: size(px(width), px(height)),
+            origin: point(px(left as f32), px(top as f32)),
+            size: size(px(physical_width), px(physical_height)),
         })),
         titlebar: None,
         focus: true,

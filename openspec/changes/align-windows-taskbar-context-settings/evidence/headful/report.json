@@ -3,10 +3,10 @@
   "host": "Windows 11 build 26200",
   "result": "passed",
   "captures": [
-    {"name":"context-light","sha256":"81a89c89e2bf6dd954d8da7036aadd2de339647f490867a4ee24e4c30522302b"},
-    {"name":"context-dark","sha256":"033615c5ffa3a324fabb66456bfea59641f62955812bd3ea0feeb703ca42b47b"},
-    {"name":"settings-zh-tw","sha256":"ce5fb31a74a9b86eb0f846a834c07e77ae6527092a3af51e9fe8a578087ad672"},
-    {"name":"settings-high-contrast","sha256":"b64e6fd82ed3dde8c6379d547b205da715aae52a123c9ece67239f7f9e92e209"},
+    {"name":"context-light","sha256":"78577c14d3b33c21af16d3c1aee4798d2eb065e6ad08570bc27d3af5de676ff5"},
+    {"name":"context-dark","sha256":"8cb65f9ec80198208cea25e4b5fee51820ef3342f7707b49c06ec704548d17f0"},
+    {"name":"settings-zh-tw","sha256":"2a94a2f9ee57b061d6ef60025828d97b17f7d3f69cd177f7cac90678dd86ee75"},
+    {"name":"settings-high-contrast","sha256":"14cf73a6f18358d343dfef29baeaef71729e89f7fd95cf36a5b9817c8eef92aa"},
     {"name":"taskbar-long-indicators","sha256":"83dfca0e6f470a48905cf50570cf21711cb03d209b5a1ff4bb206ac0df8fdfca"}
   ],
   "uia": {
