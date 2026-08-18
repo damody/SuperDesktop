@@ -1,0 +1,10 @@
+{
+  "schema":"windows11-taskbar-chrome-packaging/v1",
+  "revision":"82d5e5121facc1c9fbfb2a7979ef1681f36a96c7",
+  "built_without_launch":true,
+  "artifacts":[
+    {"name":"superdesktop-app.exe","bytes":20846592,"sha256":"61a2b540398e9fbf95f5d462a4daa49daaeeb9a5059e0e25c2b2fb804d95b5f0"},
+    {"name":"SuperDesktop-Test-Setup-1.2026.8.18-x64.exe","bytes":5770124,"sha256":"1736311435b207a00c5ca56fe19bf6d4fd4d525e307d387ac019912cbd2d8b5f"},
+    {"name":"SuperExplorer-Setup-1.2026.8.18-x64.exe","bytes":13489695,"sha256":"efe9994c01b051537c4a7ad5d69081192aeff3f271fcd428db5326f4db580059"}
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "schema":"windows11-taskbar-chrome-evidence/v1",
+  "change":"align-windows11-taskbar-chrome",
+  "recorded_at":"2026-08-18T22:00:00+08:00",
+  "result":"passed",
+  "records":{
+    "automated":{"command":"cargo fmt --all -- --check; cargo test --workspace --all-targets --locked --offline --no-fail-fast; cargo clippy --workspace --all-targets --locked --offline -- -D warnings","expected":"Chrome, locale, state, ownership and complete workspace gates pass.","actual":"All commands exited zero; taskbar-ui has 51 passing tests.","exit_status":0,"gates":["G-TASKBAR-CHROME","G-TASKBAR-A11Y","G-TASKBAR-LOCALE","G-SHELL-NONINTERFERENCE"]},
+    "headful":{"artifacts":[{"path":"evidence/light.json","sha256":"94c12200687ff21fdab87dff216617751efe407981b8df2377e4dc5e2d4e94ff"},{"path":"evidence/high-contrast.json","sha256":"ddd3788471f353b94ceedcb56b90f8e4c1bfc4e5de4f5ce3a9bf44db45fa52cd"},{"path":"evidence/explorer-free.json","sha256":"52e8ba8913c201eb341c8e11c5011099e3b34d14c9e4978706b6dae7254fee25"}],"expected":"175% light/high-contrast state matrices and Explorer-free tray/status pass.","actual":"Five states, two rows, 280px physical labeled controls, callbacks, host restart and Explorer absence passed.","reviewer":"Primary integrator","gates":["G-TASKBAR-CHROME","G-TASKBAR-A11Y","G-TASKBAR-LOCALE","G-SHELL-NONINTERFERENCE"]},
+    "package":{"artifact":"evidence/packaging.json","expected":"Release and both installers build without launch from admitted revision.","actual":"All artifacts built and hashes were verified.","reviewer":"Primary integrator","gates":["G-PACKAGE","G-TRACE"]}
+  },
+  "task_links":[
+    {"task_id":"1.1.1","record":"automated","subcheck":"light-tokens"},{"task_id":"1.1.2","record":"automated","subcheck":"contrast-tokens"},{"task_id":"1.1.3","record":"automated","subcheck":"chrome-source-tests"},
+    {"task_id":"1.2.1","record":"automated","subcheck":"localized-search"},{"task_id":"1.2.2","record":"automated","subcheck":"compact-ime"},{"task_id":"1.2.3","record":"automated","subcheck":"locale-a11y-tests"},
+    {"task_id":"2.1.1","record":"headful","subcheck":"panel-row-separators"},{"task_id":"2.1.2","record":"headful","subcheck":"primary-control-states"},{"task_id":"2.1.3","record":"automated","subcheck":"primary-routes"},
+    {"task_id":"2.2.1","record":"headful","subcheck":"fixed-entry-density"},{"task_id":"2.2.2","record":"headful","subcheck":"task-width-indicators"},{"task_id":"2.2.3","record":"headful","subcheck":"state-overlays"},
+    {"task_id":"2.3.1","record":"headful","subcheck":"notification-states"},{"task_id":"2.3.2","record":"headful","subcheck":"network-volume-ime"},{"task_id":"2.3.3","record":"headful","subcheck":"clock-typography"},
+    {"task_id":"2.4.1","record":"automated","subcheck":"typed-callbacks"},{"task_id":"2.4.2","record":"automated","subcheck":"forbidden-delegation"},{"task_id":"2.4.3","record":"automated","subcheck":"independent-unavailable"},
+    {"task_id":"3.1.1","record":"automated","subcheck":"workspace-quality"},{"task_id":"3.1.2","record":"headful","subcheck":"light-contrast-captures"},{"task_id":"3.1.3","record":"headful","subcheck":"uia-explorer-free"},
+    {"task_id":"3.2.1","record":"package","subcheck":"release-hash"},{"task_id":"3.2.2","record":"package","subcheck":"installer-hashes"},{"task_id":"3.2.3","record":"package","subcheck":"unique-evidence-validation"}
+  ]
+}
