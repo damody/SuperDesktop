@@ -1,0 +1,20 @@
+{
+  "schema": "shell-notifyicon-automated/v1",
+  "revision": "e4101d93849649db0728ae1e82082a8dc3d4f2f5",
+  "recorded_at": "2026-08-18T19:35:00+08:00",
+  "result": "passed",
+  "commands": [
+    {"command":"cargo fmt --all -- --check","exit_status":0},
+    {"command":"cargo check --workspace --all-targets --locked --offline","exit_status":0},
+    {"command":"cargo test --workspace --all-targets --locked --offline --no-fail-fast","exit_status":0},
+    {"command":"cargo clippy --workspace --all-targets --locked --offline -- -D warnings","exit_status":0},
+    {"command":"cargo build --workspace --all-targets --release --locked --offline","exit_status":0}
+  ],
+  "focused_counts": {"shell-provider-protocol":19,"platform-win":74,"notification-area-host":7,"superdesktop-app":27,"taskbar-ui":47},
+  "preview_non_interference": {"compatibility_argument_required":true,"preview_identity_created":false,"explorer_collision_rejected":true},
+  "release": {
+    "superdesktop-app.exe":{"bytes":20838400,"sha256":"1ae6f25496944b42a4d0c8b4b1ac37cf65b15cb65f3912029e9156799b035cb7"},
+    "notification-area-host.exe":{"bytes":2676224,"sha256":"93b61cc94a2cdcd2184e14b81e4b9556f95a45e6a84a71c21f47ea7f963dc570"},
+    "notify_icon_fixture.exe":{"bytes":150016,"sha256":"debf4d59e08b59b063761d5da48f577bc6fc9d7024a9c7d27ce16fb9e69a6c26"}
+  }
+}

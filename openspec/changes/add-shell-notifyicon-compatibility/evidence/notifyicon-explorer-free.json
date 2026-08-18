@@ -3,24 +3,24 @@
     "result":  "passed",
     "explorer_absent_during_measurement":  true,
     "explorer_pids_before":  [
-                                 31388
+                                 39132
                              ],
     "explorer_pids_after":  [
 
                             ],
-    "shell_pid":  26348,
-    "fixture_pid":  25800,
+    "shell_pid":  40272,
+    "fixture_pid":  13732,
     "host_pids_before":  [
-                             15528
+                             46240
                          ],
     "host_pids_after":  [
-                            50596
+                            16352
                         ],
     "host_restart_verified":  true,
-    "app_sha256":  "AE7022C7115CFC8147EAFE3FA884B1E0C11E55F4EFAB57B4ACEAFC05DB462EE2",
-    "fixture_sha256":  "08557BCF453E7F9B4026BEC802D83225004B07E8E8FFFB8286842DD8440B6D99",
+    "app_sha256":  "1AE6F25496944B42A4D0C8B4B1AC37CF65B15CB65F3912029E9156799B035CB7",
+    "fixture_sha256":  "DEBF4D59E08B59B063761D5DA48F577BC6FC9D7024A9C7D27CE16FB9E69A6C26",
     "icon_name":  "SuperDesktop compatibility fixture modified",
-    "callback_trace":  "fixture-ready pid=25800 hwnd=3478136 icon_id=7001\ncallback wparam=0 lparam=458818560\ntaskbar-created\nfixture-reregistered\ncallback wparam=0 lparam=458818560\nfixture-complete",
+    "callback_trace":  "fixture-ready pid=13732 hwnd=1182448 icon_id=7001\ncallback wparam=0 lparam=458818560\ncallback wparam=0 lparam=458817659\ntaskbar-created\nfixture-reregistered\ncallback wparam=0 lparam=458818560\nfixture-complete",
     "screenshot":  "notifyicon-taskbar.png",
-    "screenshot_sha256":  "62CAFF23570BBC48B1813D8A25A3E85F34DBC82EAA21E084DCA114FC9BE1D5F5"
+    "screenshot_sha256":  "8F75E5877BDB3AA8F28520C01AACE79BDAAC8058FBC008AFDE6EA38DFC0644C2"
 }

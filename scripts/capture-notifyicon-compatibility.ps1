@@ -18,6 +18,15 @@ $explorerPath = Join-Path $env:WINDIR 'explorer.exe'
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName UIAutomationTypes
+Add-Type @'
+using System;
+using System.Runtime.InteropServices;
+public static class NotifyIconPointer {
+    [DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y);
+    [DllImport("user32.dll")] public static extern void mouse_event(uint flags, uint dx, uint dy, uint data, UIntPtr extra);
+    public static void RightClick(int x, int y) { SetCursorPos(x,y); mouse_event(0x0008,0,0,0,UIntPtr.Zero); mouse_event(0x0010,0,0,0,UIntPtr.Zero); }
+}
+'@
 
 function Find-Named([System.Windows.Automation.AutomationElement]$Root,[string]$Name) {
     $condition = [System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::NameProperty,$Name)
@@ -82,6 +91,8 @@ try {
     $bitmap.Save($ScreenshotPath,[Drawing.Imaging.ImageFormat]::Png)
     $graphics.Dispose(); $bitmap.Dispose()
     $icon.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
+    [NotifyIconPointer]::RightClick([int](($iconBounds.Left+$iconBounds.Right)/2),[int](($iconBounds.Top+$iconBounds.Bottom)/2))
+    Start-Sleep -Milliseconds 250
     $hostBefore = @(Get-Process notification-area-host -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Id)
     $hostAfter = $hostBefore
     if ($CrashHost) {

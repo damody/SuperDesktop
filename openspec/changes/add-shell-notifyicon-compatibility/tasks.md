@@ -317,12 +317,12 @@
 **Gate/Evidence:** All change gates; `evidence/evidence-index.json`.
 **Completion threshold:** Every leaf has unique evidence, controlled lifecycle passes without Explorer and strict validation succeeds.
 
-- [ ] 5.1.1 Run fmt, locked/offline workspace check/tests and clippy warnings-as-errors.
-- [ ] 5.1.2 Build release binaries and controlled ordinary NotifyIcon fixture with hashes.
-- [ ] 5.1.3 Prove Explorer-present preview creates no compatibility identity.
-- [ ] 5.1.4 Capture Explorer-free add/modify/tooltip/activate/context/delete and overflow UIA evidence.
-- [ ] 5.1.5 Force host crash/restart and record resource/re-registration traces.
-- [ ] 5.1.6 Create unique task-linked evidence and pass strict validation.
+- [x] 5.1.1 Run fmt, locked/offline workspace check/tests and clippy warnings-as-errors.
+- [x] 5.1.2 Build release binaries and controlled ordinary NotifyIcon fixture with hashes.
+- [x] 5.1.3 Prove Explorer-present preview creates no compatibility identity.
+- [x] 5.1.4 Capture Explorer-free add/modify/tooltip/activate/context/delete and overflow UIA evidence.
+- [x] 5.1.5 Force host crash/restart and record resource/re-registration traces.
+- [x] 5.1.6 Create unique task-linked evidence and pass strict validation.
 
 ### 5.2 Package compatibility support
 
@@ -350,5 +350,5 @@
 **Gate/Evidence:** `G-NOTIFY-COMPAT`, `G-TRACE`; packaging record.
 **Completion threshold:** Both installers contain the updated host, build without launch and clean up all compatibility artifacts.
 
-- [ ] 5.2.1 Update release/package/NSIS manifests and uninstall cleanup if required.
-- [ ] 5.2.2 Build and hash standalone and combined installers without launching them.
+- [x] 5.2.1 Update release/package/NSIS manifests and uninstall cleanup if required.
+- [x] 5.2.2 Build and hash standalone and combined installers without launching them.

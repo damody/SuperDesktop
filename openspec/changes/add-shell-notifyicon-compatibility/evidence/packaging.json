@@ -1,0 +1,12 @@
+{
+  "schema":"shell-notifyicon-packaging/v1",
+  "revision":"e4101d93849649db0728ae1e82082a8dc3d4f2f5",
+  "built_without_launch":true,
+  "notification_host_installed":true,
+  "notification_host_uninstalled":true,
+  "compatibility_registry_residue":false,
+  "artifacts":[
+    {"name":"SuperDesktop-Test-Setup-1.2026.8.18-x64.exe","bytes":5767538,"sha256":"30432e3f3f8f8bef1540f4b9cee608b08b935a0ba607860f5a599a474a8efab5"},
+    {"name":"SuperExplorer-Setup-1.2026.8.18-x64.exe","bytes":13487404,"sha256":"9d522d21a2864c13d1d6dd554640344240d29426daa8e105e2802ce26aa0d10a"}
+  ]
+}
