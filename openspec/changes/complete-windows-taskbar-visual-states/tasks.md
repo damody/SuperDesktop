@@ -159,14 +159,14 @@
 **Gate／Evidence：** All change gates; `evidence/evidence-index.json`.
 **完成門檻：** Every leaf has unique passing evidence and strict validation succeeds on Windows 11 build 26200.
 
-- [ ] 5.1.1 Run fmt, locked/offline workspace check/tests and clippy warnings-as-errors.
-- [ ] 5.1.2 Build release product/provider and controlled fixture binaries with hashes.
-- [ ] 5.1.3 Capture active/inactive/grouped/minimized indicators across host DPI.
-- [ ] 5.1.4 Capture normal/paused/error/indeterminate progress from ordinary API calls.
-- [ ] 5.1.5 Capture finite/timer-no-foreground flash cadence and termination.
-- [ ] 5.1.6 Capture high-contrast, reduced-motion, UIA and resource/restart evidence.
-- [ ] 5.1.7 Prove Explorer-present non-interference and Explorer-free behavior.
-- [ ] 5.1.8 Create unique task-linked evidence and pass strict validation.
+- [x] 5.1.1 Run fmt, locked/offline workspace check/tests and clippy warnings-as-errors.
+- [x] 5.1.2 Build release product/provider and controlled fixture binaries with hashes.
+- [x] 5.1.3 Capture active/inactive/grouped/minimized indicators across host DPI.
+- [x] 5.1.4 Capture normal/paused/error/indeterminate progress from ordinary API calls.
+- [x] 5.1.5 Capture finite/timer-no-foreground flash cadence and termination.
+- [x] 5.1.6 Capture high-contrast, reduced-motion, UIA and resource/restart evidence.
+- [x] 5.1.7 Prove Explorer-present non-interference and Explorer-free behavior.
+- [x] 5.1.8 Create unique task-linked evidence and pass strict validation.
 
 ### 5.2 Package the taskbar-state provider
 
@@ -179,4 +179,4 @@
 **完成門檻：** Both installers contain required binaries, build without launch and remove all new artifacts.
 
 - [x] 5.2.1 Update release/package/NSIS manifests and uninstall cleanup if a provider is added.
-- [ ] 5.2.2 Build and hash standalone and combined installers without launching them.
+- [x] 5.2.2 Build and hash standalone and combined installers without launching them.

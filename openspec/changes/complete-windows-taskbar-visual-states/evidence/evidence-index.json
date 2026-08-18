@@ -1,0 +1,31 @@
+{
+  "schema": "superdesktop-taskbar-visual-states-evidence/v1",
+  "change": "complete-windows-taskbar-visual-states",
+  "host": {
+    "os": "Windows 11",
+    "build": 26200
+  },
+  "gates": {
+    "G-TASKBAR-INDICATOR": "passed",
+    "G-TASKBAR-PROGRESS": "passed",
+    "G-TASKBAR-ATTENTION": "passed",
+    "G-TASKBAR-A11Y": "passed",
+    "G-TASKBAR-ISOLATION": "passed",
+    "G-SHELL-NONINTERFERENCE": "passed",
+    "G-TRACE": "passed"
+  },
+  "task_evidence": {
+    "1.1-1.2": "cargo test -p shell-provider-protocol",
+    "2.1": "cargo test -p platform-win appbar_shell_hook",
+    "2.2-2.3": "evidence/progress-compatibility/test-record.json",
+    "3.1-3.2": "cargo test -p superdesktop-app taskbar_state_client",
+    "4.1-4.2": "cargo test -p taskbar-ui",
+    "5.1.1": "cargo test/clippy --workspace --all-targets --locked --offline",
+    "5.1.2": "evidence/packaging-record.json",
+    "5.1.3-5.1.5": "evidence/visual-state-matrix/report.json",
+    "5.1.6": "evidence/high-contrast-reduced-motion/report.json",
+    "5.1.7": "evidence/progress-compatibility/binding-decision.md",
+    "5.2": "evidence/packaging-record.json"
+  },
+  "result": "passed"
+}
