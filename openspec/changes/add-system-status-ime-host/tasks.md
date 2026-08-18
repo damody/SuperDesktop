@@ -44,9 +44,9 @@
 **Gate／Evidence：** `G-IME-SWITCH`, `G-STATUS-ISOLATION`; adapter tests and live probe.
 **完成門檻：** Bounded profiles enumerate, active identity is real, switching is observed and invalid/stale targets fail closed.
 
-- [ ] 2.1.1 Enumerate installed input profiles with stable identity, language tag and display name.
-- [ ] 2.1.2 Observe the foreground/current active input profile through an owned snapshot.
-- [ ] 2.1.3 Activate a validated profile and wait for exact observed confirmation.
+- [x] 2.1.1 Enumerate installed input profiles with stable identity, language tag and display name.
+- [x] 2.1.2 Observe the foreground/current active input profile through an owned snapshot.
+- [x] 2.1.3 Activate a validated profile and wait for exact observed confirmation.
 - [ ] 2.1.4 Add missing-profile, wrong-session, timeout, stale-generation and callback-panic tests.
 
 ### 2.2 Implement audio, network, power and clock providers
@@ -59,11 +59,11 @@
 **Gate／Evidence：** `G-STATUS-REAL`, `G-STATUS-ISOLATION`; platform tests and live snapshot.
 **完成門檻：** Real values match Windows observations; provider failure is independent; commands require confirming observation.
 
-- [ ] 2.2.1 Read default render endpoint volume/mute and apply validated commands.
-- [ ] 2.2.2 Observe Network List Manager connectivity with truthful unavailable handling.
-- [ ] 2.2.3 Read AC/battery state and distinguish valid battery-not-present from provider failure.
-- [ ] 2.2.4 Extend real clock/calendar locale metadata without fixed date/time values.
-- [ ] 2.2.5 Add external-change, endpoint-loss, service-failure, command-race and no-battery tests.
+- [x] 2.2.1 Read default render endpoint volume/mute and apply validated commands.
+- [x] 2.2.2 Observe Network List Manager connectivity with truthful unavailable handling.
+- [x] 2.2.3 Read AC/battery state and distinguish valid battery-not-present from provider failure.
+- [x] 2.2.4 Extend real clock/calendar locale metadata without fixed date/time values.
+- [x] 2.2.5 Add external-change, endpoint-loss, service-failure, command-race and no-battery tests.
 
 ## 3. Isolated Host and Client
 

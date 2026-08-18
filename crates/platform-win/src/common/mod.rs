@@ -15,6 +15,7 @@ pub mod owner_lease;
 pub mod power;
 pub mod settings_file;
 pub mod start_search;
+pub mod system_status;
 pub mod taskbar;
 pub mod taskbar_preview;
 pub mod taskbar_status;
