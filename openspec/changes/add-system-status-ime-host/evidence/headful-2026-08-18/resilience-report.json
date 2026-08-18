@@ -1,6 +1,7 @@
 {
     "schema":  "system-status-resilience/v1",
     "result":  "passed",
+    "app_sha256":  "54b67fd387a9e1a20de6ab0f771dac1fa4cbb7c05e8491c7a51ff50e3a0c09e0",
     "host_crash_isolated":  true,
     "bounded_restart_observed":  true,
     "stale_state_cleared_by_reconciler_test":  true,
@@ -8,54 +9,54 @@
     "handle_delta":  2,
     "thread_delta":  0,
     "before":  {
-                   "app_pid":  14224,
-                   "host_pid":  33768,
+                   "app_pid":  3020,
+                   "host_pid":  40656,
                    "samples":  [
                                    {
                                        "handles":  844,
                                        "threads":  120,
-                                       "working_set_bytes":  74076160
+                                       "working_set_bytes":  74403840
                                    },
                                    {
                                        "handles":  844,
                                        "threads":  120,
-                                       "working_set_bytes":  73449472
+                                       "working_set_bytes":  73990144
                                    },
                                    {
                                        "handles":  844,
                                        "threads":  120,
-                                       "working_set_bytes":  73580544
+                                       "working_set_bytes":  74100736
                                    },
                                    {
                                        "handles":  844,
                                        "threads":  120,
-                                       "working_set_bytes":  73613312
+                                       "working_set_bytes":  74108928
                                    }
                                ]
                },
     "after":  {
                   "app_alive":  true,
-                  "host_pid":  33300,
+                  "host_pid":  25524,
                   "samples":  [
                                   {
-                                      "handles":  846,
+                                      "handles":  847,
                                       "threads":  120,
-                                      "working_set_bytes":  73797632
+                                      "working_set_bytes":  74280960
+                                  },
+                                  {
+                                      "handles":  847,
+                                      "threads":  120,
+                                      "working_set_bytes":  74350592
                                   },
                                   {
                                       "handles":  846,
                                       "threads":  120,
-                                      "working_set_bytes":  73883648
+                                      "working_set_bytes":  74354688
                                   },
                                   {
                                       "handles":  846,
                                       "threads":  120,
-                                      "working_set_bytes":  73883648
-                                  },
-                                  {
-                                      "handles":  846,
-                                      "threads":  120,
-                                      "working_set_bytes":  73535488
+                                      "working_set_bytes":  74227712
                                   }
                               ]
               }

@@ -71,6 +71,7 @@ try {
     $report = [ordered]@{
         schema='system-status-resilience/v1'
         result='passed'
+        app_sha256=(Get-FileHash -Algorithm SHA256 -LiteralPath $appPath).Hash.ToLowerInvariant()
         host_crash_isolated=$true
         bounded_restart_observed=$true
         stale_state_cleared_by_reconciler_test=$true

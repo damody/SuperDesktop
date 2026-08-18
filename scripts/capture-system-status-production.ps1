@@ -90,7 +90,11 @@ try {
     $calendar = Find-Element $taskbar { param($item) $item.Current.ControlType -eq $button -and $item.Current.Name -match '^\d{2}:\d{2} ' }
     $start = Find-Element $taskbar { param($item) $item.Current.ControlType -eq $button -and $item.Current.Name -eq 'Start' }
     if ($null -eq $input -or $null -eq $network -or $null -eq $volume -or $null -eq $calendar -or $null -eq $start) {
-        throw 'One or more owned taskbar status controls are missing.'
+        $names = $taskbar.FindAll(
+            [System.Windows.Automation.TreeScope]::Descendants,
+            [System.Windows.Automation.Condition]::TrueCondition
+        ) | ForEach-Object { [string]$_.Current.Name } | Where-Object { $_ }
+        throw "One or more owned taskbar status controls are missing. Visible names: $($names -join ' | ')"
     }
     $originalLanguage = ([string]$input.Current.Name).Substring('Input language '.Length)
 

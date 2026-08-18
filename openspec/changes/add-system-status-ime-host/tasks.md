@@ -158,11 +158,11 @@
 **Gate／Evidence：** All change gates; `evidence/evidence-index.json`.
 **完成門檻：** Complete workspace gates pass; headful input/audio/status values match Windows; every leaf has unique evidence and strict validation passes.
 
-- [ ] 5.1.1 Run fmt, complete locked/offline workspace check/tests and clippy warnings-as-errors.
-- [ ] 5.1.2 Build release binaries and record all product/host hashes.
-- [ ] 5.1.3 Capture real taskbar status and owned input/volume/calendar flyouts at host DPI.
-- [ ] 5.1.4 Switch a controlled real input profile and verify Start IME/focus stability.
-- [ ] 5.1.5 Record resource/restart traces, create unique task-linked evidence and pass strict validation.
+- [x] 5.1.1 Run fmt, complete locked/offline workspace check/tests and clippy warnings-as-errors.
+- [x] 5.1.2 Build release binaries and record all product/host hashes.
+- [x] 5.1.3 Capture real taskbar status and owned input/volume/calendar flyouts at host DPI.
+- [x] 5.1.4 Switch a controlled real input profile and verify Start IME/focus stability.
+- [x] 5.1.5 Record resource/restart traces, create unique task-linked evidence and pass strict validation.
 
 ### 5.2 Package the host
 
@@ -175,4 +175,4 @@
 **完成門檻：** Both installers contain `system-status-host.exe`, build without launch and pass exact submodule admission.
 
 - [x] 5.2.1 Add `system-status-host.exe` to release/package/NSIS manifests and uninstall cleanup.
-- [ ] 5.2.2 Build and hash standalone and combined installers without launching them.
+- [x] 5.2.2 Build and hash standalone and combined installers without launching them.

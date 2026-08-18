@@ -1,0 +1,106 @@
+{
+  "schema": "system-status-ime-host-evidence/v1",
+  "change": "add-system-status-ime-host",
+  "result": "passed",
+  "result_revision": "2cf6272b41195742fcbcec107cfb114bdafdfe20",
+  "parent_revision": "5bc29f5b59ee00524b721f5c1e4c0f6a3efeb217",
+  "host": {
+    "os": "Windows 11",
+    "build": 26200,
+    "dpi_mode": "per-monitor-v2"
+  },
+  "gates": {
+    "G-STATUS-REAL": "passed",
+    "G-STATUS-ISOLATION": "passed",
+    "G-IME-SWITCH": "passed",
+    "G-STATUS-A11Y": "passed",
+    "G-TRACE": "passed"
+  },
+  "binaries": [
+    {
+      "name": "superdesktop-app.exe",
+      "bytes": 20370432,
+      "sha256": "54b67fd387a9e1a20de6ab0f771dac1fa4cbb7c05e8491c7a51ff50e3a0c09e0"
+    },
+    {
+      "name": "system-status-host.exe",
+      "bytes": 441344,
+      "sha256": "0a29084635a925fcdca963953ace4618a62a5f6c88daa17950ee8976a717f82f"
+    },
+    {
+      "name": "notification-area-host.exe",
+      "bytes": 409600,
+      "sha256": "4332c4572862b96f563941144002323055ece25215dbfb9ccd9ac7e90db6389d"
+    },
+    {
+      "name": "shell-provider-host.exe",
+      "bytes": 545792,
+      "sha256": "4962c32ff810755031f96a59fb9543a9554fdfaa8bdb8ecb9e67f01817fc4a96"
+    },
+    {
+      "name": "superdesktop-guardian.exe",
+      "bytes": 278016,
+      "sha256": "8db889dc87280a312a47c0f646149ad3fac7bed985986d71acc3fc62dc2bd13a"
+    },
+    {
+      "name": "shell-installer.exe",
+      "bytes": 514560,
+      "sha256": "5e91f053c93dcc8034b04bd90067e303cb2aa8baa48392555d77900b85265427"
+    }
+  ],
+  "installers": [
+    {
+      "kind": "standalone",
+      "path": "D:/SuperExplorer/dist/SuperDesktop-Test-Setup-1.2026.8.18-x64.exe",
+      "bytes": 5435156,
+      "sha256": "9a928fb63b538f642db968b2b3e35b91497e815b99d72c04c6e2d0c60f4716f7",
+      "launched": false,
+      "contains_system_status_host": true
+    },
+    {
+      "kind": "combined",
+      "path": "D:/SuperExplorer/dist/SuperExplorer-Setup-1.2026.8.18-x64.exe",
+      "bytes": 13130932,
+      "sha256": "03b837bc10164c1c641088d7bd015c30e7f5545e6d2e48ca923bc7eab16f1406",
+      "launched": false,
+      "contains_system_status_host": true
+    }
+  ],
+  "records": [
+    {
+      "tasks": ["5.1.1", "5.1.2"],
+      "kind": "automated-release-gates",
+      "result": "passed",
+      "evidence": "locked offline workspace check, test, clippy -D warnings, release build and binary hashes"
+    },
+    {
+      "tasks": ["5.1.3", "5.1.4"],
+      "kind": "headful-uia-and-visual",
+      "result": "passed",
+      "evidence": "headful-2026-08-18/headful-report.json"
+    },
+    {
+      "tasks": ["3.1.3", "3.1.4", "3.2.4", "5.1.5"],
+      "kind": "crash-restart-resource",
+      "result": "passed",
+      "evidence": "headful-2026-08-18/resilience-report.json"
+    },
+    {
+      "tasks": ["4.2.1", "4.2.2", "4.2.3", "4.2.4", "4.2.5"],
+      "kind": "owned-windows11-flyouts",
+      "result": "passed",
+      "evidence": [
+        "headful-2026-08-18/network-power-flyout.png",
+        "headful-2026-08-18/input-flyout.png",
+        "headful-2026-08-18/volume-flyout.png",
+        "headful-2026-08-18/calendar-flyout.png"
+      ]
+    },
+    {
+      "tasks": ["5.2.1", "5.2.2"],
+      "kind": "nsis-packaging",
+      "result": "passed",
+      "evidence": "standalone and combined NSIS logs contain system-status-host.exe install and uninstall entries"
+    }
+  ]
+}

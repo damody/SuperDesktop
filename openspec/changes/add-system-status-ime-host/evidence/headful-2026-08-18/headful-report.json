@@ -1,7 +1,7 @@
 {
     "schema":  "system-status-headful/v1",
     "result":  "passed",
-    "app_sha256":  "91304eaf8710ebf9e38abdc6a4e8ede71082d04d93d9db4c30ebecbbb6b5c0cc",
+    "app_sha256":  "54b67fd387a9e1a20de6ab0f771dac1fa4cbb7c05e8491c7a51ff50e3a0c09e0",
     "original_input_profile":  "zh-TW",
     "switched_input_profile":  "zh-CN",
     "original_profile_restored":  true,
@@ -16,28 +16,28 @@
     "screenshots":  [
                         {
                             "name":  "calendar-flyout.png",
-                            "sha256":  "162b606167eff43c93dfe0a44a4b4c4f025446d6615349a3abbde2c1046bfada",
-                            "bytes":  1387939
+                            "sha256":  "8d1cbaf9878ba548305b4dbb01a2981c41698c57d3f5e948a663766cec2d507f",
+                            "bytes":  1380755
                         },
                         {
                             "name":  "input-flyout.png",
-                            "sha256":  "df5dec2db52efddc4f2698ac588cd88da1721e697545f7835b03477fb15d8333",
-                            "bytes":  1368356
+                            "sha256":  "b9d0261b99f048df52717ca327cf073ead8b837fae6b23667a36259211f38a3f",
+                            "bytes":  1360571
                         },
                         {
                             "name":  "network-power-flyout.png",
-                            "sha256":  "06b5403dd275225c68ca846a269d09f5cc7ce1d1904c349d9379dea65dfbe71e",
-                            "bytes":  1380770
+                            "sha256":  "992ad830f414ce08f5f039fbde4e3b18bdd71c0fa23932ad73a37cefdbc9ab79",
+                            "bytes":  1373002
                         },
                         {
                             "name":  "start-after-input-switch.png",
-                            "sha256":  "e09aafd28e68fe91d21f048d91c209cbcb4b666fb1a6186cc8294fac7d06df50",
-                            "bytes":  1366493
+                            "sha256":  "9bdf40bf6656b4b1f256d64ff4bef655f466eff4a9e1fc98df30e24cb4b70870",
+                            "bytes":  1369829
                         },
                         {
                             "name":  "volume-flyout.png",
-                            "sha256":  "8acf24ba57854f804ffc3bed2c179fd80823e2783ab1d768e8a03be63d4c983b",
-                            "bytes":  1364198
+                            "sha256":  "35dac59d805309b446a057d89a9d63091b2b3229e2996c320c0e29d01d8af7bb",
+                            "bytes":  1356338
                         }
                     ]
 }
