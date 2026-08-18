@@ -1,0 +1,17 @@
+powershell.exe : Get-ChildItem : PEXPLORER_DERIVED_SOURCE: D:\SuperExplorer\SuperDesktop\fixtures\source-boundary\pexpl
+orer-derived-sour
+At D:\SuperExplorer\SuperDesktop\scripts\capture-m0-security-evidence.ps1:95 char:9
++         & powershell -NoProfile -ExecutionPolicy Bypass -File scripts ...
++         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Get-ChildItem :...er-derived-sour:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ce\lib.rs contains a prohibited derivation marker.
+At D:\SuperExplorer\SuperDesktop\scripts\audit-source-boundary.ps1:53 char:5
++     Get-ChildItem -Path $fixturePath -Recurse -File | ForEach-Object  ...
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (PEXPLORER_DERIV...ivation marker.:String) [Get-ChildItem], RuntimeExc 
+   eption
+    + FullyQualifiedErrorId : PEXPLORER_DERIVED_SOURCE: D:\SuperExplorer\SuperDesktop\fixtures\source-boundary\pexplor 
+   er-derived-source\lib.rs contains a prohibited derivation marker.,Microsoft.PowerShell.Commands.GetChildItemComman  
+  d

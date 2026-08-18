@@ -1,0 +1,41 @@
+cargo.exe :    Compiling shell-installer v0.1.0 (D:\SuperExplorer\SuperDesktop\crates\shell-installer)
+At D:\SuperExplorer\SuperDesktop\scripts\capture-m0-security-evidence.ps1:80 char:9
++         & cargo test -p shell-installer --locked --offline -- --nocap ...
++         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (   Compiling sh...hell-installer):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.60s
+     Running unittests src\lib.rs (target\debug\deps\shell_installer-72f35df43639f953.exe)
+
+running 8 tests
+test tests::dry_run_drift_write_before_mutate_and_exact_absence_restore ... ok
+test tests::rollback_failure_is_terminal_and_preserves_recovery_record ... ok
+test windows_registry::tests::parses_unicode_and_exact_absence ... ok
+test tests::verification_failure_rolls_back_exact_prior_value ... ok
+test tests::repair_reuses_immutable_record_and_restores_each_transaction_pre_state ... ok
+test tests::restore_reuses_original_record_and_removes_it_only_after_verification ... ok
+test tests::file_rollback_store_is_immutable_and_round_trips_exact_absence ... ok
+test tests::mutation_binary_drift_and_product_identity_fail_closed_but_restore_stays_reachable ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.72s
+
+     Running unittests src\main.rs (target\debug\deps\shell_installer-59d32a1cfa794769.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\cli.rs (target\debug\deps\cli-dfd6dac388c0e420.exe)
+
+running 2 tests
+test malformed_invocation_is_machine_readable_and_does_not_create_metadata ... ok
+test invalid_product_identity_is_rejected_without_metadata_or_registry_authority ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.45s
+
+   Doc-tests shell_installer
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s

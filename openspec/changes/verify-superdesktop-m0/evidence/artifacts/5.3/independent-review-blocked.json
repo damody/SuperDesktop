@@ -52,9 +52,10 @@
     {
       "id": "M0-REVIEW-P1-SECURITY-PROCEDURES",
       "severity": "P1",
-      "status": "open",
+      "status": "resolved",
       "summary": "Several security dispositions are hard-coded instead of being derived from attributable negative-test artifacts.",
       "owner": "Safety and source-boundary gate owner",
+      "resolution": "Added nine attributable procedures with hashed logs for reparse/canonical guards, bridge substitution and redaction, installer drift/rollback, guardian anti-spoofing, dependency/source audits, negative boundary fixtures, sensitive-source absence, and external repository integrity.",
       "required_reruns": ["G-SAFETY", "G-TRACE"]
     },
     {
@@ -84,6 +85,6 @@
     "final_independent_rereview_required": true
   },
   "unresolved_p0": 2,
-  "unresolved_p1": 3,
+  "unresolved_p1": 2,
   "g_review": "blocked"
 }

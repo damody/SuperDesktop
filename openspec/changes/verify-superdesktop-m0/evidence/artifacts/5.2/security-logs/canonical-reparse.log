@@ -1,0 +1,21 @@
+cargo.exe :     Finished `test` profile [unoptimized + debuginfo] target(s) in 0.25s
+At D:\SuperExplorer\SuperDesktop\scripts\capture-m0-security-evidence.ps1:74 char:9
++         & cargo test -p settings-store -p platform-win --locked --off ...
++         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (    Finished `t...get(s) in 0.25s:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+     Running unittests src\lib.rs (target\debug\deps\platform_win-4e81adbded13d216.exe)
+
+running 2 tests
+test common::desktop_operations::tests::reparse_items_and_replace_destinations_never_mutate_their_targets ... ok
+test common::explorer_recovery::tests::real_explorer_is_absolute_canonical_non_reparse_and_signed ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 75 filtered out; finished in 0.02s
+
+     Running unittests src\lib.rs (target\debug\deps\settings_store-10adde3d909c6fbb.exe)
+
+running 1 test
+test store::tests::fixture_guard_rejects_reparse_escape_when_supported ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 14 filtered out; finished in 0.00s

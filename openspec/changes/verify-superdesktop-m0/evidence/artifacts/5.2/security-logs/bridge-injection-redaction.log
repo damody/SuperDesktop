@@ -1,0 +1,31 @@
+cargo.exe :     Finished `test` profile [unoptimized + debuginfo] target(s) in 0.23s
+At D:\SuperExplorer\SuperDesktop\scripts\capture-m0-security-evidence.ps1:77 char:9
++         & cargo test -p explorer-bridge --locked --offline -- --nocap ...
++         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (    Finished `t...get(s) in 0.23s:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+     Running unittests src\lib.rs (target\debug\deps\explorer_bridge-6ab62840a41cf372.exe)
+
+running 13 tests
+test admission::tests::duplicate_correlation_and_shutdown_rundown_are_bounded ... ok
+test admission::tests::deadline_is_five_seconds_and_timeout_beats_late_success ... ok
+test admission::tests::cancel_beats_success_and_duplicate_callback_is_diagnostic ... ok
+test command::tests::default_is_truthful_and_has_no_initial_path ... ok
+test repair::tests::every_failure_has_localized_keyboard_repair_without_explorer_fallback ... ok
+test launcher::tests::completion_callback_uses_frozen_no_unwind_fence ... ok
+test repair::tests::diagnostics_redact_profile_path_and_environment_value ... ok
+test launcher::tests::removed_or_changed_executable_fails_before_spawn ... ok
+test command::tests::unicode_space_and_special_folder_round_trip_without_parent_mutation ... ok
+test resolver::tests::missing_directory_relative_and_path_substitution_fail_closed ... ok
+test command::tests::relative_missing_and_regular_file_are_rejected_before_spawn ... ok
+test resolver::tests::priority_is_setting_then_developer_then_adjacent ... ok
+test launcher::tests::explicit_application_spawn_and_raii_handle_cleanup ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+
+   Doc-tests explorer_bridge
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s

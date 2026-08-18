@@ -1,0 +1,20 @@
+cargo.exe :    Compiling superdesktop-guardian v0.1.0 (D:\SuperExplorer\SuperDesktop\crates\superdesktop-guardian)
+At D:\SuperExplorer\SuperDesktop\scripts\capture-m0-security-evidence.ps1:83 char:9
++         & cargo test -p superdesktop-guardian --locked --offline reco ...
++         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (   Compiling su...sktop-guardian):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.97s
+     Running unittests src\lib.rs (target\debug\deps\superdesktop_guardian-8f16916da221192f.exe)
+
+running 1 test
+test recovery::tests::forged_wrong_session_token_and_ambiguous_timing_are_zero_effect ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.00s
+
+     Running unittests src\main.rs (target\debug\deps\superdesktop_guardian-aad1242e05f5a3ac.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s

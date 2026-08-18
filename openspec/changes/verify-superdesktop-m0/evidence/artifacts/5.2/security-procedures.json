@@ -1,0 +1,81 @@
+{
+    "schema":  "m0-security-procedures/v1",
+    "result":  "passed",
+    "recorded_at":  "2026-08-19T07:31:42.3530830+08:00",
+    "revision":  "2bc706d60846f1b12ebf886ad8db3cd4985959c9",
+    "procedures":  [
+                       {
+                           "name":  "canonical-reparse",
+                           "result":  "passed",
+                           "exit_status":  0,
+                           "artifact":  "openspec/changes/verify-superdesktop-m0/evidence/artifacts/5.2/security-logs/canonical-reparse.log",
+                           "sha256":  "24ec40a5c1448f9d4b560c37d34e7c87adc1a6b11b11fb7462f0b29a04599cbf"
+                       },
+                       {
+                           "name":  "bridge-injection-redaction",
+                           "result":  "passed",
+                           "exit_status":  0,
+                           "artifact":  "openspec/changes/verify-superdesktop-m0/evidence/artifacts/5.2/security-logs/bridge-injection-redaction.log",
+                           "sha256":  "f51f29a4cfa4da7335d4be5e4c689535ef8a639ae4573c445694acbae31af76d"
+                       },
+                       {
+                           "name":  "installer-drift-rollback",
+                           "result":  "passed",
+                           "exit_status":  0,
+                           "artifact":  "openspec/changes/verify-superdesktop-m0/evidence/artifacts/5.2/security-logs/installer-drift-rollback.log",
+                           "sha256":  "79c9928bf9fefb0a0a03d050e2f92961b0bc92453c3fe31e8859a2f5414c427e"
+                       },
+                       {
+                           "name":  "guardian-anti-spoof",
+                           "result":  "passed",
+                           "exit_status":  0,
+                           "artifact":  "openspec/changes/verify-superdesktop-m0/evidence/artifacts/5.2/security-logs/guardian-anti-spoof.log",
+                           "sha256":  "308b0dcb338b4483b2144977c843ee46ca55145ddeef9355602b0a49904df3b6"
+                       },
+                       {
+                           "name":  "architecture-positive",
+                           "result":  "passed",
+                           "exit_status":  0,
+                           "artifact":  "openspec/changes/verify-superdesktop-m0/evidence/artifacts/5.2/security-logs/architecture-positive.log",
+                           "sha256":  "92e8b288e8b619d510afc9c607f8b4bc7124c6886ed0dc37976c79fef42edf29"
+                       },
+                       {
+                           "name":  "source-boundary-positive",
+                           "result":  "passed",
+                           "exit_status":  0,
+                           "artifact":  "openspec/changes/verify-superdesktop-m0/evidence/artifacts/5.2/security-logs/source-boundary-positive.log",
+                           "sha256":  "2bfe5958e1026a0c5062d1ec208b704a6779aad7cb4f3a5738b6eebefc875244"
+                       },
+                       {
+                           "name":  "source-boundary-superexplorer-negative",
+                           "result":  "passed-rejected",
+                           "exit_status":  1,
+                           "expected_diagnostic":  "SUPEREXPLORER_PATH_DEPENDENCY",
+                           "artifact":  "openspec/changes/verify-superdesktop-m0/evidence/artifacts/5.2/security-logs/source-boundary-superexplorer-negative.log",
+                           "sha256":  "17c58ceb1e164dbec379f5b8a34aa068c3454fd400221c41bda39edb2b3be798"
+                       },
+                       {
+                           "name":  "source-boundary-derived-negative",
+                           "result":  "passed-rejected",
+                           "exit_status":  1,
+                           "expected_diagnostic":  "PEXPLORER_DERIVED_SOURCE",
+                           "artifact":  "openspec/changes/verify-superdesktop-m0/evidence/artifacts/5.2/security-logs/source-boundary-derived-negative.log",
+                           "sha256":  "70fac8addd818894ca7e3a2d30e96f0ef82d0d4e5a836777247e8a62c33947bd"
+                       },
+                       {
+                           "name":  "sensitive-source-absence",
+                           "result":  "passed",
+                           "exit_status":  0,
+                           "artifact":  "openspec/changes/verify-superdesktop-m0/evidence/artifacts/5.2/security-logs/sensitive-source-absence.log",
+                           "sha256":  "3b37ca56e335bfe8ffa5758c1e4468a71044842f3bbae894878b2db6c113139b"
+                       }
+                   ],
+    "assertions":  {
+                       "fixture_root_canonical_reparse":  "passed-by-tests",
+                       "path_argument_environment_executable_substitution":  "passed-by-bridge-and-installer-tests",
+                       "credential_clipboard_environment_log_redaction":  "passed-by-redaction-tests-and-sensitive-source-absence",
+                       "dependency_license_inventory":  "passed-by-source-boundary-audit",
+                       "pexplorer_and_superexplorer_source_boundary":  "passed-by-positive-and-negative-fixtures",
+                       "superexplorer_repository_unchanged":  "passed-by-before-after-tracked-status"
+                   }
+}

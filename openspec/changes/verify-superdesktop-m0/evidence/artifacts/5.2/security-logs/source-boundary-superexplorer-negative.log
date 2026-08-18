@@ -1,0 +1,17 @@
+powershell.exe : Get-ChildItem : SUPEREXPLORER_PATH_DEPENDENCY: D:\SuperExplorer\SuperDesktop\fixtures\source-boundary\
+superexplorer-pat
+At D:\SuperExplorer\SuperDesktop\scripts\capture-m0-security-evidence.ps1:92 char:9
++         & powershell -NoProfile -ExecutionPolicy Bypass -File scripts ...
++         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Get-ChildItem :...perexplorer-pat:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+h-dependency\Cargo.toml references a forbidden local source boundary.
+At D:\SuperExplorer\SuperDesktop\scripts\audit-source-boundary.ps1:53 char:5
++     Get-ChildItem -Path $fixturePath -Recurse -File | ForEach-Object  ...
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (SUPEREXPLORER_P...ource boundary.:String) [Get-ChildItem], RuntimeExc 
+   eption
+    + FullyQualifiedErrorId : SUPEREXPLORER_PATH_DEPENDENCY: D:\SuperExplorer\SuperDesktop\fixtures\source-boundary\su 
+   perexplorer-path-dependency\Cargo.toml references a forbidden local source boundary.,Microsoft.PowerShell.Commands  
+  .GetChildItemCommand
