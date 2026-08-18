@@ -9,10 +9,10 @@
     "cargo build --workspace --all-targets --release --locked --offline"
   ],
   "focused_counts": {
-    "superdesktop-app": 15,
-    "taskbar-ui": 33,
+    "superdesktop-app": 27,
+    "taskbar-ui": 47,
     "desktop-ui": 28,
-    "platform-win": 55
+    "platform-win": 73
   },
   "source_contract": {
     "product_has_owned_start_view": true,

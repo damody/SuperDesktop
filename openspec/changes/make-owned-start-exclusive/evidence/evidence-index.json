@@ -1,15 +1,14 @@
 {
   "schema": "owned-start-exclusive-evidence/v1",
-  "recorded_at": "2026-08-18T04:00:00+08:00",
+  "recorded_at": "2026-08-18T18:45:00+08:00",
   "gate": "G-OWNED-START",
-  "result": "stale",
-  "stale_reason": "Product audit found a remaining system Start-host admission probe in superdesktop-app/src/lib.rs; final binary, headful and packaging evidence must be recaptured after its removal.",
+  "result": "passed",
   "records": [
     {
       "record_id": "automated",
       "procedure": "Run source ownership guards, focused Start/desktop tests, complete locked/offline workspace check and tests, clippy with warnings denied, and release build.",
       "expected": "Product composition contains one owned StartView path and no system Start-host call; all commands exit zero.",
-      "actual": "The negative delegated fixture was rejected; superdesktop-app 15, taskbar-ui 33, desktop-ui 28 and platform-win 55 tests passed; complete workspace gates exited zero.",
+      "actual": "The negative delegated fixture was rejected; superdesktop-app 27, taskbar-ui 47, desktop-ui 28 and platform-win 73 tests passed; complete workspace gates exited zero.",
       "exit_status": 0,
       "artifacts": [
         { "path": "automated.json", "subcheck": "owned-source-and-workspace-gates" }
@@ -22,8 +21,8 @@
       "actual": "Owned Start PID equaled taskbar PID; system host PID set was unchanged; All apps exposed 75 entries; reverse marquee selected 15 items; all six pointer/keyboard/UIA fixed-entry routes passed.",
       "exit_status": 0,
       "artifacts": [
-        { "path": "start-home.png", "sha256": "8fb91b94c26e486bd80b20db334cf92fc8a7446596080fc5f4f72942aa71f632" },
-        { "path": "start-all-apps.png", "sha256": "141111127424041406be35d5cd3890f6f7315ab94191c11ff3ec34bb251873df" },
+        { "path": "start-home.png", "sha256": "b0c5e1d00743b5ed1a1a42b3b2aa4dd47b155c63ffdeef36b86ec1bc26a55371" },
+        { "path": "start-all-apps.png", "sha256": "5ccc10d559a4c22c29bd5c336be5a192e25908bbb36df2c70677ec95d9ee48e5" },
         { "path": "start-production.json", "subcheck": "owned-pid-sections-power-and-process-observation" },
         { "path": "desktop-marquee.png", "sha256": "de363a62b31d1a4c64fb57b391ead6ef24d025def52852f377e6ca276038d20e" },
         { "path": "desktop-marquee.json", "subcheck": "reverse-marquee-selected-15" },
@@ -34,12 +33,12 @@
       "record_id": "packaging",
       "procedure": "Build standalone SuperDesktop and combined SuperExplorer UTF-8 NSIS installers without launch after exact submodule admission.",
       "expected": "Both builds exit zero and package the final release binary.",
-      "actual": "Both installers built successfully from admitted SuperDesktop revision eed2111d79c114c936c310280d96e05a03bfad67.",
+      "actual": "Both installers built successfully without launch from parent-admitted SuperDesktop revision 138750deed36f9f2b1a23c343a0fc5f22f217e3b.",
       "exit_status": 0,
       "artifacts": [
-        { "path": "D:/SuperExplorer/dist/SuperDesktop-Test-Setup-1.2026.8.18-x64.exe", "bytes": 5356419, "sha256": "bf1e7a1c0aefa673ee8e7e5204c09851f2cc6909d93389df68a443fbffd2261f" },
-        { "path": "D:/SuperExplorer/dist/SuperExplorer-Setup-1.2026.8.18-x64.exe", "bytes": 13019457, "sha256": "3d6034eeb64f9f1204baab6744d0b335bb9cb20525a61dbaef751cbff966f638" },
-        { "path": "D:/SuperExplorer/SuperDesktop/target/release/superdesktop-app.exe", "bytes": 19834880, "sha256": "8c9a1a3f7321bc674e69691eab351828e8adc7f4a8a19080b5306f6966e094fa" }
+        { "path": "D:/SuperExplorer/dist/SuperDesktop-Test-Setup-1.2026.8.18-x64.exe", "bytes": 5766871, "sha256": "c9fa2548f9f7f5f55315b0bcad157ff8b6e5fcc78d02350f147132ba9ba4d418" },
+        { "path": "D:/SuperExplorer/dist/SuperExplorer-Setup-1.2026.8.18-x64.exe", "bytes": 13484141, "sha256": "fbb6c3ba0270689b578af64b92326a748ab87ca9e935c5a1d390f7066c9213ca" },
+        { "path": "D:/SuperExplorer/SuperDesktop/target/release/superdesktop-app.exe", "bytes": 20837888, "sha256": "e3010c3179096c7bff41c189d2ba05c8822120a57a7028b40bfea3addfcb6a8a" }
       ]
     }
   ],

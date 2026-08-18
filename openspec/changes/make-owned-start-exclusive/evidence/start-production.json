@@ -1,9 +1,9 @@
 {
     "schema":  "windows11-owned-start-production/v2",
     "result":  "passed",
-    "app_sha256":  "8C9A1A3F7321BC674E69691EAB351828E8ADC7F4A8A19080B5306F6966E094FA",
-    "owned_start_pid":  18668,
-    "taskbar_pid":  18668,
+    "app_sha256":  "E3010C3179096C7BFF41C189D2BA05C8822120A57A7028B40BFEA3ADDFCB6A8A",
+    "owned_start_pid":  20176,
+    "taskbar_pid":  20176,
     "system_start_process_ids_before":  [
                                             18320,
                                             42616,
@@ -31,7 +31,7 @@
                                  "height":  1272
                              },
     "home_screenshot":  "start-home.png",
-    "home_sha256":  "8FB91B94C26E486BD80B20DB334CF92FC8A7446596080FC5F4F72942AA71F632",
+    "home_sha256":  "B0C5E1D00743B5ED1A1A42B3B2AA4DD47B155C63FFDEEF36B86EC1BC26A55371",
     "all_apps_screenshot":  "start-all-apps.png",
-    "all_apps_sha256":  "141111127424041406BE35D5CD3890F6F7315AB94191C11FF3EC34BB251873DF"
+    "all_apps_sha256":  "5CCC10D559A4C22C29BD5C336BE5A192E25908BBB36DF2C70677EC95D9EE48E5"
 }
