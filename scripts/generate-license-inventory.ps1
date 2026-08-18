@@ -6,8 +6,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 if (-not $WorkspaceRoot) { $WorkspaceRoot = Split-Path -Parent $PSScriptRoot }
-$changeRoot = Join-Path $WorkspaceRoot 'openspec/changes/bootstrap-superdesktop-workspace'
-$outputPath = Join-Path $changeRoot 'compliance/third-party-license-inventory.json'
+$outputPath = Join-Path $WorkspaceRoot 'compliance/third-party-license-inventory.json'
 $metadata = cargo metadata --locked --offline --format-version 1 | ConvertFrom-Json
 if ($LASTEXITCODE -ne 0) { throw 'cargo metadata failed.' }
 
@@ -27,11 +26,17 @@ $packages = foreach ($package in $metadata.packages | Sort-Object name, version,
     }
 }
 
-[PSCustomObject]@{
+$inventory = [PSCustomObject]@{
     schema_version = 1
     generated_by = 'cargo metadata --locked --offline plus vendor .cargo-checksum.json'
     workspace = 'SuperDesktop'
     packages = @($packages)
-} | ConvertTo-Json -Depth 5 | Set-Content -Encoding UTF8 $outputPath
+}
+New-Item -ItemType Directory -Force -Path (Split-Path -Parent $outputPath) | Out-Null
+[IO.File]::WriteAllText(
+    $outputPath,
+    (($inventory | ConvertTo-Json -Depth 5) + [Environment]::NewLine),
+    [Text.UTF8Encoding]::new($false)
+)
 
 Write-Output "Generated $outputPath with $(@($packages).Count) package records."

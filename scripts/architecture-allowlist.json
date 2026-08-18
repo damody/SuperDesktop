@@ -13,13 +13,15 @@
     "superdesktop-app",
     "superdesktop-guardian",
     "superdesktop-test-support",
+    "system-status-host",
+    "taskbar-state-host",
     "taskbar-ui"
   ],
   "allowed_direct_dependencies": {
-    "desktop-ui": ["gpui", "gpui_windows", "platform-win", "raw-window-handle", "shell-core", "shell-provider-protocol"],
+    "desktop-ui": ["gpui", "gpui_windows", "image", "platform-win", "raw-window-handle", "shell-core", "shell-provider-protocol"],
     "explorer-bridge": ["platform-win", "shell-core"],
-    "notification-area-host": ["serde_json", "shell-provider-protocol"],
-    "platform-win": ["settings-store", "shell-core", "shell-provider-protocol", "windows"],
+    "notification-area-host": ["platform-win", "serde_json", "shell-provider-protocol"],
+    "platform-win": ["intel_tex_2", "settings-store", "shell-core", "shell-provider-protocol", "windows"],
     "settings-store": [],
     "shell-core": ["shell-provider-protocol"],
     "shell-installer": ["serde", "serde_json"],
@@ -42,11 +44,14 @@
     ],
     "superdesktop-guardian": ["platform-win"],
     "superdesktop-test-support": ["settings-store", "shell-core", "jsonschema", "serde", "serde_json"],
+    "system-status-host": ["platform-win", "serde_json", "shell-provider-protocol"],
+    "taskbar-state-host": ["serde_json", "shell-provider-protocol", "windows", "windows-core"],
     "taskbar-ui": ["gpui", "gpui_windows", "image", "platform-win", "raw-window-handle", "settings-store", "shell-core", "shell-provider-protocol"]
   },
   "forbidden_dependency_substrings": {
     "shell-core": ["gpui", "windows", "winapi", "win32", "com"]
   },
-  "windows_guard_exempt_crates": ["notification-area-host", "shell-provider-protocol"],
+  "windows_binding_crates": ["platform-win", "taskbar-state-host"],
+  "windows_guard_exempt_crates": ["notification-area-host", "shell-provider-protocol", "system-status-host", "taskbar-state-host"],
   "forbidden_public_type_patterns": ["(?mi)^\\s*pub\\s+(?:type|struct|enum|fn)\\s+[^\\r\\n{;]*(?:HWND|HANDLE|IUnknown|IDesktop|IShell|COM)(?:\\b|_)"]
 }

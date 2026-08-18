@@ -94,7 +94,9 @@ foreach ($crateName in $expectedNames) {
         if ($dependencyName -notin $allowed) {
             Add-Diagnostic $diagnostics 'DEPENDENCY_DIRECTION' "$crateName -> $dependencyName is not allowlisted."
         }
-        if ($dependencyName -eq 'windows' -and $crateName -ne 'platform-win') { Add-Diagnostic $diagnostics 'WINDOWS_BINDING_OUTSIDE_PLATFORM' "$crateName directly depends on windows." }
+        if ($dependencyName -eq 'windows' -and $crateName -notin @($allowlist.windows_binding_crates)) {
+            Add-Diagnostic $diagnostics 'WINDOWS_BINDING_OUTSIDE_PLATFORM' "$crateName directly depends on windows."
+        }
 
         $forbiddenProperty = $allowlist.forbidden_dependency_substrings.PSObject.Properties[$crateName]
         if ($null -ne $forbiddenProperty) {
@@ -137,4 +139,4 @@ if ($diagnostics.Count -gt 0) {
     exit 1
 }
 
-Write-Output 'Architecture check passed: 13 approved crates, allowlisted graph, declared platform-neutral exemptions, Windows guards, and UI type boundary.'
+Write-Output "Architecture check passed: $($expectedNames.Count) approved crates, allowlisted graph, declared Windows boundaries/exemptions, Windows guards, and UI type boundary."

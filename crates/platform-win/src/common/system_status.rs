@@ -1,3 +1,7 @@
+// SAFETY: COM calls are scoped by `ComApartment`, returned COM interfaces own their lifetimes,
+// Win32 output buffers are initialized and length-checked before conversion, and every HWND/HKL
+// is treated as a copied opaque value and validated before a message or query is issued.
+
 use std::{
     ffi::c_void,
     thread,

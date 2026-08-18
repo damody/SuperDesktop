@@ -1,5 +1,10 @@
 //! Bounded, owned ingress for documented `NOTIFYICONDATAW` fields.
 
+// SAFETY: Every Win32 pointer is either an owned allocation installed in this module's window
+// userdata slot, a callback payload copied completely before the callback returns, or a handle
+// validated for the current process/session before use. Teardown clears userdata before freeing
+// it, the worker thread owns its HWND, and no borrowed shell memory escapes this module.
+
 use std::{
     collections::VecDeque,
     io::Write,

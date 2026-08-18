@@ -1,0 +1,89 @@
+{
+  "schema": "m0-independent-review-blocked/v1",
+  "status": "blocked",
+  "review_performed": true,
+  "recorded_at": "2026-08-19T07:27:51+08:00",
+  "reviewed_revision": "f61a63c9e45a49c2e6768039eda9b20b0006dad2",
+  "reviewer": {
+    "name": "Codex independent architecture reviewer",
+    "organization": "OpenAI",
+    "role": "Architecture, security, accessibility, and evidence reviewer",
+    "task": "/root/m0_independent_review"
+  },
+  "independence": {
+    "not_implementation_owner": true,
+    "not_remediation_owner": true
+  },
+  "disposition": "open-p0-p1-findings-prevent-g-review",
+  "findings": [
+    {
+      "id": "M0-REVIEW-P0-STALE-CANDIDATE",
+      "severity": "P0",
+      "status": "open",
+      "summary": "M0 and release-candidate evidence is bound to revisions and product hashes older than the reviewed HEAD.",
+      "owner": "Primary integrator / evidence gate owner",
+      "required_reruns": ["G-ARCH", "G-DESKTOP", "G-TASKBAR", "G-EXPLORER-BRIDGE", "G-A11Y-I18N", "G-PERF", "G-SAFETY", "G-TRACE"]
+    },
+    {
+      "id": "M0-REVIEW-P0-INSTALLER-ROLLBACK",
+      "severity": "P0",
+      "status": "open",
+      "summary": "Mutation-bearing enable, reboot, after-reboot, and exact rollback evidence is absent.",
+      "owner": "Reference-profile lifecycle operator",
+      "required_reruns": ["G-SHELL-TAKEOVER", "G-GUARDIAN-RECOVERY", "G-INSTALL-ROLLBACK"]
+    },
+    {
+      "id": "M0-REVIEW-P1-ARCH-SOURCE-GOVERNANCE",
+      "severity": "P1",
+      "status": "resolved",
+      "summary": "Architecture allowlist and license inventory resolution were stale after new host crates and the current GPUI pin.",
+      "owner": "Primary integrator / architecture gate owner",
+      "resolution": "Added both host crates and their exact dependency boundaries, generated a current 520-package inventory, corrected archived/current inventory resolution, limited source scanning to production src trees, and passed positive plus all negative fixtures.",
+      "required_reruns": ["G-ARCH", "G-SAFETY"]
+    },
+    {
+      "id": "M0-REVIEW-P1-LIVE-A11Y-I18N",
+      "severity": "P1",
+      "status": "open",
+      "summary": "Current M0 evidence asserts model accessibility, IME, and bidi outcomes without complete live UIA and input traces.",
+      "owner": "Desktop/taskbar accessibility and localization gate owner",
+      "required_reruns": ["G-A11Y-I18N"]
+    },
+    {
+      "id": "M0-REVIEW-P1-SECURITY-PROCEDURES",
+      "severity": "P1",
+      "status": "open",
+      "summary": "Several security dispositions are hard-coded instead of being derived from attributable negative-test artifacts.",
+      "owner": "Safety and source-boundary gate owner",
+      "required_reruns": ["G-SAFETY", "G-TRACE"]
+    },
+    {
+      "id": "M0-REVIEW-P1-EXPLORER-FREE-CANDIDATE",
+      "severity": "P1",
+      "status": "open",
+      "summary": "No Explorer-absent lifecycle proof is bound to the current candidate.",
+      "owner": "Shell lifecycle and owned-provider gate owner",
+      "required_reruns": ["G-SHELL-TAKEOVER", "G-GUARDIAN-RECOVERY", "G-DESKTOP", "G-TASKBAR"]
+    }
+  ],
+  "external_release_blockers": [
+    {
+      "id": "M0-PHYSICAL-MIXED-DPI",
+      "status": "blocked",
+      "reason": "Only one active physical display is attached; virtual topology cannot substitute for the two-display physical gate."
+    },
+    {
+      "id": "M0-ARCHIVE-LINEAGE",
+      "status": "deferred",
+      "reason": "The user explicitly required all changes to remain unarchived."
+    }
+  ],
+  "primary_integration": {
+    "p0_p1_assignments_complete": true,
+    "affected_gates_rerun": false,
+    "final_independent_rereview_required": true
+  },
+  "unresolved_p0": 2,
+  "unresolved_p1": 3,
+  "g_review": "blocked"
+}

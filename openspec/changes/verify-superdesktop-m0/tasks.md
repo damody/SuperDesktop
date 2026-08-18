@@ -248,8 +248,8 @@
 
 - [x] 5.3.1 產生 requirement/scenario/gate/task/evidence 雙向 coverage report。
 - [x] 5.3.2 執行 dangling/cyclic/incomplete/coverage-drift replacement negative validation。
-- [ ] 5.3.3 由 Independent reviewer 執行完整 P0/P1 架構、安全與 evidence review。
-- [ ] 5.3.4 由 Primary integrator 分派 P0/P1 給原 gate owner 並同步修正 design/spec/tasks。
+- [x] 5.3.3 由 Independent reviewer 執行完整 P0/P1 架構、安全與 evidence review。
+- [x] 5.3.4 由 Primary integrator 分派 P0/P1 給原 gate owner 並同步修正 design/spec/tasks。
 - [ ] 5.3.5 由原 gate owner 重跑所有受影響且標 stale 的 gates。
 - [ ] 5.3.6 由 Independent reviewer 複核 remediation lineage 與重跑結果。
 - [ ] 5.3.7 驗證 exact reference-profile lifecycle/installer 與實體 mixed-DPI mandatory leaves 均已 passed。

@@ -24,6 +24,6 @@
                         },
     "independent_review":  {
                                "status":  "blocked",
-                               "reason":  "No independent reviewer execution has been supplied in this task."
+                               "reason":  "Independent review was performed against f61a63c9 and found two open P0 and three open P1 findings; G-REVIEW cannot pass until remediation, affected-gate reruns, and re-review complete."
                            }
 }

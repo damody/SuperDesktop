@@ -9,11 +9,32 @@ param(
 
 $ErrorActionPreference = 'Stop'
 if (-not $WorkspaceRoot) { $WorkspaceRoot = Split-Path -Parent $PSScriptRoot }
-$changeRoot = Join-Path $WorkspaceRoot 'openspec/changes/bootstrap-superdesktop-workspace'
-$inventoryPath = Join-Path $changeRoot 'compliance/third-party-license-inventory.json'
+$currentInventory = Join-Path $WorkspaceRoot 'compliance/third-party-license-inventory.json'
+$activeInventory = Join-Path $WorkspaceRoot 'openspec/changes/bootstrap-superdesktop-workspace/compliance/third-party-license-inventory.json'
+$inventoryCandidates = @()
+if (Test-Path -LiteralPath $currentInventory -PathType Leaf) {
+    $inventoryCandidates += $currentInventory
+} elseif (Test-Path -LiteralPath $activeInventory -PathType Leaf) {
+    $inventoryCandidates += $activeInventory
+} else {
+    $archiveRoot = Join-Path $WorkspaceRoot 'openspec/changes/archive'
+    if (Test-Path -LiteralPath $archiveRoot -PathType Container) {
+        $inventoryCandidates += @(
+            Get-ChildItem -LiteralPath $archiveRoot -Directory |
+                Where-Object { $_.Name -like '*-bootstrap-superdesktop-workspace' } |
+                ForEach-Object { Join-Path $_.FullName 'compliance/third-party-license-inventory.json' } |
+                Where-Object { Test-Path -LiteralPath $_ -PathType Leaf }
+        )
+    }
+}
+$inventoryCandidates = @($inventoryCandidates | Sort-Object -Unique)
+if ($inventoryCandidates.Count -ne 1) {
+    throw "LICENSE_INVENTORY_RESOLUTION: expected exactly one active or archived inventory, found $($inventoryCandidates.Count)."
+}
+$inventoryPath = $inventoryCandidates[0]
 $forbiddenPathPattern = '(?i)(?:D:\\+SuperExplorer|D:\\+SuperDesktop\\+PExplorer|(?:\.\.[\\/])+SuperExplorer|vendor[\\/]gpui-ce)'
 $forbiddenDerivedPattern = '(?i)(?:PExplorer|ReactOS)'
-$approvedGitSources = @('git+https://github.com/damody/gpui-ce-explorer.git?rev=8945e2981b9fd00ca887e042d8adb9acc241b168#8945e2981b9fd00ca887e042d8adb9acc241b168')
+$approvedGitSources = @('git+https://github.com/damody/gpui-ce-explorer.git?rev=54f1339ef1791cf1d1a281ff7fa37d7e0d6b8436#54f1339ef1791cf1d1a281ff7fa37d7e0d6b8436')
 
 function Test-TextForBoundaryViolation {
     param([string]$Path)
@@ -33,7 +54,6 @@ if ($Fixture) {
     throw "Fixture did not violate source-boundary policy: $Fixture"
 }
 
-if (-not (Test-Path $inventoryPath)) { throw 'LICENSE_INVENTORY_MISSING: inventory does not exist.' }
 $inventory = Get-Content -Raw -Encoding UTF8 $inventoryPath | ConvertFrom-Json
 $metadata = cargo metadata --locked --offline --format-version 1 | ConvertFrom-Json
 if ($LASTEXITCODE -ne 0) { throw 'cargo metadata failed.' }
@@ -74,6 +94,12 @@ foreach ($package in $metadata.packages) {
 
 $productionManifests = @((Join-Path $WorkspaceRoot 'Cargo.toml')) + (Get-ChildItem -Path (Join-Path $WorkspaceRoot 'crates') -Filter Cargo.toml -Recurse -File | Select-Object -ExpandProperty FullName)
 foreach ($manifest in $productionManifests) { Test-TextForBoundaryViolation $manifest }
-Get-ChildItem -Path (Join-Path $WorkspaceRoot 'crates') -Filter '*.rs' -Recurse -File | ForEach-Object { Test-TextForBoundaryViolation $_.FullName }
+Get-ChildItem -Path (Join-Path $WorkspaceRoot 'crates') -Directory | ForEach-Object {
+    $sourceRoot = Join-Path $_.FullName 'src'
+    if (Test-Path -LiteralPath $sourceRoot -PathType Container) {
+        Get-ChildItem -LiteralPath $sourceRoot -Filter '*.rs' -Recurse -File |
+            ForEach-Object { Test-TextForBoundaryViolation $_.FullName }
+    }
+}
 
 Write-Output "Source boundary audit passed: $(@($metadata.packages).Count) package records have inventory/license/checksum coverage; no external local path dependency or PExplorer-derived production source marker was found."
