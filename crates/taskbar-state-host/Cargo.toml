@@ -1,0 +1,19 @@
+[package]
+name = "taskbar-state-host"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+serde_json.workspace = true
+shell-provider-protocol = { path = "../shell-provider-protocol" }
+windows.workspace = true
+windows-core = "=0.62.2"
+
+[lints.rust]
+unsafe_code = "allow"
+
+[[bin]]
+name = "taskbar-progress-fixture"
+path = "src/bin/taskbar_progress_fixture.rs"

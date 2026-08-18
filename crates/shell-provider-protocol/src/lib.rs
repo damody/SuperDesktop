@@ -41,8 +41,8 @@ pub use system_status::{
 };
 pub use taskbar_state::{
     TaskbarAttentionMode, TaskbarAttentionState, TaskbarProgressKind, TaskbarProgressState,
-    TaskbarStateSnapshot, TaskbarStateTerminal, TaskbarStateTerminalKind, TaskbarWindowIdentity,
-    TaskbarWindowState, reduce_group_progress,
+    TaskbarStateHostRequest, TaskbarStateHostResponse, TaskbarStateSnapshot, TaskbarStateTerminal,
+    TaskbarStateTerminalKind, TaskbarWindowIdentity, TaskbarWindowState, reduce_group_progress,
 };
 pub use validation::{
     MAX_COLLECTION_ITEMS, MAX_FRAME_BYTES, MAX_ICON_BYTES, MAX_TEXT_BYTES, Validate,

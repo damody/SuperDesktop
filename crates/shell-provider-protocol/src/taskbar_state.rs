@@ -189,6 +189,26 @@ pub struct TaskbarStateSnapshot {
     pub overflowed: bool,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TaskbarStateHostRequest {
+    Snapshot,
+    Health,
+    Shutdown,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", content = "value", rename_all = "snake_case")]
+pub enum TaskbarStateHostResponse {
+    Snapshot(TaskbarStateSnapshot),
+    Health {
+        host_generation: u64,
+        provider_available: bool,
+    },
+    Shutdown,
+    InvalidRequest,
+}
+
 impl Validate for TaskbarStateSnapshot {
     fn validate(&self) -> Result<(), ValidationError> {
         if self.host_generation == 0 || self.snapshot_generation == 0 {
@@ -378,6 +398,16 @@ mod tests {
             ..snapshot
         };
         assert!(duplicate.validate().is_err());
+    }
+
+    #[test]
+    fn host_requests_use_bounded_lowercase_json_frames() {
+        let encoded = serde_json::to_string(&TaskbarStateHostRequest::Snapshot).unwrap();
+        assert_eq!(encoded, "\"snapshot\"");
+        assert_eq!(
+            serde_json::from_str::<TaskbarStateHostRequest>(&encoded).unwrap(),
+            TaskbarStateHostRequest::Snapshot
+        );
     }
 
     #[test]

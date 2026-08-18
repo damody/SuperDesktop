@@ -10,6 +10,7 @@ mod notification_client;
 mod provider_client;
 mod status_client;
 mod surface_runtime;
+mod taskbar_state_client;
 
 pub use composition::{CompositionRoot, RouteSource, RoutedTerminal};
 pub use lifecycle::{

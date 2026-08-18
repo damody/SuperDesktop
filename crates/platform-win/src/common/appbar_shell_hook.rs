@@ -4,22 +4,131 @@
 //! enumerates or changes Explorer, and never attempts a shell takeover. The caller
 //! must supply a same-thread HWND it owns and must retain it until `teardown`.
 
-use std::{marker::PhantomData, mem::size_of, rc::Rc};
+use std::{
+    cell::{Cell, RefCell},
+    collections::VecDeque,
+    marker::PhantomData,
+    mem::size_of,
+    panic::{AssertUnwindSafe, catch_unwind},
+    rc::Rc,
+};
 
 use windows::Win32::{
-    Foundation::{HWND, RECT},
+    Foundation::{HWND, LPARAM, LRESULT, RECT, WPARAM},
     System::Threading::{GetCurrentProcessId, GetCurrentThreadId},
     UI::{
         Shell::{
-            ABE_BOTTOM, ABM_NEW, ABM_QUERYPOS, ABM_REMOVE, ABM_SETPOS, APPBARDATA, SHAppBarMessage,
+            ABE_BOTTOM, ABM_NEW, ABM_QUERYPOS, ABM_REMOVE, ABM_SETPOS, APPBARDATA, DefSubclassProc,
+            RemoveWindowSubclass, SHAppBarMessage, SetWindowSubclass,
         },
         WindowsAndMessaging::{
-            DeregisterShellHookWindow, GetWindowThreadProcessId, IsWindow, RegisterShellHookWindow,
-            RegisterWindowMessageW,
+            DeregisterShellHookWindow, GetCaretBlinkTime, GetWindowThreadProcessId, IsWindow,
+            RegisterShellHookWindow, RegisterWindowMessageW,
         },
     },
 };
 use windows::core::w;
+
+const SHELL_HOOK_SUBCLASS_ID: usize = 0x5348_4f4f;
+const SHELL_HOOK_QUEUE_CAPACITY: usize = 256;
+
+thread_local! {
+    static SHELL_HOOK_MESSAGE: Cell<u32> = const { Cell::new(0) };
+    static SHELL_HOOK_EVENTS: RefCell<VecDeque<OwnedShellHookEvent>> =
+        RefCell::new(VecDeque::with_capacity(SHELL_HOOK_QUEUE_CAPACITY));
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct OwnedShellHookEvent {
+    pub code: u32,
+    pub hwnd_identity: isize,
+    pub process_id: u32,
+    pub session_id: u32,
+}
+
+#[link(name = "kernel32")]
+unsafe extern "system" {
+    fn ProcessIdToSessionId(process_id: u32, session_id: *mut u32) -> i32;
+}
+
+fn owned_shell_hook_event(code: u32, hwnd_identity: isize) -> Option<OwnedShellHookEvent> {
+    let hwnd = HWND(hwnd_identity as _);
+    let mut process_id = 0;
+    // SAFETY: query-only lookup for the copied numeric HWND delivered by Windows.
+    if unsafe { GetWindowThreadProcessId(hwnd, Some(&mut process_id)) } == 0 || process_id == 0 {
+        return (code == 2).then_some(OwnedShellHookEvent {
+            code,
+            hwnd_identity,
+            process_id: 0,
+            session_id: 0,
+        });
+    }
+    let mut session_id = 0;
+    let mut current_session = 0;
+    // SAFETY: both APIs copy scalar session IDs into local storage.
+    if unsafe { ProcessIdToSessionId(process_id, &mut session_id) } == 0
+        || unsafe { ProcessIdToSessionId(GetCurrentProcessId(), &mut current_session) } == 0
+        || !same_session(session_id, current_session)
+    {
+        return None;
+    }
+    Some(OwnedShellHookEvent {
+        code,
+        hwnd_identity,
+        process_id,
+        session_id,
+    })
+}
+
+const fn same_session(owner_session: u32, current_session: u32) -> bool {
+    owner_session != 0 && owner_session == current_session
+}
+
+/// Uses the system caret cadence as Windows' bounded default flash interval.
+/// USER_TIMER_MAXIMUM/no-blink and implausible values fall back to 500 ms.
+pub fn system_attention_cadence_ms() -> u32 {
+    // SAFETY: read-only process-independent system timing query.
+    let value = unsafe { GetCaretBlinkTime() };
+    if (100..=5_000).contains(&value) {
+        value
+    } else {
+        500
+    }
+}
+
+fn enqueue_shell_hook_event(event: OwnedShellHookEvent) {
+    SHELL_HOOK_EVENTS.with(|events| {
+        let mut events = events.borrow_mut();
+        if events.back().copied() == Some(event) {
+            return;
+        }
+        if events.len() == SHELL_HOOK_QUEUE_CAPACITY {
+            events.pop_front();
+        }
+        events.push_back(event);
+    });
+}
+
+unsafe extern "system" fn shell_hook_subclass_proc(
+    hwnd: HWND,
+    message: u32,
+    wparam: WPARAM,
+    lparam: LPARAM,
+    _id: usize,
+    _ref_data: usize,
+) -> LRESULT {
+    let _ = catch_unwind(AssertUnwindSafe(|| {
+        SHELL_HOOK_MESSAGE.with(|registered| {
+            if registered.get() == message
+                && let Some(event) = owned_shell_hook_event(wparam.0 as u32, lparam.0)
+            {
+                enqueue_shell_hook_event(event);
+            }
+        });
+    }));
+    // SAFETY: no Rust borrow or lock is held while forwarding the original message.
+    unsafe { DefSubclassProc(hwnd, message, wparam, lparam) }
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ScreenRect {
@@ -43,6 +152,7 @@ pub struct ControlledShellCapability {
     owner_thread: u32,
     appbar_registered: bool,
     shell_hook_registered: bool,
+    shell_hook_subclass_installed: bool,
     _thread_affine: PhantomData<Rc<()>>,
 }
 
@@ -72,6 +182,7 @@ impl ControlledShellCapability {
             owner_thread: thread,
             appbar_registered: false,
             shell_hook_registered: false,
+            shell_hook_subclass_installed: false,
             _thread_affine: PhantomData,
         })
     }
@@ -159,13 +270,40 @@ impl ControlledShellCapability {
             return Err("shell-hook-message-register-failed");
         }
         if !self.shell_hook_registered {
+            if !unsafe {
+                SetWindowSubclass(
+                    self.hwnd,
+                    Some(shell_hook_subclass_proc),
+                    SHELL_HOOK_SUBCLASS_ID,
+                    0,
+                )
+                .as_bool()
+            } {
+                return Err("shell-hook-subclass-install-failed");
+            }
+            self.shell_hook_subclass_installed = true;
             // SAFETY: registers only this validated caller-owned testing HWND.
             if !unsafe { RegisterShellHookWindow(self.hwnd).as_bool() } {
+                unsafe {
+                    let _ = RemoveWindowSubclass(
+                        self.hwnd,
+                        Some(shell_hook_subclass_proc),
+                        SHELL_HOOK_SUBCLASS_ID,
+                    );
+                };
+                self.shell_hook_subclass_installed = false;
                 return Err("shell-hook-register-failed");
             }
             self.shell_hook_registered = true;
+            SHELL_HOOK_MESSAGE.with(|registered| registered.set(message));
         }
         Ok(message)
+    }
+
+    /// Drains owned copies captured by the same-thread subclass. Duplicate events
+    /// are coalesced and the queue is bounded so a misbehaving sender cannot grow it.
+    pub fn drain_shell_hook_events() -> Vec<OwnedShellHookEvent> {
+        SHELL_HOOK_EVENTS.with(|events| events.borrow_mut().drain(..).collect())
     }
 
     /// Reverses registrations in hook-first order. Calling this repeatedly is safe.
@@ -188,6 +326,19 @@ impl ControlledShellCapability {
                 self.shell_hook_registered = false;
             }
         }
+        if self.shell_hook_subclass_installed {
+            // SAFETY: removes only the callback installed by this lease on its HWND.
+            if unsafe {
+                RemoveWindowSubclass(
+                    self.hwnd,
+                    Some(shell_hook_subclass_proc),
+                    SHELL_HOOK_SUBCLASS_ID,
+                )
+                .as_bool()
+            } {
+                self.shell_hook_subclass_installed = false;
+            }
+        }
         if self.appbar_registered {
             let mut data = self.appbar_data();
             // SAFETY: removes only the registration created for this controlled HWND.
@@ -208,7 +359,10 @@ impl Drop for ControlledShellCapability {
 
 #[cfg(test)]
 mod tests {
-    use super::ScreenRect;
+    use super::{
+        ControlledShellCapability, OwnedShellHookEvent, SHELL_HOOK_QUEUE_CAPACITY, ScreenRect,
+        enqueue_shell_hook_event, owned_shell_hook_event, same_session,
+    };
 
     #[test]
     fn screen_rect_is_owned_and_has_no_native_handle() {
@@ -220,5 +374,38 @@ mod tests {
         };
         assert_eq!(rect.right - rect.left, 2);
         assert_eq!(rect.bottom - rect.top, 2);
+    }
+
+    #[test]
+    fn shell_hook_queue_coalesces_duplicates_and_is_bounded() {
+        let _ = ControlledShellCapability::drain_shell_hook_events();
+        let duplicate = OwnedShellHookEvent {
+            code: 0x8006,
+            hwnd_identity: 41,
+            process_id: 7,
+            session_id: 3,
+        };
+        enqueue_shell_hook_event(duplicate);
+        enqueue_shell_hook_event(duplicate);
+        for hwnd_identity in 0..SHELL_HOOK_QUEUE_CAPACITY as isize + 10 {
+            enqueue_shell_hook_event(OwnedShellHookEvent {
+                code: 4,
+                hwnd_identity,
+                process_id: 7,
+                session_id: 3,
+            });
+        }
+        let events = ControlledShellCapability::drain_shell_hook_events();
+        assert_eq!(events.len(), SHELL_HOOK_QUEUE_CAPACITY);
+        assert_eq!(events.last().map(|event| event.hwnd_identity), Some(265));
+    }
+
+    #[test]
+    fn wrong_session_and_retired_flash_identity_fail_closed() {
+        assert!(same_session(4, 4));
+        assert!(!same_session(4, 5));
+        assert!(!same_session(0, 0));
+        assert_eq!(owned_shell_hook_event(0x8006, 0), None);
+        assert!(include_str!("appbar_shell_hook.rs").contains("catch_unwind(AssertUnwindSafe"));
     }
 }

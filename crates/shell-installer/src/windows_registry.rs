@@ -33,6 +33,23 @@ $p = 'Registry::HKEY_CURRENT_USER\Software\Microsoft\Windows NT\CurrentVersion\W
 $v = [Environment]::GetEnvironmentVariable('SUPERDESKTOP_INSTALLER_SHELL_VALUE', 'Process')
 if ($null -eq $v) { [Console]::Error.Write('missing shell value environment'); exit 32 }
 Set-ItemProperty -LiteralPath $p -Name 'Shell' -Type String -Value $v -ErrorAction Stop
+$class = 'Registry::HKEY_CURRENT_USER\Software\Classes\CLSID\{56FDF344-FD6D-11d0-958A-006097C9A090}'
+if ($v -match '^"([^"]+superdesktop-app\.exe)"\s+--shell(?:\s|$)') {
+    $host = Join-Path (Split-Path -Parent $Matches[1]) 'taskbar-state-host.exe'
+    if (-not (Test-Path -LiteralPath $host -PathType Leaf)) { [Console]::Error.Write('taskbar state host missing'); exit 34 }
+    if (Test-Path -LiteralPath $class) {
+        $owner = [string](Get-Item -LiteralPath $class -ErrorAction Stop).GetValue('')
+        if ($owner -and $owner -ne 'SuperDesktop Taskbar Communication') { [Console]::Error.Write('per-user taskbar COM registration already owned'); exit 35 }
+    }
+    New-Item -Path $class -Force -ErrorAction Stop | Out-Null
+    Set-Item -LiteralPath $class -Value 'SuperDesktop Taskbar Communication' -ErrorAction Stop
+    $server = Join-Path $class 'LocalServer32'
+    New-Item -Path $server -Force -ErrorAction Stop | Out-Null
+    Set-Item -LiteralPath $server -Value ('"' + $host + '"') -ErrorAction Stop
+} elseif (Test-Path -LiteralPath $class) {
+    $owner = [string](Get-Item -LiteralPath $class -ErrorAction Stop).GetValue('')
+    if ($owner -eq 'SuperDesktop Taskbar Communication') { Remove-Item -LiteralPath $class -Recurse -Force -ErrorAction Stop }
+}
 "#;
 const DELETE_SCRIPT: &str = r#"
 $p = 'Registry::HKEY_CURRENT_USER\Software\Microsoft\Windows NT\CurrentVersion\Winlogon'
@@ -41,6 +58,11 @@ if (Test-Path -LiteralPath $p) {
     if ($null -ne $item.PSObject.Properties['Shell']) {
         Remove-ItemProperty -LiteralPath $p -Name 'Shell' -ErrorAction Stop
     }
+}
+$class = 'Registry::HKEY_CURRENT_USER\Software\Classes\CLSID\{56FDF344-FD6D-11d0-958A-006097C9A090}'
+if (Test-Path -LiteralPath $class) {
+    $owner = [string](Get-Item -LiteralPath $class -ErrorAction Stop).GetValue('')
+    if ($owner -eq 'SuperDesktop Taskbar Communication') { Remove-Item -LiteralPath $class -Recurse -Force -ErrorAction Stop }
 }
 "#;
 const IDENTITY_SCRIPT: &str = r#"

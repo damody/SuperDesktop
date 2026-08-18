@@ -3958,6 +3958,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8bdb6fa0dfa67b38c1e66b7041ba9dcf23b99d8121907cd31c807a332f7a0bbb"
 
 [[package]]
+name = "taskbar-state-host"
+version = "0.1.0"
+dependencies = [
+ "serde_json",
+ "shell-provider-protocol",
+ "windows 0.62.2",
+ "windows-core 0.62.2",
+]
+
+[[package]]
 name = "taskbar-ui"
 version = "0.1.0"
 dependencies = [

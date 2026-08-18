@@ -1,13 +1,13 @@
 use std::{
     cell::RefCell,
-    collections::BTreeMap,
+    collections::{BTreeMap, BTreeSet},
     path::{Path, PathBuf},
     rc::Rc,
     sync::{
         Arc, Mutex,
         atomic::{AtomicBool, AtomicU64, Ordering},
     },
-    time::{Duration, SystemTime, UNIX_EPOCH},
+    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 
 use desktop_ui::{
@@ -20,7 +20,9 @@ use gpui::{
     point, px, size,
 };
 use platform_win::common::{
-    appbar_shell_hook::{ControlledShellCapability, ScreenRect},
+    appbar_shell_hook::{
+        ControlledShellCapability, OwnedShellHookEvent, ScreenRect, system_attention_cadence_ms,
+    },
     desktop::{configure_and_show_desktop_window, current_wallpaper_path},
     monitor_dpi_start::{MonitorRecord, enable_per_monitor_v2, snapshot_real_monitors},
     taskbar::{configure_and_show_taskbar_window, snapshot_task_windows},
@@ -33,24 +35,105 @@ use shell_provider_protocol::{
     NotificationEventKind, NotificationHostResponse, NotificationMutation, ProviderRequest,
     ResponseBody, SearchBatch, SearchQuery, StatusAvailability, SystemStatusCommand,
     SystemStatusCommandRequest, SystemStatusHostRequest, SystemStatusHostResponse,
-    SystemStatusSnapshot, TerminalKind,
+    SystemStatusSnapshot, TaskbarProgressKind, TaskbarWindowState, TerminalKind,
+    reduce_group_progress,
 };
 use taskbar_ui::{
     AccessibleTask, ClockLocale, CoreStatus, FlyoutAction, JumpListModel, JumpListView,
-    NotificationAreaModel, NotificationOverflowView, PreviewCard, ProviderState, StartActions,
-    StartPowerAction, StartSnapshot, StartView, StatusRegion, SystemFlyoutKind, SystemFlyoutView,
-    SystemStatusAction, TaskAction, TaskFlyoutView, TaskViewEffect, TaskViewModel, TaskViewSurface,
-    TaskbarCallbacks, TaskbarLayout, TaskbarView, TestClock,
+    NotificationAreaModel, NotificationOverflowView, PreviewCard, ProgressState, ProviderState,
+    StartActions, StartPowerAction, StartSnapshot, StartView, StatusRegion, SystemFlyoutKind,
+    SystemFlyoutView, SystemStatusAction, TaskAction, TaskFlyoutView, TaskViewEffect,
+    TaskViewModel, TaskViewSurface, TaskbarCallbacks, TaskbarLayout, TaskbarView, TestClock,
 };
 
 use crate::{
     notification_client::NotificationClient,
     provider_client::ProviderClient,
     status_client::{StatusReconciler, SystemStatusClient},
+    taskbar_state_client::{TaskbarStateClient, TaskbarStateReconciler},
 };
 
 static NEXT_PROVIDER_REQUEST: AtomicU64 = AtomicU64::new(1);
 const ICON_CACHE_LIMIT: usize = 2_048;
+const HSHELL_WINDOWDESTROYED: u32 = 2;
+const HSHELL_WINDOWACTIVATED: u32 = 4;
+const HSHELL_RUDEAPPACTIVATED: u32 = 0x8004;
+const HSHELL_FLASH: u32 = 0x8006;
+const DEFAULT_FLASH_EDGES: u8 = 14;
+
+#[derive(Clone, Debug)]
+struct WindowAttention {
+    process_id: u32,
+    phase_on: bool,
+    steady: bool,
+    remaining_edges: u8,
+    next_edge: Instant,
+}
+
+#[derive(Default)]
+struct AttentionRuntime {
+    windows: BTreeMap<isize, WindowAttention>,
+}
+
+impl AttentionRuntime {
+    fn apply(&mut self, event: OwnedShellHookEvent, now: Instant) {
+        match event.code {
+            HSHELL_FLASH if event.hwnd_identity != 0 && event.process_id != 0 => {
+                let cadence = Duration::from_millis(u64::from(system_attention_cadence_ms()));
+                self.windows.insert(
+                    event.hwnd_identity,
+                    WindowAttention {
+                        process_id: event.process_id,
+                        phase_on: true,
+                        steady: false,
+                        remaining_edges: DEFAULT_FLASH_EDGES,
+                        next_edge: now + cadence,
+                    },
+                );
+            }
+            HSHELL_WINDOWACTIVATED | HSHELL_RUDEAPPACTIVATED | HSHELL_WINDOWDESTROYED => {
+                self.windows.remove(&event.hwnd_identity);
+            }
+            _ => {}
+        }
+    }
+
+    fn tick(&mut self, now: Instant) {
+        for state in self.windows.values_mut() {
+            while !state.steady && now >= state.next_edge {
+                state.phase_on = !state.phase_on;
+                state.remaining_edges = state.remaining_edges.saturating_sub(1);
+                state.next_edge += Duration::from_millis(u64::from(system_attention_cadence_ms()));
+                if state.remaining_edges == 0 {
+                    state.phase_on = true;
+                    state.steady = true;
+                }
+            }
+        }
+    }
+
+    fn active_windows(&self) -> BTreeSet<(isize, u32)> {
+        self.windows
+            .iter()
+            .map(|(hwnd, state)| (*hwnd, state.process_id))
+            .collect()
+    }
+
+    fn visual_for(&self, stable_id: &str) -> (bool, bool) {
+        let windows = task_hwnd(stable_id)
+            .into_iter()
+            .chain(group_window_ids(stable_id))
+            .collect::<Vec<_>>();
+        let states = windows
+            .iter()
+            .filter_map(|hwnd| self.windows.get(hwnd))
+            .collect::<Vec<_>>();
+        (
+            states.iter().any(|state| state.phase_on),
+            states.iter().any(|state| state.steady),
+        )
+    }
+}
 
 fn prune_icon_cache(
     cache: &mut BTreeMap<String, Option<IconData>>,
@@ -1044,10 +1127,35 @@ fn group_window_ids(stable_id: &str) -> Vec<isize> {
         .collect()
 }
 
+fn progress_for_task(
+    stable_id: &str,
+    states: &BTreeMap<(isize, u32), TaskbarWindowState>,
+) -> ProgressState {
+    let window_ids = task_hwnd(stable_id)
+        .into_iter()
+        .chain(group_window_ids(stable_id))
+        .collect::<BTreeSet<_>>();
+    let progress = reduce_group_progress(
+        states
+            .iter()
+            .filter(|((hwnd, _), _)| window_ids.contains(hwnd))
+            .map(|(_, state)| state.progress),
+    );
+    let value = progress.permille().unwrap_or(0);
+    match progress.kind {
+        TaskbarProgressKind::None => ProgressState::None,
+        TaskbarProgressKind::Indeterminate => ProgressState::Indeterminate,
+        TaskbarProgressKind::Normal => ProgressState::Normal(value),
+        TaskbarProgressKind::Paused => ProgressState::Paused(value),
+        TaskbarProgressKind::Error => ProgressState::Error(value),
+    }
+}
+
 fn visible_tasks(
     pin_order: &[String],
     combine_groups: bool,
     icon_cache: &mut BTreeMap<String, Option<IconData>>,
+    attention_windows: &BTreeSet<(isize, u32)>,
 ) -> Result<Vec<AccessibleTask>, &'static str> {
     snapshot_task_windows()
         .map_err(|_| "task-window-snapshot")
@@ -1126,7 +1234,10 @@ fn visible_tasks(
                         role: "button",
                         active: windows.iter().any(|window| window.foreground),
                         minimized: windows.iter().all(|window| window.minimized),
-                        attention: false,
+                        attention: windows.iter().any(|window| {
+                            attention_windows.contains(&(window.hwnd_identity, window.process_id))
+                                && !window.foreground
+                        }),
                         group_size,
                         available: true,
                         actions: vec![
@@ -1177,6 +1288,27 @@ fn verification_state_tasks() -> Vec<AccessibleTask> {
         },
     )
     .collect()
+}
+
+fn verification_task_overlay(task: &AccessibleTask) -> taskbar_ui::TaskOverlay {
+    let progress = if task.stable_id.ends_with(":active") {
+        ProgressState::Normal(420)
+    } else if task.stable_id.ends_with(":minimized") {
+        ProgressState::Paused(650)
+    } else if task.stable_id.ends_with(":attention") {
+        ProgressState::Error(300)
+    } else if task.stable_id.ends_with(":group") {
+        ProgressState::Indeterminate
+    } else {
+        ProgressState::None
+    };
+    taskbar_ui::TaskOverlay {
+        progress,
+        attention: task.attention,
+        attention_phase_on: task.attention,
+        animation_phase: 350,
+        ..Default::default()
+    }
 }
 
 fn hwnd(window: &gpui::Window) -> Result<isize, &'static str> {
@@ -1644,6 +1776,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
             &persisted_settings.taskbar.pins,
             persisted_settings.taskbar.combine_groups,
             &mut task_icon_cache.borrow_mut(),
+            &BTreeSet::new(),
         )?
     };
     let wallpaper = std::env::var_os("SUPERDESKTOP_WALLPAPER_PATH")
@@ -1658,6 +1791,10 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
     let provider_client = Rc::new(RefCell::new(ProviderClient::adjacent()?));
     let notification_client = Rc::new(RefCell::new(NotificationClient::adjacent(shell)?));
     let status_client = Rc::new(RefCell::new(SystemStatusClient::adjacent()?));
+    let mut initial_taskbar_state_client = TaskbarStateClient::adjacent(shell)?;
+    initial_taskbar_state_client.ensure_started()?;
+    let taskbar_state_client = Rc::new(RefCell::new(initial_taskbar_state_client));
+    let taskbar_state_reconciler = Rc::new(RefCell::new(TaskbarStateReconciler::default()));
     let status_reconciler = Rc::new(RefCell::new(StatusReconciler::default()));
     if let Ok(response) = status_client.borrow_mut().request(
         &SystemStatusHostRequest::Snapshot,
@@ -1678,6 +1815,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
             let mut taskbar_handles = Vec::new();
             let mut system_flyout_windows = Vec::new();
             let leases = Rc::new(RefCell::new(Vec::<ControlledShellCapability>::new()));
+            let attention_runtime = Rc::new(RefCell::new(AttentionRuntime::default()));
             let init_error = Rc::new(RefCell::new(None::<&'static str>));
             for monitor in snapshot.monitors.clone() {
                 if verification_surface.as_deref() != Some("taskbar") {
@@ -2044,15 +2182,17 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                         }
                         let taskbar_overlays = taskbar_tasks
                             .iter()
-                            .filter(|task| task.attention)
-                            .map(|task| {
-                                (
-                                    task.stable_id.clone(),
+                            .filter_map(|task| {
+                                let overlay = if state_matrix {
+                                    verification_task_overlay(task)
+                                } else {
                                     taskbar_ui::TaskOverlay {
-                                        attention: true,
-                                        ..taskbar_ui::TaskOverlay::default()
-                                    },
-                                )
+                                        attention: task.attention,
+                                        ..Default::default()
+                                    }
+                                };
+                                (overlay != taskbar_ui::TaskOverlay::default())
+                                    .then(|| (task.stable_id.clone(), overlay))
                             })
                             .collect();
                         TaskbarView {
@@ -2614,19 +2754,32 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                 let refresh_notification_client = Rc::clone(&notification_client);
                 let refresh_status_client = Rc::clone(&status_client);
                 let refresh_status_reconciler = Rc::clone(&status_reconciler);
+                let refresh_taskbar_state_client = Rc::clone(&taskbar_state_client);
+                let refresh_taskbar_state_reconciler = Rc::clone(&taskbar_state_reconciler);
                 let refresh_system_flyouts = system_flyout_windows.clone();
                 let refresh_settings = Rc::clone(&persisted_settings);
                 let refresh_task_icons = Rc::clone(&task_icon_cache);
+                let refresh_attention = Rc::clone(&attention_runtime);
                 refresh_foreground
                     .spawn(async move {
                         let mut notification_tick = 0u8;
                         loop {
                             refresh_background.timer(Duration::from_millis(50)).await;
+                            let now = Instant::now();
+                            {
+                                let mut attention = refresh_attention.borrow_mut();
+                                for event in ControlledShellCapability::drain_shell_hook_events() {
+                                    attention.apply(event, now);
+                                }
+                                attention.tick(now);
+                            }
+                            let attention_windows = refresh_attention.borrow().active_windows();
                             let taskbar_settings = refresh_settings.borrow().taskbar.clone();
                             let Ok(tasks) = visible_tasks(
                                 &taskbar_settings.pins,
                                 taskbar_settings.combine_groups,
                                 &mut refresh_task_icons.borrow_mut(),
+                                &attention_windows,
                             ) else {
                                 continue;
                             };
@@ -2664,6 +2817,26 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                     }
                                 }
                             }
+                            if notification_tick.is_multiple_of(2) {
+                                match refresh_taskbar_state_client
+                                    .borrow_mut()
+                                    .request_snapshot(Duration::from_millis(100))
+                                {
+                                    Ok(snapshot) => {
+                                        refresh_taskbar_state_reconciler.borrow_mut().apply(snapshot);
+                                    }
+                                    Err("taskbar-state-disabled") => {}
+                                    Err(_) => {
+                                        refresh_taskbar_state_reconciler
+                                            .borrow_mut()
+                                            .provider_unavailable();
+                                    }
+                                }
+                            }
+                            let taskbar_states = refresh_taskbar_state_reconciler
+                                .borrow()
+                                .windows()
+                                .clone();
                             let current_status = status(refresh_status_reconciler.borrow().snapshot());
                             let current_system_snapshot =
                                 refresh_status_reconciler.borrow().snapshot().cloned();
@@ -2683,6 +2856,42 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                                 trace_action("status:snapshot-updated");
                                                 cx.notify();
                                             }
+                                            let mut task_visual_changed = false;
+                                            for task in &tasks {
+                                                let overlay = view
+                                                    .overlays
+                                                    .entry(task.stable_id.clone())
+                                                    .or_default();
+                                                let (phase_on, steady) = refresh_attention
+                                                    .borrow()
+                                                    .visual_for(&task.stable_id);
+                                                let before = (
+                                                    overlay.attention,
+                                                    overlay.attention_phase_on,
+                                                    overlay.attention_steady,
+                                                    overlay.progress,
+                                                    overlay.animation_phase,
+                                                );
+                                                overlay.attention = task.attention;
+                                                overlay.attention_phase_on = phase_on;
+                                                overlay.attention_steady = steady;
+                                                overlay.progress =
+                                                    progress_for_task(&task.stable_id, &taskbar_states);
+                                                if overlay.attention || overlay.progress == ProgressState::Indeterminate {
+                                                    overlay.animation_phase =
+                                                        (overlay.animation_phase + 80) % 1_001;
+                                                } else {
+                                                    overlay.animation_phase = 0;
+                                                }
+                                                task_visual_changed |= before
+                                                    != (
+                                                        task.attention,
+                                                        phase_on,
+                                                        steady,
+                                                        overlay.progress,
+                                                        overlay.animation_phase,
+                                                    );
+                                            }
                                             if view.tasks != tasks {
                                                 view.tasks = tasks.clone();
                                                 let live = tasks
@@ -2691,14 +2900,9 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                                     .collect::<std::collections::BTreeSet<_>>();
                                                 view.overlays
                                                     .retain(|stable_id, _| live.contains(stable_id.as_str()));
-                                                for task in &tasks {
-                                                    let overlay = view
-                                                        .overlays
-                                                        .entry(task.stable_id.clone())
-                                                        .or_default();
-                                                    overlay.attention = task.attention;
-                                                }
                                                 trace_action("shell-event");
+                                                cx.notify();
+                                            } else if task_visual_changed {
                                                 cx.notify();
                                             }
                                             if let Some(snapshot) = notification_update.clone() {
@@ -2793,13 +2997,49 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
 #[cfg(test)]
 mod live_parity_tests {
     use super::{
+        AttentionRuntime, DEFAULT_FLASH_EDGES, HSHELL_FLASH, HSHELL_WINDOWACTIVATED,
         ICON_CACHE_LIMIT, MonitorRecord, prune_icon_cache, reconcile_desktop_item_positions,
         start_window_geometry,
     };
     use desktop_ui::AccessibleNode;
+    use platform_win::common::appbar_shell_hook::OwnedShellHookEvent;
     use platform_win::common::monitor_dpi_start::ScreenRect;
     use std::collections::{BTreeMap, BTreeSet};
     use std::path::Path;
+    use std::time::Instant;
+
+    #[test]
+    fn shell_attention_flashes_then_holds_until_activation() {
+        let start = Instant::now();
+        let cadence = std::time::Duration::from_millis(u64::from(
+            platform_win::common::appbar_shell_hook::system_attention_cadence_ms(),
+        ));
+        let mut runtime = AttentionRuntime::default();
+        runtime.apply(
+            OwnedShellHookEvent {
+                code: HSHELL_FLASH,
+                hwnd_identity: 0x2a,
+                process_id: 1,
+                session_id: 1,
+            },
+            start,
+        );
+        assert_eq!(runtime.visual_for("win:1:2A"), (true, false));
+        runtime.tick(start + cadence);
+        assert_eq!(runtime.visual_for("win:1:2A"), (false, false));
+        runtime.tick(start + cadence * u32::from(DEFAULT_FLASH_EDGES));
+        assert_eq!(runtime.visual_for("win:1:2A"), (true, true));
+        runtime.apply(
+            OwnedShellHookEvent {
+                code: HSHELL_WINDOWACTIVATED,
+                hwnd_identity: 0x2a,
+                process_id: 1,
+                session_id: 1,
+            },
+            start,
+        );
+        assert_eq!(runtime.visual_for("win:1:2A"), (false, false));
+    }
 
     fn product_start_composition_is_owned(source: &str) -> bool {
         let production = source.split("#[cfg(test)]").next().unwrap_or(source);

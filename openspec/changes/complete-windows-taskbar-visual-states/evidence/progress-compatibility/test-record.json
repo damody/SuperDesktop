@@ -1,0 +1,21 @@
+{
+  "schema": "superdesktop-taskbar-progress-compatibility/v1",
+  "host_os_build": 26200,
+  "explorer_present_fixture": {
+    "command": "target/debug/taskbar-progress-fixture.exe normal 42",
+    "result": "passed",
+    "observed": "state=2 percent=42"
+  },
+  "local_server_fixture": {
+    "command": "cargo test -p taskbar-state-host --test host_process",
+    "result": "passed",
+    "tests": 2,
+    "observed_progress": {
+      "kind": "normal",
+      "completed": 42,
+      "total": 100
+    }
+  },
+  "registry_binding": "HKCU\\Software\\Classes\\CLSID\\{56FDF344-FD6D-11d0-958A-006097C9A090}\\LocalServer32",
+  "preview_registration": false
+}

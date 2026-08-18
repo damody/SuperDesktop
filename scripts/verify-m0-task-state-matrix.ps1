@@ -82,14 +82,14 @@ try {
     }
 
     $expected = @(
-        'State active [active]',
-        'State minimized [minimized]',
-        'State attention [attention]',
-        'State group [group:3]',
+        'State active [active',
+        'State minimized [minimized',
+        'State attention [attention',
+        'State group [group:3',
         'State unavailable [unavailable]'
     )
     foreach ($name in $expected) {
-        if ($name -notin @($controls.name)) {
+        if (@($controls.name | Where-Object { $_.StartsWith($name) }).Count -ne 1) {
             throw "Missing UI Automation task state: $name"
         }
     }
@@ -101,10 +101,10 @@ try {
     if ($unavailable.Count -ne 1 -or $unavailable[0].invoke_available) {
         throw 'Unavailable state incorrectly exposes InvokePattern.'
     }
-    $active = @($controls | Where-Object name -eq 'State active [active]')[0]
-    $minimized = @($controls | Where-Object name -eq 'State minimized [minimized]')[0]
-    $attention = @($controls | Where-Object name -eq 'State attention [attention]')[0]
-    $group = @($controls | Where-Object name -eq 'State group [group:3]')[0]
+    $active = @($controls | Where-Object { $_.name.StartsWith('State active [active') })[0]
+    $minimized = @($controls | Where-Object { $_.name.StartsWith('State minimized [minimized') })[0]
+    $attention = @($controls | Where-Object { $_.name.StartsWith('State attention [attention') })[0]
+    $group = @($controls | Where-Object { $_.name.StartsWith('State group [group:3') })[0]
     $taskRows = @($controls.bounds.top | Sort-Object -Unique)
     if ($taskRows.Count -ne 2 -or
         $active.bounds.top -le $minimized.bounds.top -or

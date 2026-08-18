@@ -45,10 +45,10 @@
 **Gate／Evidence：** `G-TASKBAR-ATTENTION`, `G-TASKBAR-ISOLATION`; callback traces.
 **完成門檻：** Live start/stop/foreground behavior is no-unwind, same-session and timing-bounded.
 
-- [ ] 2.1.1 Decode supported Shell Hook flash/attention and foreground events.
-- [ ] 2.1.2 Read the Windows default cadence when request timeout is zero.
-- [ ] 2.1.3 Fence PID/session/HWND generation and callback shutdown.
-- [ ] 2.1.4 Add wrong-session, retired-window, panic and event-storm tests.
+- [x] 2.1.1 Decode supported Shell Hook flash/attention and foreground events.
+- [x] 2.1.2 Read the Windows default cadence when request timeout is zero.
+- [x] 2.1.3 Fence PID/session/HWND generation and callback shutdown.
+- [x] 2.1.4 Add wrong-session, retired-window, panic and event-storm tests.
 
 ### 2.2 Probe ordinary `ITaskbarList3` progress compatibility
 
@@ -60,10 +60,10 @@
 **Gate／Evidence：** `G-TASKBAR-PROGRESS`, `G-SHELL-NONINTERFERENCE`; capability report.
 **完成門檻：** The selected route observes normal Windows calls without app modification and preview owns no compatibility identity.
 
-- [ ] 2.2.1 Build a controlled unchanged `ITaskbarList3` progress fixture.
-- [ ] 2.2.2 Trace `CLSID_TaskbarList` state/value behavior with Explorer present.
-- [ ] 2.2.3 Trace the same behavior in controlled Explorer-free Shell mode.
-- [ ] 2.2.4 Record and validate the documented route or admitted proxy decision.
+- [x] 2.2.1 Build a controlled unchanged `ITaskbarList3` progress fixture.
+- [x] 2.2.2 Trace `CLSID_TaskbarList` state/value behavior with Explorer present.
+- [x] 2.2.3 Trace the same behavior in controlled Explorer-free Shell mode.
+- [x] 2.2.4 Record and validate the documented route or admitted proxy decision.
 
 ### 2.3 Implement isolated progress ingress
 
@@ -75,11 +75,11 @@
 **Gate／Evidence：** `G-TASKBAR-PROGRESS`, `G-TASKBAR-ISOLATION`; host test record.
 **完成門檻：** Ordinary calls yield exactly-once current-generation state; crash, overflow and malformed input fail closed.
 
-- [ ] 2.3.1 Implement same-session progress state/value ingress.
-- [ ] 2.3.2 Implement NOPROGRESS, indeterminate and blocking paused/error semantics.
-- [ ] 2.3.3 Add bounded modify coalescing with protected clear/terminal events.
-- [ ] 2.3.4 Add no-unwind shutdown and authoritative reconciliation.
-- [ ] 2.3.5 Add duplicate, stale, zero-total, overflow, crash and restart tests.
+- [x] 2.3.1 Implement same-session progress state/value ingress.
+- [x] 2.3.2 Implement NOPROGRESS, indeterminate and blocking paused/error semantics.
+- [x] 2.3.3 Add bounded modify coalescing with protected clear/terminal events.
+- [x] 2.3.4 Add no-unwind shutdown and authoritative reconciliation.
+- [x] 2.3.5 Add duplicate, stale, zero-total, overflow, crash and restart tests.
 
 ## 3. Supervision and Composition
 
@@ -93,10 +93,10 @@
 **Gate／Evidence：** `G-TASKBAR-ISOLATION`, `G-TRACE`; client/restart record.
 **完成門檻：** Initial/full snapshots apply monotonically; crash clears overlays and bounded restart accepts one new generation.
 
-- [ ] 3.1.1 Add adjacent provider resolution, handshake, health and clean shutdown.
-- [ ] 3.1.2 Apply monotonic snapshots and reject pre-restart events.
-- [ ] 3.1.3 Reconcile overlays against live PID/session/HWND generations.
-- [ ] 3.1.4 Add crash, stale snapshot, duplicate terminal and bounded-retry tests.
+- [x] 3.1.1 Add adjacent provider resolution, handshake, health and clean shutdown.
+- [x] 3.1.2 Apply monotonic snapshots and reject pre-restart events.
+- [x] 3.1.3 Reconcile overlays against live PID/session/HWND generations.
+- [x] 3.1.4 Add crash, stale snapshot, duplicate terminal and bounded-retry tests.
 
 ### 3.2 Integrate independent task overlays
 
@@ -108,11 +108,11 @@
 **Gate／Evidence：** `G-TASKBAR-PROGRESS`, `G-TASKBAR-ATTENTION`; integration record.
 **完成門檻：** Active/minimized/grouped/progress/attention/badge/availability update independently in preview and Shell modes.
 
-- [ ] 3.2.1 Map per-window snapshots to stable task identities.
-- [ ] 3.2.2 Reduce grouped progress and attention using pure priority rules.
-- [ ] 3.2.3 Schedule animation ticks only while live animated states exist.
-- [ ] 3.2.4 Clear animations on activation, close, retirement and provider failure.
-- [ ] 3.2.5 Add mode, group reorder, provider failure and state-independence tests.
+- [x] 3.2.1 Map per-window snapshots to stable task identities.
+- [x] 3.2.2 Reduce grouped progress and attention using pure priority rules.
+- [x] 3.2.3 Schedule animation ticks only while live animated states exist.
+- [x] 3.2.4 Clear animations on activation, close, retirement and provider failure.
+- [x] 3.2.5 Add mode, group reorder, provider failure and state-independence tests.
 
 ## 4. Windows 11 Rendering and Accessibility
 
@@ -178,5 +178,5 @@
 **Gate／Evidence：** `G-TASKBAR-ISOLATION`, `G-TRACE`; packaging record.
 **完成門檻：** Both installers contain required binaries, build without launch and remove all new artifacts.
 
-- [ ] 5.2.1 Update release/package/NSIS manifests and uninstall cleanup if a provider is added.
+- [x] 5.2.1 Update release/package/NSIS manifests and uninstall cleanup if a provider is added.
 - [ ] 5.2.2 Build and hash standalone and combined installers without launching them.

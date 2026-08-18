@@ -354,6 +354,7 @@ fn validate_companion_binaries(app_path: &Path) -> Result<(), InstallerError> {
     for (file_name, field) in [
         ("shell-provider-host.exe", "shell-provider-host"),
         ("notification-area-host.exe", "notification-area-host"),
+        ("taskbar-state-host.exe", "taskbar-state-host"),
         ("SuperExplorer.exe", "SuperExplorer"),
     ] {
         let companion = admitted_binary(&directory.join(file_name), field)?;
