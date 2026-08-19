@@ -24,9 +24,14 @@ using System;
 using System.Runtime.InteropServices;
 public static class SuperDesktopFlyoutFocus {
     [DllImport("user32.dll")]
+    public static extern bool SetProcessDpiAwarenessContext(IntPtr context);
+    [DllImport("user32.dll")]
     public static extern bool SetForegroundWindow(IntPtr hwnd);
+    [DllImport("user32.dll")]
+    public static extern uint GetDpiForWindow(IntPtr hwnd);
 }
 '@
+[SuperDesktopFlyoutFocus]::SetProcessDpiAwarenessContext([IntPtr](-4)) | Out-Null
 
 function Find-Element {
     param(
@@ -138,6 +143,95 @@ function Find-OwnedPopupElement {
     return $null
 }
 
+function Get-OwnedPopupWindows([int]$ProcessId, [IntPtr]$TaskbarHwnd) {
+    $result = @()
+    $windows = [System.Windows.Automation.AutomationElement]::RootElement.FindAll(
+        [System.Windows.Automation.TreeScope]::Children,
+        [System.Windows.Automation.Condition]::TrueCondition
+    )
+    for ($index = 0; $index -lt $windows.Count; $index++) {
+        $candidate = $windows.Item($index)
+        try {
+            if ($candidate.Current.ProcessId -ne $ProcessId) { continue }
+            if ($candidate.Current.IsOffscreen) { continue }
+            $handle = [IntPtr][int]$candidate.Current.NativeWindowHandle
+            if ($handle -eq [IntPtr]::Zero -or $handle -eq $TaskbarHwnd) { continue }
+            $bounds = $candidate.Current.BoundingRectangle
+            if ($bounds.Width -gt 100 -and $bounds.Height -gt 100) {
+                $result += $candidate
+            }
+        } catch [System.Windows.Automation.ElementNotAvailableException] {}
+    }
+    @($result)
+}
+
+function Measure-OwnedFlyout(
+    [string]$Kind,
+    [int]$ProcessId,
+    [System.Windows.Automation.AutomationElement]$Taskbar,
+    [IntPtr]$TaskbarHwnd,
+    [double]$ExpectedWidthDip
+) {
+    $deadline = [DateTime]::UtcNow.AddSeconds(3)
+    do {
+        $candidates = @(Get-OwnedPopupWindows $ProcessId $TaskbarHwnd)
+        $maximumRight = @($candidates | ForEach-Object { $_.Current.BoundingRectangle.Right } | Measure-Object -Maximum).Maximum
+        $windows = if ($null -eq $maximumRight) { @() } else { @($candidates | Where-Object { $maximumRight - $_.Current.BoundingRectangle.Right -le 64.0 }) }
+        if ($windows.Count -eq 1) { break }
+        Start-Sleep -Milliseconds 50
+    } while ([DateTime]::UtcNow -lt $deadline)
+    if ($windows.Count -ne 1) {
+        $details = @($windows | ForEach-Object {
+            $bounds = $_.Current.BoundingRectangle
+            "hwnd=$($_.Current.NativeWindowHandle),name=$($_.Current.Name),bounds=$($bounds.Left),$($bounds.Top),$($bounds.Right),$($bounds.Bottom)"
+        })
+        throw "$Kind owned popup count=$($windows.Count), expected 1: $($details -join '; ')"
+    }
+    $popup = $windows[0]
+    $popupBounds = $popup.Current.BoundingRectangle
+    $taskbarBounds = $Taskbar.Current.BoundingRectangle
+    $popupHwnd = [IntPtr][int]$popup.Current.NativeWindowHandle
+    $dpi = [SuperDesktopFlyoutFocus]::GetDpiForWindow($popupHwnd)
+    if ($dpi -eq 0) { throw "$Kind popup DPI unavailable" }
+    $scale = [double]$dpi / 96.0
+    $widthDip = [double]$popupBounds.Width / $scale
+    $heightDip = [double]$popupBounds.Height / $scale
+    $gapDip = ([double]$taskbarBounds.Top - [double]$popupBounds.Bottom) / $scale
+    $center = [Drawing.Point]::new(
+        [int]($popupBounds.Left + $popupBounds.Width / 2),
+        [int]($popupBounds.Top + $popupBounds.Height / 2)
+    )
+    $monitor = [Windows.Forms.Screen]::FromPoint($center).Bounds
+    $contained = (
+        $popupBounds.Left -ge $monitor.Left -and
+        $popupBounds.Top -ge $monitor.Top -and
+        $popupBounds.Right -le $monitor.Right -and
+        $popupBounds.Bottom -le $monitor.Bottom
+    )
+    if (-not $contained) { throw "$Kind popup is outside its monitor" }
+    if ([Math]::Abs($widthDip - $ExpectedWidthDip) -gt 16.0) {
+        throw "$Kind width=$widthDip DIP differs from expected=$ExpectedWidthDip DIP; hwnd=$popupHwnd name=$($popup.Current.Name) dpi=$dpi popup=$($popupBounds.Left),$($popupBounds.Top),$($popupBounds.Right),$($popupBounds.Bottom) taskbar=$($taskbarBounds.Left),$($taskbarBounds.Top),$($taskbarBounds.Right),$($taskbarBounds.Bottom) gapDip=$gapDip"
+    }
+    if ($gapDip -lt 2.0 -or $gapDip -gt 16.0) {
+        throw "$Kind taskbar gap=$gapDip DIP is outside 2..16 DIP"
+    }
+    [ordered]@{
+        kind = $Kind
+        hwnd = [int64]$popupHwnd
+        owned_popup_count = $windows.Count
+        dpi = $dpi
+        scale = $scale
+        expected_width_dip = $ExpectedWidthDip
+        width_dip = $widthDip
+        height_dip = $heightDip
+        taskbar_gap_dip = $gapDip
+        contained = $contained
+        popup_bounds = [ordered]@{left=$popupBounds.Left;top=$popupBounds.Top;right=$popupBounds.Right;bottom=$popupBounds.Bottom}
+        taskbar_bounds = [ordered]@{left=$taskbarBounds.Left;top=$taskbarBounds.Top;right=$taskbarBounds.Right;bottom=$taskbarBounds.Bottom}
+        monitor_bounds = [ordered]@{left=$monitor.Left;top=$monitor.Top;right=$monitor.Right;bottom=$monitor.Bottom}
+    }
+}
+
 function Capture-Screen([string]$Path) {
     $bounds = [System.Windows.Forms.SystemInformation]::VirtualScreen
     $bitmap = [Drawing.Bitmap]::new($bounds.Width, $bounds.Height)
@@ -159,6 +253,7 @@ Remove-Item -LiteralPath $tracePath -ErrorAction SilentlyContinue
 $watchdog = $null
 $suppressor = $null
 $explorerBefore = @(Get-Process explorer -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Id)
+$geometryRecords = @()
 
 try {
     if ($SuppressExplorer) {
@@ -226,11 +321,13 @@ try {
     Invoke-Element $network
     $networkDialog = Find-OwnedPopupElement $process.Id $process.MainWindowHandle { param($item) $item.Current.ControlType -eq [System.Windows.Automation.ControlType]::Window }
     if ($null -eq $networkDialog) { throw 'Owned network and power flyout did not appear.' }
+    $geometryRecords += Measure-OwnedFlyout 'network-power' $process.Id $taskbar $process.MainWindowHandle 360.0
     Capture-Screen (Join-Path $EvidenceDirectory 'network-power-flyout.png')
 
     Invoke-Element $input
     $inputDialog = Find-OwnedPopupElement $process.Id $process.MainWindowHandle { param($item) $item.Current.ControlType -eq [System.Windows.Automation.ControlType]::Window }
     if ($null -eq $inputDialog) { throw 'Owned input flyout did not appear.' }
+    $geometryRecords += Measure-OwnedFlyout 'input' $process.Id $taskbar $process.MainWindowHandle 360.0
     Capture-Screen (Join-Path $EvidenceDirectory 'input-flyout.png')
 
     Invoke-Element $volume
@@ -238,11 +335,13 @@ try {
     if ($null -eq $volumeDialog) { throw 'Owned volume flyout did not replace the input flyout.' }
     $slider = Find-Element $volumeDialog { param($item) $item.Current.ControlType -eq [System.Windows.Automation.ControlType]::Slider }
     if ($null -eq $slider) { throw 'Owned volume slider is missing.' }
+    $geometryRecords += Measure-OwnedFlyout 'volume' $process.Id $taskbar $process.MainWindowHandle 360.0
     Capture-Screen (Join-Path $EvidenceDirectory 'volume-flyout.png')
 
     Invoke-Element $calendar
     $calendarDialog = Find-OwnedPopupElement $process.Id $process.MainWindowHandle { param($item) $item.Current.ControlType -eq [System.Windows.Automation.ControlType]::Window }
     if ($null -eq $calendarDialog) { throw 'Owned calendar flyout did not replace the volume flyout.' }
+    $geometryRecords += Measure-OwnedFlyout 'calendar' $process.Id $taskbar $process.MainWindowHandle 380.0
     Capture-Screen (Join-Path $EvidenceDirectory 'calendar-flyout.png')
 
     if (-not $SkipStartFocusVerification) {
@@ -303,7 +402,7 @@ try {
         [ordered]@{ name=$_.Name;sha256=(Get-FileHash -Algorithm SHA256 -LiteralPath $_.FullName).Hash.ToLowerInvariant();bytes=$_.Length }
     }
     $report = [ordered]@{
-        schema='system-status-headful/v1'
+        schema='system-status-headful/v2'
         result='passed'
         app_sha256=(Get-FileHash -Algorithm SHA256 -LiteralPath $appPath).Hash.ToLowerInvariant()
         original_input_profile=$originalLanguage
@@ -312,6 +411,8 @@ try {
         start_survived_switch=if($SkipStartFocusVerification){$null}else{$true}
         start_focus_restored_trace=if($SkipStartFocusVerification){$null}else{$true}
         owned_flyouts=@('network-power','input','volume','calendar')
+        geometry_thresholds=[ordered]@{width_tolerance_dip=16.0;taskbar_gap_min_dip=2.0;taskbar_gap_max_dip=16.0}
+        geometry_records=$geometryRecords
         explorer_suppressed=[bool]$SuppressExplorer
         explorer_before=$explorerBefore
         explorer_absent_during_capture=$explorerAbsentDuringCapture

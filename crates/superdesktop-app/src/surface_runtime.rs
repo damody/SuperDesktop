@@ -2019,6 +2019,7 @@ struct SystemFlyoutGeometry {
 
 fn system_flyout_geometry(
     monitor: &MonitorRecord,
+    shell: bool,
     kind: SystemFlyoutKind,
     input_profile_count: usize,
     notification_count: usize,
@@ -2045,7 +2046,12 @@ fn system_flyout_geometry(
     let gap = 8.0;
     let taskbar_height = 40.0 * f32::from(taskbar_rows.clamp(1, 3));
     let usable_width = (work_right - work_left - gap * 2.0).max(1.0);
-    let popup_bottom = (work_bottom - taskbar_height - gap).max(work_top + 1.0);
+    let taskbar_bottom = if shell {
+        monitor.bounds.bottom as f32 / scale
+    } else {
+        work_bottom
+    };
+    let popup_bottom = (taskbar_bottom - taskbar_height - gap).max(work_top + 1.0);
     let usable_height = (popup_bottom - work_top).max(1.0);
     let width = preferred_width.min(usable_width);
     let height = preferred_height.min(usable_height);
@@ -2059,6 +2065,7 @@ fn system_flyout_geometry(
 
 fn system_flyout_options(
     monitor: &MonitorRecord,
+    shell: bool,
     kind: SystemFlyoutKind,
     input_profile_count: usize,
     notification_count: usize,
@@ -2066,6 +2073,7 @@ fn system_flyout_options(
 ) -> WindowOptions {
     let geometry = system_flyout_geometry(
         monitor,
+        shell,
         kind,
         input_profile_count,
         notification_count,
@@ -3833,6 +3841,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                 let opened = app.open_window(
                                     system_flyout_options(
                                         &system_flyout_monitor,
+                                        shell,
                                         kind,
                                         input_profile_count,
                                         notifications
@@ -5203,8 +5212,14 @@ mod live_parity_tests {
             dpi_x: 168,
             dpi_y: 168,
         };
-        let geometry =
-            super::system_flyout_geometry(&reference, super::SystemFlyoutKind::Calendar, 1, 10, 2);
+        let geometry = super::system_flyout_geometry(
+            &reference,
+            false,
+            super::SystemFlyoutKind::Calendar,
+            1,
+            10,
+            2,
+        );
         let logical_right = 1920.0 / 1.75;
         let logical_bottom = 1080.0 / 1.75;
         assert_eq!(geometry.width, 380.0);
@@ -5229,8 +5244,14 @@ mod live_parity_tests {
             },
             ..reference.clone()
         };
-        let geometry =
-            super::system_flyout_geometry(&negative, super::SystemFlyoutKind::Input, 64, 0, 3);
+        let geometry = super::system_flyout_geometry(
+            &negative,
+            false,
+            super::SystemFlyoutKind::Input,
+            64,
+            0,
+            3,
+        );
         assert!(geometry.left >= -1920.0 / 1.75);
         assert!(geometry.top >= -200.0 / 1.75);
         assert!(geometry.left + geometry.width <= -8.0);
@@ -5256,6 +5277,7 @@ mod live_parity_tests {
         };
         let geometry = super::system_flyout_geometry(
             &constrained,
+            false,
             super::SystemFlyoutKind::Calendar,
             1,
             100,
@@ -5289,6 +5311,7 @@ mod live_parity_tests {
             for rows in 1..=3 {
                 let geometry = super::system_flyout_geometry(
                     &monitor,
+                    false,
                     super::SystemFlyoutKind::Calendar,
                     1,
                     100,
@@ -5298,6 +5321,97 @@ mod live_parity_tests {
                 assert!(geometry.left + geometry.width <= 3840.0 / scale);
                 assert!(geometry.top + geometry.height <= 2160.0 / scale);
                 assert!(geometry.height <= 720.0);
+            }
+        }
+    }
+
+    #[test]
+    fn system_flyout_geometry_uses_exact_preview_and_shell_taskbar_anchors() {
+        let monitor = MonitorRecord {
+            device_name: "stale-work-area".into(),
+            primary: true,
+            bounds: ScreenRect {
+                left: 0,
+                top: 0,
+                right: 3840,
+                bottom: 2160,
+            },
+            work_area: ScreenRect {
+                left: 0,
+                top: 0,
+                right: 3840,
+                bottom: 2020,
+            },
+            dpi_x: 168,
+            dpi_y: 168,
+        };
+        let preview = super::system_flyout_geometry(
+            &monitor,
+            false,
+            super::SystemFlyoutKind::Volume,
+            1,
+            0,
+            2,
+        );
+        let shell =
+            super::system_flyout_geometry(&monitor, true, super::SystemFlyoutKind::Volume, 1, 0, 2);
+        let scale = 1.75;
+        let preview_bottom = 2020.0 / scale - 80.0 - 8.0;
+        let shell_bottom = 2160.0 / scale - 80.0 - 8.0;
+        assert!((preview.top + preview.height - preview_bottom).abs() < 0.01);
+        assert!((shell.top + shell.height - shell_bottom).abs() < 0.01);
+        assert!((shell.top - preview.top - 80.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn system_flyout_geometry_matrix_preserves_windows_logical_ratios() {
+        let kinds: [(super::SystemFlyoutKind, f32, f32); 4] = [
+            (super::SystemFlyoutKind::Input, 360.0, 298.0),
+            (super::SystemFlyoutKind::Volume, 360.0, 184.0),
+            (super::SystemFlyoutKind::NetworkPower, 360.0, 228.0),
+            (super::SystemFlyoutKind::Calendar, 380.0, 520.0),
+        ];
+        for dpi in [96, 144, 168, 216] {
+            let monitor = MonitorRecord {
+                device_name: format!("dpi-{dpi}"),
+                primary: false,
+                bounds: ScreenRect {
+                    left: -3840,
+                    top: -300,
+                    right: 0,
+                    bottom: 2160,
+                },
+                work_area: ScreenRect {
+                    left: -3840,
+                    top: -300,
+                    right: 0,
+                    bottom: 2040,
+                },
+                dpi_x: dpi,
+                dpi_y: dpi,
+            };
+            let scale = dpi as f32 / 96.0;
+            let work_left = -3840.0 / scale;
+            let work_right = 0.0;
+            let work_top = -300.0 / scale;
+            for shell in [false, true] {
+                for rows in 1..=3 {
+                    let taskbar_bottom = if shell { 2160.0 } else { 2040.0 } / scale;
+                    let popup_bottom = taskbar_bottom - 40.0 * rows as f32 - 8.0;
+                    for (kind, preferred_width, preferred_height) in kinds {
+                        let geometry =
+                            super::system_flyout_geometry(&monitor, shell, kind, 2, 0, rows);
+                        assert_eq!(geometry.width, preferred_width);
+                        assert_eq!(
+                            geometry.height,
+                            preferred_height.min(popup_bottom - work_top)
+                        );
+                        assert!(geometry.left >= work_left);
+                        assert!(geometry.left + geometry.width <= work_right + 0.01);
+                        assert!(geometry.top >= work_top);
+                        assert!((geometry.top + geometry.height - popup_bottom).abs() < 0.01);
+                    }
+                }
             }
         }
     }

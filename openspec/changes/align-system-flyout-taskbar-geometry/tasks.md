@@ -12,9 +12,9 @@
 **Gate／Evidence：** `G-FLYOUT-GEOMETRY`; focused Rust tests.
 **完成門檻：** Preview uses work-area anchor, shell uses bounds anchor, and both subtract owned taskbar height/gap once.
 
-- [ ] 1.1.1 Add explicit shell-mode input to geometry and option helpers.
-- [ ] 1.1.2 Compute preview and shell taskbar-top anchors from their matching taskbar contract.
-- [ ] 1.1.3 Pass runtime mode through the owned system-flyout composition path.
+- [x] 1.1.1 Add explicit shell-mode input to geometry and option helpers.
+- [x] 1.1.2 Compute preview and shell taskbar-top anchors from their matching taskbar contract.
+- [x] 1.1.3 Pass runtime mode through the owned system-flyout composition path.
 
 ### 1.2 Add the logical DPI and boundary matrix
 
@@ -26,9 +26,9 @@
 **Gate／Evidence：** `G-DPI-MATRIX`; test names and console results.
 **完成門檻：** Four DPI values, two modes, three rows, four kinds, negative origin, stale work area, and constrained bounds pass.
 
-- [ ] 1.2.1 Test preview and shell bottom anchors with retained work-area reservation.
-- [ ] 1.2.2 Test preferred widths/heights and containment for 96/144/168/216 DPI and 1–3 rows.
-- [ ] 1.2.3 Test negative-origin and constrained-monitor clamping without double conversion.
+- [x] 1.2.1 Test preview and shell bottom anchors with retained work-area reservation.
+- [x] 1.2.2 Test preferred widths/heights and containment for 96/144/168/216 DPI and 1–3 rows.
+- [x] 1.2.3 Test negative-origin and constrained-monitor clamping without double conversion.
 
 ## 2. UTIT authoritative geometry admission
 
@@ -42,9 +42,9 @@
 **Gate／Evidence：** `G-UTIT`, `G-FLYOUT-GEOMETRY`; `evidence/headful/headful-report.json`.
 **完成門檻：** All four kinds record physical bounds, DPI/logical dimensions, bottom gap, containment and replacement identity.
 
-- [ ] 2.1.1 Capture taskbar, popup, monitor and DPI geometry for every owned flyout kind.
-- [ ] 2.1.2 Derive logical width/height/gap and version the report schema.
-- [ ] 2.1.3 Preserve screenshot hashes, input-profile restoration and Explorer watchdog evidence.
+- [x] 2.1.1 Capture taskbar, popup, monitor and DPI geometry for every owned flyout kind.
+- [x] 2.1.2 Derive logical width/height/gap and version the report schema.
+- [x] 2.1.3 Preserve screenshot hashes, input-profile restoration and Explorer watchdog evidence.
 
 ### 2.2 Enforce Windows ratio and noninterference thresholds
 
@@ -56,9 +56,9 @@
 **Gate／Evidence：** `G-SHELL-NONINTERFERENCE`, `G-UTIT`; focused and shell-parity reports.
 **完成門檻：** Every popup gap is 2–16 DIP, widths meet tolerance, one popup replaces another, and Explorer remains absent/recovered.
 
-- [ ] 2.2.1 Enforce per-kind preferred-width tolerance and monitor containment.
-- [ ] 2.2.2 Enforce 2–16 DIP taskbar gap and exact owned-popup replacement.
-- [ ] 2.2.3 Run focused system-status and full shell-parity UTIT and validate report hashes.
+- [x] 2.2.1 Enforce per-kind preferred-width tolerance and monitor containment.
+- [x] 2.2.2 Enforce 2–16 DIP taskbar gap and exact owned-popup replacement.
+- [x] 2.2.3 Run focused system-status and full shell-parity UTIT and validate report hashes.
 
 ## 3. Full admission, evidence and packaging
 
@@ -72,9 +72,9 @@
 **Gate／Evidence：** `G-DPI-MATRIX`, `G-UTIT`, `G-TRACE`; automated evidence.
 **完成門檻：** Every locally runnable blocking gate exits zero against one implementation revision.
 
-- [ ] 3.1.1 Run format and locked/offline focused plus workspace tests.
-- [ ] 3.1.2 Run Clippy warnings-as-errors, architecture/source-boundary audits and release build.
-- [ ] 3.1.3 Inspect screenshots and pass strict OpenSpec plus detailed-task validation.
+- [x] 3.1.1 Run format and locked/offline focused plus workspace tests.
+- [x] 3.1.2 Run Clippy warnings-as-errors, architecture/source-boundary audits and release build.
+- [x] 3.1.3 Inspect screenshots and pass strict OpenSpec plus detailed-task validation.
 
 ### 3.2 Commit, package and finalize traceability
 
