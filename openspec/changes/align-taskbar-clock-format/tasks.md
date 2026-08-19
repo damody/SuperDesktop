@@ -19,4 +19,4 @@
 - [x] 3.2 Run full locked workspace tests and warnings-as-errors Clippy.
 - [x] 3.3 Build release and capture the 168-DPI three-row clock in light, dark, and high contrast.
 - [x] 3.4 Verify one-second advancement, UIA content, containment, and calendar activation in the headful run.
-- [ ] 3.5 Save redacted evidence, run strict OpenSpec validation, and commit without unrelated worktree files.
+- [x] 3.5 Save redacted evidence, run strict OpenSpec validation, and commit without unrelated worktree files.

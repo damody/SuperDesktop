@@ -1,6 +1,7 @@
 {
   "schema": "superdesktop-row-aware-clock-evidence/v1",
   "result": "passed",
+  "implementation_commit": "fbe7d1f8",
   "release_app_sha256": "918fa07705d82995501a7209a30127e3afafeb65ed98f327f96ad7c2772e3ffd",
   "format_contract": {
     "traditional_chinese": ["下午 03:30:23", "星期三", "2026/8/19"],
