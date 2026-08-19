@@ -1,9 +1,9 @@
-//! Shell-owned Win+E keyboard routing with bounded thread and hook lifetime.
+//! Shell-owned Windows-key routing with bounded thread and hook lifetime.
 
 use std::{
     panic::{AssertUnwindSafe, catch_unwind},
     sync::{
-        atomic::{AtomicBool, Ordering},
+        atomic::{AtomicU8, AtomicU32, Ordering},
         mpsc,
     },
     thread::JoinHandle,
@@ -13,7 +13,9 @@ use windows::Win32::{
     Foundation::{LPARAM, LRESULT, WPARAM},
     System::Threading::GetCurrentThreadId,
     UI::{
-        Input::KeyboardAndMouse::{GetAsyncKeyState, VK_LWIN, VK_RWIN},
+        Input::KeyboardAndMouse::{
+            GetAsyncKeyState, VK_CONTROL, VK_LWIN, VK_MENU, VK_RWIN, VK_SHIFT,
+        },
         WindowsAndMessaging::{
             CallNextHookEx, GetMessageW, HC_ACTION, KBDLLHOOKSTRUCT, MSG, PM_NOREMOVE,
             PeekMessageW, PostThreadMessageW, SetWindowsHookExW, UnhookWindowsHookEx,
@@ -22,26 +24,88 @@ use windows::Win32::{
     },
 };
 
+const VK_A: u32 = 0x41;
+const VK_D: u32 = 0x44;
 const VK_E: u32 = 0x45;
-static WIN_E_DOWN: AtomicBool = AtomicBool::new(false);
+const VK_N: u32 = 0x4e;
+const VK_S: u32 = 0x53;
+const VK_SPACE: u32 = 0x20;
+const VK_TAB: u32 = 0x09;
 
-fn reduce_win_e(
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[repr(u8)]
+pub enum ShellHotkeyAction {
+    OpenExplorer = 1,
+    ShowDesktop = 2,
+    CycleInput = 3,
+    OpenSearch = 4,
+    OpenTaskView = 5,
+    OpenNetworkPower = 6,
+    OpenNotifications = 7,
+    CycleInputPrevious = 8,
+}
+
+impl ShellHotkeyAction {
+    fn from_code(code: u8) -> Option<Self> {
+        match code {
+            1 => Some(Self::OpenExplorer),
+            2 => Some(Self::ShowDesktop),
+            3 => Some(Self::CycleInput),
+            4 => Some(Self::OpenSearch),
+            5 => Some(Self::OpenTaskView),
+            6 => Some(Self::OpenNetworkPower),
+            7 => Some(Self::OpenNotifications),
+            8 => Some(Self::CycleInputPrevious),
+            _ => None,
+        }
+    }
+}
+
+static ACTIVE_KEY: AtomicU32 = AtomicU32::new(0);
+static REQUESTED: AtomicU8 = AtomicU8::new(0);
+
+fn action_for_key(
+    vk_code: u32,
+    control: bool,
+    alt: bool,
+    shift: bool,
+) -> Option<ShellHotkeyAction> {
+    if control || alt {
+        return None;
+    }
+    match vk_code {
+        VK_E if !shift => Some(ShellHotkeyAction::OpenExplorer),
+        VK_D if !shift => Some(ShellHotkeyAction::ShowDesktop),
+        VK_SPACE if shift => Some(ShellHotkeyAction::CycleInputPrevious),
+        VK_SPACE => Some(ShellHotkeyAction::CycleInput),
+        VK_S if !shift => Some(ShellHotkeyAction::OpenSearch),
+        VK_TAB if !shift => Some(ShellHotkeyAction::OpenTaskView),
+        VK_A if !shift => Some(ShellHotkeyAction::OpenNetworkPower),
+        VK_N if !shift => Some(ShellHotkeyAction::OpenNotifications),
+        _ => None,
+    }
+}
+
+fn reduce_shell_hotkey(
     vk_code: u32,
     key_down: bool,
     key_up: bool,
     windows_down: bool,
-    was_down: bool,
-) -> (bool, bool, bool) {
-    if vk_code != VK_E {
-        return (false, false, was_down);
+    control: bool,
+    alt: bool,
+    shift: bool,
+    active_key: u32,
+) -> (bool, Option<ShellHotkeyAction>, u32) {
+    if key_down
+        && windows_down
+        && let Some(action) = action_for_key(vk_code, control, alt, shift)
+    {
+        return (true, (active_key != vk_code).then_some(action), vk_code);
     }
-    if key_down && windows_down {
-        return (true, !was_down, true);
+    if key_up && active_key == vk_code {
+        return (true, None, 0);
     }
-    if key_up && was_down {
-        return (true, false, false);
-    }
-    (false, false, was_down)
+    (false, None, active_key)
 }
 
 unsafe extern "system" fn keyboard_hook(code: i32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
@@ -56,12 +120,24 @@ unsafe extern "system" fn keyboard_hook(code: i32, wparam: WPARAM, lparam: LPARA
         let key_up = message == WM_KEYUP || message == WM_SYSKEYUP;
         let windows_down = unsafe { GetAsyncKeyState(i32::from(VK_LWIN.0)) } < 0
             || unsafe { GetAsyncKeyState(i32::from(VK_RWIN.0)) } < 0;
-        let was_down = WIN_E_DOWN.load(Ordering::Acquire);
-        let (consume, request, next_down) =
-            reduce_win_e(event.vkCode, key_down, key_up, windows_down, was_down);
-        WIN_E_DOWN.store(next_down, Ordering::Release);
-        if request {
-            REQUESTED.store(true, Ordering::Release);
+        let control = unsafe { GetAsyncKeyState(i32::from(VK_CONTROL.0)) } < 0;
+        let alt = unsafe { GetAsyncKeyState(i32::from(VK_MENU.0)) } < 0;
+        let shift = unsafe { GetAsyncKeyState(i32::from(VK_SHIFT.0)) } < 0;
+        let active_key = ACTIVE_KEY.load(Ordering::Acquire);
+        let (consume, request, next_key) = reduce_shell_hotkey(
+            event.vkCode,
+            key_down,
+            key_up,
+            windows_down,
+            control,
+            alt,
+            shift,
+            active_key,
+        );
+        ACTIVE_KEY.store(next_key, Ordering::Release);
+        if let Some(request) = request {
+            let _ =
+                REQUESTED.compare_exchange(0, request as u8, Ordering::AcqRel, Ordering::Acquire);
         }
         if consume {
             return LRESULT(1);
@@ -71,17 +147,15 @@ unsafe extern "system" fn keyboard_hook(code: i32, wparam: WPARAM, lparam: LPARA
     .unwrap_or(LRESULT(0))
 }
 
-static REQUESTED: AtomicBool = AtomicBool::new(false);
-
-pub struct WinEHotkey {
+pub struct ShellHotkeys {
     thread_id: u32,
     worker: Option<JoinHandle<()>>,
 }
 
-impl WinEHotkey {
+impl ShellHotkeys {
     pub fn start() -> Result<Self, String> {
-        REQUESTED.store(false, Ordering::Release);
-        WIN_E_DOWN.store(false, Ordering::Release);
+        REQUESTED.store(0, Ordering::Release);
+        ACTIVE_KEY.store(0, Ordering::Release);
         let (ready_tx, ready_rx) = mpsc::sync_channel(1);
         let worker = std::thread::Builder::new()
             .name("superdesktop-win-e".into())
@@ -95,8 +169,9 @@ impl WinEHotkey {
                 } {
                     Ok(hook) => hook,
                     Err(error) => {
-                        let _ =
-                            ready_tx.send(Err(format!("Win+E hook registration failed: {error}")));
+                        let _ = ready_tx.send(Err(format!(
+                            "Shell hotkey hook registration failed: {error}"
+                        )));
                         return;
                     }
                 };
@@ -111,30 +186,30 @@ impl WinEHotkey {
                     }
                 }
                 let _ = unsafe { UnhookWindowsHookEx(hook) };
-                WIN_E_DOWN.store(false, Ordering::Release);
+                ACTIVE_KEY.store(0, Ordering::Release);
             })
-            .map_err(|error| format!("Win+E hook thread failed: {error}"))?;
+            .map_err(|error| format!("Shell hotkey hook thread failed: {error}"))?;
         let thread_id = ready_rx
             .recv()
-            .map_err(|_| "Win+E hook startup channel closed".to_owned())??;
+            .map_err(|_| "Shell hotkey hook startup channel closed".to_owned())??;
         Ok(Self {
             thread_id,
             worker: Some(worker),
         })
     }
 
-    pub fn take_requested(&self) -> bool {
-        REQUESTED.swap(false, Ordering::AcqRel)
+    pub fn take_requested(&self) -> Option<ShellHotkeyAction> {
+        ShellHotkeyAction::from_code(REQUESTED.swap(0, Ordering::AcqRel))
     }
 }
 
-impl Drop for WinEHotkey {
+impl Drop for ShellHotkeys {
     fn drop(&mut self) {
         let _ = unsafe { PostThreadMessageW(self.thread_id, WM_QUIT, WPARAM(0), LPARAM(0)) };
         if let Some(worker) = self.worker.take()
             && worker.join().is_err()
         {
-            eprintln!("SuperDesktop error [Win+E]: hook thread panicked during shutdown");
+            eprintln!("SuperDesktop error [shell hotkeys]: hook thread panicked during shutdown");
         }
     }
 }
@@ -144,26 +219,43 @@ mod tests {
     use super::*;
 
     #[test]
-    fn win_e_reducer_suppresses_one_request_per_physical_press() {
+    fn reducer_routes_supported_shell_keys_once_and_passes_unsupported_chords() {
         assert_eq!(
-            reduce_win_e(VK_E, true, false, true, false),
-            (true, true, true)
+            reduce_shell_hotkey(VK_E, true, false, true, false, false, false, 0),
+            (true, Some(ShellHotkeyAction::OpenExplorer), VK_E)
         );
         assert_eq!(
-            reduce_win_e(VK_E, true, false, true, true),
-            (true, false, true)
+            reduce_shell_hotkey(VK_E, true, false, true, false, false, false, VK_E),
+            (true, None, VK_E)
         );
         assert_eq!(
-            reduce_win_e(VK_E, false, true, false, true),
-            (true, false, false)
+            reduce_shell_hotkey(VK_E, false, true, false, false, false, false, VK_E),
+            (true, None, 0)
+        );
+        for (key, action) in [
+            (VK_D, ShellHotkeyAction::ShowDesktop),
+            (VK_SPACE, ShellHotkeyAction::CycleInput),
+            (VK_S, ShellHotkeyAction::OpenSearch),
+            (VK_TAB, ShellHotkeyAction::OpenTaskView),
+            (VK_A, ShellHotkeyAction::OpenNetworkPower),
+            (VK_N, ShellHotkeyAction::OpenNotifications),
+        ] {
+            assert_eq!(
+                reduce_shell_hotkey(key, true, false, true, false, false, false, 0),
+                (true, Some(action), key)
+            );
+        }
+        assert_eq!(
+            reduce_shell_hotkey(VK_SPACE, true, false, true, false, false, true, 0),
+            (true, Some(ShellHotkeyAction::CycleInputPrevious), VK_SPACE)
         );
         assert_eq!(
-            reduce_win_e(VK_E, true, false, false, false),
-            (false, false, false)
+            reduce_shell_hotkey(VK_D, true, false, true, true, false, false, 0),
+            (false, None, 0)
         );
         assert_eq!(
-            reduce_win_e(0x46, true, false, true, false),
-            (false, false, false)
+            reduce_shell_hotkey(0x46, true, false, true, false, false, false, 0),
+            (false, None, 0)
         );
     }
 
@@ -177,7 +269,7 @@ mod tests {
             "PostThreadMessageW(self.thread_id, WM_QUIT",
             "UnhookWindowsHookEx",
             "catch_unwind(AssertUnwindSafe",
-            "REQUESTED.swap(false",
+            "REQUESTED.swap(0",
         ] {
             assert!(
                 production.contains(required),

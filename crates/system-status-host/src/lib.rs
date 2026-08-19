@@ -300,7 +300,7 @@ impl SystemStatusRuntime {
             SystemStatusCommand::ActivateInputProfile { profile_id } => (
                 platform_win::common::system_status::request_input_profile(
                     &profile_id,
-                    Duration::from_millis(750),
+                    Duration::from_secs(2),
                 )
                 .map(|_| ()),
                 None,

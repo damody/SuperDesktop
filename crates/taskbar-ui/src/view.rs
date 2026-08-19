@@ -503,7 +503,7 @@ impl Render for TaskbarView {
                         .left_0()
                         .right_0()
                         .top_0()
-                        .h(px(6.))
+                        .h(px(12.))
                         .cursor(CursorStyle::ResizeUpDown)
                         .on_mouse_down(MouseButton::Left, |_, window, cx| {
                             window.start_window_resize(ResizeEdge::Top);
@@ -1709,6 +1709,7 @@ mod tests {
             "taskbar-resize-strip",
             "CursorStyle::ResizeUpDown",
             "ResizeEdge::Top",
+            ".h(px(12.))",
             "attach_resize_observer",
             "if this.locked",
             ".border_t_1()",

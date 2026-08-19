@@ -20,16 +20,18 @@ use windows::Win32::{
         QueryFullProcessImageNameW,
     },
     UI::{
+        HiDpi::GetDpiForWindow,
         Shell::{DefSubclassProc, RemoveWindowSubclass, SetWindowSubclass},
         WindowsAndMessaging::{
             EnumWindows, GA_ROOT, GW_OWNER, GWL_EXSTYLE, GWL_STYLE, GetAncestor, GetClientRect,
             GetCursorPos, GetForegroundWindow, GetWindow, GetWindowLongPtrW, GetWindowRect,
-            GetWindowTextLengthW, GetWindowTextW, GetWindowThreadProcessId, HTCLIENT, HWND_TOPMOST,
-            IsIconic, IsWindow, IsWindowVisible, PostMessageW, RegisterWindowMessageW, SW_MINIMIZE,
-            SW_RESTORE, SWP_FRAMECHANGED, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER,
-            SWP_SHOWWINDOW, SetForegroundWindow, SetWindowLongPtrW, SetWindowPos, ShowWindow,
-            WM_CLOSE, WM_ENTERSIZEMOVE, WM_EXITSIZEMOVE, WM_NCDESTROY, WM_NCHITTEST,
-            WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_THICKFRAME, WindowFromPoint,
+            GetWindowTextLengthW, GetWindowTextW, GetWindowThreadProcessId, HTCLIENT, HTTOP,
+            HWND_TOPMOST, IsIconic, IsWindow, IsWindowVisible, PostMessageW,
+            RegisterWindowMessageW, SW_MINIMIZE, SW_RESTORE, SWP_FRAMECHANGED, SWP_NOACTIVATE,
+            SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER, SWP_SHOWWINDOW, SetForegroundWindow,
+            SetWindowLongPtrW, SetWindowPos, ShowWindow, WM_CLOSE, WM_ENTERSIZEMOVE,
+            WM_EXITSIZEMOVE, WM_NCDESTROY, WM_NCHITTEST, WM_SIZING, WMSZ_TOP, WMSZ_TOPLEFT,
+            WMSZ_TOPRIGHT, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_THICKFRAME, WindowFromPoint,
         },
     },
 };
@@ -47,6 +49,12 @@ const TASKBAR_RESIZE_SUBCLASS_ID: usize = 0x5253_5a45;
 static TASKBAR_AUTO_HIDE_REVEAL_MESSAGE: OnceLock<u32> = OnceLock::new();
 thread_local! {
     static TASKBAR_RESIZE_SESSIONS: RefCell<BTreeSet<isize>> = const { RefCell::new(BTreeSet::new()) };
+}
+
+fn quantized_taskbar_outer_height(proposed_height: i32, dpi: u32) -> (u8, i32) {
+    let row_height = ((40u32.saturating_mul(dpi.max(96)) + 48) / 96).max(1) as i32;
+    let rows = ((proposed_height.max(1) + row_height / 2) / row_height).clamp(1, 3) as u8;
+    (rows, row_height * i32::from(rows))
 }
 #[link(name = "dwmapi")]
 unsafe extern "system" {
@@ -98,6 +106,31 @@ unsafe extern "system" fn taskbar_resize_subclass_proc(
     }
     if message == WM_NCHITTEST && ref_data == 1 {
         return LRESULT(HTCLIENT as isize);
+    }
+    if message == WM_NCHITTEST && ref_data == 0 {
+        let mut window_rect = RECT::default();
+        if unsafe { GetWindowRect(hwnd, &mut window_rect) }.is_ok() {
+            let cursor_y = (lparam.0 >> 16) as i16 as i32;
+            let dpi = unsafe { GetDpiForWindow(hwnd) }.max(96);
+            let resize_band = ((12u32.saturating_mul(dpi) + 48) / 96).max(1) as i32;
+            if cursor_y <= window_rect.top + resize_band {
+                return LRESULT(HTTOP as isize);
+            }
+        }
+    }
+    if message == WM_SIZING
+        && matches!(wparam.0 as u32, WMSZ_TOP | WMSZ_TOPLEFT | WMSZ_TOPRIGHT)
+        && lparam.0 != 0
+    {
+        let _ = catch_unwind(AssertUnwindSafe(|| {
+            // SAFETY: WM_SIZING supplies a writable RECT for the duration of the callback.
+            let proposed = unsafe { &mut *(lparam.0 as *mut RECT) };
+            let dpi = unsafe { GetDpiForWindow(hwnd) };
+            let proposed_height = (proposed.bottom - proposed.top).max(1);
+            let (_, outer_height) = quantized_taskbar_outer_height(proposed_height, dpi);
+            proposed.top = proposed.bottom - outer_height;
+        }));
+        return LRESULT(1);
     }
     unsafe { DefSubclassProc(hwnd, message, wparam, lparam) }
 }
@@ -770,6 +803,26 @@ mod tests {
             assert!(production.contains(required));
         }
         assert!(!production.contains("Shell_TrayWnd"));
+    }
+
+    #[test]
+    fn taskbar_resize_quantizes_to_exact_physical_row_heights() {
+        assert_eq!(quantized_taskbar_outer_height(1, 96), (1, 40));
+        assert_eq!(quantized_taskbar_outer_height(59, 96), (1, 40));
+        assert_eq!(quantized_taskbar_outer_height(60, 96), (2, 80));
+        assert_eq!(quantized_taskbar_outer_height(100, 96), (3, 120));
+        assert_eq!(quantized_taskbar_outer_height(90, 144), (2, 120));
+        assert_eq!(quantized_taskbar_outer_height(10_000, 192), (3, 240));
+        let production = include_str!("taskbar.rs")
+            .split("#[cfg(test)]")
+            .next()
+            .unwrap_or("");
+        for required in ["WM_SIZING", "WMSZ_TOP", "GetDpiForWindow", "proposed.top ="] {
+            assert!(
+                production.contains(required),
+                "missing resize quantization: {required}"
+            );
+        }
     }
     #[test]
     fn taskbar_auto_hide_adapters_reject_invalid_and_foreign_windows() {

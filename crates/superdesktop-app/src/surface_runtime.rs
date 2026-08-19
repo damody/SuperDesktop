@@ -26,6 +26,7 @@ use platform_win::common::{
     desktop::{configure_and_show_desktop_window, current_wallpaper_path},
     explorer_recovery::trusted_explorer_shell_present,
     monitor_dpi_start::{MonitorRecord, enable_per_monitor_v2, snapshot_real_monitors},
+    shell_hotkey::ShellHotkeyAction,
     taskbar::{
         configure_and_show_taskbar_window, move_owned_taskbar_client, owned_taskbar_resize_active,
         physical_cursor_position, post_owned_taskbar_reveal, promote_owned_popup_topmost,
@@ -40,8 +41,8 @@ use shell_provider_protocol::{
     NotificationEventKind, NotificationHostResponse, NotificationMutation, ProviderRequest,
     ResponseBody, SearchBatch, SearchQuery, StatusAvailability, SystemStatusCommand,
     SystemStatusCommandRequest, SystemStatusHostRequest, SystemStatusHostResponse,
-    SystemStatusSnapshot, TaskbarProgressKind, TaskbarStateSnapshot, TaskbarWindowState,
-    TerminalKind, reduce_group_progress,
+    SystemStatusSnapshot, SystemStatusTerminalKind, TaskbarProgressKind, TaskbarStateSnapshot,
+    TaskbarWindowState, TerminalKind, reduce_group_progress,
 };
 use taskbar_ui::{
     AccessibleTask, AutoHideEffect, AutoHideInput, AutoHideState, ClockLocale, CoreStatus,
@@ -2225,7 +2226,7 @@ fn system_flyout_geometry(
     let work_right = monitor.work_area.right as f32 / scale;
     let work_bottom = monitor.work_area.bottom as f32 / scale;
     let (preferred_width, preferred_height): (f32, f32) = match kind {
-        SystemFlyoutKind::Input => (360.0, 154.0 + input_profile_count.clamp(1, 6) as f32 * 72.0),
+        SystemFlyoutKind::Input => (360.0, 112.0 + input_profile_count.clamp(1, 6) as f32 * 56.0),
         SystemFlyoutKind::Volume => (360.0, 184.0),
         SystemFlyoutKind::NetworkPower => (360.0, 640.0),
         SystemFlyoutKind::Calendar => (
@@ -2686,6 +2687,23 @@ fn system_status_command(action: SystemStatusAction) -> SystemStatusCommand {
     }
 }
 
+fn adjacent_input_profile_id(snapshot: &SystemStatusSnapshot, direction: i32) -> Option<String> {
+    let StatusAvailability::Available(input) = &snapshot.input else {
+        return None;
+    };
+    if input.profiles.len() < 2 {
+        return None;
+    }
+    let active = input
+        .profiles
+        .iter()
+        .position(|profile| profile.id == input.active_profile_id)
+        .unwrap_or(0);
+    let count = input.profiles.len() as i32;
+    let target = (active as i32 + direction).rem_euclid(count) as usize;
+    input.profiles.get(target).map(|profile| profile.id.clone())
+}
+
 fn apply_system_status_action(
     action: SystemStatusAction,
     app: &mut App,
@@ -2694,6 +2712,11 @@ fn apply_system_status_action(
     start_window: &Rc<RefCell<Option<gpui::WindowHandle<StartView>>>>,
 ) {
     let restore_start_focus = matches!(&action, SystemStatusAction::ActivateInputProfile(_));
+    let command_timeout = if restore_start_focus {
+        Duration::from_millis(2_500)
+    } else {
+        Duration::from_millis(1_000)
+    };
     let Some(expected_host_generation) = reconciler
         .borrow()
         .snapshot()
@@ -2711,15 +2734,26 @@ fn apply_system_status_action(
         request: SystemStatusCommandRequest {
             correlation_id,
             expected_host_generation,
-            deadline_unix_ms: unix_time_ms().saturating_add(1_000),
+            deadline_unix_ms: unix_time_ms().saturating_add(command_timeout.as_millis() as u64),
             command,
         },
     };
     let response = client
         .borrow_mut()
-        .request(&request, Duration::from_millis(1_000));
+        .request(&request, command_timeout + Duration::from_millis(250));
     match response {
         Ok(response @ SystemStatusHostResponse::Terminal(_)) => {
+            if let SystemStatusHostResponse::Terminal(terminal) = &response
+                && !matches!(
+                    terminal.terminal,
+                    SystemStatusTerminalKind::Observed | SystemStatusTerminalKind::Accepted
+                )
+            {
+                report_error(
+                    "status:command",
+                    format!("{:?}: {}", terminal.terminal, terminal.message),
+                );
+            }
             reconciler.borrow_mut().apply(response);
             if let Ok(snapshot @ SystemStatusHostResponse::Snapshot(_)) =
                 client.borrow_mut().request(
@@ -2802,8 +2836,8 @@ fn superexplorer_executable() -> Option<PathBuf> {
 
 pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> {
     enable_per_monitor_v2()?;
-    let win_e_hotkey = Rc::new(if shell {
-        match platform_win::common::shell_hotkey::WinEHotkey::start() {
+    let shell_hotkeys = Rc::new(if shell {
+        match platform_win::common::shell_hotkey::ShellHotkeys::start() {
             Ok(hotkey) => {
                 trace_action("win-e:hook-active");
                 Some(hotkey)
@@ -2946,6 +2980,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
             let mut desktop_handles = Vec::new();
             let mut taskbar_handles = Vec::new();
             let mut taskbar_monitor_names = Vec::new();
+            let mut shell_show_desktop_sessions = Vec::new();
             let mut taskbar_auto_hide = Vec::<TaskbarAutoHideRuntime>::new();
             let mut system_flyout_windows = Vec::new();
             let leases = Rc::new(RefCell::new(Vec::<ControlledShellCapability>::new()));
@@ -3235,6 +3270,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                 let start_window_for_taskbar = Rc::clone(&start_window);
                 let start_window_for_status = Rc::clone(&start_window);
                 let show_desktop_session = Rc::new(RefCell::new(ShowDesktopSession::default()));
+                shell_show_desktop_sessions.push(Rc::clone(&show_desktop_session));
                 let show_desktop_session_for_taskbar = Rc::clone(&show_desktop_session);
                 let show_desktop_session_for_context = Rc::clone(&show_desktop_session);
                 let start_provider_for_taskbar = Rc::clone(&provider_client);
@@ -4442,11 +4478,15 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
 
             let refresh_handles = taskbar_handles.clone();
             let refresh_monitor_names = taskbar_monitor_names.clone();
+            let refresh_show_desktop_sessions = shell_show_desktop_sessions.clone();
             if !refresh_handles.is_empty() && !state_matrix {
                 let refresh_background = cx.background_executor().clone();
                 let refresh_foreground = cx.foreground_executor().clone();
                 let refresh_app = cx.to_async();
                 let refresh_status_reconciler = Rc::clone(&status_reconciler);
+                let refresh_status_client = Rc::clone(&status_client);
+                let refresh_hotkey_start_window =
+                    Rc::new(RefCell::new(None::<gpui::WindowHandle<StartView>>));
                 let refresh_taskbar_state_reconciler = Rc::clone(&taskbar_state_reconciler);
                 let refresh_provider_batch = Arc::clone(&provider_refresh_batch);
                 let refresh_system_flyouts = system_flyout_windows.clone();
@@ -4455,7 +4495,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                 let refresh_settings = Rc::clone(&persisted_settings);
                 let refresh_task_icons = Rc::clone(&task_icon_cache);
                 let refresh_attention = Rc::clone(&attention_runtime);
-                let refresh_win_e_hotkey = Rc::clone(&win_e_hotkey);
+                let refresh_shell_hotkeys = Rc::clone(&shell_hotkeys);
                 let refresh_auto_hide_context = Rc::clone(&taskbar_context_window);
                 let refresh_auto_hide_settings_window = Rc::clone(&taskbar_settings_window);
                 let refresh_auto_hide_leases = Rc::clone(&leases);
@@ -4468,12 +4508,14 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                             vec![None::<TaskbarPhysicalGeometry>; refresh_handles.len()];
                         loop {
                             refresh_background.timer(Duration::from_millis(50)).await;
-                            if refresh_win_e_hotkey
+                            let shell_hotkey_action = refresh_shell_hotkeys
                                 .as_ref()
                                 .as_ref()
-                                .is_some_and(|hotkey| hotkey.take_requested())
+                                .and_then(|hotkeys| hotkeys.take_requested());
+                            if shell_hotkey_action
+                                == Some(platform_win::common::shell_hotkey::ShellHotkeyAction::OpenExplorer)
                             {
-                                trace_action("win-e:requested");
+                                trace_action("shell-hotkey:win-e");
                                 pending_superexplorer_focus = request_superexplorer_foreground();
                             }
                             if let Some(pending) = pending_superexplorer_focus.as_ref() {
@@ -4643,6 +4685,109 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                             let current_system_snapshot =
                                 refresh_status_reconciler.borrow().snapshot().cloned();
                             refresh_app.update(|app| {
+                                if let Some(action) = shell_hotkey_action {
+                                    match action {
+                                        ShellHotkeyAction::OpenExplorer => {}
+                                        ShellHotkeyAction::ShowDesktop => {
+                                            if let Some(session) =
+                                                refresh_show_desktop_sessions.first()
+                                            {
+                                                run_show_desktop_cycle(session);
+                                                trace_action("shell-hotkey:show-desktop");
+                                            }
+                                        }
+                                        ShellHotkeyAction::CycleInput
+                                        | ShellHotkeyAction::CycleInputPrevious => {
+                                            if let Some(profile_id) = current_system_snapshot
+                                                .as_ref()
+                                                .and_then(|snapshot| {
+                                                    adjacent_input_profile_id(
+                                                        snapshot,
+                                                        if action
+                                                            == ShellHotkeyAction::CycleInput
+                                                        {
+                                                            1
+                                                        } else {
+                                                            -1
+                                                        },
+                                                    )
+                                                })
+                                            {
+                                                apply_system_status_action(
+                                                    SystemStatusAction::ActivateInputProfile(
+                                                        profile_id,
+                                                    ),
+                                                    app,
+                                                    &refresh_status_client,
+                                                    &refresh_status_reconciler,
+                                                    &refresh_hotkey_start_window,
+                                                );
+                                                trace_action("shell-hotkey:cycle-input");
+                                            } else {
+                                                report_error(
+                                                    "shell-hotkey:cycle-input",
+                                                    "no alternate input profile is available",
+                                                );
+                                            }
+                                        }
+                                        ShellHotkeyAction::OpenSearch => {
+                                            let callback = refresh_handles.iter().find_map(|handle| {
+                                                handle
+                                                    .update(app, |view, _, _| {
+                                                        view.callbacks.as_ref().map(|callbacks| {
+                                                            Rc::clone(&callbacks.start)
+                                                        })
+                                                    })
+                                                    .ok()
+                                                    .flatten()
+                                            });
+                                            if let Some(callback) = callback {
+                                                callback(app);
+                                                trace_action("shell-hotkey:search");
+                                            }
+                                        }
+                                        ShellHotkeyAction::OpenTaskView => {
+                                            let callback = refresh_handles.iter().find_map(|handle| {
+                                                handle
+                                                    .update(app, |view, _, _| {
+                                                        view.callbacks.as_ref().map(|callbacks| {
+                                                            Rc::clone(&callbacks.task_view)
+                                                        })
+                                                    })
+                                                    .ok()
+                                                    .flatten()
+                                            });
+                                            if let Some(callback) = callback {
+                                                callback(app);
+                                                trace_action("shell-hotkey:task-view");
+                                            }
+                                        }
+                                        ShellHotkeyAction::OpenNetworkPower
+                                        | ShellHotkeyAction::OpenNotifications => {
+                                            let callback = refresh_handles.iter().find_map(|handle| {
+                                                handle
+                                                    .update(app, |view, _, _| {
+                                                        view.callbacks.as_ref().map(|callbacks| {
+                                                            Rc::clone(&callbacks.system_flyout)
+                                                        })
+                                                    })
+                                                    .ok()
+                                                    .flatten()
+                                            });
+                                            if let Some(callback) = callback {
+                                                let kind = if action
+                                                    == ShellHotkeyAction::OpenNetworkPower
+                                                {
+                                                    SystemFlyoutKind::NetworkPower
+                                                } else {
+                                                    SystemFlyoutKind::Calendar
+                                                };
+                                                callback(kind, app);
+                                                trace_action("shell-hotkey:system-flyout");
+                                            }
+                                        }
+                                    }
+                                }
                                 let mut alive = false;
                                 for (index, handle) in refresh_handles.iter().enumerate() {
                                     let auto_hide = None::<TaskbarAutoHideRuntime>;
@@ -5207,13 +5352,19 @@ mod live_parity_tests {
         let production = source.split("#[cfg(test)]").next().unwrap_or(source);
         for required in [
             "if shell {",
-            "shell_hotkey::WinEHotkey::start()",
+            "shell_hotkey::ShellHotkeys::start()",
             "request_superexplorer_foreground()",
             "focus_superexplorer_window(",
             "WindowAction::RestoreAndActivate",
             "build_default_launch(&resolved)",
             "Some(pending.process_id)",
             "win-e:focus-timeout",
+            "ShellHotkeyAction::ShowDesktop",
+            "ShellHotkeyAction::CycleInput",
+            "ShellHotkeyAction::OpenTaskView",
+            "ShellHotkeyAction::OpenNetworkPower",
+            "ShellHotkeyAction::OpenNotifications",
+            "adjacent_input_profile_id",
         ] {
             assert!(
                 production.contains(required),
@@ -6189,7 +6340,7 @@ mod live_parity_tests {
     #[test]
     fn system_flyout_geometry_matrix_preserves_windows_logical_ratios() {
         let kinds: [(super::SystemFlyoutKind, f32, f32); 4] = [
-            (super::SystemFlyoutKind::Input, 360.0, 298.0),
+            (super::SystemFlyoutKind::Input, 360.0, 224.0),
             (super::SystemFlyoutKind::Volume, 360.0, 184.0),
             (super::SystemFlyoutKind::NetworkPower, 360.0, 640.0),
             (super::SystemFlyoutKind::Calendar, 380.0, 520.0),
