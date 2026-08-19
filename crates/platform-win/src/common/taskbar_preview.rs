@@ -8,7 +8,7 @@ use windows::Win32::Graphics::Dwm::{
     DWM_TNP_SOURCECLIENTAREAONLY, DWM_TNP_VISIBLE, DwmIsCompositionEnabled, DwmRegisterThumbnail,
     DwmUnregisterThumbnail, DwmUpdateThumbnailProperties,
 };
-use windows::Win32::UI::WindowsAndMessaging::IsWindow;
+use windows::Win32::UI::WindowsAndMessaging::{GetClientRect, IsWindow};
 use windows::core::BOOL;
 
 pub const PREVIEW_DEADLINE_MS: u64 = 500;
@@ -39,6 +39,7 @@ pub struct ThumbnailRect {
 #[derive(Debug)]
 pub struct LiveThumbnail {
     handle: isize,
+    source: isize,
 }
 
 impl LiveThumbnail {
@@ -58,13 +59,24 @@ impl LiveThumbnail {
         }
         let handle = unsafe { DwmRegisterThumbnail(destination, source) }
             .map_err(|_| PreviewUnavailable::ProbeFailed)?;
-        Ok(Self { handle })
+        Ok(Self {
+            handle,
+            source: source.0 as isize,
+        })
     }
 
-    pub fn update_destination(&self, destination: ThumbnailRect) -> Result<(), PreviewUnavailable> {
-        if destination.right <= destination.left || destination.bottom <= destination.top {
-            return Err(PreviewUnavailable::InvalidWindow);
-        }
+    pub fn update_destination(&self, container: ThumbnailRect) -> Result<(), PreviewUnavailable> {
+        let source = HWND(self.source as *mut c_void);
+        let mut source_client = RECT::default();
+        // SAFETY: source remains an opaque, query-only HWND; output storage is local.
+        unsafe { GetClientRect(source, &mut source_client) }
+            .map_err(|_| PreviewUnavailable::RetiredWindow)?;
+        let destination = aspect_fit_thumbnail_rect(
+            source_client.right - source_client.left,
+            source_client.bottom - source_client.top,
+            container,
+        )
+        .ok_or(PreviewUnavailable::InvalidWindow)?;
         let properties = DWM_THUMBNAIL_PROPERTIES {
             dwFlags: DWM_TNP_RECTDESTINATION
                 | DWM_TNP_VISIBLE
@@ -86,6 +98,34 @@ impl LiveThumbnail {
         unsafe { DwmUpdateThumbnailProperties(self.handle, &raw const properties) }
             .map_err(|_| PreviewUnavailable::ProbeFailed)
     }
+}
+
+pub fn aspect_fit_thumbnail_rect(
+    source_width: i32,
+    source_height: i32,
+    container: ThumbnailRect,
+) -> Option<ThumbnailRect> {
+    let container_width = container.right.checked_sub(container.left)?;
+    let container_height = container.bottom.checked_sub(container.top)?;
+    if source_width <= 0 || source_height <= 0 || container_width <= 0 || container_height <= 0 {
+        return None;
+    }
+    let scale = (f64::from(container_width) / f64::from(source_width))
+        .min(f64::from(container_height) / f64::from(source_height));
+    let width = (f64::from(source_width) * scale)
+        .round()
+        .clamp(1.0, f64::from(container_width)) as i32;
+    let height = (f64::from(source_height) * scale)
+        .round()
+        .clamp(1.0, f64::from(container_height)) as i32;
+    let left = container.left + (container_width - width) / 2;
+    let top = container.top + (container_height - height) / 2;
+    Some(ThumbnailRect {
+        left,
+        top,
+        right: left + width,
+        bottom: top + height,
+    })
 }
 
 impl Drop for LiveThumbnail {
@@ -143,5 +183,38 @@ mod tests {
             LiveThumbnail::register(0, 0).unwrap_err(),
             PreviewUnavailable::InvalidWindow
         );
+    }
+
+    #[test]
+    fn thumbnail_destination_preserves_landscape_portrait_and_square_ratios() {
+        let container = ThumbnailRect {
+            left: 10,
+            top: 20,
+            right: 210,
+            bottom: 220,
+        };
+        assert_eq!(
+            aspect_fit_thumbnail_rect(1920, 1080, container),
+            Some(ThumbnailRect {
+                left: 10,
+                top: 63,
+                right: 210,
+                bottom: 176,
+            })
+        );
+        assert_eq!(
+            aspect_fit_thumbnail_rect(1080, 1920, container),
+            Some(ThumbnailRect {
+                left: 53,
+                top: 20,
+                right: 166,
+                bottom: 220,
+            })
+        );
+        assert_eq!(
+            aspect_fit_thumbnail_rect(200, 200, container),
+            Some(container)
+        );
+        assert_eq!(aspect_fit_thumbnail_rect(0, 200, container), None);
     }
 }
