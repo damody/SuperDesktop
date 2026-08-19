@@ -1,0 +1,23 @@
+{
+    "schema":  "taskbar-settings-chrome-headful/v1",
+    "result":  "passed",
+    "theme":  "light",
+    "locale":  "zh-TW",
+    "close":  {
+                  "fixed_bounds":  "1827,-2,63,63",
+                  "control_type":  "Button",
+                  "dismissed":  true,
+                  "invoke_pattern":  true
+              },
+    "scrollbar":  {
+                      "before":  0,
+                      "range_pattern":  true,
+                      "control_type":  "ScrollBar",
+                      "after_drag":  100,
+                      "bounds":  "1897,78,21,1407"
+                  },
+    "captures":  [
+                     "light-top.png",
+                     "light-bottom.png"
+                 ]
+}

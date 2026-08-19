@@ -1,0 +1,17 @@
+{
+  "schema": "taskbar-settings-chrome-headful-index/v1",
+  "change": "fix-taskbar-settings-close-scrollbar",
+  "recorded_at": "2026-08-19T16:11:27+08:00",
+  "result": "passed",
+  "actual": "Light, dark, and high-contrast runs each exposed fixed Button and ScrollBar UIA controls, dragged RangeValue from 0 to 100, kept the close bounds fixed, and dismissed through InvokePattern.",
+  "reviewer": "Primary integrator",
+  "themes": {
+    "light": {"report": "light-report.json", "report_sha256": "d6be42d3dacbddc3a6176d5c156314ab1f7d31558d1cd96b0b5e8a73238225dc", "top_sha256": "8afeb3d4c868ca46f81f56f0354e7c990be2fd08ea80ba3e2bf196be21c3de4e", "bottom_sha256": "1c0f395464fd1bd73e1881dc89533fcb3144349faf70018ee35d533f854e0554"},
+    "dark": {"report": "dark-report.json", "report_sha256": "99e297ed36ac51877e61baab8c75dcf5d5116d0371bf12b6cb4990cfd5b62e64", "top_sha256": "30b1cf2d44a0d3f16cd6b65df11bbe74817ef4e729a86d32e47df2d62f666de0", "bottom_sha256": "09b03884788672ca5fd815febeb50811ef514fd674d8befe7e67ef72ab261674"},
+    "high_contrast": {"report": "high-contrast-report.json", "report_sha256": "4878a93ab8ff9b085a118a7148a748c1874d10c3a26908328ccbefadbeae49c3", "top_sha256": "35f3312eaa486d7fade2aa7e4d44687640ceafb8f809482f9c1a2272272b85ef", "bottom_sha256": "241e1effdcec3486765967d4eb096f32f1e4941b5cb763d20e8e3718b9d43d2e"}
+  },
+  "task_links": [
+    {"task_id": "2.2", "subcheck": "uia-close-drag-capture"},
+    {"task_id": "2.4", "subcheck": "three-theme-visual-review"}
+  ]
+}

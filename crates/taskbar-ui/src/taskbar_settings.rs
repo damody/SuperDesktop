@@ -1,9 +1,9 @@
 use std::{collections::BTreeSet, rc::Rc};
 
 use gpui::{
-    Context, FocusHandle, InteractiveElement, IntoElement, ParentElement, Render,
-    StatefulInteractiveElement, Styled, Subscription, Toggled, Window, div,
-    prelude::FluentBuilder as _, px, rgb,
+    Context, FocusHandle, InteractiveElement, IntoElement, MouseDownEvent, MouseMoveEvent,
+    MouseUpEvent, ParentElement, Pixels, Render, ScrollHandle, StatefulInteractiveElement, Styled,
+    Subscription, Toggled, Window, canvas, div, point, prelude::FluentBuilder as _, px, rgb,
 };
 use settings_store::{TaskbarAlignment, TaskbarSearchMode, TaskbarSettings};
 
@@ -86,6 +86,55 @@ impl TaskbarSettingsLayout {
             bottom_padding: 48.0,
         }
     }
+}
+
+const SETTINGS_SCROLLBAR_TRACK_TOP: f32 = 8.0;
+const SETTINGS_SCROLLBAR_TRACK_BOTTOM: f32 = 8.0;
+const SETTINGS_SCROLLBAR_MIN_THUMB: f32 = 48.0;
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct TaskbarSettingsScrollbarGeometry {
+    track_height: f32,
+    thumb_height: f32,
+    thumb_top: f32,
+    progress: f32,
+    max_offset: f32,
+}
+
+fn taskbar_settings_scrollbar_geometry(
+    viewport_height: f32,
+    max_offset: f32,
+    offset_y: f32,
+) -> Option<TaskbarSettingsScrollbarGeometry> {
+    let max_offset = max_offset.max(0.0);
+    let track_height =
+        (viewport_height - SETTINGS_SCROLLBAR_TRACK_TOP - SETTINGS_SCROLLBAR_TRACK_BOTTOM).max(0.0);
+    if max_offset <= f32::EPSILON || track_height <= SETTINGS_SCROLLBAR_MIN_THUMB {
+        return None;
+    }
+    let content_height = viewport_height + max_offset;
+    let thumb_height = (track_height * viewport_height / content_height)
+        .clamp(SETTINGS_SCROLLBAR_MIN_THUMB, track_height);
+    let movable_height = (track_height - thumb_height).max(0.0);
+    let progress = (-offset_y / max_offset).clamp(0.0, 1.0);
+    Some(TaskbarSettingsScrollbarGeometry {
+        track_height,
+        thumb_height,
+        thumb_top: progress * movable_height,
+        progress,
+        max_offset,
+    })
+}
+
+fn taskbar_settings_offset_for_thumb(
+    geometry: TaskbarSettingsScrollbarGeometry,
+    thumb_top: f32,
+) -> f32 {
+    let movable_height = (geometry.track_height - geometry.thumb_height).max(0.0);
+    if movable_height <= f32::EPSILON {
+        return 0.0;
+    }
+    -geometry.max_offset * (thumb_top / movable_height).clamp(0.0, 1.0)
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -847,6 +896,9 @@ pub struct TaskbarSettingsView {
     action: TaskbarSettingsAction,
     dismiss: TaskbarSurfaceDismiss,
     focus: FocusHandle,
+    scroll: ScrollHandle,
+    scrollbar_drag_position: Option<Pixels>,
+    scrollbar_geometry_refreshes: u8,
 }
 
 impl TaskbarSettingsView {
@@ -862,6 +914,9 @@ impl TaskbarSettingsView {
             action,
             dismiss,
             focus: cx.focus_handle(),
+            scroll: ScrollHandle::new(),
+            scrollbar_drag_position: None,
+            scrollbar_geometry_refreshes: 0,
         }
     }
 
@@ -870,6 +925,150 @@ impl TaskbarSettingsView {
             Ok((settings, revision)) => self.model.apply_saved(settings, revision),
             Err(error) => self.model.reject(error),
         }
+    }
+
+    fn render_scrollbar(
+        &mut self,
+        tokens: TaskbarSettingsTokens,
+        zh: bool,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> impl IntoElement + use<> {
+        let dismiss = self.dismiss.clone();
+        let close = div()
+            .id("taskbar-settings-close")
+            .role(gpui::Role::Button)
+            .aria_label(if zh {
+                "關閉工作列設定"
+            } else {
+                "Close Taskbar settings"
+            })
+            .tab_index(0)
+            .absolute()
+            .top(px(-38.0))
+            .right(px(20.0))
+            .w(px(36.0))
+            .h(px(36.0))
+            .rounded(px(6.0))
+            .flex()
+            .items_center()
+            .justify_center()
+            .text_size(px(22.0))
+            .cursor_pointer()
+            .hover(move |style| style.bg(rgb(tokens.border)))
+            .active(move |style| style.bg(rgb(tokens.secondary)))
+            .focus_visible(move |style| style.border_2().border_color(rgb(tokens.focus)))
+            .on_click(cx.listener(move |_, _, window, cx| dismiss(window, cx)))
+            .child("×");
+        let overlay = div()
+            .id("taskbar-settings-fixed-overlay")
+            .absolute()
+            .inset_0()
+            .child(close);
+        let bounds = self.scroll.bounds();
+        let geometry = taskbar_settings_scrollbar_geometry(
+            bounds.size.height.as_f32(),
+            self.scroll.max_offset().y.as_f32(),
+            self.scroll.offset().y.as_f32(),
+        );
+        let Some(geometry) = geometry else {
+            if self.scrollbar_geometry_refreshes < 3 {
+                self.scrollbar_geometry_refreshes += 1;
+                let entity = cx.entity();
+                window.on_next_frame(move |_, cx| cx.notify(entity.entity_id()));
+            }
+            return overlay;
+        };
+        self.scrollbar_geometry_refreshes = 3;
+        let entity = cx.entity();
+        let scroll_handle = self.scroll.clone();
+        let track_origin_y = bounds.origin.y + px(SETTINGS_SCROLLBAR_TRACK_TOP);
+        let thumb_top = px(geometry.thumb_top);
+        let thumb_height = px(geometry.thumb_height);
+        let scrollbar_value = f64::from(geometry.progress * 100.0);
+
+        overlay.child(
+            div()
+                .id("taskbar-settings-scrollbar")
+                .role(gpui::Role::ScrollBar)
+                .aria_label(if zh {
+                    "工作列設定捲軸"
+                } else {
+                    "Taskbar settings scrollbar"
+                })
+                .aria_min_numeric_value(0.0)
+                .aria_max_numeric_value(100.0)
+                .aria_numeric_value(scrollbar_value)
+                .tab_index(0)
+                .absolute()
+                .top(px(SETTINGS_SCROLLBAR_TRACK_TOP))
+                .right(px(4.0))
+                .bottom(px(SETTINGS_SCROLLBAR_TRACK_BOTTOM))
+                .w(px(12.0))
+                .rounded_full()
+                .bg(rgb(tokens.border))
+                .child(
+                    div()
+                        .id("taskbar-settings-scrollbar-thumb")
+                        .absolute()
+                        .top(thumb_top)
+                        .left(px(2.0))
+                        .right(px(2.0))
+                        .h(thumb_height)
+                        .rounded_full()
+                        .cursor_pointer()
+                        .bg(rgb(tokens.secondary))
+                        .hover(move |style| style.bg(rgb(tokens.foreground)))
+                        .child(
+                            canvas(
+                                |_, _, _| (),
+                                move |thumb_bounds, _, window, _| {
+                                    window.on_mouse_event({
+                                        let entity = entity.clone();
+                                        move |event: &MouseDownEvent, _, _, cx| {
+                                            if thumb_bounds.contains(&event.position) {
+                                                entity.update(cx, |this, _| {
+                                                    this.scrollbar_drag_position = Some(
+                                                        event.position.y - thumb_bounds.origin.y,
+                                                    );
+                                                });
+                                            }
+                                        }
+                                    });
+                                    window.on_mouse_event({
+                                        let entity = entity.clone();
+                                        move |_: &MouseUpEvent, _, _, cx| {
+                                            entity.update(cx, |this, _| {
+                                                this.scrollbar_drag_position = None;
+                                            });
+                                        }
+                                    });
+                                    window.on_mouse_event(
+                                        move |event: &MouseMoveEvent, _, _, cx| {
+                                            if !event.dragging() {
+                                                return;
+                                            }
+                                            let Some(drag_position) =
+                                                entity.read(cx).scrollbar_drag_position
+                                            else {
+                                                return;
+                                            };
+                                            let thumb_top =
+                                                event.position.y - track_origin_y - drag_position;
+                                            let offset_y = taskbar_settings_offset_for_thumb(
+                                                geometry,
+                                                thumb_top.as_f32(),
+                                            );
+                                            scroll_handle.set_offset(point(px(0.0), px(offset_y)));
+                                            cx.notify(entity.entity_id());
+                                        },
+                                    );
+                                },
+                            )
+                            .size_full(),
+                        ),
+                ),
+        )
     }
 }
 
@@ -885,7 +1084,8 @@ impl Render for TaskbarSettingsView {
         let focus = tokens.focus;
         let layout = TaskbarSettingsLayout::for_width(window.bounds().size.width.as_f32());
         let zh = traditional_chinese();
-        let dismiss = self.dismiss.clone();
+        let dismiss_for_key = self.dismiss.clone();
+        let scroll_for_key = self.scroll.clone();
         let sections = [
             (
                 TaskbarSettingsSection::Items,
@@ -953,6 +1153,7 @@ impl Render for TaskbarSettingsView {
                 },
             ),
         ];
+        let scrollbar = self.render_scrollbar(tokens, zh, window, cx);
         div()
             .id("owned-taskbar-settings")
             .role(gpui::Role::Dialog)
@@ -964,43 +1165,89 @@ impl Render for TaskbarSettingsView {
             .top_0()
             .w_full()
             .h_full()
-            .p(px(layout.outer_padding))
-            .pb(px(layout.bottom_padding))
+            .relative()
             .bg(rgb(background))
             .text_color(rgb(foreground))
-            .overflow_x_hidden()
-            .overflow_y_scroll()
+            .overflow_hidden()
+            .flex()
+            .flex_col()
             .on_key_down(cx.listener(move |this, event: &gpui::KeyDownEvent, window, cx| {
                 match event.keystroke.key.as_str() {
                     "up" => this.model.move_focus(-1),
                     "down" => this.model.move_focus(1),
+                    "pageup" => {
+                        let viewport = scroll_for_key.bounds().size.height.as_f32();
+                        let next = (scroll_for_key.offset().y.as_f32() + viewport * 0.8).min(0.0);
+                        scroll_for_key.set_offset(point(px(0.0), px(next)));
+                    }
+                    "pagedown" => {
+                        let viewport = scroll_for_key.bounds().size.height.as_f32();
+                        let maximum = scroll_for_key.max_offset().y.as_f32();
+                        let next = (scroll_for_key.offset().y.as_f32() - viewport * 0.8)
+                            .max(-maximum);
+                        scroll_for_key.set_offset(point(px(0.0), px(next)));
+                    }
+                    "home" => scroll_for_key.set_offset(point(px(0.0), px(0.0))),
+                    "end" => scroll_for_key.set_offset(point(
+                        px(0.0),
+                        -scroll_for_key.max_offset().y,
+                    )),
                     "enter" | "space" => {
                         if let Some(row) = this.model.rows().get(this.model.focused_row()).cloned()
                             && let Some(effect) = this.model.activate(row.id)
                         { this.apply(effect); }
                     }
-                    "escape" => dismiss(window, cx),
+                    "escape" => dismiss_for_key(window, cx),
                     _ => return,
                 }
                 cx.stop_propagation();
                 cx.notify();
             }))
             .child(
-                div().w_full().min_w_0().flex().justify_center().child(
-                div().w(px(layout.content_width)).min_w_0().flex().flex_col().gap(px(16.))
-                    .child(div().text_size(px(14.)).text_color(rgb(secondary)).child(if zh { "個人化  ›  工作列" } else { "Personalization  ›  Taskbar" }))
-                    .child(div().text_size(px(28.)).child(if zh { "工作列" } else { "Taskbar" }))
+                div()
+                    .id("taskbar-settings-window-chrome")
+                    .w_full()
+                    .h(px(40.0))
+                    .flex_none(),
+            )
+            .child(
+                div()
+                    .id("taskbar-settings-scroll-body")
+                    .relative()
+                    .w_full()
+                    .flex_1()
+                    .min_h_0()
                     .child(
-                        div().p(px(16.)).rounded(px(tokens.card_radius as f32)).border_1().border_color(rgb(border)).bg(rgb(card))
+                        div()
+                            .id("taskbar-settings-scroll-viewport")
+                            .size_full()
+                            .p(px(layout.outer_padding))
+                            .pt(px(0.0))
+                            .pr(px(layout.outer_padding + 20.0))
+                            .pb(px(layout.bottom_padding))
+                            .scrollbar_width(px(12.0))
+                            .overflow_x_hidden()
+                            .overflow_y_scroll()
+                            .track_scroll(&self.scroll)
+                            .min_w_0()
+                            .flex()
+                            .flex_col()
+                            .items_center()
+                            .child(
+                    div().w(px(layout.content_width)).min_w_0().flex_none().flex().flex_col().gap(px(16.))
+                    .child(div().flex_none().text_size(px(14.)).text_color(rgb(secondary)).child(if zh { "個人化  ›  工作列" } else { "Personalization  ›  Taskbar" }))
+                    .child(div().flex_none().text_size(px(28.)).child(if zh { "工作列" } else { "Taskbar" }))
+                    .child(
+                        div().flex_none().p(px(16.)).rounded(px(tokens.card_radius as f32)).border_1().border_color(rgb(border)).bg(rgb(card))
                             .flex().items_center().gap(px(12.)).child("ⓘ").child(div().flex_1().min_w_0().whitespace_normal().child(if zh { "部分 Windows 內建介面仍待 SuperDesktop 完整接管。" } else { "Some Windows inbox surfaces are unavailable until SuperDesktop owns them." })),
                     )
                     .when_some(self.model.error().map(str::to_owned), |element, error| {
-                        element.child(div().id("taskbar-settings-error").role(gpui::Role::Alert).aria_label(error.clone()).p(px(12.)).rounded(px(8.)).bg(rgb(0x5c1a1a)).text_color(rgb(0xffffff)).child(error))
+                        element.child(div().id("taskbar-settings-error").role(gpui::Role::Alert).aria_label(error.clone()).flex_none().p(px(12.)).rounded(px(8.)).bg(rgb(0x5c1a1a)).text_color(rgb(0xffffff)).child(error))
                     })
                     .children(sections.into_iter().map(|(section, title, description)| {
                         let rows = self.model.rows().into_iter().filter(|row| row.section == section).collect::<Vec<_>>();
                         let expanded = self.model.expanded(section);
-                        div().w_full().min_w_0().rounded(px(tokens.card_radius as f32)).border_1().border_color(rgb(border)).bg(rgb(card)).overflow_hidden().flex().flex_col()
+                        div().w_full().min_w_0().flex_none().rounded(px(tokens.card_radius as f32)).border_1().border_color(rgb(border)).bg(rgb(card)).overflow_hidden().flex().flex_col()
                             .child(
                                 div().id(format!("taskbar-settings-section-{section:?}")).role(gpui::Role::Button).aria_label(format!("{title}, {}", if expanded { "expanded" } else { "collapsed" })).tab_index(0)
                                     .h(px(tokens.section_height as f32)).px(px(16.)).flex().items_center().cursor_pointer()
@@ -1032,6 +1279,8 @@ impl Render for TaskbarSettingsView {
                             })))
                     }))
                 )
+                    )
+                    .child(scrollbar),
             )
     }
 }
@@ -1224,6 +1473,57 @@ mod tests {
         assert_eq!(normal.content_width, 1000.0);
         let wide = TaskbarSettingsLayout::for_width(2200.0);
         assert_eq!(wide.content_width, 1000.0);
+    }
+
+    #[test]
+    fn settings_scrollbar_geometry_is_bounded_and_handles_fit_without_division() {
+        assert_eq!(taskbar_settings_scrollbar_geometry(860.0, 0.0, 0.0), None);
+        assert_eq!(taskbar_settings_scrollbar_geometry(48.0, 200.0, 0.0), None);
+
+        let top = taskbar_settings_scrollbar_geometry(860.0, 1_000.0, 0.0).unwrap();
+        assert_eq!(top.progress, 0.0);
+        assert_eq!(top.thumb_top, 0.0);
+        assert!(top.thumb_height >= SETTINGS_SCROLLBAR_MIN_THUMB);
+        assert!(top.thumb_height <= top.track_height);
+
+        let middle = taskbar_settings_scrollbar_geometry(860.0, 1_000.0, -500.0).unwrap();
+        assert!((middle.progress - 0.5).abs() < f32::EPSILON);
+        assert!(middle.thumb_top > 0.0);
+        assert!(middle.thumb_top < middle.track_height - middle.thumb_height);
+
+        let bottom = taskbar_settings_scrollbar_geometry(860.0, 1_000.0, -2_000.0).unwrap();
+        assert_eq!(bottom.progress, 1.0);
+        assert_eq!(bottom.thumb_top, bottom.track_height - bottom.thumb_height);
+        assert_eq!(taskbar_settings_offset_for_thumb(bottom, -100.0), 0.0);
+        assert_eq!(
+            taskbar_settings_offset_for_thumb(bottom, bottom.track_height * 2.0),
+            -1_000.0
+        );
+    }
+
+    #[test]
+    fn settings_window_chrome_source_tracks_scroll_and_uses_shared_dismissal() {
+        let source = include_str!("taskbar_settings.rs");
+        let production = source.split("#[cfg(test)]").next().unwrap_or(source);
+        for required in [
+            "scroll: ScrollHandle",
+            "scrollbar_drag_position: Option<Pixels>",
+            ".track_scroll(&self.scroll)",
+            "taskbar-settings-scrollbar",
+            "taskbar-settings-scrollbar-thumb",
+            "Role::ScrollBar",
+            ".aria_min_numeric_value(0.0)",
+            ".aria_max_numeric_value(100.0)",
+            "taskbar-settings-close",
+            "Role::Button",
+            "taskbar-settings-fixed-overlay",
+            "dismiss(window, cx)",
+            ".scrollbar_width(px(12.0))",
+            "taskbar_settings_offset_for_thumb",
+        ] {
+            assert!(production.contains(required), "missing {required}");
+        }
+        assert!(!production.contains("TitlebarOptions"));
     }
 
     #[test]

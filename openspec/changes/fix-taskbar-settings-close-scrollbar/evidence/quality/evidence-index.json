@@ -1,0 +1,23 @@
+{
+  "schema": "taskbar-settings-chrome-quality/v1",
+  "change": "fix-taskbar-settings-close-scrollbar",
+  "recorded_at": "2026-08-19T16:11:27+08:00",
+  "result": "passed",
+  "records": {
+    "format": {"command": "cargo fmt --all -- --check", "exit_status": 0, "log": "fmt.log", "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"},
+    "check": {"command": "cargo check -p taskbar-ui -p superdesktop-app --all-targets --locked", "exit_status": 0, "log": "check.log", "log_sha256": "1992409637debd7076fd4ff4610b5bfb6ca2a558689c33ee7f84e9a7aba9c15a"},
+    "tests": {"command": "cargo test -p taskbar-ui -p superdesktop-app --locked --no-fail-fast", "actual": "116 unit tests passed and all doc-test targets passed.", "exit_status": 0, "log": "tests.log", "log_sha256": "53597f87f88893aa9ca14a34d0d212018591b1ee611eee7cf074e9e66764fa83"},
+    "clippy": {"command": "cargo clippy -p taskbar-ui -p superdesktop-app --all-targets --locked -- -D warnings", "exit_status": 0, "log": "clippy.log", "log_sha256": "e6e9f47dbce5dd78d186d4abcfc4a5bf04ea458d431150d38c00255c7add6a1f"}
+  },
+  "task_links": [
+    {"task_id": "1.1", "record": "tests", "subcheck": "scrollbar-geometry"},
+    {"task_id": "1.2", "record": "tests", "subcheck": "tracked-drag-state"},
+    {"task_id": "1.3", "record": "tests", "subcheck": "close-source-contract"},
+    {"task_id": "1.4", "record": "tests", "subcheck": "scrollbar-source-contract"},
+    {"task_id": "2.1", "record": "tests", "subcheck": "focused-regressions"},
+    {"task_id": "2.3", "record": "format"},
+    {"task_id": "2.3", "record": "check"},
+    {"task_id": "2.3", "record": "tests"},
+    {"task_id": "2.3", "record": "clippy"}
+  ]
+}
