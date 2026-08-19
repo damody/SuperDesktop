@@ -1,0 +1,89 @@
+{
+  "schema": "superdesktop-utit-run/v1",
+  "run_id": "focused",
+  "suite": "shell-parity",
+  "partial": true,
+  "started_unix_ms": 1787121824742,
+  "finished_unix_ms": 1787121839637,
+  "workspace": "\\\\?\\D:\\SuperExplorer\\SuperDesktop",
+  "host": {
+    "windows_build": 26200,
+    "architecture": "AMD64",
+    "interactive": true,
+    "monitor_count": 1,
+    "explorer_running": true,
+    "workspace_revision": "f2f8104273712c81c1b8550d0b2737f65fb757ff",
+    "tools": [
+      "cargo",
+      "certutil",
+      "git",
+      "openspec",
+      "powershell"
+    ]
+  },
+  "counts": {
+    "selected": 1,
+    "passed": 1,
+    "failed": 0,
+    "blocked": 0,
+    "skipped": 0,
+    "not_applicable": 0
+  },
+  "decision": "partial",
+  "cases": [
+    {
+      "id": "gui-start",
+      "title": "Owned Start home and all apps",
+      "state": "passed",
+      "reason": "passed",
+      "duration_ms": 14547,
+      "exit_code": 0,
+      "timed_out": false,
+      "argv": [
+        "powershell.exe",
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "D:\\SuperExplorer\\SuperDesktop\\scripts\\capture-start-production.ps1",
+        "-Workspace",
+        "D:\\SuperExplorer\\SuperDesktop",
+        "-OutputPath",
+        "D:\\SuperExplorer\\SuperDesktop\\openspec\\changes\\align-start-footer-windows11-parity\\evidence\\focused\\cases\\gui-start/start/report.json",
+        "-HomeScreenshotPath",
+        "D:\\SuperExplorer\\SuperDesktop\\openspec\\changes\\align-start-footer-windows11-parity\\evidence\\focused\\cases\\gui-start/start/home.png",
+        "-AllAppsScreenshotPath",
+        "D:\\SuperExplorer\\SuperDesktop\\openspec\\changes\\align-start-footer-windows11-parity\\evidence\\focused\\cases\\gui-start/start/all-apps.png",
+        "-PowerScreenshotPath",
+        "D:\\SuperExplorer\\SuperDesktop\\openspec\\changes\\align-start-footer-windows11-parity\\evidence\\focused\\cases\\gui-start/start/power.png",
+        "-Locale",
+        "zh-TW",
+        "-SuppressExplorer"
+      ],
+      "stdout": {
+        "path": "cases/gui-start/stdout.log",
+        "bytes": 3078,
+        "sha256": "07a52d7bc9b2d2260bab943c6efae132ec001143395056e0289b0f3252335290"
+      },
+      "stderr": null,
+      "artifacts": [
+        {
+          "path": "cases/gui-start/start/report.json",
+          "bytes": 3077,
+          "sha256": "4e99c3cb0f4495a9284015a6156d92734fb7dfdd891f7f501759b72296a639fc"
+        },
+        {
+          "path": "cases/gui-start/start/home.png",
+          "bytes": 127360,
+          "sha256": "3c407b96357ec33430c00ed6c7aa5e76b87d1fad35b8824ff077b15671764909"
+        },
+        {
+          "path": "cases/gui-start/start/all-apps.png",
+          "bytes": 136003,
+          "sha256": "9b1405a57fe326df7be5f329f78d92b2bdb185389afddb93a5a48c7832a04f06"
+        }
+      ],
+      "recovery_verified": true
+    }
+  ]
+}

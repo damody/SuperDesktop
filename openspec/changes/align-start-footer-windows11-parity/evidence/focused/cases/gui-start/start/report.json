@@ -1,0 +1,74 @@
+{
+    "schema":  "windows11-owned-start-production/v3",
+    "result":  "passed",
+    "app_sha256":  "8BF31F4E5510ADE5B18C31CA2B02FA01650C7525A4C5AC38296388B4FB706929",
+    "owned_start_pid":  48656,
+    "taskbar_pid":  48656,
+    "system_start_process_ids_before":  [
+                                            35304,
+                                            50560
+                                        ],
+    "system_start_process_ids_after":  [
+                                           35304,
+                                           50560
+                                       ],
+    "new_system_start_process_ids":  [
+
+                                     ],
+    "explorer_absent_during_capture":  true,
+    "explorer_recovered":  true,
+    "locale":  "zh-TW",
+    "home_sections":  [
+                          "已釘選",
+                          "建議",
+                          "電源"
+                      ],
+    "power_collapsed":  true,
+    "all_apps_count":  75,
+    "footer":  {
+                   "action_count":  1,
+                   "settings_absent":  true,
+                   "power_bounds":  {
+                                        "left":  2365,
+                                        "top":  1883,
+                                        "width":  70,
+                                        "height":  70
+                                    },
+                   "power_width_dip":  40,
+                   "power_height_dip":  40,
+                   "power_right_inset_dip":  32.571428571428569
+               },
+    "centered_home_bounds":  {
+                                 "left":  1348,
+                                 "top":  733,
+                                 "width":  1144,
+                                 "height":  1272
+                             },
+    "taskbar_bounds":  {
+                           "left":  -12,
+                           "top":  2020,
+                           "right":  3852,
+                           "bottom":  2172
+                       },
+    "monitor_bounds":  {
+                           "left":  0,
+                           "top":  0,
+                           "right":  3840,
+                           "bottom":  2160
+                       },
+    "geometry":  {
+                     "dpi":  168,
+                     "scale":  1.75,
+                     "width_dip":  653.71428571428567,
+                     "height_dip":  726.85714285714289,
+                     "taskbar_gap_dip":  8.5714285714285712,
+                     "overlap_physical_px":  -15,
+                     "contained":  true
+                 },
+    "home_screenshot":  "home.png",
+    "home_sha256":  "3C407B96357EC33430C00ED6C7AA5E76B87D1FAD35B8824FF077B15671764909",
+    "all_apps_screenshot":  "all-apps.png",
+    "all_apps_sha256":  "9B1405A57FE326DF7BE5F329F78D92B2BDB185389AFDDB93A5A48C7832A04F06",
+    "power_screenshot":  "power.png",
+    "power_sha256":  "182557AB3898501D5C603D0538E9F5B9298001DE1959B74247D2F9D2C0A692F6"
+}
