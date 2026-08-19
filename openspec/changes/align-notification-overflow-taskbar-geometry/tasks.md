@@ -86,6 +86,6 @@
 **Gate／Evidence：** `G-PACKAGE`, `G-TRACE`.
 **完成門檻：** 18/18, verified installers, clean current gitlink, unarchived.
 
-- [ ] 3.2.1 Commit implementation and update parent gitlink.
-- [ ] 3.2.2 Build both installers `--no-launch` and verify hashes.
-- [ ] 3.2.3 Create 18 unique records, revalidate and commit without archive.
+- [x] 3.2.1 Commit implementation and update parent gitlink.
+- [x] 3.2.2 Build both installers `--no-launch` and verify hashes.
+- [x] 3.2.3 Create 18 unique records, revalidate and commit without archive.
