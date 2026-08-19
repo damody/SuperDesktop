@@ -9,5 +9,6 @@ license.workspace = true
 workspace = true
 
 [dependencies]
+platform-win = { path = "../platform-win" }
 serde.workspace = true
 serde_json.workspace = true

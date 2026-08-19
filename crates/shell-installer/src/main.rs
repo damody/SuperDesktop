@@ -26,6 +26,12 @@ fn main() -> ExitCode {
     {
         return run_quiesce(&raw_arguments);
     }
+    if raw_arguments
+        .first()
+        .is_some_and(|argument| argument == "close-explorer")
+    {
+        return run_close_explorer(&raw_arguments);
+    }
     let requested_operation = raw_arguments.first().cloned();
     match run(raw_arguments.into_iter()) {
         Ok(()) => ExitCode::SUCCESS,
@@ -53,6 +59,44 @@ fn main() -> ExitCode {
                 ),
             }
             ExitCode::from(code)
+        }
+    }
+}
+
+fn run_close_explorer(arguments: &[String]) -> ExitCode {
+    if arguments != ["close-explorer"] {
+        println!(
+            "{}",
+            json!({
+                "disposition": "failed",
+                "operation": "close-explorer",
+                "error": "usage: shell-installer close-explorer"
+            })
+        );
+        return ExitCode::from(2);
+    }
+    match platform_win::common::explorer_recovery::shutdown_trusted_explorer_shell() {
+        Ok(outcome) => {
+            println!(
+                "{}",
+                json!({
+                    "disposition": "applied",
+                    "operation": "close-explorer",
+                    "outcome": format!("{outcome:?}")
+                })
+            );
+            ExitCode::SUCCESS
+        }
+        Err(error) => {
+            println!(
+                "{}",
+                json!({
+                    "disposition": "failed",
+                    "operation": "close-explorer",
+                    "error": error
+                })
+            );
+            ExitCode::from(4)
         }
     }
 }

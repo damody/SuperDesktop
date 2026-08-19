@@ -75,6 +75,13 @@ pub fn run_product_for(
         }
         shell_active = false;
     }
+    if shell_active && let Err(error) = close_explorer_with_uac() {
+        eprintln!("SuperDesktop error [explorer-uac]: {error}");
+        if let Err(restore_error) = restore_default_explorer_registration() {
+            eprintln!("SuperDesktop error [shell-registration-rollback]: {restore_error}");
+        }
+        shell_active = false;
+    }
     let effective_request = ExecutionRequest {
         shell: shell_active,
     };
@@ -85,6 +92,26 @@ pub fn run_product_for(
     surface_runtime::run(shell_active, duration)?;
     if let Some(owner) = owner {
         owner.release()?;
+    }
+    Ok(())
+}
+
+fn close_explorer_with_uac() -> Result<(), &'static str> {
+    let executable = std::env::current_exe().map_err(|_| "app-current-executable")?;
+    let helper = executable
+        .parent()
+        .ok_or("app-no-binary-directory")?
+        .join("shell-installer.exe");
+    let exit_code = platform_win::common::elevation::run_elevated_helper(
+        &helper,
+        "close-explorer",
+        std::time::Duration::from_secs(30),
+    )?;
+    if exit_code != 0 {
+        return Err("elevated-explorer-helper-failed");
+    }
+    if platform_win::common::explorer_recovery::trusted_explorer_shell_present()? {
+        return Err("elevated-explorer-shutdown-not-observed");
     }
     Ok(())
 }
@@ -241,8 +268,17 @@ mod shell_registration_tests {
         let registration = lib
             .find("ensure_current_user_shell_registration()")
             .expect("shell registration");
-        let guardian = lib.find("arm_recovery_guardian()?").expect("guardian arm");
+        let guardian = lib
+            .find("if shell_active && let Err(error) = arm_recovery_guardian()")
+            .expect("guardian arm");
+        let uac = lib
+            .find("if shell_active && let Err(error) = close_explorer_with_uac()")
+            .expect("UAC close");
         assert!(registration < guardian);
+        assert!(guardian < uac);
+        assert!(lib.contains("run_elevated_helper("));
+        assert!(lib.contains("\"close-explorer\""));
+        assert!(lib.contains("elevated-explorer-shutdown-not-observed"));
         assert!(lib.contains("audit.after != plan.desired"));
         assert!(lib.contains("shell_active = false"));
         assert!(lib.contains("restore_default_explorer_registration"));

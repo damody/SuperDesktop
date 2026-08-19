@@ -3001,25 +3001,6 @@ fn superexplorer_executable() -> Option<PathBuf> {
 
 pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> {
     enable_per_monitor_v2()?;
-    if shell {
-        match platform_win::common::explorer_recovery::shutdown_trusted_explorer_shell() {
-            Ok(platform_win::common::explorer_recovery::ShellShutdownOutcome::AlreadyAbsent) => {
-                trace_action("explorer-takeover:already-absent");
-            }
-            Ok(
-                platform_win::common::explorer_recovery::ShellShutdownOutcome::ClosedGracefully {
-                    ..
-                },
-            ) => trace_action("explorer-takeover:closed-gracefully"),
-            Ok(platform_win::common::explorer_recovery::ShellShutdownOutcome::Terminated {
-                ..
-            }) => trace_action("explorer-takeover:terminated"),
-            Err(error) => {
-                report_error("explorer-takeover", error);
-                return Err("explorer-takeover-failed");
-            }
-        }
-    }
     let shell_hotkeys = Rc::new(if shell {
         match platform_win::common::shell_hotkey::ShellHotkeys::start() {
             Ok(hotkey) => {
@@ -6721,7 +6702,6 @@ mod live_parity_tests {
             "launch_task_manager()",
             "TaskbarContextCommand::ToggleLockTaskbar",
             "TaskbarContextCommand::ReturnToDefaultExplorer",
-            "shutdown_trusted_explorer_shell()",
             "recover_explorer_shell()",
             "explorer-return:verified",
             "taskbar:lock-toggled",
