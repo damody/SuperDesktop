@@ -378,7 +378,11 @@ unsafe fn decode_copydata(
         return Err("notify-icon-copydata-size");
     }
     let bytes = unsafe { std::slice::from_raw_parts(copy.lpData.cast::<u8>(), length) };
-    let embedded_message = u32::from_ne_bytes(bytes[4..8].try_into().unwrap());
+    let embedded_message = u32::from_ne_bytes(
+        bytes[4..8]
+            .try_into()
+            .map_err(|_| "notify-icon-copydata-truncated")?,
+    );
     let message = if copy.dwData == COPYDATA_SIGNATURE {
         embedded_message
     } else {
@@ -393,7 +397,10 @@ unsafe fn decode_copydata(
         0
     };
     let packed_size = (native_offset == 8)
-        .then(|| u32::from_ne_bytes(bytes[8..12].try_into().unwrap()))
+        .then(|| bytes.get(8..12))
+        .flatten()
+        .and_then(|value| value.try_into().ok())
+        .map(u32::from_ne_bytes)
         .filter(|size| {
             matches!(
                 *size,
@@ -421,7 +428,7 @@ unsafe fn decode_copydata(
                     .get(offset..offset + 2)
                     .ok_or("notify-icon-copydata-truncated")?
                     .try_into()
-                    .unwrap(),
+                    .map_err(|_| "notify-icon-copydata-truncated")?,
             ));
         }
         let state = if cb_size >= PACKED_V2_SIZE {
@@ -436,7 +443,12 @@ unsafe fn decode_copydata(
                     bytes
                         .get(offset..offset + 2)
                         .ok_or("notify-icon-copydata-truncated")
-                        .map(|value| u16::from_ne_bytes(value.try_into().unwrap()))
+                        .and_then(|value| {
+                            value
+                                .try_into()
+                                .map(u16::from_ne_bytes)
+                                .map_err(|_| "notify-icon-copydata-truncated")
+                        })
                 })
                 .collect()
         };
@@ -457,7 +469,7 @@ unsafe fn decode_copydata(
                     .get(944..960)
                     .ok_or("notify-icon-copydata-truncated")?
                     .try_into()
-                    .unwrap(),
+                    .map_err(|_| "notify-icon-copydata-truncated")?,
             )
         } else {
             None

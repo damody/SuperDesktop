@@ -1,5 +1,4 @@
 use std::collections::{BTreeMap, BTreeSet};
-use std::fmt::Write;
 
 use crate::{
     ActiveRequest, ApplicationId, ApplicationState, BridgeTerminal, Diagnostic, DiagnosticKind,
@@ -328,12 +327,15 @@ fn apply_desktop_snapshot(
     {
         transition.state.selection.focused = None;
     }
-    transition
-        .state
-        .requests
-        .get_mut(&request_id)
-        .unwrap()
-        .terminal = Some(TerminalKind::Succeeded);
+    if let Some(request) = transition.state.requests.get_mut(&request_id) {
+        request.terminal = Some(TerminalKind::Succeeded);
+    } else {
+        reject(
+            transition,
+            DiagnosticKind::RejectedTransition,
+            Some(request_id),
+        );
+    }
 }
 
 fn apply_window_snapshot(
@@ -352,12 +354,15 @@ fn apply_window_snapshot(
     }
     transition.state.windows = windows.clone();
     rebuild_applications(&mut transition.state);
-    transition
-        .state
-        .requests
-        .get_mut(&request_id)
-        .unwrap()
-        .terminal = Some(TerminalKind::Succeeded);
+    if let Some(request) = transition.state.requests.get_mut(&request_id) {
+        request.terminal = Some(TerminalKind::Succeeded);
+    } else {
+        reject(
+            transition,
+            DiagnosticKind::RejectedTransition,
+            Some(request_id),
+        );
+    }
 }
 
 fn rebuild_applications(state: &mut ShellState) {
@@ -418,8 +423,7 @@ fn reject(transition: &mut Transition, kind: DiagnosticKind, request_id: Option<
 
 pub fn stable_state_hash(state: &ShellState) -> u64 {
     let mut canonical = String::new();
-    write!(
-        canonical,
+    canonical.push_str(&format!(
         "{:?}|{:?}|{:?}|{}|{}|{}|",
         state.mode,
         state.lifecycle,
@@ -427,35 +431,30 @@ pub fn stable_state_hash(state: &ShellState) -> u64 {
         state.generation.0,
         state.settings_revision,
         state.next_request_id
-    )
-    .expect("writing to a string cannot fail");
+    ));
     for id in state.monitors.keys() {
-        write!(canonical, "m:{id}|").unwrap();
+        canonical.push_str(&format!("m:{id}|"));
     }
     for id in &state.desktop_items {
-        write!(canonical, "d:{id}|").unwrap();
+        canonical.push_str(&format!("d:{id}|"));
     }
     for (id, window) in &state.windows {
-        write!(
-            canonical,
+        canonical.push_str(&format!(
             "w:{id}:{}:{}:{}:{}|",
             window.application_id, window.order, window.active, window.minimized
-        )
-        .unwrap();
+        ));
     }
     for (id, request) in &state.requests {
-        write!(
-            canonical,
+        canonical.push_str(&format!(
             "r:{id}:{:?}:{}:{:?}:{}|",
             request.kind, request.generation.0, request.terminal, request.cancelled
-        )
-        .unwrap();
+        ));
     }
     for (id, terminal) in &state.terminals {
-        write!(canonical, "t:{id}:{terminal:?}|").unwrap();
+        canonical.push_str(&format!("t:{id}:{terminal:?}|"));
     }
     for diagnostic in &state.diagnostics {
-        write!(canonical, "x:{:?}|", diagnostic.kind).unwrap();
+        canonical.push_str(&format!("x:{:?}|", diagnostic.kind));
     }
     const OFFSET: u64 = 0xcbf2_9ce4_8422_2325;
     const PRIME: u64 = 0x0000_0100_0000_01b3;

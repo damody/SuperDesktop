@@ -268,6 +268,13 @@ impl ProductionTransferRuntime {
 }
 
 fn trace_action(action: &str) {
+    if !action.starts_with("error:")
+        && ["error", "failed", "rejected", "unavailable", "exhausted"]
+            .iter()
+            .any(|marker| action.contains(marker))
+    {
+        eprintln!("SuperDesktop error: {action}");
+    }
     let Some(path) = std::env::var_os("SUPERDESKTOP_ACTION_TRACE") else {
         return;
     };
@@ -282,6 +289,22 @@ fn trace_action(action: &str) {
             .map(|duration| duration.as_millis())
             .unwrap_or_default();
         let _ = writeln!(file, "{millis} {action}");
+    }
+}
+
+fn report_error(context: &str, error: impl std::fmt::Display) {
+    eprintln!("SuperDesktop error [{context}]: {error}");
+    trace_action(&format!("error:{context}:{error}"));
+}
+
+fn guard_ui_action(context: &str, action: impl FnOnce()) {
+    if let Err(payload) = std::panic::catch_unwind(std::panic::AssertUnwindSafe(action)) {
+        let message = payload
+            .downcast_ref::<&str>()
+            .copied()
+            .or_else(|| payload.downcast_ref::<String>().map(String::as_str))
+            .unwrap_or("non-string panic payload");
+        report_error(context, format!("panic contained: {message}"));
     }
 }
 
@@ -372,7 +395,7 @@ fn reconcile_desktop_item_positions(
             .copied()
             .any(|other| desktop_items_overlap(candidate, other))
         {
-            (0..)
+            let available = (0..)
                 .map(|slot| {
                     (
                         DESKTOP_GRID_ORIGIN
@@ -386,8 +409,17 @@ fn reconcile_desktop_item_positions(
                         .iter()
                         .copied()
                         .any(|other| desktop_items_overlap(*candidate, other))
-                })
-                .expect("desktop grid has an unbounded number of columns")
+                });
+            match available {
+                Some(position) => position,
+                None => {
+                    report_error(
+                        "desktop:grid",
+                        "no free desktop grid position; retaining the default position",
+                    );
+                    default
+                }
+            }
         } else {
             candidate
         };
@@ -2790,6 +2822,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
             ));
             let mut desktop_handles = Vec::new();
             let mut taskbar_handles = Vec::new();
+            let mut taskbar_monitor_names = Vec::new();
             let mut taskbar_auto_hide = Vec::<TaskbarAutoHideRuntime>::new();
             let mut system_flyout_windows = Vec::new();
             let leases = Rc::new(RefCell::new(Vec::<ControlledShellCapability>::new()));
@@ -3154,6 +3187,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                 let worker_rows = Arc::clone(&auto_hide_fast_rows);
                 let worker_stop = Arc::clone(&auto_hide_worker_stop);
                 let worker_handle_slot = Rc::clone(&auto_hide_worker_handle);
+                let taskbar_monitor_name = taskbar_monitor.device_name.clone();
                 let taskbar = cx.open_window(
                     options(
                         &monitor,
@@ -3356,8 +3390,10 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                         locked: production_taskbar_settings.locked,
                         callbacks: Some(TaskbarCallbacks {
                             start: Rc::new(move |app| {
+                                guard_ui_action("start", || {
                                 trace_action("start");
-                                if let Some(existing) = *start_window_for_taskbar.borrow() {
+                                let existing_start = *start_window_for_taskbar.borrow();
+                                if let Some(existing) = existing_start {
                                     if existing
                                         .update(app, |_, window, _| window.remove_window())
                                         .is_ok()
@@ -3448,14 +3484,16 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                         *start_window_for_taskbar.borrow_mut() = Some(handle);
                                         trace_action("start:owned-opened");
                                     }
-                                    Err(_) => trace_action("start:owned-open-failed"),
+                                    Err(error) => report_error("start:open", error),
                                 }
+                                });
                             }),
                             show_desktop: Rc::new(move |_| {
                                 run_show_desktop_cycle(&show_desktop_session_for_taskbar)
                             }),
                             task_view: Rc::new(move |app| {
-                                if let Some(existing) = *task_view_window_for_taskbar.borrow() {
+                                let existing_task_view = *task_view_window_for_taskbar.borrow();
+                                if let Some(existing) = existing_task_view {
                                     if existing
                                         .update(app, |_, window, _| window.remove_window())
                                         .is_ok()
@@ -3546,7 +3584,8 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                 }
                             }),
                             task_context: Rc::new(move |stable_id, app| {
-                                if let Some(existing) = *jump_list_window_for_taskbar.borrow() {
+                                let existing_jump_list = *jump_list_window_for_taskbar.borrow();
+                                if let Some(existing) = existing_jump_list {
                                     if existing
                                         .update(app, |_, window, _| window.remove_window())
                                         .is_ok()
@@ -3675,7 +3714,8 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                 }
                             }),
                             taskbar_context: Rc::new(move |anchor, app| {
-                                if let Some(existing) = *context_window_for_taskbar.borrow() {
+                                let existing_context = *context_window_for_taskbar.borrow();
+                                if let Some(existing) = existing_context {
                                     let _ = existing.update(app, |_, window, _| window.remove_window());
                                     *context_window_for_taskbar.borrow_mut() = None;
                                 }
@@ -3752,7 +3792,8 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                                         });
                                                     }
                                                     TaskbarContextCommand::OpenTaskbarSettings => {
-                                                        if let Some(existing) = *settings_slot_for_action.borrow() {
+                                                        let existing_settings = *settings_slot_for_action.borrow();
+                                                        if let Some(existing) = existing_settings {
                                                             if existing.update(app, |_, window, _| window.activate_window()).is_ok() {
                                                                 trace_action("taskbar:settings-activated");
                                                                 return;
@@ -4158,6 +4199,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                     stop_reveal_worker: auto_hide_worker_stop,
                     reveal_worker: auto_hide_worker_handle,
                 });
+                taskbar_monitor_names.push(taskbar_monitor_name);
                 taskbar_handles.push(taskbar);
             }
             if let Some(error) = init_error.borrow_mut().take() {
@@ -4267,6 +4309,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
             }
 
             let refresh_handles = taskbar_handles.clone();
+            let refresh_monitor_names = taskbar_monitor_names.clone();
             if !refresh_handles.is_empty() && !state_matrix {
                 let refresh_background = cx.background_executor().clone();
                 let refresh_foreground = cx.foreground_executor().clone();
@@ -4287,9 +4330,52 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                     .spawn(async move {
                         let auto_hide_epoch = Instant::now();
                         let mut notification_tick = 0u8;
+                        let mut last_monitor_geometries =
+                            vec![None::<TaskbarPhysicalGeometry>; refresh_handles.len()];
                         loop {
                             refresh_background.timer(Duration::from_millis(50)).await;
                             notification_tick = notification_tick.wrapping_add(1);
+                            let refreshed_geometries = if notification_tick.is_multiple_of(10) {
+                                match snapshot_real_monitors() {
+                                    Ok(snapshot) => refresh_monitor_names
+                                        .iter()
+                                        .enumerate()
+                                        .map(|(index, device_name)| {
+                                            let next = snapshot
+                                                .monitors
+                                                .iter()
+                                                .find(|monitor| {
+                                                    monitor.device_name == *device_name
+                                                })
+                                                .map(|monitor| {
+                                                    taskbar_physical_geometry(
+                                                        monitor,
+                                                        shell,
+                                                        refresh_settings.borrow().taskbar.rows,
+                                                    )
+                                                });
+                                            if last_monitor_geometries.get(index).copied().flatten()
+                                                == next
+                                            {
+                                                None
+                                            } else {
+                                                if let Some(slot) =
+                                                    last_monitor_geometries.get_mut(index)
+                                                {
+                                                    *slot = next;
+                                                }
+                                                next
+                                            }
+                                        })
+                                        .collect::<Vec<_>>(),
+                                    Err(error) => {
+                                        report_error("taskbar:monitor-refresh", error);
+                                        vec![None; refresh_handles.len()]
+                                    }
+                                }
+                            } else {
+                                vec![None; refresh_handles.len()]
+                            };
                             let direct_notification_result =
                                 notification_tick.is_multiple_of(10).then(|| {
                                     refresh_notification_client
@@ -4381,11 +4467,39 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                 refresh_status_reconciler.borrow().snapshot().cloned();
                             refresh_app.update(|app| {
                                 let mut alive = false;
-                                for handle in &refresh_handles {
+                                for (index, handle) in refresh_handles.iter().enumerate() {
                                     let auto_hide = None::<TaskbarAutoHideRuntime>;
+                                    let refreshed_geometry = refreshed_geometries
+                                        .get(index)
+                                        .copied()
+                                        .flatten();
                                     if handle
                                         .update(app, |view, window, cx| {
                                             alive = true;
+                                            if let Some(geometry) = refreshed_geometry {
+                                                match hwnd(window) {
+                                                    Ok(raw) => match move_owned_taskbar_client(
+                                                        raw,
+                                                        geometry.left,
+                                                        geometry.top,
+                                                        geometry.width,
+                                                        geometry.height,
+                                                    ) {
+                                                        Ok(true) => trace_action(
+                                                            "taskbar:monitor-geometry-reconciled",
+                                                        ),
+                                                        Ok(false) => {}
+                                                        Err(error) => report_error(
+                                                            "taskbar:monitor-geometry",
+                                                            error,
+                                                        ),
+                                                    },
+                                                    Err(error) => report_error(
+                                                        "taskbar:monitor-hwnd",
+                                                        error,
+                                                    ),
+                                                }
+                                            }
                                             if let Some(runtime) = &auto_hide {
                                                 let taskbar_height = taskbar_physical_geometry(
                                                     &runtime.monitor,
@@ -5354,6 +5468,67 @@ mod live_parity_tests {
         assert_eq!((shell.left, shell.width), (-1920, 1920));
         assert_eq!(taskbar_physical_geometry(&monitor, true, 0).height, 70);
         assert_eq!(taskbar_physical_geometry(&monitor, true, 99).height, 210);
+    }
+
+    #[test]
+    fn preview_taskbar_reanchors_when_work_area_expands_after_explorer_exit() {
+        let mut monitor = MonitorRecord {
+            device_name: "primary".into(),
+            primary: true,
+            bounds: ScreenRect {
+                left: 0,
+                top: 0,
+                right: 1920,
+                bottom: 1080,
+            },
+            work_area: ScreenRect {
+                left: 0,
+                top: 0,
+                right: 1920,
+                bottom: 1040,
+            },
+            dpi_x: 96,
+            dpi_y: 96,
+        };
+        let before = taskbar_physical_geometry(&monitor, false, 1);
+        monitor.work_area.bottom = monitor.bounds.bottom;
+        let after = taskbar_physical_geometry(&monitor, false, 1);
+        assert_eq!(before.bottom, 1040);
+        assert_eq!(after.bottom, 1080);
+        assert_eq!(after.top, 1040);
+    }
+
+    #[test]
+    fn popup_slots_end_read_borrows_before_mutation_and_start_panics_are_contained() {
+        let source = include_str!("surface_runtime.rs");
+        let production = source.split("#[cfg(test)]").next().unwrap_or(source);
+        for required in [
+            "guard_ui_action(\"start\"",
+            "let existing_start = *start_window_for_taskbar.borrow()",
+            "let existing_task_view = *task_view_window_for_taskbar.borrow()",
+            "let existing_jump_list = *jump_list_window_for_taskbar.borrow()",
+            "let existing_context = *context_window_for_taskbar.borrow()",
+            "let existing_settings = *settings_slot_for_action.borrow()",
+            "taskbar:monitor-geometry-reconciled",
+            "\"taskbar:monitor-geometry\"",
+        ] {
+            assert!(
+                production.contains(required),
+                "missing lifecycle guard: {required}"
+            );
+        }
+        for forbidden in [
+            "if let Some(existing) = *start_window_for_taskbar.borrow()",
+            "if let Some(existing) = *task_view_window_for_taskbar.borrow()",
+            "if let Some(existing) = *jump_list_window_for_taskbar.borrow()",
+            "if let Some(existing) = *context_window_for_taskbar.borrow()",
+            "if let Some(existing) = *settings_slot_for_action.borrow()",
+        ] {
+            assert!(
+                !production.contains(forbidden),
+                "borrow can panic: {forbidden}"
+            );
+        }
     }
 
     #[test]

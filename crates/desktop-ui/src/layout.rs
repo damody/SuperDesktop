@@ -140,8 +140,12 @@ impl DesktopLayout {
                 .or_else(|| fallback_area.map(|area| (fallback_monitor.clone(), area)))
                 .unwrap_or((
                     position.monitor_id.clone(),
-                    LogicalRect::new(0.0, 0.0, metrics.cell_width, metrics.cell_height)
-                        .expect("valid fallback"),
+                    LogicalRect {
+                        left: 0.0,
+                        top: 0.0,
+                        right: metrics.cell_width.max(f32::EPSILON),
+                        bottom: metrics.cell_height.max(f32::EPSILON),
+                    },
                 ));
             position.monitor_id = monitor;
             position.logical =

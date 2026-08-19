@@ -88,7 +88,11 @@ impl<F: AtomicSettingsFileSystem> SettingsStore<F> {
             .atomic_replace(&temporary, target)
             .map_err(StoreError::Io)?;
         self.file_system
-            .sync_parent(target.parent().unwrap())
+            .sync_parent(
+                target
+                    .parent()
+                    .ok_or_else(|| StoreError::TargetEscapesFixture(target.to_path_buf()))?,
+            )
             .map_err(StoreError::Io)?;
         Ok(next)
     }
@@ -122,7 +126,11 @@ impl<F: AtomicSettingsFileSystem> SettingsStore<F> {
                     .quarantine(target, &quarantine_path)
                     .map_err(StoreError::Io)?;
                 self.file_system
-                    .sync_parent(target.parent().unwrap())
+                    .sync_parent(
+                        target.parent().ok_or_else(|| {
+                            StoreError::TargetEscapesFixture(target.to_path_buf())
+                        })?,
+                    )
                     .map_err(StoreError::Io)?;
                 Ok(LoadOutcome {
                     settings: SettingsV1::default(),

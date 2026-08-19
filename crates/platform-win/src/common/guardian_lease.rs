@@ -276,7 +276,7 @@ impl OwnedHandle {
         }
     }
     fn raw(&self) -> RawHandle {
-        self.0.expect("live owned handle")
+        self.0.unwrap_or(INVALID_HANDLE)
     }
     fn close(&mut self) -> Result<(), &'static str> {
         let raw = self.0.take().ok_or("handle-already-closed")?;

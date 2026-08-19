@@ -28,23 +28,24 @@ fn main() -> ExitCode {
                 .as_ref()
                 .map(|record| format!("{:?}", record.command).to_ascii_lowercase())
                 .or(requested_operation);
-            println!(
-                "{}",
-                serde_json::to_string(&json!({
-                    "disposition": "failed",
-                    "exit_code": code,
-                    "error": format!("{error:?}"),
-                    "timestamp_unix_ms": timestamp_unix_ms(),
-                    "operation": operation,
-                    "plan_fingerprint": audit.as_ref().map(|record| &record.fingerprint),
-                    "before": audit.as_ref().and_then(|record| record.before.as_ref()),
-                    "desired": audit.as_ref().and_then(|record| record.desired.as_ref()),
-                    "after": audit.as_ref().and_then(|record| record.after.as_ref()),
-                    "affected_targets": audit.as_ref().map(|record| &record.affected_targets).cloned().unwrap_or_default(),
-                    "audit": audit,
-                }))
-                .expect("error audit serializes")
-            );
+            match serde_json::to_string(&json!({
+                "disposition": "failed",
+                "exit_code": code,
+                "error": format!("{error:?}"),
+                "timestamp_unix_ms": timestamp_unix_ms(),
+                "operation": operation,
+                "plan_fingerprint": audit.as_ref().map(|record| &record.fingerprint),
+                "before": audit.as_ref().and_then(|record| record.before.as_ref()),
+                "desired": audit.as_ref().and_then(|record| record.desired.as_ref()),
+                "after": audit.as_ref().and_then(|record| record.after.as_ref()),
+                "affected_targets": audit.as_ref().map(|record| &record.affected_targets).cloned().unwrap_or_default(),
+                "audit": audit,
+            })) {
+                Ok(record) => println!("{record}"),
+                Err(serialization_error) => eprintln!(
+                    "shell-installer error [failure-audit]: {serialization_error}; original={error:?}"
+                ),
+            }
             ExitCode::from(code)
         }
     }
@@ -102,11 +103,18 @@ fn run(arguments: impl Iterator<Item = String>) -> Result<(), CliFailure> {
     validate_mutation_binaries(&plan).map_err(|error| failure_with_plan(classify(error), &plan))?;
     let audit = execute_plan(&mut registry, &mut store, &plan, &arguments.authority)
         .map_err(|error| failure_with_plan(classify(error), &plan))?;
-    println!(
-        "{}",
-        serde_json::to_string_pretty(&json!({ "plan": plan, "audit": audit }))
-            .expect("installer audit serializes")
-    );
+    match serde_json::to_string_pretty(&json!({ "plan": plan, "audit": audit })) {
+        Ok(record) => println!("{record}"),
+        Err(error) => {
+            eprintln!("shell-installer error [success-audit]: {error}");
+            return Err(failure((
+                4,
+                InstallerError::PreflightRejected(format!(
+                    "success audit serialization failed: {error}"
+                )),
+            )));
+        }
+    }
     Ok(())
 }
 

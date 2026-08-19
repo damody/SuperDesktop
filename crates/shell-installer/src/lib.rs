@@ -486,7 +486,9 @@ pub fn execute_plan<R: ShellRegistry, S: RollbackStore>(
             },
         ));
     }
-    let after = after_result.expect("verified result is successful");
+    let after = after_result.map_err(|error| {
+        InstallerError::Registry(format!("post-write verification read failed: {error:?}"))
+    })?;
     if restoring {
         store.remove()?;
     }

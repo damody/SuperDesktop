@@ -1,5 +1,4 @@
 use std::collections::BTreeMap;
-use std::fmt::Write;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) enum Value {
@@ -34,7 +33,7 @@ fn write_value(value: &Value, output: &mut String) {
     match value {
         Value::Null => output.push_str("null"),
         Value::Bool(value) => output.push_str(if *value { "true" } else { "false" }),
-        Value::Number(value) => write!(output, "{value}").unwrap(),
+        Value::Number(value) => output.push_str(&value.to_string()),
         Value::String(value) => write_string(value, output),
         Value::Array(values) => {
             output.push('[');
@@ -70,7 +69,9 @@ fn write_string(value: &str, output: &mut String) {
             '\n' => output.push_str("\\n"),
             '\r' => output.push_str("\\r"),
             '\t' => output.push_str("\\t"),
-            character if character < ' ' => write!(output, "\\u{:04x}", character as u32).unwrap(),
+            character if character < ' ' => {
+                output.push_str(&format!("\\u{:04x}", character as u32));
+            }
             character => output.push(character),
         }
     }
@@ -107,7 +108,7 @@ impl Parser<'_> {
     }
 
     fn object(&mut self) -> Result<Value, String> {
-        self.expect(b'{')?;
+        self.consume_expected(b'{')?;
         let mut values = BTreeMap::new();
         self.whitespace();
         if self.consume(b'}') {
@@ -117,7 +118,7 @@ impl Parser<'_> {
             self.whitespace();
             let key = self.string()?;
             self.whitespace();
-            self.expect(b':')?;
+            self.consume_expected(b':')?;
             if values.insert(key, self.value()?).is_some() {
                 return Err("duplicate object key".into());
             }
@@ -125,13 +126,13 @@ impl Parser<'_> {
             if self.consume(b'}') {
                 break;
             }
-            self.expect(b',')?;
+            self.consume_expected(b',')?;
         }
         Ok(Value::Object(values))
     }
 
     fn array(&mut self) -> Result<Value, String> {
-        self.expect(b'[')?;
+        self.consume_expected(b'[')?;
         let mut values = Vec::new();
         self.whitespace();
         if self.consume(b']') {
@@ -143,13 +144,13 @@ impl Parser<'_> {
             if self.consume(b']') {
                 break;
             }
-            self.expect(b',')?;
+            self.consume_expected(b',')?;
         }
         Ok(Value::Array(values))
     }
 
     fn string(&mut self) -> Result<String, String> {
-        self.expect(b'"')?;
+        self.consume_expected(b'"')?;
         let mut output = String::new();
         while let Some(byte) = self.next() {
             match byte {
@@ -213,7 +214,7 @@ impl Parser<'_> {
             return Err("non-integer number unsupported".into());
         }
         std::str::from_utf8(&self.bytes[start..self.offset])
-            .unwrap()
+            .map_err(|_| "integer is not UTF-8")?
             .parse()
             .map_err(|_| "integer out of range".into())
     }
@@ -233,7 +234,7 @@ impl Parser<'_> {
         }
     }
 
-    fn expect(&mut self, expected: u8) -> Result<(), String> {
+    fn consume_expected(&mut self, expected: u8) -> Result<(), String> {
         if self.consume(expected) {
             Ok(())
         } else {

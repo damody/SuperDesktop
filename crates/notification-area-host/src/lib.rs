@@ -480,7 +480,9 @@ fn stable_icon_id(identity: &NotifyIconIdentity) -> u32 {
         .unwrap_or([0; 16])
         .chunks_exact(4)
         .fold(0u32, |value, chunk| {
-            value ^ u32::from_le_bytes(chunk.try_into().unwrap())
+            let mut word = [0u8; 4];
+            word.copy_from_slice(chunk);
+            value ^ u32::from_le_bytes(word)
         })
         .max(1)
 }

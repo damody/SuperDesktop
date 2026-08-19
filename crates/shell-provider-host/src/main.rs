@@ -9,10 +9,13 @@ use shell_provider_protocol::{
 
 fn main() -> io::Result<()> {
     if std::env::args().any(|argument| argument == "--manifest") {
-        println!(
-            "{}",
-            serde_json::to_string_pretty(&contract_manifest()).expect("manifest serializes")
-        );
+        match serde_json::to_string_pretty(&contract_manifest()) {
+            Ok(manifest) => println!("{manifest}"),
+            Err(error) => {
+                eprintln!("shell-provider-host error [manifest]: {error}");
+                return Err(io::Error::other(error));
+            }
+        }
         return Ok(());
     }
 

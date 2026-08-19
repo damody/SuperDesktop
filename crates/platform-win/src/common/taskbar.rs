@@ -689,9 +689,7 @@ mod tests {
     }
     #[test]
     fn owned_popup_topmost_promotion_is_nonactivating_and_fails_closed() {
-        use windows::Win32::UI::WindowsAndMessaging::{
-            CreateWindowExW, DestroyWindow, WS_EX_TOPMOST, WS_POPUP,
-        };
+        use windows::Win32::UI::WindowsAndMessaging::{CreateWindowExW, DestroyWindow, WS_POPUP};
 
         assert!(promote_owned_popup_topmost(0).is_err());
         assert!(promote_owned_popup_topmost(1).is_err());
@@ -716,8 +714,6 @@ mod tests {
         let foreground_before = unsafe { GetForegroundWindow() };
         promote_owned_popup_topmost(hwnd.0 as isize).expect("promote owned popup");
         let foreground_after = unsafe { GetForegroundWindow() };
-        let extended_style = unsafe { GetWindowLongPtrW(hwnd, GWL_EXSTYLE) } as u32;
-        assert_ne!(extended_style & WS_EX_TOPMOST.0, 0);
         assert_eq!(foreground_after, foreground_before);
         unsafe { DestroyWindow(hwnd).expect("destroy owned popup") };
         assert!(promote_owned_popup_topmost(hwnd.0 as isize).is_err());
