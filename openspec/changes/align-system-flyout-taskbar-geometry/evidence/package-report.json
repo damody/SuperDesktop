@@ -1,0 +1,16 @@
+{
+  "schema": "system-flyout-taskbar-geometry-package/v1",
+  "result": "passed",
+  "implementation_commit": "17d26c93",
+  "evidence_base_commit": "04a7805132fd76f1479fd61685cdc7ace7983194",
+  "parent_gitlink_commit": "909cd32937914b5d30b7775c8f6bb42aa481b7ad",
+  "binaries": {
+    "superdesktop_app_sha256": "f356e29b71e5f34a41a6cb3bc80b77295c518cc294a919fe0194e43a68f34af6",
+    "superdesktop_utit_sha256": "3278241ba4b3d3a96a5b234ad02238a108e4e0e0f6a6a4b764187330172db3d3"
+  },
+  "installers": [
+    {"path":"D:/SuperExplorer/dist/SuperDesktop-Test-Setup-1.2026.8.19-x64.exe","bytes":5873125,"sha256":"81f568384c412cd3c12d45c37ab8a96be83c213abfaf382a390fb424d26e399f","launched":false},
+    {"path":"D:/SuperExplorer/dist/SuperExplorer-Setup-1.2026.8.19-x64.exe","bytes":13651680,"sha256":"e1b736dd4f9ebba0011bdb9e7bbdc24ddb0f009e3afc8101af8f636ca0308f7a","launched":false}
+  ],
+  "change_archived": false
+}

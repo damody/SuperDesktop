@@ -1,0 +1,30 @@
+{
+  "schema": "system-flyout-taskbar-geometry-traceability/v1",
+  "result": "passed",
+  "leaf_count": 18,
+  "implementation_commit": "17d26c93",
+  "records": [
+    {"task_id":"1.1.1","status":"passed","artifact":"surface_runtime.rs#system_flyout_geometry(shell)"},
+    {"task_id":"1.1.2","status":"passed","artifact":"surface_runtime.rs#taskbar_bottom mode selection"},
+    {"task_id":"1.1.3","status":"passed","artifact":"surface_runtime.rs#system_flyout_options composition"},
+    {"task_id":"1.2.1","status":"passed","artifact":"system_flyout_geometry_uses_exact_preview_and_shell_taskbar_anchors"},
+    {"task_id":"1.2.2","status":"passed","artifact":"system_flyout_geometry_matrix_preserves_windows_logical_ratios"},
+    {"task_id":"1.2.3","status":"passed","artifact":"system_flyout_geometry_reserves_owned_taskbar_and_clamps_every_monitor_origin"},
+    {"task_id":"2.1.1","status":"passed","artifact":"scripts/capture-system-status-production.ps1#Measure-OwnedFlyout"},
+    {"task_id":"2.1.2","status":"passed","artifact":"evidence/headful/headful-report.json#geometry_records"},
+    {"task_id":"2.1.3","status":"passed","artifact":"evidence/headful/*.png;headful-report screenshot hashes"},
+    {"task_id":"2.2.1","status":"passed","artifact":"evidence/headful/headful-report.json#width/containment"},
+    {"task_id":"2.2.2","status":"passed","artifact":"evidence/headful/headful-report.json#taskbar_gap_dip/owned_popup_count"},
+    {"task_id":"2.2.3","status":"passed","artifact":"evidence/shell-parity/report.json"},
+    {"task_id":"3.1.1","status":"passed","artifact":"evidence/shell-parity/report.json#workspace-tests"},
+    {"task_id":"3.1.2","status":"passed","artifact":"shell-parity Clippy/release;architecture/source-boundary gates"},
+    {"task_id":"3.1.3","status":"passed","artifact":"evidence/headful/*.png;openspec strict;detailed validator"},
+    {"task_id":"3.2.1","status":"passed","artifact":"implementation 17d26c93;parent gitlink 909cd329"},
+    {"task_id":"3.2.2","status":"passed","artifact":"evidence/package-report.json"},
+    {"task_id":"3.2.3","status":"passed","artifact":"evidence/traceability-index.json"}
+  ],
+  "unique_task_records": true,
+  "strict_openspec_validation": "passed",
+  "detailed_task_validation": "passed",
+  "change_archived": false
+}
