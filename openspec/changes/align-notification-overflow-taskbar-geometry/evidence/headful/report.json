@@ -1,0 +1,57 @@
+{
+    "schema":  "explorer-free-notifyicon/v2",
+    "result":  "passed",
+    "explorer_absent_during_measurement":  true,
+    "explorer_absent_during_capture":  true,
+    "explorer_recovered":  true,
+    "explorer_pids_before":  [
+                                 53336
+                             ],
+    "explorer_pids_after":  [
+
+                            ],
+    "shell_pid":  39796,
+    "fixture_pid":  53540,
+    "host_pids_before":  [
+                             11948
+                         ],
+    "host_pids_after":  [
+                            11948
+                        ],
+    "host_restart_verified":  false,
+    "app_sha256":  "DD33DE56002C43B35C3547925C47CE50E5929C09CB96C8F14240E14D28361257",
+    "fixture_sha256":  "509E8BD58EC972D3FE5522F45000E1DFBF77A24A6947A49A9E8F6804815E7392",
+    "icon_name":  "SuperDesktop compatibility fixture",
+    "callback_trace":  "fixture-ready pid=53540 hwnd=33361570 icon_id=7001\ncallback wparam=0 lparam=458818560\ncallback wparam=0 lparam=458817659\nfixture-complete",
+    "screenshot":  "overflow.png",
+    "screenshot_sha256":  "16549E9A66A14CCBE5B96DB9542812BABFCB0DA8C53FFBAEA9F05C2CED1E7AC6",
+    "overflow":  {
+                     "hwnd":  53742920,
+                     "owner_pid":  39796,
+                     "hidden_button_count":  14,
+                     "dpi":  168,
+                     "scale":  1.75,
+                     "width_dip":  357.71428571428572,
+                     "height_dip":  174.85714285714286,
+                     "taskbar_gap_dip":  4.5714285714285712,
+                     "contained":  true,
+                     "bounds":  {
+                                    "left":  3212,
+                                    "top":  1706,
+                                    "right":  3838,
+                                    "bottom":  2012
+                                },
+                     "taskbar_bounds":  {
+                                            "left":  -12,
+                                            "top":  2020,
+                                            "right":  3852,
+                                            "bottom":  2172
+                                        },
+                     "monitor_bounds":  {
+                                            "left":  0,
+                                            "top":  0,
+                                            "right":  3840,
+                                            "bottom":  2160
+                                        }
+                 }
+}
