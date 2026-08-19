@@ -1,0 +1,7 @@
+/notification-retry*/
+/system-status-retry*/
+/shell-parity/
+/shell-parity-final/
+/shell-parity-pass/
+/shell-parity-passed/cases/
+/headful/*.log

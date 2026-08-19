@@ -1,0 +1,43 @@
+{
+    "schema":  "owned-taskbar-hover-preview-headful/v2",
+    "result":  "passed",
+    "app_sha256":  "43a44fd1ed871bbe18aea0e730e1cf61a064b48a1b14404d568423919b04252b",
+    "early_absence":  true,
+    "delay_ms":  400,
+    "close_grace_ms":  250,
+    "group_cards":  2,
+    "single_cards":  1,
+    "popup_crossing":  true,
+    "uia_dialog":  "Window previews",
+    "foreground_preserved":  true,
+    "foreground_hwnd":  18484140,
+    "foreground_pid":  4984,
+    "source_bounds":  {
+                          "left":  434,
+                          "top":  2092,
+                          "right":  714,
+                          "bottom":  2162
+                      },
+    "popup_bounds":  {
+                         "left":  2,
+                         "top":  1543,
+                         "right":  1251,
+                         "bottom":  2010
+                     },
+    "monitor_work_area":  {
+                              "left":  0,
+                              "top":  0,
+                              "right":  3840,
+                              "bottom":  2018
+                          },
+    "source_anchor_x":  574,
+    "expected_popup_center_x":  624.5,
+    "actual_popup_center_x":  626.5,
+    "anchor_delta_px":  2,
+    "edge_clamped":  true,
+    "popup_contained":  true,
+    "explorer_absent_during_capture":  true,
+    "explorer_recovered":  true,
+    "screenshot":  "hover-preview.png",
+    "screenshot_sha256":  "26c37510b03cd64f9580178ec48662f00f228775b0dbce67098967d4c3f35058"
+}
