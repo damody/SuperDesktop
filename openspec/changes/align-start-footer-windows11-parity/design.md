@@ -12,7 +12,7 @@ The Start footer currently owns account, Settings, and Power controls. Windows 1
 
 Delete only the `start-settings` render subtree and its render-local callback clones. Keep the footer action group as the accessible container for one Power child. This avoids changing StartActions or provider protocols. Moving Settings elsewhere was rejected because search/pins already provide the Windows-consistent location; hiding the gear visually while leaving it accessible was rejected as dishonest accessibility.
 
-The Start capture enumerates Button descendants under the footer group, requires one child named Power, rejects a Settings button, converts its rectangle using the Start HWND DPI, requires 38-42 DIP width and height, and requires an 8-24 DIP right inset. Existing power expansion and three MenuItem checks remain unchanged.
+The Start capture enumerates Button descendants under the footer group, requires one child named Power, rejects a Settings button, converts its rectangle using the Start HWND DPI, requires 38-42 DIP width and height, and requires a 20-36 DIP outer-window right inset. The range accounts for the authored 24 DIP content inset plus the DPI-rounded non-client frame included by UI Automation HWND bounds. Existing power expansion and three MenuItem checks remain unchanged.
 
 ## Risks / Trade-offs
 

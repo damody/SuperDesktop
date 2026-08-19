@@ -23,7 +23,7 @@ The Explorer-free Start UTIT case MUST record footer action count, Power physica
 
 #### Scenario: Live Start footer passes
 - **WHEN** the release app renders Start at the host DPI
-- **THEN** UTIT proves one footer action, 38-42 DIP Power dimensions, bounded right inset, no Settings footer button, complete power actions, and successful recovery
+- **THEN** UTIT proves one footer action, 38-42 DIP Power dimensions, a 20-36 DIP outer-window right inset, no Settings footer button, complete power actions, and successful recovery
 
 #### Scenario: Gear or geometry returns
 - **WHEN** a Settings footer control appears or Power leaves its size/alignment bounds
