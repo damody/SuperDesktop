@@ -1,0 +1,170 @@
+{
+    "schema":  "system-status-headful/v2",
+    "result":  "passed",
+    "app_sha256":  "8e114adcd69e4cb8c3b784ac7b89dd0f4f4929d296d23f457110a3ea1e707156",
+    "original_input_profile":  "zh-TW",
+    "switched_input_profile":  "zh-CN (zh-CN, hkl:0000000008040804)",
+    "original_profile_restored":  true,
+    "start_survived_switch":  true,
+    "start_focus_restored_trace":  true,
+    "owned_flyouts":  [
+                          "network-power",
+                          "input",
+                          "volume",
+                          "calendar"
+                      ],
+    "geometry_thresholds":  {
+                                "width_tolerance_dip":  16,
+                                "taskbar_gap_min_dip":  2,
+                                "taskbar_gap_max_dip":  16
+                            },
+    "geometry_records":  [
+                             {
+                                 "kind":  "network-power",
+                                 "hwnd":  61083916,
+                                 "owned_popup_count":  1,
+                                 "dpi":  168,
+                                 "scale":  1.75,
+                                 "expected_width_dip":  360,
+                                 "width_dip":  373.71428571428572,
+                                 "height_dip":  234.85714285714286,
+                                 "taskbar_gap_dip":  4.5714285714285712,
+                                 "contained":  true,
+                                 "popup_bounds":  {
+                                                      "left":  3184,
+                                                      "top":  1601,
+                                                      "right":  3838,
+                                                      "bottom":  2012
+                                                  },
+                                 "taskbar_bounds":  {
+                                                        "left":  -12,
+                                                        "top":  2020,
+                                                        "right":  3852,
+                                                        "bottom":  2172
+                                                    },
+                                 "monitor_bounds":  {
+                                                        "left":  0,
+                                                        "top":  0,
+                                                        "right":  3840,
+                                                        "bottom":  2160
+                                                    }
+                             },
+                             {
+                                 "kind":  "input",
+                                 "hwnd":  30545006,
+                                 "owned_popup_count":  1,
+                                 "dpi":  168,
+                                 "scale":  1.75,
+                                 "expected_width_dip":  360,
+                                 "width_dip":  373.71428571428572,
+                                 "height_dip":  305.14285714285717,
+                                 "taskbar_gap_dip":  4,
+                                 "contained":  true,
+                                 "popup_bounds":  {
+                                                      "left":  3184,
+                                                      "top":  1479,
+                                                      "right":  3838,
+                                                      "bottom":  2013
+                                                  },
+                                 "taskbar_bounds":  {
+                                                        "left":  -12,
+                                                        "top":  2020,
+                                                        "right":  3852,
+                                                        "bottom":  2172
+                                                    },
+                                 "monitor_bounds":  {
+                                                        "left":  0,
+                                                        "top":  0,
+                                                        "right":  3840,
+                                                        "bottom":  2160
+                                                    }
+                             },
+                             {
+                                 "kind":  "volume",
+                                 "hwnd":  61149452,
+                                 "owned_popup_count":  1,
+                                 "dpi":  168,
+                                 "scale":  1.75,
+                                 "expected_width_dip":  360,
+                                 "width_dip":  373.71428571428572,
+                                 "height_dip":  190.85714285714286,
+                                 "taskbar_gap_dip":  4.5714285714285712,
+                                 "contained":  true,
+                                 "popup_bounds":  {
+                                                      "left":  3184,
+                                                      "top":  1678,
+                                                      "right":  3838,
+                                                      "bottom":  2012
+                                                  },
+                                 "taskbar_bounds":  {
+                                                        "left":  -12,
+                                                        "top":  2020,
+                                                        "right":  3852,
+                                                        "bottom":  2172
+                                                    },
+                                 "monitor_bounds":  {
+                                                        "left":  0,
+                                                        "top":  0,
+                                                        "right":  3840,
+                                                        "bottom":  2160
+                                                    }
+                             },
+                             {
+                                 "kind":  "calendar",
+                                 "hwnd":  30610542,
+                                 "owned_popup_count":  1,
+                                 "dpi":  168,
+                                 "scale":  1.75,
+                                 "expected_width_dip":  380,
+                                 "width_dip":  393.71428571428572,
+                                 "height_dip":  526.85714285714289,
+                                 "taskbar_gap_dip":  4.5714285714285712,
+                                 "contained":  true,
+                                 "popup_bounds":  {
+                                                      "left":  3149,
+                                                      "top":  1090,
+                                                      "right":  3838,
+                                                      "bottom":  2012
+                                                  },
+                                 "taskbar_bounds":  {
+                                                        "left":  -12,
+                                                        "top":  2020,
+                                                        "right":  3852,
+                                                        "bottom":  2172
+                                                    },
+                                 "monitor_bounds":  {
+                                                        "left":  0,
+                                                        "top":  0,
+                                                        "right":  3840,
+                                                        "bottom":  2160
+                                                    }
+                             }
+                         ],
+    "explorer_suppressed":  true,
+    "explorer_before":  [
+                            9792
+                        ],
+    "explorer_absent_during_capture":  true,
+    "screenshots":  [
+                        {
+                            "name":  "calendar-flyout.png",
+                            "sha256":  "801a7a66a52e123d4a8f7351600b4adb603cc05cf9eab271138dcd2d49369dc6",
+                            "bytes":  763848
+                        },
+                        {
+                            "name":  "input-flyout.png",
+                            "sha256":  "55c4c1c7deba1a6759cad90df7fbc1c5d3c422b6866aa9482c2a2a541bcbfaa6",
+                            "bytes":  728864
+                        },
+                        {
+                            "name":  "network-power-flyout.png",
+                            "sha256":  "e8cb73516bbde355432b3cef1918795fa731ed44f7b63c86381af5d2af50c613",
+                            "bytes":  671272
+                        },
+                        {
+                            "name":  "volume-flyout.png",
+                            "sha256":  "db285b49d4e0ba6a9159b8efc8aef7f6fbbc537786d2508fca5531b7ec45474e",
+                            "bytes":  730873
+                        }
+                    ]
+}
