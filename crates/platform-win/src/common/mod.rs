@@ -15,6 +15,7 @@ pub mod notify_icon_compat;
 pub mod owner_lease;
 pub mod power;
 pub mod settings_file;
+pub mod shell_hotkey;
 pub mod start_search;
 pub mod system_status;
 pub mod taskbar;

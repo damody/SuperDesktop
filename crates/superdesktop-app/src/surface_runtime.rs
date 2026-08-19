@@ -321,18 +321,51 @@ fn launch_superexplorer() {
     launch_superexplorer_at(None);
 }
 
-fn launch_superexplorer_at(initial_path: Option<&Path>) {
-    let adjacent = std::env::current_exe()
-        .ok()
+fn resolve_superexplorer() -> Result<explorer_bridge::ResolvedExecutable, String> {
+    let current = std::env::current_exe().ok();
+    let adjacent = current
+        .as_ref()
         .and_then(|path| path.parent().map(|parent| parent.join("SuperExplorer.exe")))
-        .unwrap_or_else(|| std::path::PathBuf::from(r"C:\missing\SuperExplorer.exe"));
+        .unwrap_or_else(|| PathBuf::from(r"C:\missing\SuperExplorer.exe"));
+    let developer_release = current
+        .as_ref()
+        .and_then(|path| {
+            path.ancestors()
+                .find(|ancestor| {
+                    ancestor
+                        .file_name()
+                        .is_some_and(|name| name == "SuperDesktop")
+                })
+                .and_then(Path::parent)
+        })
+        .map(|workspace| {
+            let release = workspace.join("target/release/SuperExplorer.exe");
+            if release.is_file() {
+                release
+            } else {
+                workspace.join("target/debug/SuperExplorer.exe")
+            }
+        })
+        .unwrap_or_else(|| adjacent.clone());
     let resolver = explorer_bridge::ExecutableResolver {
-        setting: std::env::var_os("SUPEREXPLORER_PATH").map(std::path::PathBuf::from),
-        developer_release: adjacent.clone(),
+        setting: std::env::var_os("SUPEREXPLORER_PATH").map(PathBuf::from),
+        developer_release,
         adjacent,
     };
-    match resolver.resolve() {
-        Ok((resolved, _)) => {
+    resolver
+        .resolve()
+        .map(|(resolved, _)| resolved)
+        .map_err(|trace| {
+            format!(
+                "SuperExplorer resolver rejected all candidates: {:?}",
+                trace.decisions
+            )
+        })
+}
+
+fn launch_superexplorer_at(initial_path: Option<&Path>) {
+    match resolve_superexplorer() {
+        Ok(resolved) => {
             let spec = match initial_path {
                 Some(path) => match explorer_bridge::build_folder_launch(&resolved, path) {
                     Ok(spec) => spec,
@@ -356,6 +389,77 @@ fn launch_superexplorer_at(initial_path: Option<&Path>) {
             }
         }
         Err(_) => trace_action("superexplorer:resolver-unavailable"),
+    }
+}
+
+struct PendingSuperExplorerFocus {
+    process_id: u32,
+    executable: PathBuf,
+    deadline: Instant,
+}
+
+fn focus_superexplorer_window(executable: &Path, process_id: Option<u32>) -> Result<bool, String> {
+    let executable = executable
+        .canonicalize()
+        .map_err(|error| format!("SuperExplorer canonical path failed: {error}"))?
+        .to_string_lossy()
+        .to_ascii_lowercase();
+    let windows = snapshot_task_windows()?;
+    let candidate = windows.into_iter().find(|window| {
+        if window.tool_window || window.cloaked || window.owned_transient {
+            return false;
+        }
+        if process_id.is_some_and(|process_id| window.process_id == process_id) {
+            return true;
+        }
+        PathBuf::from(&window.application_identity)
+            .canonicalize()
+            .is_ok_and(|observed| observed.to_string_lossy().to_ascii_lowercase() == executable)
+    });
+    let Some(candidate) = candidate else {
+        return Ok(false);
+    };
+    platform_win::common::taskbar::apply_window_action(
+        candidate.hwnd_identity,
+        platform_win::common::taskbar::WindowAction::RestoreAndActivate,
+    )?;
+    Ok(true)
+}
+
+fn request_superexplorer_foreground() -> Option<PendingSuperExplorerFocus> {
+    let resolved = match resolve_superexplorer() {
+        Ok(resolved) => resolved,
+        Err(error) => {
+            report_error("win-e:resolve", error);
+            return None;
+        }
+    };
+    match focus_superexplorer_window(&resolved.path, None) {
+        Ok(true) => {
+            trace_action("win-e:superexplorer-activated");
+            return None;
+        }
+        Ok(false) => {}
+        Err(error) => report_error("win-e:existing-window", error),
+    }
+    let spec = explorer_bridge::build_default_launch(&resolved);
+    match explorer_bridge::ProcessLauncher.launch(&spec) {
+        explorer_bridge::LaunchOutcome::Launched { process_id } => {
+            trace_action("win-e:superexplorer-launched");
+            Some(PendingSuperExplorerFocus {
+                process_id,
+                executable: resolved.path,
+                deadline: Instant::now() + Duration::from_secs(3),
+            })
+        }
+        explorer_bridge::LaunchOutcome::ValidationFailed(error) => {
+            report_error("win-e:launch-validation", error);
+            None
+        }
+        explorer_bridge::LaunchOutcome::SpawnFailed(error) => {
+            report_error("win-e:launch", error);
+            None
+        }
     }
 }
 
@@ -2698,6 +2802,20 @@ fn superexplorer_executable() -> Option<PathBuf> {
 
 pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> {
     enable_per_monitor_v2()?;
+    let win_e_hotkey = Rc::new(if shell {
+        match platform_win::common::shell_hotkey::WinEHotkey::start() {
+            Ok(hotkey) => {
+                trace_action("win-e:hook-active");
+                Some(hotkey)
+            }
+            Err(error) => {
+                report_error("win-e:hook", error);
+                None
+            }
+        }
+    } else {
+        None
+    });
     let snapshot = snapshot_real_monitors()?;
     let (mut settings_store, settings_target) =
         platform_win::common::settings_file::production_settings_store()
@@ -4337,6 +4455,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                 let refresh_settings = Rc::clone(&persisted_settings);
                 let refresh_task_icons = Rc::clone(&task_icon_cache);
                 let refresh_attention = Rc::clone(&attention_runtime);
+                let refresh_win_e_hotkey = Rc::clone(&win_e_hotkey);
                 let refresh_auto_hide_context = Rc::clone(&taskbar_context_window);
                 let refresh_auto_hide_settings_window = Rc::clone(&taskbar_settings_window);
                 let refresh_auto_hide_leases = Rc::clone(&leases);
@@ -4344,10 +4463,42 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                     .spawn(async move {
                         let auto_hide_epoch = Instant::now();
                         let mut notification_tick = 0u8;
+                        let mut pending_superexplorer_focus = None::<PendingSuperExplorerFocus>;
                         let mut last_monitor_geometries =
                             vec![None::<TaskbarPhysicalGeometry>; refresh_handles.len()];
                         loop {
                             refresh_background.timer(Duration::from_millis(50)).await;
+                            if refresh_win_e_hotkey
+                                .as_ref()
+                                .as_ref()
+                                .is_some_and(|hotkey| hotkey.take_requested())
+                            {
+                                trace_action("win-e:requested");
+                                pending_superexplorer_focus = request_superexplorer_foreground();
+                            }
+                            if let Some(pending) = pending_superexplorer_focus.as_ref() {
+                                match focus_superexplorer_window(
+                                    &pending.executable,
+                                    Some(pending.process_id),
+                                ) {
+                                    Ok(true) => {
+                                        trace_action("win-e:superexplorer-activated");
+                                        pending_superexplorer_focus = None;
+                                    }
+                                    Ok(false) if Instant::now() >= pending.deadline => {
+                                        report_error(
+                                            "win-e:focus-timeout",
+                                            "SuperExplorer window did not appear within 3 seconds",
+                                        );
+                                        pending_superexplorer_focus = None;
+                                    }
+                                    Ok(false) => {}
+                                    Err(error) => {
+                                        report_error("win-e:focus", error);
+                                        pending_superexplorer_focus = None;
+                                    }
+                                }
+                            }
                             notification_tick = notification_tick.wrapping_add(1);
                             let refreshed_geometries = if notification_tick.is_multiple_of(10) {
                                 let explorer_shell_present =
@@ -5048,6 +5199,38 @@ mod live_parity_tests {
             }
         "#;
         assert!(!product_status_has_no_fixed_provider_values(fixed_fixture));
+    }
+
+    #[test]
+    fn win_e_is_shell_scoped_and_routes_only_to_verified_superexplorer_foreground() {
+        let source = include_str!("surface_runtime.rs");
+        let production = source.split("#[cfg(test)]").next().unwrap_or(source);
+        for required in [
+            "if shell {",
+            "shell_hotkey::WinEHotkey::start()",
+            "request_superexplorer_foreground()",
+            "focus_superexplorer_window(",
+            "WindowAction::RestoreAndActivate",
+            "build_default_launch(&resolved)",
+            "Some(pending.process_id)",
+            "win-e:focus-timeout",
+        ] {
+            assert!(
+                production.contains(required),
+                "missing Win+E route: {required}"
+            );
+        }
+        for forbidden in [
+            "explorer.exe /e",
+            "ShellExecuteW",
+            "keybd_event",
+            "SendInput",
+        ] {
+            assert!(
+                !production.contains(forbidden),
+                "delegated Win+E route: {forbidden}"
+            );
+        }
     }
 
     #[test]
