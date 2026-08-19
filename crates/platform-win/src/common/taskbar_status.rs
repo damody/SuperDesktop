@@ -11,6 +11,7 @@ pub struct LocalDateTime {
     pub day: u8,
     pub hour: u8,
     pub minute: u8,
+    pub second: u8,
 }
 
 pub fn local_date_time() -> LocalDateTime {
@@ -22,6 +23,7 @@ pub fn local_date_time() -> LocalDateTime {
         day: value.wDay as u8,
         hour: value.wHour as u8,
         minute: value.wMinute as u8,
+        second: value.wSecond as u8,
     }
 }
 
@@ -44,5 +46,6 @@ mod tests {
         assert!((1..=31).contains(&value.day));
         assert!(value.hour <= 23);
         assert!(value.minute <= 59);
+        assert!(value.second <= 59);
     }
 }

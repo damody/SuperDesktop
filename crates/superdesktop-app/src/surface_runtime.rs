@@ -2492,8 +2492,9 @@ fn status(snapshot: Option<&SystemStatusSnapshot>) -> StatusRegion {
             day: local.day,
             hour: local.hour,
             minute: local.minute,
+            second: local.second,
         },
-        ClockLocale::ZhTw,
+        taskbar_clock_locale(),
         CoreStatus {
             network,
             volume,
@@ -2503,6 +2504,21 @@ fn status(snapshot: Option<&SystemStatusSnapshot>) -> StatusRegion {
             notifications: ProviderState::Unavailable("notification-provider-not-ready"),
         },
     )
+}
+
+fn taskbar_clock_locale() -> ClockLocale {
+    let locale = std::env::var("SUPERDESKTOP_LOCALE")
+        .ok()
+        .or_else(platform_win::common::taskbar_status::user_locale_name);
+    clock_locale_from_tag(locale.as_deref())
+}
+
+fn clock_locale_from_tag(locale: Option<&str>) -> ClockLocale {
+    if locale.is_some_and(|locale| locale.to_ascii_lowercase().starts_with("zh")) {
+        ClockLocale::ZhTw
+    } else {
+        ClockLocale::En
+    }
 }
 
 fn system_status_command(action: SystemStatusAction) -> SystemStatusCommand {
@@ -2649,10 +2665,17 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
     let (mut settings_store, settings_target) =
         platform_win::common::settings_file::production_settings_store()
             .map_err(|_| "settings-store-init")?;
-    let persisted_settings = settings_store
+    let mut persisted_settings = settings_store
         .load(&settings_target)
         .map_err(|_| "settings-store-load")?
         .settings;
+    let verification_surface = std::env::var("SUPERDESKTOP_VERIFICATION_SURFACE").ok();
+    if verification_surface.is_some()
+        && let Ok(rows) = std::env::var("SUPERDESKTOP_VERIFICATION_TASKBAR_ROWS")
+        && let Ok(rows) = rows.parse::<u8>()
+    {
+        persisted_settings.taskbar.rows = rows.clamp(1, 3);
+    }
     let state_matrix = std::env::var_os("SUPERDESKTOP_VERIFICATION_STATE_MATRIX").is_some();
     let task_icon_cache = Rc::new(RefCell::new(BTreeMap::new()));
     let initial_tasks = if state_matrix {
@@ -2669,7 +2692,6 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
         .map(std::path::PathBuf::from)
         .filter(|path| path.is_file())
         .or_else(|| current_wallpaper_path().ok());
-    let verification_surface = std::env::var("SUPERDESKTOP_VERIFICATION_SURFACE").ok();
     let auto_hide_verification = verification_surface.as_deref() == Some("taskbar-auto-hide");
     let interactive = verification_surface.is_some() && !auto_hide_verification;
     let desktop_namespace = Rc::new(RefCell::new(DesktopNamespaceRuntime::default()));
@@ -5067,6 +5089,9 @@ mod live_parity_tests {
     fn production_status_uses_platform_clock_and_refreshes_changed_values() {
         let source = include_str!("surface_runtime.rs");
         assert!(source.contains("taskbar_status::local_date_time()"));
+        assert!(source.contains("second: local.second"));
+        assert!(source.contains("taskbar_clock_locale()"));
+        assert!(source.contains("SUPERDESKTOP_VERIFICATION_TASKBAR_ROWS"));
         assert!(source.contains("if view.status != current_status"));
         assert!(source.contains("view.status = current_status.clone()"));
         assert!(!source.contains("year: 2026,\n            month: 8,\n            day: 14,"));
@@ -5854,6 +5879,26 @@ mod live_parity_tests {
             shell_provider_protocol::SystemStatusCommand::DisconnectWifi {
                 interface_id: "interface-2".into(),
             }
+        );
+    }
+
+    #[test]
+    fn taskbar_clock_locale_follows_configured_or_user_language_tag() {
+        assert_eq!(
+            super::clock_locale_from_tag(Some("zh-TW")),
+            taskbar_ui::ClockLocale::ZhTw
+        );
+        assert_eq!(
+            super::clock_locale_from_tag(Some("zh-Hant-TW")),
+            taskbar_ui::ClockLocale::ZhTw
+        );
+        assert_eq!(
+            super::clock_locale_from_tag(Some("en-US")),
+            taskbar_ui::ClockLocale::En
+        );
+        assert_eq!(
+            super::clock_locale_from_tag(None),
+            taskbar_ui::ClockLocale::En
         );
     }
 

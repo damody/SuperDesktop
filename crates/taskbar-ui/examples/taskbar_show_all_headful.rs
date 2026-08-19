@@ -41,6 +41,7 @@ fn status() -> StatusRegion {
             day: 19,
             hour: 16,
             minute: 20,
+            second: 30,
         },
         ClockLocale::ZhTw,
         CoreStatus {

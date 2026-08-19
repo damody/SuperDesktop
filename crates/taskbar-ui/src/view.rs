@@ -29,6 +29,8 @@ thread_local! {
 
 const ICON_RENDER_CACHE_LIMIT: usize = 2_048;
 const SHOW_DESKTOP_CORNER_WIDTH: f32 = 8.0;
+const CLOCK_CONTROL_WIDTH: f32 = 112.0;
+const LEGACY_CLOCK_CONTROL_WIDTH: f32 = 82.0;
 
 fn icon_hash(icon: &IconData) -> u64 {
     let mut hasher = DefaultHasher::new();
@@ -141,6 +143,14 @@ fn toggled_system_flyout(
 
 fn activates_button(key: &str) -> bool {
     matches!(key, "enter" | "space")
+}
+
+fn clock_accessible_label(status: &StatusRegion, rows: u8) -> String {
+    if rows >= 3 {
+        format!("{} {} {}", status.time, status.weekday, status.date)
+    } else {
+        format!("{} {}", status.time, status.date)
+    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -411,15 +421,19 @@ impl Render for TaskbarView {
             TaskbarSearchMode::Icon => 44.0,
             TaskbarSearchMode::Box => 168.0,
         };
+        let taskbar_rows = self.layout.rows.get();
         let left_reserved = 44.0 + search_width + if show_task_view { 44.0 } else { 0.0 };
-        let right_reserved = 210.0 + notification_area_reserved_width + SHOW_DESKTOP_CORNER_WIDTH;
+        let right_reserved = 210.0
+            + (CLOCK_CONTROL_WIDTH - LEGACY_CLOCK_CONTROL_WIDTH)
+            + notification_area_reserved_width
+            + SHOW_DESKTOP_CORNER_WIDTH;
         let adaptive_task_slots = self.tasks.len().saturating_add(1);
         let adaptive_task_width = adaptive_labeled_task_width(
             window.bounds().size.width.as_f32(),
             left_reserved,
             right_reserved,
             adaptive_task_slots,
-            self.layout.rows.get(),
+            taskbar_rows,
         );
         let fixed_indicator_width = fixed_entry_indicator_width(adaptive_task_width);
         let start_color = if high_contrast {
@@ -1202,9 +1216,9 @@ impl Render for TaskbarView {
                         div()
                             .id("clock-calendar-control")
                             .role(gpui::Role::Button)
-                            .aria_label(format!("{} {}", self.status.time, self.status.date))
+                            .aria_label(clock_accessible_label(&self.status, taskbar_rows))
                             .tab_index(0)
-                            .w(px(82.))
+                            .w(px(CLOCK_CONTROL_WIDTH))
                             .h(bar_height)
                             .flex()
                             .flex_col()
@@ -1240,9 +1254,30 @@ impl Render for TaskbarView {
                                     }
                                 },
                             ))
-                            .child(div().text_size(px(12.)).child(self.status.time.clone()))
                             .child(
                                 div()
+                                    .w_full()
+                                    .text_center()
+                                    .whitespace_nowrap()
+                                    .text_size(px(12.))
+                                    .child(self.status.time.clone()),
+                            )
+                            .when(taskbar_rows >= 3, |clock| {
+                                clock.child(
+                                    div()
+                                        .w_full()
+                                        .text_center()
+                                        .whitespace_nowrap()
+                                        .text_size(px(11.))
+                                        .text_color(rgb(tokens.secondary_text))
+                                        .child(self.status.weekday.clone()),
+                                )
+                            })
+                            .child(
+                                div()
+                                    .w_full()
+                                    .text_center()
+                                    .whitespace_nowrap()
                                     .text_size(px(11.))
                                     .text_color(rgb(tokens.secondary_text))
                                     .child(self.status.date.clone()),
@@ -1403,12 +1438,14 @@ impl Render for TaskbarView {
 #[cfg(test)]
 mod tests {
     use super::{
-        SHOW_DESKTOP_CORNER_WIDTH, TaskbarChromeTokens, activates_button,
-        adaptive_labeled_task_width, bc7_render_image, compact_input_language,
-        fixed_entry_indicator_width, icon_render_image, task_display_label,
+        CLOCK_CONTROL_WIDTH, SHOW_DESKTOP_CORNER_WIDTH, TaskbarChromeTokens, activates_button,
+        adaptive_labeled_task_width, bc7_render_image, clock_accessible_label,
+        compact_input_language, fixed_entry_indicator_width, icon_render_image, task_display_label,
         taskbar_rows_for_logical_height, taskbar_search_label, toggled_system_flyout,
     };
-    use crate::SystemFlyoutKind;
+    use crate::{
+        ClockLocale, CoreStatus, ProviderState, StatusRegion, SystemFlyoutKind, TestClock,
+    };
     use shell_provider_protocol::IconData;
 
     #[test]
@@ -1441,6 +1478,57 @@ mod tests {
             toggled_system_flyout(current, SystemFlyoutKind::Volume),
             None
         );
+    }
+
+    #[test]
+    fn clock_width_rows_alignment_and_accessible_order_match_windows() {
+        let status = StatusRegion::new(
+            TestClock {
+                year: 2026,
+                month: 8,
+                day: 19,
+                hour: 15,
+                minute: 30,
+                second: 23,
+            },
+            ClockLocale::ZhTw,
+            CoreStatus {
+                network: ProviderState::Unavailable("fixture"),
+                volume: ProviderState::Unavailable("fixture"),
+                muted: ProviderState::Unavailable("fixture"),
+                input_language: ProviderState::Unavailable("fixture"),
+                battery: ProviderState::Unavailable("fixture"),
+                notifications: ProviderState::Unavailable("fixture"),
+            },
+        );
+        assert_eq!(CLOCK_CONTROL_WIDTH, 112.0);
+        assert_eq!(
+            clock_accessible_label(&status, 3),
+            "下午 03:30:23 星期三 2026/8/19"
+        );
+        assert_eq!(
+            clock_accessible_label(&status, 1),
+            "下午 03:30:23 2026/8/19"
+        );
+        assert_eq!(
+            clock_accessible_label(&status, 2),
+            clock_accessible_label(&status, 1)
+        );
+        let source = include_str!("view.rs");
+        for required in [
+            "CLOCK_CONTROL_WIDTH: f32 = 112.0",
+            "taskbar_rows >= 3",
+            ".w_full()",
+            ".text_center()",
+            ".whitespace_nowrap()",
+            "clock_accessible_label(&self.status, taskbar_rows)",
+            "CLOCK_CONTROL_WIDTH - LEGACY_CLOCK_CONTROL_WIDTH",
+        ] {
+            assert!(
+                source.contains(required),
+                "missing clock contract: {required}"
+            );
+        }
     }
 
     #[test]

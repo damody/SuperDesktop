@@ -248,7 +248,9 @@ function Capture-Screen([string]$Path) {
 
 $priorSurface = $env:SUPERDESKTOP_VERIFICATION_SURFACE
 $priorTrace = $env:SUPERDESKTOP_ACTION_TRACE
+$priorVerificationRows = $env:SUPERDESKTOP_VERIFICATION_TASKBAR_ROWS
 $env:SUPERDESKTOP_VERIFICATION_SURFACE = 'taskbar'
+$env:SUPERDESKTOP_VERIFICATION_TASKBAR_ROWS = '3'
 $env:SUPERDESKTOP_ACTION_TRACE = $tracePath
 Remove-Item -LiteralPath $tracePath -ErrorAction SilentlyContinue
 $watchdog = $null
@@ -295,7 +297,12 @@ try {
     $input = Find-Element $taskbar { param($item) $item.Current.ControlType -eq $button -and $item.Current.Name.StartsWith('Input language ') }
     $network = Find-Element $taskbar { param($item) $item.Current.ControlType -eq $button -and $item.Current.Name.StartsWith('Network ') }
     $volume = Find-Element $taskbar { param($item) $item.Current.ControlType -eq $button -and $item.Current.Name.StartsWith('Volume ') }
-    $calendar = Find-Element $taskbar { param($item) $item.Current.ControlType -eq $button -and $item.Current.Name -match '^\d{2}:\d{2} ' }
+    $calendar = Find-Element $taskbar {
+        param($item)
+        $item.Current.ControlType -eq $button -and
+            $item.Current.Name -match '\d{2}:\d{2}:\d{2}' -and
+            $item.Current.Name -match '\d{1,4}/\d{1,2}/\d{1,4}'
+    }
     $traditionalStart = -join @([char]0x958B, [char]0x59CB)
     $start = Find-Element $taskbar {
         param($item)
@@ -318,6 +325,19 @@ try {
         throw "Owned taskbar controls missing: $($missing -join ', '). Visible names: $($names -join ' | ')"
     }
     $originalLanguage = ([string]$input.Current.Name).Substring('Input language '.Length)
+    $clockNameBefore = [string]$calendar.Current.Name
+    $traditionalWeekdayPrefix = -join @([char]0x661f, [char]0x671f)
+    $clockHasWeekday = $clockNameBefore.Contains($traditionalWeekdayPrefix) -or $clockNameBefore -match '(Sunday|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday)'
+    Start-Sleep -Milliseconds 1200
+    $calendar = Find-Element $taskbar {
+        param($item)
+        $item.Current.ControlType -eq $button -and
+            $item.Current.Name -match '\d{2}:\d{2}:\d{2}' -and
+            $item.Current.Name -match '\d{1,4}/\d{1,2}/\d{1,4}'
+    }
+    if ($null -eq $calendar) { throw 'Owned clock control disappeared during second-advance verification.' }
+    $clockSecondAdvanced = $clockNameBefore -ne [string]$calendar.Current.Name
+    if (-not $clockHasWeekday -or -not $clockSecondAdvanced) { throw 'Owned three-row clock did not expose weekday and one-second advancement.' }
 
     Invoke-Element $network
     $networkDialog = Find-OwnedPopupElement $process.Id $process.MainWindowHandle { param($item) $item.Current.ControlType -eq [System.Windows.Automation.ControlType]::Window }
@@ -445,6 +465,8 @@ try {
         original_profile_restored=$true
         language_preferences_invoked=$languagePreferencesInvoked
         language_preferences_visibility_claimed=$false
+        clock_weekday_visible=$clockHasWeekday
+        clock_second_advanced=$clockSecondAdvanced
         start_survived_switch=if($SkipStartFocusVerification){$null}else{$true}
         start_focus_restored_trace=if($SkipStartFocusVerification){$null}else{$true}
         owned_flyouts=@('network-power','input','volume','calendar')
@@ -470,4 +492,5 @@ try {
     if ($watchdog -and -not $watchdog.HasExited) { Stop-Process -Id $watchdog.Id -Force -ErrorAction SilentlyContinue }
     if ($null -eq $priorSurface) { Remove-Item Env:SUPERDESKTOP_VERIFICATION_SURFACE -ErrorAction SilentlyContinue } else { $env:SUPERDESKTOP_VERIFICATION_SURFACE = $priorSurface }
     if ($null -eq $priorTrace) { Remove-Item Env:SUPERDESKTOP_ACTION_TRACE -ErrorAction SilentlyContinue } else { $env:SUPERDESKTOP_ACTION_TRACE = $priorTrace }
+    if ($null -eq $priorVerificationRows) { Remove-Item Env:SUPERDESKTOP_VERIFICATION_TASKBAR_ROWS -ErrorAction SilentlyContinue } else { $env:SUPERDESKTOP_VERIFICATION_TASKBAR_ROWS = $priorVerificationRows }
 }

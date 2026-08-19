@@ -1,0 +1,35 @@
+{
+  "schema": "superdesktop-row-aware-clock-evidence/v1",
+  "result": "passed",
+  "release_app_sha256": "918fa07705d82995501a7209a30127e3afafeb65ed98f327f96ad7c2772e3ffd",
+  "format_contract": {
+    "traditional_chinese": ["下午 03:30:23", "星期三", "2026/8/19"],
+    "english": ["03:30:23 PM", "Wednesday", "8/19/2026"],
+    "midnight_noon": "passed",
+    "all_weekdays": "passed",
+    "leap_date": "passed"
+  },
+  "presentation": {
+    "clock_width_dip": 112,
+    "taskbar_rows": 3,
+    "full_width_text_centered": true,
+    "contained": true,
+    "right_reservation_updated": true,
+    "uia_visual_order": true,
+    "second_advanced": true,
+    "weekday_visible": true,
+    "calendar_activation": true
+  },
+  "themes": {
+    "light": { "result": "passed", "report_sha256": "398c0c383888eaca7a780997c2bfdd70286187b45787fe90f5272bf3f8a327d7", "screenshot_sha256": "66d06c82d74752e8a046b827ab96accbcdd1b3718a361084b98419be2c3e5247" },
+    "dark": { "result": "passed", "report_sha256": "6d7c5a847882d435f9a8843f2bb136faded5748b47c9925448b62d923cb6e285", "screenshot_sha256": "86274cf57f0ab4a4fa0f036808b2a467fb28e290e87914b7c3de04e9b1a02247" },
+    "high_contrast": { "result": "passed", "report_sha256": "f7bb784fa88884c6d51b035f0ec64b50e257aff05fbc259815a500e5d15ec33d", "screenshot_sha256": "51dc778b59b3e77e1df4307b005335d9d4a400cf72c4689ce5f984cadf38f86a" }
+  },
+  "quality": [
+    { "command": "cargo fmt --all -- --check", "result": "passed" },
+    { "command": "cargo check --workspace --all-targets --locked", "result": "passed" },
+    { "command": "cargo test --workspace --locked", "result": "passed" },
+    { "command": "cargo clippy --workspace --all-targets --locked -- -D warnings", "result": "passed" }
+  ],
+  "identity_bearing_screenshots_committed": false
+}
