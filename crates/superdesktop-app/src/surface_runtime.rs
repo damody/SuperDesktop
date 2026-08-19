@@ -66,7 +66,6 @@ use crate::{
 };
 
 static NEXT_PROVIDER_REQUEST: AtomicU64 = AtomicU64::new(1);
-static EXPLORER_SUPPRESSION_ENABLED: AtomicBool = AtomicBool::new(false);
 const ICON_CACHE_LIMIT: usize = 2_048;
 const HSHELL_WINDOWDESTROYED: u32 = 2;
 const HSHELL_WINDOWACTIVATED: u32 = 4;
@@ -3107,32 +3106,6 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
     let terminal = Rc::new(RefCell::new(None::<Result<(), &'static str>>));
     let terminal_for_app = Rc::clone(&terminal);
     let platform = gpui_windows::WindowsPlatform::new(false).map_err(|_| "gpui-platform")?;
-    EXPLORER_SUPPRESSION_ENABLED.store(shell, Ordering::Release);
-    let explorer_suppression_worker = if shell {
-        match std::thread::Builder::new()
-            .name("superdesktop-explorer-suppression".into())
-            .spawn(|| {
-                while EXPLORER_SUPPRESSION_ENABLED.load(Ordering::Acquire) {
-                    std::thread::sleep(Duration::from_secs(1));
-                    if !EXPLORER_SUPPRESSION_ENABLED.load(Ordering::Acquire) {
-                        break;
-                    }
-                    if let Err(error) =
-                        platform_win::common::explorer_recovery::shutdown_trusted_explorer_shell()
-                    {
-                        eprintln!("SuperDesktop error [explorer-suppression]: {error}");
-                    }
-                }
-            }) {
-            Ok(worker) => Some(worker),
-            Err(_) => {
-                EXPLORER_SUPPRESSION_ENABLED.store(false, Ordering::Release);
-                return Err("explorer-suppression-thread");
-            }
-        }
-    } else {
-        None
-    };
     gpui::Application::with_platform(Rc::new(platform))
         .with_quit_mode(gpui::QuitMode::Explicit)
         .run(move |cx: &mut App| {
@@ -4247,8 +4220,11 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                                         }
                                                     }
                                                     TaskbarContextCommand::ReturnToDefaultExplorer => {
-                                                        EXPLORER_SUPPRESSION_ENABLED.store(false, Ordering::Release);
-                                                        match platform_win::common::explorer_recovery::recover_explorer_shell() {
+                                                        match crate::restore_default_explorer_registration().and_then(|_| {
+                                                            platform_win::common::explorer_recovery::recover_explorer_shell()
+                                                                .map(|_| ())
+                                                                .map_err(str::to_owned)
+                                                        }) {
                                                             Ok(_) => {
                                                                 trace_action("explorer-return:verified");
                                                                 app.quit();
@@ -5511,14 +5487,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                     .detach();
             }
         });
-    let result = terminal.borrow_mut().take().unwrap_or(Ok(()));
-    EXPLORER_SUPPRESSION_ENABLED.store(false, Ordering::Release);
-    if let Some(worker) = explorer_suppression_worker
-        && worker.join().is_err()
-    {
-        eprintln!("SuperDesktop error [explorer-suppression]: worker panicked");
-    }
-    result
+    terminal.borrow_mut().take().unwrap_or(Ok(()))
 }
 
 #[cfg(test)]

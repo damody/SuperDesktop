@@ -3781,6 +3781,7 @@ dependencies = [
  "serde_json",
  "settings-store",
  "shell-core",
+ "shell-installer",
  "shell-provider-protocol",
  "taskbar-ui",
 ]

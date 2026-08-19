@@ -64,6 +64,10 @@ pub fn run_product_for(
 ) -> Result<(), &'static str> {
     let owner = admit_shell(&request)?;
     if request.shell {
+        if let Err(error) = ensure_current_user_shell_registration() {
+            eprintln!("SuperDesktop error [shell-registration]: {error}");
+            return Err("shell-registration-failed");
+        }
         arm_recovery_guardian()?;
     }
     let mut root = CompositionRoot::new(request);
@@ -73,6 +77,95 @@ pub fn run_product_for(
     surface_runtime::run(request.shell, duration)?;
     if let Some(owner) = owner {
         owner.release()?;
+    }
+    Ok(())
+}
+
+fn shell_registration_paths()
+-> Result<(std::path::PathBuf, std::path::PathBuf, std::path::PathBuf), String> {
+    let app = std::env::current_exe().map_err(|error| format!("current-exe:{error}"))?;
+    let directory = app
+        .parent()
+        .ok_or_else(|| "current executable has no parent directory".to_owned())?;
+    let guardian = directory.join("superdesktop-guardian.exe");
+    let rollback = std::env::var_os("LOCALAPPDATA")
+        .map(std::path::PathBuf::from)
+        .ok_or_else(|| "LOCALAPPDATA is unavailable".to_owned())?
+        .join("SuperDesktop")
+        .join("installer-rollback.json");
+    Ok((app, guardian, rollback))
+}
+
+fn ensure_current_user_shell_registration() -> Result<(), String> {
+    use shell_installer::{
+        FileRollbackStore, InstallerCommand, InstallerDisposition, MutationAuthority,
+        ShellRegistry, WindowsShellRegistry, build_enable_plan, execute_plan,
+    };
+
+    let (app, guardian, rollback) = shell_registration_paths()?;
+    let mut registry = WindowsShellRegistry;
+    let observed = registry
+        .read_shell()
+        .map_err(|error| format!("read:{error:?}"))?;
+    let plan = build_enable_plan(
+        InstallerCommand::Enable,
+        observed,
+        &app,
+        &guardian,
+        &rollback,
+    )
+    .map_err(|error| format!("plan:{error:?}"))?;
+    if plan.observed == plan.desired {
+        return Ok(());
+    }
+    let authority = MutationAuthority {
+        apply: true,
+        explicit_opt_in: true,
+        confirmed_fingerprint: Some(plan.fingerprint.clone()),
+    };
+    let mut store = FileRollbackStore::new(rollback);
+    let audit = execute_plan(&mut registry, &mut store, &plan, &authority)
+        .map_err(|error| format!("apply:{error:?}"))?;
+    if audit.disposition != InstallerDisposition::Applied || audit.after != plan.desired {
+        return Err(format!("verification:{:?}", audit.disposition));
+    }
+    Ok(())
+}
+
+pub(crate) fn restore_default_explorer_registration() -> Result<(), String> {
+    use shell_installer::{
+        FileRollbackStore, InstallerCommand, InstallerDisposition, MutationAuthority,
+        RollbackStore, ShellRegistry, WindowsShellRegistry, build_restore_plan, execute_plan,
+    };
+
+    let (app, guardian, rollback) = shell_registration_paths()?;
+    let mut registry = WindowsShellRegistry;
+    let observed = registry
+        .read_shell()
+        .map_err(|error| format!("read:{error:?}"))?;
+    let mut store = FileRollbackStore::new(rollback.clone());
+    let record = store
+        .load()
+        .map_err(|error| format!("rollback-read:{error:?}"))?
+        .ok_or_else(|| "rollback record is unavailable".to_owned())?;
+    let plan = build_restore_plan(
+        InstallerCommand::Disable,
+        observed,
+        &record,
+        app,
+        guardian,
+        rollback,
+    )
+    .map_err(|error| format!("plan:{error:?}"))?;
+    let authority = MutationAuthority {
+        apply: true,
+        explicit_opt_in: true,
+        confirmed_fingerprint: Some(plan.fingerprint.clone()),
+    };
+    let audit = execute_plan(&mut registry, &mut store, &plan, &authority)
+        .map_err(|error| format!("apply:{error:?}"))?;
+    if audit.disposition != InstallerDisposition::Applied || audit.after != plan.desired {
+        return Err(format!("verification:{:?}", audit.disposition));
     }
     Ok(())
 }
@@ -127,3 +220,21 @@ pub fn run_guardian_parent_fixture(terminal_path: &str) -> Result<u32, &'static 
 
 pub const APP_USER_MODEL_ID: &str = identity::APP_USER_MODEL_ID;
 pub const ORIGINAL_FILENAME: &str = identity::ORIGINAL_FILENAME;
+
+#[cfg(test)]
+mod shell_registration_tests {
+    #[test]
+    fn shell_registration_is_verified_before_guardian_and_explorer_shutdown() {
+        let lib = include_str!("lib.rs");
+        let runtime = include_str!("surface_runtime.rs");
+        let registration = lib
+            .find("ensure_current_user_shell_registration()")
+            .expect("shell registration");
+        let guardian = lib.find("arm_recovery_guardian()?").expect("guardian arm");
+        assert!(registration < guardian);
+        assert!(lib.contains("audit.after != plan.desired"));
+        assert!(lib.contains("restore_default_explorer_registration"));
+        assert!(!runtime.contains("superdesktop-explorer-suppression"));
+        assert!(!runtime.contains("EXPLORER_SUPPRESSION_ENABLED"));
+    }
+}
