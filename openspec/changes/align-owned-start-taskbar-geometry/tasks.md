@@ -86,6 +86,6 @@
 **Gate／Evidence：** `G-PACKAGE`, `G-TRACE`; final evidence.
 **完成門檻：** 18/18, clean submodule, current gitlink, verified hashes and unarchived change.
 
-- [ ] 3.2.1 Commit implementation and update parent gitlink.
-- [ ] 3.2.2 Build both NSIS installers with `--no-launch` and verify hashes.
-- [ ] 3.2.3 Create 18 unique evidence records, revalidate and commit without archive.
+- [x] 3.2.1 Commit implementation and update parent gitlink.
+- [x] 3.2.2 Build both NSIS installers with `--no-launch` and verify hashes.
+- [x] 3.2.3 Create 18 unique evidence records, revalidate and commit without archive.

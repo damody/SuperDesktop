@@ -1,0 +1,23 @@
+{
+  "schema":"owned-start-taskbar-geometry-traceability/v1","result":"passed","leaf_count":18,"implementation_commit":"92a9c367",
+  "records":[
+    {"task_id":"1.1.1","status":"passed","artifact":"surface_runtime.rs#start_window_geometry(shell,rows)"},
+    {"task_id":"1.1.2","status":"passed","artifact":"surface_runtime.rs#start_bottom"},
+    {"task_id":"1.1.3","status":"passed","artifact":"surface_runtime.rs#start_options composition"},
+    {"task_id":"1.2.1","status":"passed","artifact":"start_geometry_uses_matching_preview_and_shell_taskbar_anchors"},
+    {"task_id":"1.2.2","status":"passed","artifact":"start_geometry_matrix_preserves_windows_ratios_without_taskbar_overlap"},
+    {"task_id":"1.2.3","status":"passed","artifact":"start_geometry_centers_clamps_and_preserves_bottom_gap"},
+    {"task_id":"2.1.1","status":"passed","artifact":"capture-start-production.ps1#SuppressExplorer/watchdog"},
+    {"task_id":"2.1.2","status":"passed","artifact":"evidence/headful/report.json#geometry"},
+    {"task_id":"2.1.3","status":"passed","artifact":"evidence/headful/home.png;all-apps.png;power.png"},
+    {"task_id":"2.2.1","status":"passed","artifact":"evidence/headful/report.json#gap/containment/non-overlap"},
+    {"task_id":"2.2.2","status":"passed","artifact":"superdesktop-utit catalog gui-start recovery;report host PIDs"},
+    {"task_id":"2.2.3","status":"passed","artifact":"evidence/shell-parity/report.json"},
+    {"task_id":"3.1.1","status":"passed","artifact":"shell-parity workspace-tests"},
+    {"task_id":"3.1.2","status":"passed","artifact":"shell-parity Clippy/release;architecture/source audits"},
+    {"task_id":"3.1.3","status":"passed","artifact":"headful screenshots;strict/detailed validation"},
+    {"task_id":"3.2.1","status":"passed","artifact":"implementation 92a9c367;parent b6b13a0"},
+    {"task_id":"3.2.2","status":"passed","artifact":"evidence/package-report.json"},
+    {"task_id":"3.2.3","status":"passed","artifact":"evidence/traceability-index.json"}
+  ],"unique_task_records":true,"strict_openspec_validation":"passed","detailed_task_validation":"passed","change_archived":false
+}
