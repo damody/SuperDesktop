@@ -1,0 +1,32 @@
+{
+  "schema": "openspec-leaf-evidence-index/v1",
+  "change": "add-owned-notification-center",
+  "result": "passed",
+  "leaf_count": 24,
+  "entries": [
+    {"task":"1.1.1","evidence_id":"E-NC-DTO","artifact":"automated-gates.json","proof":"owned identity, severity, content, time, and generation tests"},
+    {"task":"1.1.2","evidence_id":"E-NC-DEFAULTS","artifact":"automated-gates.json","proof":"serde-defaulted icon/snapshot and typed mutation contracts"},
+    {"task":"1.1.3","evidence_id":"E-NC-PROTOCOL-NEGATIVE","artifact":"automated-gates.json","proof":"old/new, bounds, invalid identity, and frame tests"},
+    {"task":"1.2.1","evidence_id":"E-NC-NATIVE-COPY","artifact":"headful/light/light-fixture.log","proof":"documented NIF_INFO fixture reached owned ingress"},
+    {"task":"1.2.2","evidence_id":"E-NC-NATIVE-TRANSLATE","artifact":"headful/light/light-report.json","proof":"nine real notification rows rendered"},
+    {"task":"1.2.3","evidence_id":"E-NC-NATIVE-NEGATIVE","artifact":"automated-gates.json","proof":"layout, UTF-16, truncation, owner, and session tests"},
+    {"task":"2.1.1","evidence_id":"E-NC-HISTORY","artifact":"automated-gates.json","proof":"atomic icon and notification admission tests"},
+    {"task":"2.1.2","evidence_id":"E-NC-RETENTION","artifact":"automated-gates.json","proof":"dedupe, oldest eviction, and disconnect retention tests"},
+    {"task":"2.1.3","evidence_id":"E-NC-STORM","artifact":"automated-gates.json","proof":"100-record capacity, ordering, and snapshot tests"},
+    {"task":"2.2.1","evidence_id":"E-NC-ACTIONS","artifact":"headful/light/light-report.json","proof":"UIA dismiss and clear actions passed"},
+    {"task":"2.2.2","evidence_id":"E-NC-RECONCILE","artifact":"headful/light/light-trace.log","proof":"authoritative center reconciliation traces"},
+    {"task":"2.2.3","evidence_id":"E-NC-ACTION-NEGATIVE","artifact":"automated-gates.json","proof":"stale, unknown, repeated, empty, and icon preservation tests"},
+    {"task":"3.1.1","evidence_id":"E-NC-STATES","artifact":"headful/light/light-empty.png","proof":"localized empty state with calendar retained"},
+    {"task":"3.1.2","evidence_id":"E-NC-TOKENS","artifact":"headful/high-contrast/high-contrast-populated.png","proof":"explicit high-contrast cards and focus geometry"},
+    {"task":"3.1.3","evidence_id":"E-NC-GEOMETRY","artifact":"automated-gates.json","proof":"96-216 DPI, negative origin, compact, overflow, rows matrix"},
+    {"task":"3.2.1","evidence_id":"E-NC-RENDER","artifact":"headful/dark/dark-populated.png","proof":"icons, bounded text, times, cards, and calendar rendered"},
+    {"task":"3.2.2","evidence_id":"E-NC-INTERACTION","artifact":"headful/light/light-dismissed.png","proof":"dismiss, clear, Escape, and reconciliation passed"},
+    {"task":"3.2.3","evidence_id":"E-NC-A11Y-SOURCE","artifact":"automated-gates.json","proof":"UIA roles/names, long text, localization, and no-delegation tests"},
+    {"task":"4.1.1","evidence_id":"E-NC-FIXTURE","artifact":"headful/light/light-fixture.log","proof":"controlled real NotifyIcon balloon fixture"},
+    {"task":"4.1.2","evidence_id":"E-NC-HEADFUL-MATRIX","artifact":"headful/high-contrast/high-contrast-report.json","proof":"three themes, empty/populated/overflow, 175 percent captures"},
+    {"task":"4.1.3","evidence_id":"E-NC-EXPLORER-FREE","artifact":"headful/light/light-report.json","proof":"UIA actions and zero forbidden process start with Explorer absent"},
+    {"task":"4.2.1","evidence_id":"E-NC-FULL-GATES","artifact":"automated-gates.json","proof":"fmt, workspace tests, clippy, and release passed"},
+    {"task":"4.2.2","evidence_id":"E-NC-INSTALLERS","artifact":"packaging.json","proof":"implementation commit and both NSIS installers"},
+    {"task":"4.2.3","evidence_id":"E-NC-TRACE","artifact":"evidence-index.json","proof":"24 unique evidence records and strict validation"}
+  ]
+}

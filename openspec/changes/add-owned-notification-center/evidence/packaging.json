@@ -1,0 +1,15 @@
+{
+  "schema": "owned-notification-center-packaging/v1",
+  "result": "passed",
+  "version": "1.2026.8.19",
+  "superdesktop_revision": "c339fc86b734d217bb4977b9afa84e72bd7f41cd",
+  "superexplorer_revision": "d5ee3be030fed227710cd58fc515754485105804",
+  "artifacts": [
+    {"path":"D:/SuperExplorer/SuperDesktop/target/release/superdesktop-app.exe","bytes":21197824,"sha256":"2154385e13544f57a2c8cd0387eaab072fc03d0b432b0970a293ff3a0e7fb13d"},
+    {"path":"D:/SuperExplorer/SuperDesktop/target/release/notification-area-host.exe","bytes":2690048,"sha256":"a9067e594c7e3cb219ea4175f322a7f2b11f3a380a85f7fc8051d9feef1e0354"},
+    {"path":"D:/SuperExplorer/SuperDesktop/target/release/examples/notify_icon_fixture.exe","bytes":153600,"sha256":"4c0091a28ef751603b618cbc9dfb689633ce031e148d4f948bef66c0c3b55d7b"},
+    {"path":"D:/SuperExplorer/dist/SuperDesktop-Test-Setup-1.2026.8.19-x64.exe","mode":"superdesktop-only","bytes":5854885,"sha256":"356b778e5a00f1b2b7d6355663446ee115db55303e7442b16fa10dc6e27ec24e"},
+    {"path":"D:/SuperExplorer/dist/SuperExplorer-Setup-1.2026.8.19-x64.exe","mode":"superexplorer-plus-superdesktop","bytes":13609209,"sha256":"5ba4e57a2ca4d01efae660de09842150bfe85c3469c9884218b4abc8c8c96175"}
+  ],
+  "commands": ["build_desktop_test_install.bat --no-launch","build_install.bat --no-launch"]
+}

@@ -1,0 +1,33 @@
+{
+  "schema": "owned-notification-center-automated/v1",
+  "result": "passed",
+  "implementation_revision": "c339fc86b734d217bb4977b9afa84e72bd7f41cd",
+  "release_app_sha256": "2154385e13544f57a2c8cd0387eaab072fc03d0b432b0970a293ff3a0e7fb13d",
+  "notification_host_sha256": "a9067e594c7e3cb219ea4175f322a7f2b11f3a380a85f7fc8051d9feef1e0354",
+  "commands": [
+    "cargo fmt --all -- --check",
+    "cargo test --workspace --all-targets --locked --offline --no-fail-fast",
+    "cargo clippy --workspace --all-targets --locked --offline -- -D warnings",
+    "cargo build --workspace --all-targets --release --locked --offline"
+  ],
+  "focused_counts": {
+    "shell_provider_protocol": 20,
+    "platform_win": 77,
+    "notification_area_host": 7,
+    "taskbar_ui": 59,
+    "superdesktop_app": 33
+  },
+  "history_capacity": 100,
+  "dpi_matrix": [96,120,144,168,192,216],
+  "headful": {
+    "windows_build": 26200,
+    "dpi": 168,
+    "dpi_percent": 175,
+    "themes": ["light","dark","high-contrast"],
+    "real_notifyicon_rows": 9,
+    "uia_dismiss": "9-to-8",
+    "uia_clear_all": "8-to-0",
+    "explorer_absent": true,
+    "forbidden_processes_started": 0
+  }
+}
