@@ -181,6 +181,22 @@ pub fn catalog() -> Vec<TestCase> {
             60,
         ),
         headful_case(
+            "gui-notification-overflow",
+            "Explorer-free hidden notification icons",
+            "capture-notifyicon-compatibility.ps1",
+            &[
+                "-Workspace",
+                "{workspace}",
+                "-OutputPath",
+                "{out}/notifyicon/report.json",
+                "-ScreenshotPath",
+                "{out}/notifyicon/overflow.png",
+            ],
+            &["notifyicon/report.json", "notifyicon/overflow.png"],
+            true,
+            75,
+        ),
+        headful_case(
             "gui-desktop-marquee",
             "Desktop marquee selection",
             "capture-desktop-marquee-production.ps1",

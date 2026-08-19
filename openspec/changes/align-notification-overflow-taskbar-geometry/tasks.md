@@ -12,9 +12,9 @@
 **Gate／Evidence：** `G-OVERFLOW-GEOMETRY`; focused tests.
 **完成門檻：** Matching anchor, rows and 8 DIP gap apply once.
 
-- [ ] 1.1.1 Add shell input to overflow bounds/options.
-- [ ] 1.1.2 Select preview/shell taskbar bottom and bounded panel bottom.
-- [ ] 1.1.3 Pass runtime shell mode through overflow composition.
+- [x] 1.1.1 Add shell input to overflow bounds/options.
+- [x] 1.1.2 Select preview/shell taskbar bottom and bounded panel bottom.
+- [x] 1.1.3 Pass runtime shell mode through overflow composition.
 
 ### 1.2 Freeze Windows layout ratios
 
@@ -26,9 +26,9 @@
 **Gate／Evidence：** `G-DPI-MATRIX`; Rust tests.
 **完成門檻：** 4 DPI × 2 modes × 3 rows and icon/boundary matrix pass.
 
-- [ ] 1.2.1 Test stale work-area preview/shell anchors.
-- [ ] 1.2.2 Test icon counts 1/6/7/20/36+ with 344/48/6-column ratios.
-- [ ] 1.2.3 Test negative origins, constrained size and containment.
+- [x] 1.2.1 Test stale work-area preview/shell anchors.
+- [x] 1.2.2 Test icon counts 1/6/7/20/36+ with 344/48/6-column ratios.
+- [x] 1.2.3 Test negative origins, constrained size and containment.
 
 ## 2. Forced Explorer-free UTIT
 
@@ -42,9 +42,9 @@
 **Gate／Evidence：** `G-NOTIFYICON`, `G-UTIT`; headful report.
 **完成門檻：** Panel/taskbar/monitor rectangles, DPI/DIP values, hidden buttons and hashes exist.
 
-- [ ] 2.1.1 Launch 20-icon fixture and deterministically open owned overflow.
-- [ ] 2.1.2 Record HWND/PID, rectangles, DPI, logical width/height/gap and containment.
-- [ ] 2.1.3 Preserve activate/context callbacks, host recovery, screenshot and hashes.
+- [x] 2.1.1 Launch 20-icon fixture and deterministically open owned overflow.
+- [x] 2.1.2 Record HWND/PID, rectangles, DPI, logical width/height/gap and containment.
+- [x] 2.1.3 Preserve activate/context callbacks, host recovery, screenshot and hashes.
 
 ### 2.2 Enforce isolation and runtime thresholds
 
@@ -56,9 +56,9 @@
 **Gate／Evidence：** `G-SHELL-NONINTERFERENCE`, `G-UTIT`; focused/full reports.
 **完成門檻：** Width ±16 DIP, gap 2–16 DIP, containment, ownership, callbacks and recovery pass.
 
-- [ ] 2.2.1 Enforce width/gap/containment/hidden-button thresholds.
-- [ ] 2.2.2 Add Explorer-watchdog UTIT catalog case and required artifacts.
-- [ ] 2.2.3 Run focused and full shell-parity and validate hashes.
+- [x] 2.2.1 Enforce width/gap/containment/hidden-button thresholds.
+- [x] 2.2.2 Add Explorer-watchdog UTIT catalog case and required artifacts.
+- [x] 2.2.3 Run focused and full shell-parity and validate hashes.
 
 ## 3. Admission and packaging
 
@@ -72,9 +72,9 @@
 **Gate／Evidence：** `G-DPI-MATRIX`, `G-UTIT`, `G-TRACE`.
 **完成門檻：** All locally runnable blocking gates exit zero.
 
-- [ ] 3.1.1 Run format and focused/workspace tests.
-- [ ] 3.1.2 Run Clippy, architecture/source audits and release.
-- [ ] 3.1.3 Inspect screenshot and pass strict/detailed validation.
+- [x] 3.1.1 Run format and focused/workspace tests.
+- [x] 3.1.2 Run Clippy, architecture/source audits and release.
+- [x] 3.1.3 Inspect screenshot and pass strict/detailed validation.
 
 ### 3.2 Commit, package and trace
 

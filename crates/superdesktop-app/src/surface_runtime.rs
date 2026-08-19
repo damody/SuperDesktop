@@ -2116,6 +2116,7 @@ struct NotificationOverflowBounds {
 
 fn notification_overflow_bounds(
     monitor: &MonitorRecord,
+    shell: bool,
     icon_count: usize,
     taskbar_rows: u8,
 ) -> NotificationOverflowBounds {
@@ -2128,10 +2129,15 @@ fn notification_overflow_bounds(
     let work_right = monitor.work_area.right as f32 / scale;
     let work_bottom = monitor.work_area.bottom as f32 / scale;
     let taskbar_height = 40.0 * f32::from(taskbar_rows.clamp(1, 3));
+    let taskbar_bottom = if shell {
+        monitor.bounds.bottom as f32 / scale
+    } else {
+        work_bottom
+    };
+    let bottom = taskbar_bottom - taskbar_height - 8.0;
     let width = logical_width.min(work_right - work_left);
-    let height = logical_height.min((work_bottom - work_top - taskbar_height - 8.0).max(1.0));
+    let height = logical_height.min((bottom - work_top).max(1.0));
     let right = work_right - 8.0;
-    let bottom = work_bottom - taskbar_height - 8.0;
     NotificationOverflowBounds {
         left: (right - width).max(work_left),
         top: (bottom - height).max(work_top),
@@ -2142,10 +2148,11 @@ fn notification_overflow_bounds(
 
 fn notification_overflow_options(
     monitor: &MonitorRecord,
+    shell: bool,
     icon_count: usize,
     taskbar_rows: u8,
 ) -> WindowOptions {
-    let bounds = notification_overflow_bounds(monitor, icon_count, taskbar_rows);
+    let bounds = notification_overflow_bounds(monitor, shell, icon_count, taskbar_rows);
     WindowOptions {
         window_bounds: Some(WindowBounds::Windowed(Bounds {
             origin: point(px(bounds.left), px(bounds.top)),
@@ -3770,6 +3777,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                 let opened = app.open_window(
                                     notification_overflow_options(
                                         &notification_overflow_monitor,
+                                        shell,
                                         nodes.len(),
                                         notification_overflow_settings.borrow().taskbar.rows,
                                     ),
@@ -5248,7 +5256,7 @@ mod live_parity_tests {
             dpi_x: 168,
             dpi_y: 168,
         };
-        let bounds = super::notification_overflow_bounds(&monitor, 24, 2);
+        let bounds = super::notification_overflow_bounds(&monitor, false, 24, 2);
         assert_eq!(bounds.width, 344.0);
         assert_eq!(bounds.height, 216.0);
         assert!((bounds.left + bounds.width - (-8.0)).abs() < 0.01);
@@ -5267,12 +5275,57 @@ mod live_parity_tests {
             dpi_y: 480,
             ..monitor
         };
-        let bounds = super::notification_overflow_bounds(&constrained, usize::MAX, 3);
+        let bounds = super::notification_overflow_bounds(&constrained, false, usize::MAX, 3);
         assert!(bounds.width <= 80.0);
         assert!(bounds.height <= 1.0);
         assert!(bounds.left >= -20.0 && bounds.top >= 0.0);
         assert!(bounds.left + bounds.width <= 60.0);
         assert!(bounds.top + bounds.height <= 1.0);
+    }
+
+    #[test]
+    fn notification_overflow_geometry_matrix_tracks_mode_rows_and_icon_grid() {
+        for dpi in [96, 144, 168, 216] {
+            let monitor = MonitorRecord {
+                device_name: format!("dpi-{dpi}"),
+                primary: false,
+                bounds: ScreenRect {
+                    left: -3840,
+                    top: -300,
+                    right: 0,
+                    bottom: 2160,
+                },
+                work_area: ScreenRect {
+                    left: -3840,
+                    top: -300,
+                    right: 0,
+                    bottom: 2020,
+                },
+                dpi_x: dpi,
+                dpi_y: dpi,
+            };
+            let scale = dpi as f32 / 96.0;
+            for shell in [false, true] {
+                for taskbar_rows in 1..=3 {
+                    for (icons, grid_rows) in [(1, 1), (6, 1), (7, 2), (20, 4), (36, 6), (99, 6)] {
+                        let geometry = super::notification_overflow_bounds(
+                            &monitor,
+                            shell,
+                            icons,
+                            taskbar_rows,
+                        );
+                        let taskbar_bottom = if shell { 2160.0 } else { 2020.0 } / scale;
+                        let panel_bottom = taskbar_bottom - 40.0 * taskbar_rows as f32 - 8.0;
+                        assert_eq!(geometry.width, 344.0);
+                        assert_eq!(geometry.height, 24.0 + 48.0 * grid_rows as f32);
+                        assert!((geometry.top + geometry.height - panel_bottom).abs() < 0.01);
+                        assert!(geometry.left >= -3840.0 / scale);
+                        assert!(geometry.left + geometry.width <= -8.0 + 0.01);
+                        assert!(geometry.top >= -300.0 / scale);
+                    }
+                }
+            }
+        }
     }
 
     #[test]
