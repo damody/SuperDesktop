@@ -60,21 +60,30 @@ try {
     )
     $buttons = $root.FindAll([System.Windows.Automation.TreeScope]::Descendants, $condition)
     $taskBounds = @()
+    $taskMeasurements = @()
     $singleCharacterLabels = 0
     $fixedFound = $false
+    $fixedBounds = $null
     $taskButton = $null
     for ($index = 0; $index -lt $buttons.Count; $index++) {
         $button = $buttons.Item($index)
         $name = [string]$button.Current.Name
-        if ($name -eq 'SuperExplorer') { $fixedFound = $true; continue }
+        if ($name -eq 'SuperExplorer') {
+            $bounds = $button.Current.BoundingRectangle
+            $fixedBounds = [ordered]@{ name=$name;left=[int]$bounds.Left;top=[int]$bounds.Top;width=[int]$bounds.Width;height=[int]$bounds.Height }
+            $fixedFound = $true
+            continue
+        }
         if ($name -notmatch '^(.+) \[(active|minimized|attention|available|unavailable|group:\d+)\]$') { continue }
         $visibleLabel = $matches[1].Trim()
+        $taskState = $matches[2]
         if ([Globalization.StringInfo]::ParseCombiningCharacters($visibleLabel).Count -le 1) {
             $singleCharacterLabels++
         }
         $bounds = $button.Current.BoundingRectangle
         if($null-eq$taskButton){$taskButton=$button}
         $taskBounds += [ordered]@{ left=[int]$bounds.Left;top=[int]$bounds.Top;width=[int]$bounds.Width;height=[int]$bounds.Height }
+        $taskMeasurements += [ordered]@{ order=$taskMeasurements.Count;name=$visibleLabel;state=$taskState;left=[int]$bounds.Left;top=[int]$bounds.Top;width=[int]$bounds.Width;height=[int]$bounds.Height }
     }
     $rows = @($taskBounds.top | Sort-Object -Unique)
     if (-not $fixedFound -or $taskBounds.Count -lt 2 -or $singleCharacterLabels -ne 0 -or $rows.Count -ne 1) {
@@ -91,7 +100,15 @@ try {
     $maxTaskRight=@($taskBounds|ForEach-Object{$_.left+$_.width}|Measure-Object -Maximum).Maximum
     $taskbarDpi=[LiveTaskbarDpi]::GetDpiForWindow($process.MainWindowHandle);$taskbarScale=[double]$taskbarDpi/96.0
     $logicalTaskWidths=@($taskBounds|ForEach-Object{$_.width/$taskbarScale})
-    if(@($logicalTaskWidths|Where-Object{$_ -lt 43 -or $_ -gt 161}).Count -ne 0 -or @($logicalTaskWidths|Where-Object{$_ -lt 159}).Count -eq 0){throw "Adaptive task widths rejected: $($logicalTaskWidths-join',')"}
+    $fixedLogicalWidth=[double]$fixedBounds.width/$taskbarScale
+    $fixedBounds['logical_width_dip']=$fixedLogicalWidth
+    for($measurementIndex=0;$measurementIndex-lt$taskMeasurements.Count;$measurementIndex++){$taskMeasurements[$measurementIndex]['logical_width_dip']=$logicalTaskWidths[$measurementIndex]}
+    $widthDeltas=@($taskBounds|ForEach-Object{[Math]::Abs([double]$_.width-[double]$fixedBounds.width)})
+    $maximumWidthDelta=@($widthDeltas|Measure-Object -Maximum).Maximum
+    for($measurementIndex=1;$measurementIndex-lt$taskMeasurements.Count;$measurementIndex++){if($taskMeasurements[$measurementIndex].left-le$taskMeasurements[$measurementIndex-1].left){throw "Task order is not left-to-right at index $measurementIndex"}}
+    if($fixedBounds.left-ge$taskMeasurements[0].left){throw "Fixed entry does not precede ordinary tasks."}
+    if($fixedLogicalWidth-lt43-or$fixedLogicalWidth-gt161-or@($logicalTaskWidths|Where-Object{$_ -lt 43 -or $_ -gt 161}).Count-ne0-or@($logicalTaskWidths|Where-Object{$_ -lt 159}).Count-eq0){throw "Adaptive task widths rejected: fixed=$fixedLogicalWidth tasks=$($logicalTaskWidths-join',')"}
+    if($maximumWidthDelta-gt1){throw "Fixed/task width mismatch: fixed=$($fixedBounds.width) maxDelta=$maximumWidthDelta"}
     if([double]::IsPositiveInfinity($rightControlLeft)-or$maxTaskRight-gt$rightControlLeft){throw "One-row task overlap: maxTaskRight=$maxTaskRight reservedLeft=$rightControlLeft"}
 
     $sourceBounds=$taskButton.Current.BoundingRectangle
@@ -139,11 +156,15 @@ try {
         distinct_task_rows=$rows.Count
         single_character_labels=$singleCharacterLabels
         fixed_superexplorer=$fixedFound
+        fixed_entry=$fixedBounds
+        visible_tasks=$taskMeasurements
         maximum_task_right=$maxTaskRight
         reserved_right_controls_left=$rightControlLeft
         right_control_overlap=$false
         logical_task_widths=$logicalTaskWidths
         adaptive_shrink_observed=$true
+        maximum_fixed_task_width_delta_px=$maximumWidthDelta
+        fixed_task_width_parity=$true
         screenshot=(Split-Path -Leaf $ScreenshotPath)
         screenshot_sha256=(Get-FileHash -Algorithm SHA256 -LiteralPath $ScreenshotPath).Hash
         raw_titles_persisted=$false

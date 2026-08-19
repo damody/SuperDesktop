@@ -128,6 +128,10 @@ fn adaptive_labeled_task_width(
     ((window_width - left_reserved - right_reserved).max(0.0) / columns).clamp(44.0, 160.0)
 }
 
+fn fixed_entry_indicator_width(task_width: f32) -> f32 {
+    (task_width - 16.0).max(12.0)
+}
+
 fn toggled_system_flyout(
     current: Option<SystemFlyoutKind>,
     requested: SystemFlyoutKind,
@@ -409,15 +413,17 @@ impl Render for TaskbarView {
             TaskbarSearchMode::Icon => 44.0,
             TaskbarSearchMode::Box => 168.0,
         };
-        let left_reserved = 44.0 + search_width + if show_task_view { 44.0 } else { 0.0 } + 160.0;
+        let left_reserved = 44.0 + search_width + if show_task_view { 44.0 } else { 0.0 };
         let right_reserved = 210.0 + notification_area_reserved_width + SHOW_DESKTOP_CORNER_WIDTH;
+        let adaptive_task_slots = self.tasks.len().saturating_add(1);
         let adaptive_task_width = adaptive_labeled_task_width(
             window.bounds().size.width.as_f32(),
             left_reserved,
             right_reserved,
-            self.tasks.len(),
+            adaptive_task_slots,
             self.layout.rows.get(),
         );
+        let fixed_indicator_width = fixed_entry_indicator_width(adaptive_task_width);
         let start_color = if high_contrast {
             rgb(0xffff00)
         } else {
@@ -779,7 +785,7 @@ impl Render for TaskbarView {
                             .role(gpui::Role::Button)
                             .aria_label(self.fixed_name.clone())
                             .tab_index(0)
-                            .w(px(160.))
+                            .w(px(adaptive_task_width))
                             .h(px(40.))
                             .flex_none()
                             .px_2()
@@ -831,7 +837,7 @@ impl Render for TaskbarView {
                                     .absolute()
                                     .left(px(8.))
                                     .bottom_0()
-                                    .w(px(144.))
+                                    .w(px(fixed_indicator_width))
                                     .h(px(3.))
                                     .rounded_full()
                                     .bg(rgb(if high_contrast { 0x00ffff } else { 0x5b8db8 })),
@@ -1418,9 +1424,9 @@ impl Render for TaskbarView {
 mod tests {
     use super::{
         SHOW_DESKTOP_CORNER_WIDTH, TaskbarChromeTokens, activates_button,
-        adaptive_labeled_task_width, bc7_render_image, compact_input_language, icon_render_image,
-        task_display_label, taskbar_rows_for_logical_height, taskbar_search_label,
-        toggled_system_flyout,
+        adaptive_labeled_task_width, bc7_render_image, compact_input_language,
+        fixed_entry_indicator_width, icon_render_image, task_display_label,
+        taskbar_rows_for_logical_height, taskbar_search_label, toggled_system_flyout,
     };
     use crate::SystemFlyoutKind;
     use shell_provider_protocol::IconData;
@@ -1565,7 +1571,6 @@ mod tests {
             ".hover(move |style|",
             ".active(move |style|",
             ".focus_visible(move |style|",
-            "let task_width = if labeled_button { 160.0 } else { 44.0 }",
             ".w(px(210.))",
             "notification_area_reserved_width",
             ".pr(px(notification_area_reserved_width))",
@@ -1578,6 +1583,15 @@ mod tests {
                 "missing taskbar chrome: {required}"
             );
         }
+        let fixed_start = source.find(".id(\"superexplorer-fixed-entry\")").unwrap();
+        let fixed_end = source[fixed_start..]
+            .find(".children(self.tasks.iter()")
+            .unwrap()
+            + fixed_start;
+        let fixed_source = &source[fixed_start..fixed_end];
+        assert!(fixed_source.contains(".w(px(adaptive_task_width))"));
+        assert!(fixed_source.contains(".w(px(fixed_indicator_width))"));
+        assert!(!fixed_source.contains(".w(px(160.))"));
     }
 
     #[test]
@@ -1678,11 +1692,18 @@ mod tests {
             adaptive_labeled_task_width(1920.0, 204.0, 510.0, 10, 2),
             160.0
         );
+        let without_fixed = adaptive_labeled_task_width(1920.0, 44.0, 510.0, 12, 1);
+        let with_fixed = adaptive_labeled_task_width(1920.0, 44.0, 510.0, 13, 1);
+        assert!(with_fixed < without_fixed);
+        assert_eq!(fixed_entry_indicator_width(160.0), 144.0);
+        assert_eq!(fixed_entry_indicator_width(44.0), 28.0);
         let source = include_str!("view.rs");
         for required in [
             "adaptive_labeled_task_width(",
             "left_reserved",
             "right_reserved",
+            "adaptive_task_slots",
+            "fixed_entry_indicator_width(adaptive_task_width)",
             "let task_width = if labeled_button { adaptive_task_width } else { 44.0 }",
         ] {
             assert!(source.contains(required), "missing {required}");

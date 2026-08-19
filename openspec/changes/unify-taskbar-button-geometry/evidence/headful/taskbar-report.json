@@ -1,0 +1,188 @@
+{
+    "schema":  "taskbar-live-production/v1",
+    "result":  "passed",
+    "app_sha256":  "7D31C876AF5BB43C3D71479FE348A2F91EEB44F631A3E2145651F698B1F3E4D8",
+    "task_count":  13,
+    "distinct_task_rows":  1,
+    "single_character_labels":  0,
+    "fixed_superexplorer":  true,
+    "fixed_entry":  {
+                        "name":  "SuperExplorer",
+                        "left":  154,
+                        "top":  2008,
+                        "width":  236,
+                        "height":  70,
+                        "logical_width_dip":  134.85714285714286
+                    },
+    "visible_tasks":  [
+                          {
+                              "order":  0,
+                              "name":  "maa",
+                              "state":  "group:3",
+                              "left":  390,
+                              "top":  2008,
+                              "width":  236,
+                              "height":  70,
+                              "logical_width_dip":  134.85714285714286
+                          },
+                          {
+                              "order":  1,
+                              "name":  "Steam",
+                              "state":  "minimized",
+                              "left":  626,
+                              "top":  2008,
+                              "width":  236,
+                              "height":  70,
+                              "logical_width_dip":  134.85714285714286
+                          },
+                          {
+                              "order":  2,
+                              "name":  "哔哩哔哩 (゜-゜)つロ 干杯~-bilibili — Mozilla Firefox",
+                              "state":  "minimized",
+                              "left":  862,
+                              "top":  2008,
+                              "width":  236,
+                              "height":  70,
+                              "logical_width_dip":  134.85714285714286
+                          },
+                          {
+                              "order":  3,
+                              "name":  "Android Device",
+                              "state":  "minimized",
+                              "left":  1098,
+                              "top":  2008,
+                              "width":  236,
+                              "height":  70,
+                              "logical_width_dip":  134.85714285714286
+                          },
+                          {
+                              "order":  4,
+                              "name":  "MuMuPlayer",
+                              "state":  "available",
+                              "left":  1334,
+                              "top":  2008,
+                              "width":  236,
+                              "height":  70,
+                              "logical_width_dip":  134.85714285714286
+                          },
+                          {
+                              "order":  5,
+                              "name":  "PimaxClient",
+                              "state":  "minimized",
+                              "left":  1570,
+                              "top":  2008,
+                              "width":  236,
+                              "height":  70,
+                              "logical_width_dip":  134.85714285714286
+                          },
+                          {
+                              "order":  6,
+                              "name":  "3034477@msi - RustDesk",
+                              "state":  "minimized",
+                              "left":  1806,
+                              "top":  2008,
+                              "width":  236,
+                              "height":  70,
+                              "logical_width_dip":  134.85714285714286
+                          },
+                          {
+                              "order":  7,
+                              "name":  "D:\\SuperExplorer\\SuperDesktop\\target\\release\\superdesktop-app.exe",
+                              "state":  "available",
+                              "left":  2042,
+                              "top":  2008,
+                              "width":  236,
+                              "height":  70,
+                              "logical_width_dip":  134.85714285714286
+                          },
+                          {
+                              "order":  8,
+                              "name":  "ChatGPT",
+                              "state":  "available",
+                              "left":  2278,
+                              "top":  2008,
+                              "width":  236,
+                              "height":  70,
+                              "logical_width_dip":  134.85714285714286
+                          },
+                          {
+                              "order":  9,
+                              "name":  "Spotify Premium",
+                              "state":  "minimized",
+                              "left":  2514,
+                              "top":  2008,
+                              "width":  236,
+                              "height":  70,
+                              "logical_width_dip":  134.85714285714286
+                          },
+                          {
+                              "order":  10,
+                              "name":  "config.toml - omoba - Visual Studio Code",
+                              "state":  "minimized",
+                              "left":  2750,
+                              "top":  2008,
+                              "width":  236,
+                              "height":  70,
+                              "logical_width_dip":  134.85714285714286
+                          },
+                          {
+                              "order":  11,
+                              "name":  "explorer",
+                              "state":  "group:2",
+                              "left":  2986,
+                              "top":  2008,
+                              "width":  236,
+                              "height":  70,
+                              "logical_width_dip":  134.85714285714286
+                          },
+                          {
+                              "order":  12,
+                              "name":  "工作管理員",
+                              "state":  "minimized",
+                              "left":  3222,
+                              "top":  2008,
+                              "width":  236,
+                              "height":  70,
+                              "logical_width_dip":  134.85714285714286
+                          }
+                      ],
+    "maximum_task_right":  3458,
+    "reserved_right_controls_left":  3480,
+    "right_control_overlap":  false,
+    "logical_task_widths":  [
+                                134.85714285714286,
+                                134.85714285714286,
+                                134.85714285714286,
+                                134.85714285714286,
+                                134.85714285714286,
+                                134.85714285714286,
+                                134.85714285714286,
+                                134.85714285714286,
+                                134.85714285714286,
+                                134.85714285714286,
+                                134.85714285714286,
+                                134.85714285714286,
+                                134.85714285714286
+                            ],
+    "adaptive_shrink_observed":  true,
+    "maximum_fixed_task_width_delta_px":  0,
+    "fixed_task_width_parity":  true,
+    "screenshot":  "taskbar.png",
+    "screenshot_sha256":  "6FD5DC8016A1849B7DA6D34AAEC6D2ED3911E831A17C22B9D143C3F929B66BA4",
+    "raw_titles_persisted":  false,
+    "frame_visible":  true,
+    "jump_list":  {
+                      "width_dip":  373.71428571428572,
+                      "height_dip":  486.85714285714283,
+                      "taskbar_gap_dip":  4.5714285714285712,
+                      "source_anchor_delta_dip":  0,
+                      "menu_item_count":  23,
+                      "headings":  [
+                                       "Recent",
+                                       "Tasks",
+                                       "Actions"
+                                   ],
+                      "screenshot":  "jump-list.png",
+                      "screenshot_sha256":  "3602E6F6096E59440C2F964CC632A539A1EA599B9FFEC9FD40FFE4A31AF66965"
+                  }
+}
