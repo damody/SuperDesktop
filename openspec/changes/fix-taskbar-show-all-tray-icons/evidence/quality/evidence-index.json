@@ -1,0 +1,24 @@
+{
+  "schema": "taskbar-show-all-quality/v1",
+  "change": "fix-taskbar-show-all-tray-icons",
+  "recorded_at": "2026-08-19T16:30:10+08:00",
+  "result": "passed",
+  "records": {
+    "format": {"command": "cargo fmt --all -- --check", "exit_status": 0, "log": "fmt.log", "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"},
+    "check": {"command": "cargo check -p taskbar-ui -p superdesktop-app --all-targets --locked", "exit_status": 0, "log": "check.log", "log_sha256": "35b70ddd057e55c6d94c9644cd20610b67b435aae87a7623c79a3e036317d883"},
+    "tests": {"command": "cargo test -p taskbar-ui -p superdesktop-app --locked --no-fail-fast", "actual": "119 unit tests passed and all doc-test targets passed.", "exit_status": 0, "log": "tests.log", "log_sha256": "77a0c51943c156eb260bb01f20a7424c5b1057acadff3be69d0950328ed90250"},
+    "clippy": {"command": "cargo clippy -p taskbar-ui -p superdesktop-app --all-targets --locked -- -D warnings", "exit_status": 0, "log": "clippy.log", "log_sha256": "569dee4396b1b80be814f9ea377cfb6afc47fd9e11e340ae2910c0f8e28ffccf"}
+  },
+  "task_links": [
+    {"task_id": "1.1", "record": "tests", "subcheck": "unconditional-control"},
+    {"task_id": "1.2", "record": "tests", "subcheck": "complete-fresh-snapshot"},
+    {"task_id": "1.3", "record": "tests", "subcheck": "taskbar-contracts"},
+    {"task_id": "2.1", "record": "tests", "subcheck": "empty-admission"},
+    {"task_id": "2.2", "record": "tests", "subcheck": "localized-empty-state"},
+    {"task_id": "2.3", "record": "tests", "subcheck": "popup-composition"},
+    {"task_id": "3.1", "record": "format"},
+    {"task_id": "3.1", "record": "check"},
+    {"task_id": "3.1", "record": "tests"},
+    {"task_id": "3.1", "record": "clippy"}
+  ]
+}

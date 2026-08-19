@@ -12,6 +12,14 @@ use crate::{NotificationAccessibleNode, view::icon_render_image};
 pub type NotificationOverflowAction = Rc<dyn Fn(&IconKey, NotificationEventKind)>;
 pub type NotificationOverflowDismiss = Rc<dyn Fn(&mut Window, &mut gpui::App)>;
 
+fn traditional_chinese() -> bool {
+    if let Ok(locale) = std::env::var("SUPERDESKTOP_LOCALE") {
+        return locale.eq_ignore_ascii_case("zh-TW");
+    }
+    platform_win::common::taskbar_status::user_locale_name()
+        .is_some_and(|locale| locale.eq_ignore_ascii_case("zh-TW"))
+}
+
 pub struct NotificationOverflowView {
     pub nodes: Vec<NotificationAccessibleNode>,
     action: NotificationOverflowAction,
@@ -53,12 +61,18 @@ impl Render for NotificationOverflowView {
         let panel_border = if high_contrast { 0xffffff } else { 0xd0d0d0 };
         let hover_background = if high_contrast { 0x1a1a1a } else { 0xe7e7e7 };
         let pressed_background = if high_contrast { 0x303030 } else { 0xdcdcdc };
+        let empty = self.nodes.is_empty();
+        let zh_tw = traditional_chinese();
         let dismiss = self.dismiss.clone();
         let action = self.action.clone();
         div()
             .id("owned-notification-overflow")
             .role(gpui::Role::Dialog)
-            .aria_label("Hidden icons")
+            .aria_label(if zh_tw {
+                "系統匣圖示"
+            } else {
+                "Tray icons"
+            })
             .tab_index(0)
             .track_focus(&self.focus)
             .size_full()
@@ -79,6 +93,23 @@ impl Render for NotificationOverflowView {
                     }
                 }),
             )
+            .when(empty, |panel| {
+                panel.items_center().justify_center().child(
+                    div()
+                        .id("notification-overflow-empty")
+                        .role(gpui::Role::Status)
+                        .aria_label(if zh_tw {
+                            "目前沒有系統匣圖示"
+                        } else {
+                            "No tray icons are currently registered"
+                        })
+                        .child(if zh_tw {
+                            "目前沒有系統匣圖示"
+                        } else {
+                            "No tray icons"
+                        }),
+                )
+            })
             .children(self.nodes.iter().cloned().map(move |node| {
                 let click_action = action.clone();
                 let key_action = action.clone();
@@ -134,7 +165,10 @@ mod tests {
         let source = include_str!("notification_overflow.rs");
         for required in [
             "owned-notification-overflow",
-            "Hidden icons",
+            "Tray icons",
+            "notification-overflow-empty",
+            "No tray icons",
+            "目前沒有系統匣圖示",
             "observe_window_activation",
             "event.keystroke.key == \"escape\"",
             "NotificationEventKind::Activate",

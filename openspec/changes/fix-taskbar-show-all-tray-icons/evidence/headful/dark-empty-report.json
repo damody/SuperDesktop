@@ -1,0 +1,20 @@
+{
+    "schema":  "taskbar-show-all-tray-icons-headful/v1",
+    "result":  "passed",
+    "mode":  "empty",
+    "theme":  "dark",
+    "chevron":  {
+                    "control_type":  "ControlType.Button",
+                    "bounds":  "1502,1210,56,62",
+                    "invoke_pattern":  true
+                },
+    "popup":  {
+                  "fixture_icons":  [
+
+                                    ],
+                  "name":  "Tray icons",
+                  "empty_state":  true
+              },
+    "capture":  "dark-empty.png",
+    "capture_bounds":  "{X=338,Y=659,Width=1599,Height=712}"
+}

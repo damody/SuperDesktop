@@ -248,4 +248,36 @@ mod tests {
         assert!(!model.provider_available());
         assert!(model.visible().is_empty());
     }
+
+    #[test]
+    fn accessible_nodes_are_a_complete_unique_snapshot_across_placements() {
+        let mut model = NotificationAreaModel::default();
+        assert!(model.apply_snapshot(
+            NotificationSnapshot {
+                generation: 1,
+                icons: vec![icon("a", 1, true), icon("b", 2, false), icon("c", 3, false),],
+                notifications: Vec::new(),
+            },
+            2,
+        ));
+        assert_eq!(model.visible().len(), 2);
+        assert_eq!(model.overflow().len(), 1);
+        let nodes = model.accessible_nodes();
+        assert_eq!(nodes.len(), 3);
+        let unique = nodes
+            .iter()
+            .map(|node| node.key.clone())
+            .collect::<BTreeSet<_>>();
+        assert_eq!(unique.len(), nodes.len());
+        assert!(
+            nodes
+                .iter()
+                .any(|node| node.placement == NotificationPlacement::Visible)
+        );
+        assert!(
+            nodes
+                .iter()
+                .any(|node| node.placement == NotificationPlacement::Overflow)
+        );
+    }
 }

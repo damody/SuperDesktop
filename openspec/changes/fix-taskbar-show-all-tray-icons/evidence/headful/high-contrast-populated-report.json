@@ -1,0 +1,22 @@
+{
+    "schema":  "taskbar-show-all-tray-icons-headful/v1",
+    "result":  "passed",
+    "mode":  "populated",
+    "theme":  "high-contrast",
+    "chevron":  {
+                    "control_type":  "ControlType.Button",
+                    "bounds":  "1502,1210,56,62",
+                    "invoke_pattern":  true
+                },
+    "popup":  {
+                  "fixture_icons":  [
+                                        "Fixture tray icon 1",
+                                        "Fixture tray icon 2",
+                                        "Fixture tray icon 3"
+                                    ],
+                  "name":  "Tray icons",
+                  "empty_state":  false
+              },
+    "capture":  "high-contrast-populated.png",
+    "capture_bounds":  "{X=338,Y=659,Width=1599,Height=712}"
+}

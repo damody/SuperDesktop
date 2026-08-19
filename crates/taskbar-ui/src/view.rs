@@ -396,9 +396,7 @@ impl Render for TaskbarView {
             .filter(|node| node.placement == NotificationPlacement::Overflow)
             .cloned()
             .collect::<Vec<_>>();
-        let has_overflow = !overflow_notifications.is_empty();
-        let notification_area_reserved_width =
-            visible_notifications.len() as f32 * 36.0 + if has_overflow { 32.0 } else { 0.0 };
+        let notification_area_reserved_width = visible_notifications.len() as f32 * 36.0 + 32.0;
         let theme = std::env::var("SUPERDESKTOP_THEME").ok();
         let high_contrast = theme.as_deref() == Some("high-contrast");
         let tokens = TaskbarChromeTokens::new(theme.as_deref());
@@ -558,12 +556,15 @@ impl Render for TaskbarView {
                             })
                             .when(!has_native_icon, |element| element.child("•"))
                     }))
-                    .when(has_overflow, |area| {
-                        area.child(
-                            div()
+                    .child(
+                        div()
                                 .id("notification-overflow-control")
                                 .role(gpui::Role::Button)
-                                .aria_label("Show hidden icons")
+                                .aria_label(if zh_tw {
+                                    "顯示所有系統匣圖示"
+                                } else {
+                                    "Show all tray icons"
+                                })
                                 .tab_index(0)
                                 .w(px(32.))
                                 .h(px(36.))
@@ -577,20 +578,8 @@ impl Render for TaskbarView {
                                     style.border_2().border_color(rgb(tokens.focus))
                                 })
                                 .on_click(_cx.listener(move |this, _, _, cx| {
-                                    if this.notification_area.overflow_open() {
-                                        this.notification_area.dismiss_overflow();
-                                    } else {
-                                        this.notification_area.open_overflow();
-                                    }
                                     if let Some(callback) = &notification_overflow_callback {
-                                        callback(
-                                            this.notification_area
-                                                .accessible_nodes()
-                                                .into_iter()
-                                                .filter(|node| node.placement == NotificationPlacement::Overflow)
-                                                .collect(),
-                                            cx,
-                                        );
+                                        callback(this.notification_area.accessible_nodes(), cx);
                                     }
                                     cx.notify();
                                 }))
@@ -598,15 +587,7 @@ impl Render for TaskbarView {
                                     if activates_button(&event.keystroke.key)
                                         && let Some(callback) = &notification_overflow_key_callback
                                     {
-                                        this.notification_area.open_overflow();
-                                        callback(
-                                            this.notification_area
-                                                .accessible_nodes()
-                                                .into_iter()
-                                                .filter(|node| node.placement == NotificationPlacement::Overflow)
-                                                .collect(),
-                                            cx,
-                                        );
+                                        callback(this.notification_area.accessible_nodes(), cx);
                                         cx.notify();
                                     }
                                 }))
@@ -618,11 +599,10 @@ impl Render for TaskbarView {
                                         ))
                                         .w(px(16.))
                                         .h(px(16.))
-                                        .text_color(rgb(0x202020)),
+                                        .text_color(rgb(tokens.text)),
                                 )
                                 .child("⌃"),
-                        )
-                    })
+                    )
                     .when(overflow_open, |area| {
                         area.child(
                             div()
@@ -1592,6 +1572,39 @@ mod tests {
         assert!(fixed_source.contains(".w(px(adaptive_task_width))"));
         assert!(fixed_source.contains(".w(px(fixed_indicator_width))"));
         assert!(!fixed_source.contains(".w(px(160.))"));
+    }
+
+    #[test]
+    fn tray_show_all_control_is_unconditional_complete_and_theme_aware() {
+        let source = include_str!("view.rs");
+        let production = source.split("#[cfg(test)]").next().unwrap_or(source);
+        let start = production
+            .find(".id(\"notification-overflow-control\")")
+            .expect("show-all control");
+        let end = production[start..]
+            .find(".when(overflow_open")
+            .map(|offset| start + offset)
+            .expect("inline overflow boundary");
+        let control = &production[start..end];
+        for required in [
+            "visible_notifications.len() as f32 * 36.0 + 32.0",
+            "Show all tray icons",
+            "顯示所有系統匣圖示",
+            "callback(this.notification_area.accessible_nodes(), cx)",
+            ".text_color(rgb(tokens.text))",
+            "activates_button(&event.keystroke.key)",
+        ] {
+            assert!(production.contains(required), "missing {required}");
+        }
+        assert!(!production.contains("when(has_overflow"));
+        assert!(!control.contains("NotificationPlacement::Overflow"));
+        assert_eq!(
+            control
+                .matches("callback(this.notification_area.accessible_nodes(), cx)")
+                .count(),
+            2,
+            "pointer and keyboard routes must both forward complete fresh snapshots"
+        );
     }
 
     #[test]

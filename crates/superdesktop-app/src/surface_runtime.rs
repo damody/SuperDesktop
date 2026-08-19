@@ -3900,9 +3900,6 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                     trace_action("notification:overflow-closed");
                                     return;
                                 }
-                                if nodes.is_empty() {
-                                    return;
-                                }
                                 let dismiss_slot =
                                     Rc::clone(&notification_overflow_window_for_taskbar);
                                 let event_client = Rc::clone(&notification_client_for_overflow);
@@ -5453,6 +5450,23 @@ mod live_parity_tests {
         assert!(bounds.left >= -20.0 && bounds.top >= 0.0);
         assert!(bounds.left + bounds.width <= 60.0);
         assert!(bounds.top + bounds.height <= 1.0);
+    }
+
+    #[test]
+    fn notification_show_all_admits_empty_and_complete_snapshots_without_delegation() {
+        let source = include_str!("surface_runtime.rs");
+        let production = source.split("#[cfg(test)]").next().unwrap_or(source);
+        for required in [
+            "notification_overflow: Rc::new(move |nodes, app|",
+            "notification_overflow_options(",
+            "nodes.len()",
+            "NotificationOverflowView::new",
+            "notification:owned-overflow-opened",
+        ] {
+            assert!(production.contains(required), "missing {required}");
+        }
+        assert!(!production.contains("if nodes.is_empty()"));
+        assert!(!production.contains("Shell_TrayWnd"));
     }
 
     #[test]
