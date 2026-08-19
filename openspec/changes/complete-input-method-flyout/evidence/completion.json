@@ -1,0 +1,17 @@
+{
+  "schema": "superdesktop-input-completion/v1",
+  "result": "passed",
+  "change": "complete-input-method-flyout",
+  "implementation_commit": "0c805a57",
+  "tasks": { "total": 55, "passed": 55, "not_applicable": 0, "failed": 0, "blocked": 0, "stale": 0 },
+  "gates": {
+    "G-IME-IDENTITY": "passed",
+    "G-IME-LAUNCH": "passed",
+    "G-IME-BOUNDS": "passed",
+    "G-IME-TRUTH": "passed",
+    "G-IME-PRIVACY": "passed",
+    "G-IME-UI": "passed"
+  },
+  "unresolved": { "P0": 0, "P1": 0 },
+  "raw_identity_artifacts_committed": false
+}

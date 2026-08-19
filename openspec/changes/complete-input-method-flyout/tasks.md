@@ -151,4 +151,4 @@
 - [x] 6.1.4 Validate every JSON report, artifact hash, task ID/subcheck, and gate mapping.
 - [x] 6.1.5 Run strict OpenSpec and detailed-task validation with no incomplete marker or contradiction.
 - [x] 6.1.6 Confirm no failed, blocked, stale, P0, or P1 item and every conditional leaf has evidence-backed disposition.
-- [ ] 6.1.7 Commit the implementation/evidence without unrelated worktree files.
+- [x] 6.1.7 Commit the implementation/evidence without unrelated worktree files.

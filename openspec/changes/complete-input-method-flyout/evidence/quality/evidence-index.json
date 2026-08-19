@@ -11,6 +11,6 @@
   ],
   "subchecks": {
     "6.1.1": "passed", "6.1.2": "passed", "6.1.3": "passed",
-    "6.1.4": "passed", "6.1.5": "passed", "6.1.6": "passed", "6.1.7": "pending_commit"
+    "6.1.4": "passed", "6.1.5": "passed", "6.1.6": "passed", "6.1.7": "passed"
   }
 }
