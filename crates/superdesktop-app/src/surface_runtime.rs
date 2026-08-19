@@ -24,6 +24,7 @@ use platform_win::common::{
         ControlledShellCapability, OwnedShellHookEvent, ScreenRect, system_attention_cadence_ms,
     },
     desktop::{configure_and_show_desktop_window, current_wallpaper_path},
+    explorer_recovery::trusted_explorer_shell_present,
     monitor_dpi_start::{MonitorRecord, enable_per_monitor_v2, snapshot_real_monitors},
     taskbar::{
         configure_and_show_taskbar_window, move_owned_taskbar_client, owned_taskbar_resize_active,
@@ -1958,6 +1959,10 @@ fn taskbar_physical_geometry(
     }
 }
 
+const fn taskbar_uses_monitor_bounds(shell: bool, explorer_shell_present: bool) -> bool {
+    shell || !explorer_shell_present
+}
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 struct StartWindowGeometry {
     left: f32,
@@ -3188,12 +3193,21 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                 let worker_stop = Arc::clone(&auto_hide_worker_stop);
                 let worker_handle_slot = Rc::clone(&auto_hide_worker_handle);
                 let taskbar_monitor_name = taskbar_monitor.device_name.clone();
+                let explorer_shell_present_at_open = match trusted_explorer_shell_present() {
+                    Ok(present) => present,
+                    Err(error) => {
+                        report_error("taskbar:explorer-presence", error);
+                        true
+                    }
+                };
+                let taskbar_bounds_mode =
+                    taskbar_uses_monitor_bounds(shell, explorer_shell_present_at_open);
                 let taskbar = cx.open_window(
                     options(
                         &monitor,
                         true,
                         interactive,
-                        shell,
+                        taskbar_bounds_mode,
                         production_taskbar_settings.rows,
                     ),
                     move |window, cx| {
@@ -3205,7 +3219,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                     }
                     let geometry = taskbar_physical_geometry(
                         &taskbar_monitor,
-                        shell,
+                        taskbar_bounds_mode,
                         production_taskbar_settings.rows,
                     );
                     let width = geometry.width;
@@ -4336,6 +4350,18 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                             refresh_background.timer(Duration::from_millis(50)).await;
                             notification_tick = notification_tick.wrapping_add(1);
                             let refreshed_geometries = if notification_tick.is_multiple_of(10) {
+                                let explorer_shell_present =
+                                    match trusted_explorer_shell_present() {
+                                        Ok(present) => present,
+                                        Err(error) => {
+                                            report_error("taskbar:explorer-presence", error);
+                                            true
+                                        }
+                                    };
+                                let taskbar_bounds_mode = taskbar_uses_monitor_bounds(
+                                    shell,
+                                    explorer_shell_present,
+                                );
                                 match snapshot_real_monitors() {
                                     Ok(snapshot) => refresh_monitor_names
                                         .iter()
@@ -4350,7 +4376,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                                 .map(|monitor| {
                                                     taskbar_physical_geometry(
                                                         monitor,
-                                                        shell,
+                                                        taskbar_bounds_mode,
                                                         refresh_settings.borrow().taskbar.rows,
                                                     )
                                                 });
@@ -5496,6 +5522,9 @@ mod live_parity_tests {
         assert_eq!(before.bottom, 1040);
         assert_eq!(after.bottom, 1080);
         assert_eq!(after.top, 1040);
+        assert!(!super::taskbar_uses_monitor_bounds(false, true));
+        assert!(super::taskbar_uses_monitor_bounds(false, false));
+        assert!(super::taskbar_uses_monitor_bounds(true, true));
     }
 
     #[test]

@@ -157,6 +157,61 @@ pub enum ShellRecoveryOutcome {
     SpawnedVerified { process_id: u32 },
 }
 
+/// Reports whether the current interactive session still has a live shell window owned by the
+/// verified system Explorer binary. This is read-only and does not start or show Explorer.
+pub fn trusted_explorer_shell_present() -> Result<bool, &'static str> {
+    let trusted = TrustedExplorer::resolve()?;
+    let mut current_session = 0;
+    // SAFETY: current process id is read-only and session output is writable.
+    if unsafe { ProcessIdToSessionId(GetCurrentProcessId(), &mut current_session) } == 0 {
+        return Err("explorer-presence-current-session");
+    }
+    for class in ["Shell_TrayWnd", "Progman"] {
+        let class = OsStr::new(class)
+            .encode_wide()
+            .chain(Some(0))
+            .collect::<Vec<_>>();
+        // SAFETY: class is terminated; null title matches any window.
+        let window = unsafe { FindWindowW(class.as_ptr(), std::ptr::null()) };
+        if window == 0 {
+            continue;
+        }
+        let mut pid = 0;
+        // SAFETY: window is query-only and pid is writable.
+        if unsafe { GetWindowThreadProcessId(window, &mut pid) } == 0 {
+            continue;
+        }
+        let mut session = 0;
+        // SAFETY: pid is from a live window and session is writable.
+        if unsafe { ProcessIdToSessionId(pid, &mut session) } == 0 || session != current_session {
+            continue;
+        }
+        // SAFETY: query-only handle, owned and closed on this path.
+        let process = unsafe { OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid) };
+        if process == 0 {
+            continue;
+        }
+        let mut path = vec![0u16; 32_768];
+        let mut length = path.len() as u32;
+        // SAFETY: process is live and path/length are valid outputs.
+        let queried =
+            unsafe { QueryFullProcessImageNameW(process, 0, path.as_mut_ptr(), &mut length) } != 0;
+        // SAFETY: this function owns the process handle.
+        let _ = unsafe { CloseHandle(process) };
+        if !queried {
+            continue;
+        }
+        let observed = PathBuf::from(String::from_utf16_lossy(&path[..length as usize]));
+        let Ok(observed) = observed.canonicalize() else {
+            continue;
+        };
+        if observed == trusted.application {
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
+
 /// Restores the existing Explorer Shell in the current interactive session,
 /// spawning the verified system target only when no usable shell window exists.
 pub fn recover_explorer_shell() -> Result<ShellRecoveryOutcome, &'static str> {
@@ -289,6 +344,9 @@ mod tests {
 
     #[test]
     fn live_recovery_prefers_existing_verified_explorer_without_process_spawn() {
+        if !trusted_explorer_shell_present().unwrap_or(false) {
+            return;
+        }
         let before = std::process::Command::new("powershell")
             .args([
                 "-NoProfile",
