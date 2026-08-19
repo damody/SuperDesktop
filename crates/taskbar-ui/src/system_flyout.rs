@@ -7,7 +7,7 @@ use gpui::{
 };
 use shell_provider_protocol::{
     InputProfile, InputProfileKind, NotificationSnapshot, StatusAvailability, SystemStatusSnapshot,
-    WifiNetwork,
+    WifiNetwork, WindowsNotificationAccess,
 };
 
 use crate::{StatusRegion, SystemFlyoutKind, SystemStatusAction, view::icon_render_image};
@@ -1436,6 +1436,32 @@ impl Render for SystemFlyoutView {
                 let notification_count = notification_snapshot
                     .as_ref()
                     .map_or(0, |snapshot| snapshot.notifications.len());
+                let windows_event_message = notification_snapshot.as_ref().and_then(|snapshot| {
+                    let status = &snapshot.windows_events;
+                    match (&status.access, status.synchronized) {
+                        (WindowsNotificationAccess::Allowed, true) => None,
+                        (WindowsNotificationAccess::Allowed, false) => Some(localized(
+                            presentation,
+                            "正在同步 Windows 通知",
+                            "Syncing Windows notifications",
+                        )),
+                        (WindowsNotificationAccess::Denied, _) => Some(localized(
+                            presentation,
+                            "Windows 通知存取遭拒，請在隱私權設定中允許通知存取",
+                            "Windows notification access was denied. Allow notification access in Privacy settings.",
+                        )),
+                        (WindowsNotificationAccess::Unspecified, _) => Some(localized(
+                            presentation,
+                            "正在等待 Windows 通知存取權限",
+                            "Waiting for Windows notification access",
+                        )),
+                        (WindowsNotificationAccess::Unavailable, _) => Some(localized(
+                            presentation,
+                            "Windows 通知事件目前無法使用",
+                            "Windows notification events are currently unavailable",
+                        )),
+                    }
+                });
                 root.child(
                     div()
                         .id("owned-notification-center-heading")
@@ -1503,6 +1529,20 @@ impl Render for SystemFlyoutView {
                             .text_size(px(12.))
                             .text_color(rgb(tokens.unavailable))
                             .child(error),
+                    )
+                })
+                .when_some(windows_event_message, |root, message| {
+                    root.child(
+                        div()
+                            .id("owned-windows-notification-event-status")
+                            .role(gpui::Role::Status)
+                            .p_2()
+                            .rounded(px(8.))
+                            .border_1()
+                            .border_color(rgb(tokens.border))
+                            .text_size(px(12.))
+                            .text_color(rgb(tokens.secondary))
+                            .child(message),
                     )
                 })
                 .child(match notification_snapshot.clone() {
@@ -1998,6 +2038,9 @@ mod tests {
             "owned-notification-list",
             "owned-notification-empty",
             "owned-notification-provider-unavailable",
+            "owned-windows-notification-event-status",
+            "WindowsNotificationAccess::Denied",
+            "WindowsNotificationAccess::Unavailable",
             "NotificationCenterAction::Dismiss",
             "NotificationCenterAction::ClearAll",
             "event.keystroke.key == \"delete\"",

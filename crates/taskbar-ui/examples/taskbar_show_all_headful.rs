@@ -155,6 +155,7 @@ fn main() -> ExitCode {
                     generation: 1,
                     icons,
                     notifications: Vec::new(),
+                    windows_events: Default::default(),
                 },
                 1,
             );

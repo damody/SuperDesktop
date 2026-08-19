@@ -29,7 +29,8 @@ pub use notification::{
     NotifyIconCallbackRoute, NotifyIconClientIdentity, NotifyIconCompatibilityOperation,
     NotifyIconCompatibilityRequest, NotifyIconCompatibilityTerminal, NotifyIconIdentity,
     NotifyIconLayoutVersion, NotifyIconTerminalKind, OwnedNotification, OwnedNotificationContent,
-    OwnedNotifyIcon, RegisteredIcon,
+    OwnedNotifyIcon, RegisteredIcon, WindowsNotificationAccess, WindowsNotificationChange,
+    WindowsNotificationEventStatus,
 };
 pub use search::{
     SearchBatch, SearchProvider, SearchProviderState, SearchQuery, rank_search_results,

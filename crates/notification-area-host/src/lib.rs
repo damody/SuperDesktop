@@ -1,15 +1,19 @@
 use std::{
     collections::{BTreeMap, BTreeSet, VecDeque},
-    time::{SystemTime, UNIX_EPOCH},
+    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 
 use platform_win::common::notify_icon_compat::NotifyIconIngress;
+use platform_win::common::windows_notification_events::{
+    WindowsNotificationEventSource, parse_windows_notification_id,
+};
 
 use shell_provider_protocol::{
-    IconKey, NotificationEvent, NotificationEventKind, NotificationHostHealth,
+    IconKey, MAX_TEXT_BYTES, NotificationEvent, NotificationEventKind, NotificationHostHealth,
     NotificationHostResponse, NotificationIcon, NotificationMutation, NotificationSnapshot,
     NotifyIconCompatibilityTerminal, NotifyIconIdentity, NotifyIconTerminalKind, OwnedNotification,
-    OwnedNotificationContent, RegisteredIcon, Validate,
+    OwnedNotificationContent, RegisteredIcon, Validate, WindowsNotificationAccess,
+    WindowsNotificationChange, WindowsNotificationEventStatus,
 };
 
 pub const MAX_CLIENTS: usize = 64;
@@ -18,12 +22,16 @@ pub const MAX_EVENTS: usize = 512;
 pub const MAX_NOTIFICATION_HISTORY: usize = 100;
 pub const MAX_COMPLETED_CALLBACKS: usize = 512;
 pub const MAX_CALLBACK_AGE_MS: u64 = 5_000;
+const WINDOWS_NOTIFICATION_RECONCILE_INTERVAL: Duration = Duration::from_secs(5);
 
 pub struct NativeCompatibilityRegistry {
     pub registry: NotificationRegistry,
     host_generation: u64,
     native: BTreeMap<IconKey, shell_provider_protocol::OwnedNotifyIcon>,
     completed_callbacks: VecDeque<String>,
+    windows_events: Option<WindowsNotificationEventSource>,
+    last_windows_reconcile: Option<Instant>,
+    windows_events_enabled: bool,
 }
 
 impl Default for NativeCompatibilityRegistry {
@@ -35,11 +43,31 @@ impl Default for NativeCompatibilityRegistry {
                 .map_or(1, |value| value.as_millis().max(1) as u64),
             native: BTreeMap::new(),
             completed_callbacks: VecDeque::new(),
+            windows_events: None,
+            last_windows_reconcile: None,
+            windows_events_enabled: false,
         }
     }
 }
 
 impl NativeCompatibilityRegistry {
+    /// Production constructor. `Default` deliberately remains isolated for deterministic tests.
+    pub fn with_windows_notification_events() -> Self {
+        let mut result = Self {
+            windows_events_enabled: true,
+            ..Self::default()
+        };
+        match WindowsNotificationEventSource::new() {
+            Ok(source) => {
+                result.registry.windows_events = source.access_status();
+                result.windows_events = Some(source);
+                result.reconcile_windows_notifications(true);
+            }
+            Err(reason) => result.registry.windows_events = unavailable_windows_status(reason),
+        }
+        result
+    }
+
     pub const fn host_generation(&self) -> u64 {
         self.host_generation
     }
@@ -49,7 +77,19 @@ impl NativeCompatibilityRegistry {
         mutation: NotificationMutation,
         now_unix_ms: u64,
     ) -> NotificationHostResponse {
+        self.reconcile_windows_notifications(false);
         match mutation {
+            NotificationMutation::DismissNotification {
+                ref notification_id,
+                expected_generation,
+            } if parse_windows_notification_id(notification_id).is_some() => {
+                self.dismiss_windows_notification(notification_id, expected_generation)
+            }
+            NotificationMutation::ClearNotifications {
+                expected_generation,
+            } if self.registry.has_windows_notifications() => {
+                self.clear_windows_notifications(expected_generation)
+            }
             NotificationMutation::Event { event } => self.deliver_event(event, now_unix_ms),
             NotificationMutation::CancelEvent { correlation_id } => {
                 if !self.completed_callbacks.contains(&correlation_id) {
@@ -68,6 +108,124 @@ impl NativeCompatibilityRegistry {
             }
             other => self.registry.apply(other),
         }
+    }
+
+    fn reconcile_windows_notifications(&mut self, force: bool) {
+        if !self.windows_events_enabled {
+            return;
+        }
+        let due = self
+            .last_windows_reconcile
+            .is_none_or(|last| last.elapsed() >= WINDOWS_NOTIFICATION_RECONCILE_INTERVAL);
+        let should_retry_access = due
+            && self.windows_events.as_ref().is_none_or(|source| {
+                source.access_status().access != WindowsNotificationAccess::Allowed
+            });
+        if should_retry_access {
+            match WindowsNotificationEventSource::new_with_access_request(false) {
+                Ok(source) => {
+                    self.registry.windows_events = source.access_status();
+                    self.windows_events = Some(source);
+                }
+                Err(reason) => {
+                    self.registry
+                        .set_windows_status(unavailable_windows_status(reason));
+                    self.last_windows_reconcile = Some(Instant::now());
+                    return;
+                }
+            }
+        }
+        let Some(source) = self.windows_events.as_ref() else {
+            return;
+        };
+        if !force && !due && !source.take_dirty() {
+            return;
+        }
+        self.last_windows_reconcile = Some(Instant::now());
+        match source.snapshot() {
+            Ok(batch) => self
+                .registry
+                .replace_windows_notifications(batch.notifications, batch.status),
+            Err(reason) => self
+                .registry
+                .set_windows_status(unavailable_windows_status(reason)),
+        }
+    }
+
+    fn dismiss_windows_notification(
+        &mut self,
+        notification_id: &str,
+        expected_generation: u64,
+    ) -> NotificationHostResponse {
+        self.reconcile_windows_notifications(true);
+        if expected_generation != self.registry.generation {
+            return self.registry.accepted(false);
+        }
+        let Some(native_id) = parse_windows_notification_id(notification_id) else {
+            return NotificationHostResponse::Rejected("windows-notification-id-invalid".into());
+        };
+        let Some(source) = self.windows_events.as_ref() else {
+            return NotificationHostResponse::Rejected(
+                "windows-notification-events-unavailable".into(),
+            );
+        };
+        if !self.registry.windows_events.synchronized
+            || !self
+                .registry
+                .notifications
+                .iter()
+                .any(|item| item.notification_id == notification_id)
+        {
+            return NotificationHostResponse::Rejected("windows-notification-not-current".into());
+        }
+        if let Err(reason) = source.remove(native_id) {
+            return NotificationHostResponse::Rejected(reason);
+        }
+        self.reconcile_windows_notifications(true);
+        let changed = !self
+            .registry
+            .notifications
+            .iter()
+            .any(|item| item.notification_id == notification_id);
+        if changed {
+            NotificationHostResponse::Accepted {
+                changed: true,
+                generation: self.registry.generation,
+            }
+        } else {
+            NotificationHostResponse::Rejected("windows-notification-remove-not-confirmed".into())
+        }
+    }
+
+    fn clear_windows_notifications(
+        &mut self,
+        expected_generation: u64,
+    ) -> NotificationHostResponse {
+        self.reconcile_windows_notifications(true);
+        if expected_generation != self.registry.generation {
+            return self.registry.accepted(false);
+        }
+        let Some(source) = self.windows_events.as_ref() else {
+            return NotificationHostResponse::Rejected(
+                "windows-notification-events-unavailable".into(),
+            );
+        };
+        if !self.registry.windows_events.synchronized {
+            return NotificationHostResponse::Rejected("windows-notification-not-current".into());
+        }
+        if let Err(reason) = source.clear() {
+            return NotificationHostResponse::Rejected(reason);
+        }
+        self.reconcile_windows_notifications(true);
+        if self.registry.has_windows_notifications() {
+            return NotificationHostResponse::Rejected(
+                "windows-notification-clear-not-confirmed".into(),
+            );
+        }
+        self.registry
+            .apply(NotificationMutation::ClearNotifications {
+                expected_generation: self.registry.generation,
+            })
     }
 
     pub fn reconcile_dead_clients(&mut self) -> usize {
@@ -98,6 +256,10 @@ impl NativeCompatibilityRegistry {
         self.native.clear();
         self.completed_callbacks.clear();
         self.host_generation = self.host_generation.saturating_add(1).max(1);
+        if let Some(source) = self.windows_events.as_ref() {
+            self.registry.windows_events = source.access_status();
+            self.reconcile_windows_notifications(true);
+        }
     }
 
     fn deliver_event(
@@ -350,6 +512,7 @@ pub struct NotificationRegistry {
     pub(crate) generation: u64,
     events: NotificationEventQueue,
     notifications: VecDeque<OwnedNotification>,
+    windows_events: WindowsNotificationEventStatus,
 }
 
 impl NotificationRegistry {
@@ -473,6 +636,48 @@ impl NotificationRegistry {
             generation: self.generation,
             icons: self.icons.values().cloned().collect(),
             notifications: self.notifications.iter().cloned().collect(),
+            windows_events: self.windows_events.clone(),
+        }
+    }
+
+    fn has_windows_notifications(&self) -> bool {
+        self.notifications.iter().any(|notification| {
+            parse_windows_notification_id(&notification.notification_id).is_some()
+        })
+    }
+
+    fn set_windows_status(&mut self, status: WindowsNotificationEventStatus) {
+        if self.windows_events != status {
+            self.windows_events = status;
+            self.generation = self.generation.saturating_add(1);
+        }
+    }
+
+    fn replace_windows_notifications(
+        &mut self,
+        windows: Vec<OwnedNotification>,
+        status: WindowsNotificationEventStatus,
+    ) {
+        let mut merged = self
+            .notifications
+            .iter()
+            .filter(|item| parse_windows_notification_id(&item.notification_id).is_none())
+            .cloned()
+            .chain(windows)
+            .collect::<Vec<_>>();
+        merged.sort_by(|left, right| {
+            right
+                .admitted_unix_ms
+                .cmp(&left.admitted_unix_ms)
+                .then_with(|| left.notification_id.cmp(&right.notification_id))
+        });
+        merged.dedup_by(|left, right| left.notification_id == right.notification_id);
+        merged.truncate(MAX_NOTIFICATION_HISTORY);
+        let merged = VecDeque::from(merged);
+        if self.notifications != merged || self.windows_events != status {
+            self.notifications = merged;
+            self.windows_events = status;
+            self.generation = self.generation.saturating_add(1);
         }
     }
 
@@ -507,6 +712,23 @@ impl NotificationRegistry {
             changed,
             generation: self.generation,
         }
+    }
+}
+
+fn unavailable_windows_status(reason: String) -> WindowsNotificationEventStatus {
+    let mut reason = reason;
+    if reason.len() > MAX_TEXT_BYTES {
+        let mut end = MAX_TEXT_BYTES;
+        while !reason.is_char_boundary(end) {
+            end -= 1;
+        }
+        reason.truncate(end);
+    }
+    WindowsNotificationEventStatus {
+        access: WindowsNotificationAccess::Unavailable,
+        synchronized: false,
+        last_change: WindowsNotificationChange::None,
+        reason,
     }
 }
 
@@ -660,6 +882,89 @@ mod tests {
             admitted_unix_ms: index + 1,
             generation: index + 1,
             icon: None,
+        }
+    }
+
+    fn windows_notification(index: u64) -> OwnedNotification {
+        let mut value = notification(index);
+        value.notification_id = format!("windows:{index}");
+        value.key.client_id = "windows-events".into();
+        value
+    }
+
+    fn synchronized_windows_status() -> WindowsNotificationEventStatus {
+        WindowsNotificationEventStatus {
+            access: WindowsNotificationAccess::Allowed,
+            synchronized: true,
+            last_change: WindowsNotificationChange::Added,
+            reason: String::new(),
+        }
+    }
+
+    #[test]
+    fn windows_reconciliation_preserves_local_history_is_bounded_and_generation_stable() {
+        let mut registry = NotificationRegistry::default();
+        registry.admit_notification(notification(500));
+        let windows = (0..MAX_NOTIFICATION_HISTORY as u64)
+            .map(windows_notification)
+            .collect::<Vec<_>>();
+        registry.replace_windows_notifications(windows.clone(), synchronized_windows_status());
+        let first_generation = registry.generation;
+        let snapshot = registry.snapshot();
+        assert_eq!(snapshot.notifications.len(), MAX_NOTIFICATION_HISTORY);
+        assert!(
+            snapshot
+                .notifications
+                .iter()
+                .any(|item| item.notification_id == "notification-500")
+        );
+        assert!(snapshot.windows_events.synchronized);
+
+        registry.replace_windows_notifications(windows, synchronized_windows_status());
+        assert_eq!(registry.generation, first_generation);
+
+        registry.set_windows_status(unavailable_windows_status("transient".into()));
+        assert!(registry.has_windows_notifications());
+        assert_eq!(
+            registry.snapshot().windows_events.access,
+            WindowsNotificationAccess::Unavailable
+        );
+
+        registry.replace_windows_notifications(Vec::new(), synchronized_windows_status());
+        let snapshot = registry.snapshot();
+        assert_eq!(snapshot.notifications.len(), 1);
+        assert_eq!(
+            snapshot.notifications[0].notification_id,
+            "notification-500"
+        );
+    }
+
+    #[test]
+    fn identity_manifests_match_and_declare_documented_notification_capability() {
+        let package = include_str!("../../../packaging/windows-identity/AppxManifest.xml");
+        let executable = include_str!("../resources/windows/notification-area-host.manifest.xml");
+        for exact in [
+            "SuperDesktop.WindowsShell",
+            "CN=SuperDesktop",
+            "NotificationAreaHost",
+        ] {
+            assert!(package.contains(exact));
+            assert!(executable.contains(exact));
+        }
+        for required in [
+            "uap3:Capability Name=\"userNotificationListener\"",
+            "rescap:Capability Name=\"runFullTrust\"",
+            "uap10:AllowExternalContent>true",
+            "Executable=\"notification-area-host.exe\"",
+        ] {
+            assert!(
+                package.contains(required),
+                "missing identity declaration: {required}"
+            );
+        }
+        for forbidden in ["ShellExperienceHost", "explorer.exe", "Notifications.db"] {
+            assert!(!package.contains(forbidden));
+            assert!(!executable.contains(forbidden));
         }
     }
 

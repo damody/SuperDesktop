@@ -1,7 +1,8 @@
 param(
     [Parameter(Mandatory = $true)]
     [string]$SuperExplorerPath,
-    [string]$OutputDirectory = ""
+    [string]$OutputDirectory = "",
+    [string]$SignedIdentityPackage = ""
 )
 
 $ErrorActionPreference = 'Stop'
@@ -45,6 +46,20 @@ try {
             name = $entry.Key
             bytes = (Get-Item -LiteralPath $destination).Length
             sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $destination).Hash.ToLowerInvariant()
+        }
+    }
+    if (-not [string]::IsNullOrWhiteSpace($SignedIdentityPackage)) {
+        $identityPackage = (Resolve-Path -LiteralPath $SignedIdentityPackage).Path
+        $signature = Get-AuthenticodeSignature -LiteralPath $identityPackage
+        if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -ne 'CN=SuperDesktop') {
+            throw 'SignedIdentityPackage must have a valid CN=SuperDesktop signature.'
+        }
+        $identityDestination = Join-Path $staging 'SuperDesktop.WindowsShell.msix'
+        Copy-Item -LiteralPath $identityPackage -Destination $identityDestination
+        $binaries += [ordered]@{
+            name = 'SuperDesktop.WindowsShell.msix'
+            bytes = (Get-Item -LiteralPath $identityDestination).Length
+            sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $identityDestination).Hash.ToLowerInvariant()
         }
     }
     $manifest = [ordered]@{

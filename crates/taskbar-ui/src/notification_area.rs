@@ -229,6 +229,7 @@ mod tests {
                 generation: 1,
                 icons: vec![icon("a", 1, true), icon("b", 2, false)],
                 notifications: Vec::new(),
+                windows_events: Default::default(),
             },
             1
         ));
@@ -257,6 +258,7 @@ mod tests {
                 generation: 1,
                 icons: vec![icon("a", 1, true), icon("b", 2, false), icon("c", 3, false),],
                 notifications: Vec::new(),
+                windows_events: Default::default(),
             },
             2,
         ));

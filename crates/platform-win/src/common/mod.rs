@@ -21,3 +21,4 @@ pub mod taskbar;
 pub mod taskbar_preview;
 pub mod taskbar_status;
 pub mod virtual_desktop;
+pub mod windows_notification_events;

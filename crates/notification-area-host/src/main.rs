@@ -20,7 +20,7 @@ fn main() -> io::Result<()> {
     } else {
         None
     };
-    let mut registry = NativeCompatibilityRegistry::default();
+    let mut registry = NativeCompatibilityRegistry::with_windows_notification_events();
     let input = io::stdin().lock();
     let mut output = io::stdout().lock();
     for frame in input.split(b'\n') {

@@ -1,7 +1,7 @@
 use std::io::Write;
 use std::process::{Command, Stdio};
 
-use shell_provider_protocol::{NotificationHostResponse, NotificationMutation};
+use shell_provider_protocol::{NotificationHostResponse, NotificationMutation, Validate};
 
 #[test]
 fn host_handles_lifecycle_malformed_input_and_eof() {
@@ -20,6 +20,12 @@ fn host_handles_lifecycle_malformed_input_and_eof() {
         .unwrap()
     )
     .unwrap();
+    writeln!(
+        input,
+        "{}",
+        serde_json::to_string(&NotificationMutation::Snapshot).unwrap()
+    )
+    .unwrap();
     writeln!(input, "bad-json").unwrap();
     drop(input);
     let output = child.wait_with_output().unwrap();
@@ -33,8 +39,13 @@ fn host_handles_lifecycle_malformed_input_and_eof() {
         responses[0],
         NotificationHostResponse::Accepted { changed: true, .. }
     ));
+    let NotificationHostResponse::Snapshot(snapshot) = &responses[1] else {
+        panic!("second response must be a redaction-safe provider snapshot")
+    };
+    snapshot.validate().unwrap();
+    assert!(snapshot.notifications.len() <= 100);
     assert!(matches!(
-        responses[1],
+        responses[2],
         NotificationHostResponse::Rejected(_)
     ));
 }

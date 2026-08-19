@@ -450,12 +450,71 @@ impl Validate for NotificationEvent {
     }
 }
 
+#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum WindowsNotificationAccess {
+    Allowed,
+    Denied,
+    Unspecified,
+    #[default]
+    Unavailable,
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum WindowsNotificationChange {
+    Added,
+    Removed,
+    #[default]
+    None,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct WindowsNotificationEventStatus {
+    pub access: WindowsNotificationAccess,
+    pub synchronized: bool,
+    pub last_change: WindowsNotificationChange,
+    pub reason: String,
+}
+
+impl Default for WindowsNotificationEventStatus {
+    fn default() -> Self {
+        Self {
+            access: WindowsNotificationAccess::Unavailable,
+            synchronized: false,
+            last_change: WindowsNotificationChange::None,
+            reason: "Windows notification events were not supplied by this provider".into(),
+        }
+    }
+}
+
+impl Validate for WindowsNotificationEventStatus {
+    fn validate(&self) -> Result<(), ValidationError> {
+        if self.reason.len() > MAX_TEXT_BYTES {
+            return Err(ValidationError::TextTooLong(
+                "notification.windows_events.reason",
+            ));
+        }
+        if self.access == WindowsNotificationAccess::Unavailable && self.reason.trim().is_empty() {
+            return Err(ValidationError::Empty("notification.windows_events.reason"));
+        }
+        if self.synchronized && self.access != WindowsNotificationAccess::Allowed {
+            return Err(ValidationError::InvalidValue(
+                "notification.windows_events.synchronized",
+            ));
+        }
+        Ok(())
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct NotificationSnapshot {
     pub generation: u64,
     pub icons: Vec<RegisteredIcon>,
     #[serde(default)]
     pub notifications: Vec<OwnedNotification>,
+    #[serde(default)]
+    pub windows_events: WindowsNotificationEventStatus,
 }
 
 impl Validate for NotificationSnapshot {
@@ -474,7 +533,7 @@ impl Validate for NotificationSnapshot {
         for notification in &self.notifications {
             notification.validate()?;
         }
-        Ok(())
+        self.windows_events.validate()
     }
 }
 
@@ -609,6 +668,11 @@ mod tests {
         let legacy_snapshot = serde_json::json!({"generation":1,"icons":[]});
         let decoded: NotificationSnapshot = serde_json::from_value(legacy_snapshot).unwrap();
         assert!(decoded.notifications.is_empty());
+        assert_eq!(
+            decoded.windows_events.access,
+            WindowsNotificationAccess::Unavailable
+        );
+        decoded.validate().unwrap();
 
         let mut icon = compatibility_icon();
         icon.notification = Some(OwnedNotificationContent {
@@ -634,5 +698,61 @@ mod tests {
             expected_generation: 0,
         };
         assert!(invalid.validate().is_err());
+    }
+
+    #[test]
+    fn windows_event_status_is_additive_bounded_and_internally_consistent() {
+        for (access, synchronized) in [
+            (WindowsNotificationAccess::Allowed, false),
+            (WindowsNotificationAccess::Allowed, true),
+            (WindowsNotificationAccess::Denied, false),
+            (WindowsNotificationAccess::Unspecified, false),
+        ] {
+            WindowsNotificationEventStatus {
+                access,
+                synchronized,
+                last_change: WindowsNotificationChange::None,
+                reason: String::new(),
+            }
+            .validate()
+            .unwrap();
+        }
+        let status = WindowsNotificationEventStatus {
+            access: WindowsNotificationAccess::Unavailable,
+            synchronized: false,
+            last_change: WindowsNotificationChange::Removed,
+            reason: "listener unavailable".into(),
+        };
+        status.validate().unwrap();
+        let encoded = serde_json::to_string(&status).unwrap();
+        assert_eq!(
+            serde_json::from_str::<WindowsNotificationEventStatus>(&encoded).unwrap(),
+            status
+        );
+        assert!(
+            WindowsNotificationEventStatus {
+                access: WindowsNotificationAccess::Denied,
+                synchronized: true,
+                last_change: WindowsNotificationChange::Added,
+                reason: String::new(),
+            }
+            .validate()
+            .is_err()
+        );
+        assert!(
+            WindowsNotificationEventStatus {
+                access: WindowsNotificationAccess::Unavailable,
+                synchronized: false,
+                last_change: WindowsNotificationChange::None,
+                reason: String::new(),
+            }
+            .validate()
+            .is_err()
+        );
+        let oversized = WindowsNotificationEventStatus {
+            reason: "x".repeat(MAX_TEXT_BYTES + 1),
+            ..Default::default()
+        };
+        assert!(oversized.validate().is_err());
     }
 }
