@@ -69,3 +69,18 @@ fn malformed_invocation_is_machine_readable_and_does_not_create_metadata() {
     assert!(!record.exists());
     let _ = fs::remove_file(record);
 }
+
+#[test]
+fn quiesce_empty_install_directory_is_successful_and_machine_readable() {
+    let directory = unique_record().with_extension("directory");
+    fs::create_dir_all(&directory).unwrap();
+    let output = Command::new(env!("CARGO_BIN_EXE_shell-installer"))
+        .args(["quiesce", "--install-dir", directory.to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    let value: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(value["disposition"], "applied");
+    assert_eq!(value["operation"], "quiesce");
+    fs::remove_dir(&directory).unwrap();
+}

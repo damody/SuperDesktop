@@ -10,7 +10,9 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
 
+mod process_quiescence;
 mod windows_registry;
+pub use process_quiescence::quiesce_installation;
 pub use windows_registry::WindowsShellRegistry;
 
 pub const SHELL_TARGET: &str = r"HKCU\Software\Microsoft\Windows NT\CurrentVersion\Winlogon\Shell";
@@ -474,16 +476,16 @@ pub fn execute_plan<R: ShellRegistry, S: RollbackStore>(
             .as_ref()
             .is_ok_and(|after| *after == plan.desired);
     if !verified {
+        let failure_message = match &write_result {
+            Err(error) => format!("write failed ({error:?}); prior state restored"),
+            Ok(()) => "verification failed; prior state restored".to_owned(),
+        };
         restore_and_verify(registry, plan.observed.as_deref())?;
         return Ok(audit(
             plan,
             plan.observed.clone(),
             InstallerDisposition::RolledBack,
-            if write_result.is_err() {
-                "write failed; prior state restored"
-            } else {
-                "verification failed; prior state restored"
-            },
+            &failure_message,
         ));
     }
     let after = after_result.map_err(|error| {

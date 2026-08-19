@@ -20,6 +20,12 @@ struct Arguments {
 
 fn main() -> ExitCode {
     let raw_arguments = std::env::args().skip(1).collect::<Vec<_>>();
+    if raw_arguments
+        .first()
+        .is_some_and(|argument| argument == "quiesce")
+    {
+        return run_quiesce(&raw_arguments);
+    }
     let requested_operation = raw_arguments.first().cloned();
     match run(raw_arguments.into_iter()) {
         Ok(()) => ExitCode::SUCCESS,
@@ -47,6 +53,41 @@ fn main() -> ExitCode {
                 ),
             }
             ExitCode::from(code)
+        }
+    }
+}
+
+fn run_quiesce(arguments: &[String]) -> ExitCode {
+    let install_directory = match arguments {
+        [command, option, directory] if command == "quiesce" && option == "--install-dir" => {
+            PathBuf::from(directory)
+        }
+        _ => {
+            println!(
+                "{}",
+                json!({
+                    "disposition": "failed",
+                    "operation": "quiesce",
+                    "error": "usage: shell-installer quiesce --install-dir PATH"
+                })
+            );
+            return ExitCode::from(2);
+        }
+    };
+    match shell_installer::quiesce_installation(&install_directory) {
+        Ok(summary) => {
+            println!(
+                "{}",
+                json!({ "disposition": "applied", "operation": "quiesce", "summary": summary })
+            );
+            ExitCode::SUCCESS
+        }
+        Err(error) => {
+            println!(
+                "{}",
+                json!({ "disposition": "failed", "operation": "quiesce", "error": error })
+            );
+            ExitCode::from(4)
         }
     }
 }

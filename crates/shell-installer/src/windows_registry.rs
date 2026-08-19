@@ -52,21 +52,25 @@ function Restore-TaskbarClass {
     }
 }
 if ($v -match '^"([^"]+superdesktop-app\.exe)"\s+--shell(?:\s|$)') {
-    $host = Join-Path (Split-Path -Parent $Matches[1]) 'taskbar-state-host.exe'
-    if (-not (Test-Path -LiteralPath $host -PathType Leaf)) { [Console]::Error.Write('taskbar state host missing'); exit 34 }
+    $appPath = $Matches[1]
+    if ($appPath.StartsWith('\\?\')) { $appPath = $appPath.Substring(4) }
+    $taskbarHost = Join-Path (Split-Path -Parent $appPath) 'taskbar-state-host.exe'
+    if (-not (Test-Path -LiteralPath $taskbarHost -PathType Leaf)) { [Console]::Error.Write('taskbar state host missing'); exit 34 }
     if ($oldOwner -and $oldOwner -ne 'SuperDesktop Taskbar Communication') { [Console]::Error.Write('per-user taskbar COM registration already owned'); exit 35 }
 }
 try {
     if ($v -match '^"([^"]+superdesktop-app\.exe)"\s+--shell(?:\s|$)') {
-        $host = Join-Path (Split-Path -Parent $Matches[1]) 'taskbar-state-host.exe'
+        $appPath = $Matches[1]
+        if ($appPath.StartsWith('\\?\')) { $appPath = $appPath.Substring(4) }
+        $taskbarHost = Join-Path (Split-Path -Parent $appPath) 'taskbar-state-host.exe'
         New-Item -Path $class -Force -ErrorAction Stop | Out-Null
         Set-Item -LiteralPath $class -Value 'SuperDesktop Taskbar Communication' -ErrorAction Stop
         New-Item -Path $server -Force -ErrorAction Stop | Out-Null
-        Set-Item -LiteralPath $server -Value ('"' + $host + '"') -ErrorAction Stop
+        Set-Item -LiteralPath $server -Value ('"' + $taskbarHost + '"') -ErrorAction Stop
     } elseif ($oldOwner -eq 'SuperDesktop Taskbar Communication') {
         Remove-Item -LiteralPath $class -Recurse -Force -ErrorAction Stop
     }
-    Set-ItemProperty -LiteralPath $p -Name 'Shell' -Type String -Value $v -ErrorAction Stop
+    New-ItemProperty -LiteralPath $p -Name 'Shell' -PropertyType String -Value $v -Force -ErrorAction Stop | Out-Null
 } catch {
     Restore-TaskbarClass
     throw
@@ -294,5 +298,15 @@ mod tests {
             parse_observation(br#"{"exists":false,"value":null}"#).unwrap(),
             None
         );
+    }
+
+    #[test]
+    fn write_script_uses_the_windows_powershell_registry_type_contract() {
+        assert!(WRITE_SCRIPT.contains("New-ItemProperty"));
+        assert!(WRITE_SCRIPT.contains("-PropertyType String"));
+        assert!(WRITE_SCRIPT.contains("$appPath.Substring(4)"));
+        assert!(WRITE_SCRIPT.contains("$taskbarHost"));
+        assert!(!WRITE_SCRIPT.contains("$host ="));
+        assert!(!WRITE_SCRIPT.contains("Set-ItemProperty -LiteralPath $p -Name 'Shell' -Type"));
     }
 }

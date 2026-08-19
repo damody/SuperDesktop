@@ -63,18 +63,26 @@ pub fn run_product_for(
     duration: Option<std::time::Duration>,
 ) -> Result<(), &'static str> {
     let owner = admit_shell(&request)?;
-    if request.shell {
-        if let Err(error) = ensure_current_user_shell_registration() {
-            eprintln!("SuperDesktop error [shell-registration]: {error}");
-            return Err("shell-registration-failed");
-        }
-        arm_recovery_guardian()?;
+    let mut shell_active = request.shell;
+    if shell_active && let Err(error) = ensure_current_user_shell_registration() {
+        eprintln!("SuperDesktop error [shell-registration]: {error}");
+        shell_active = false;
     }
-    let mut root = CompositionRoot::new(request);
-    if !request.shell {
+    if shell_active && let Err(error) = arm_recovery_guardian() {
+        eprintln!("SuperDesktop error [guardian-arm]: {error}");
+        if let Err(restore_error) = restore_default_explorer_registration() {
+            eprintln!("SuperDesktop error [shell-registration-rollback]: {restore_error}");
+        }
+        shell_active = false;
+    }
+    let effective_request = ExecutionRequest {
+        shell: shell_active,
+    };
+    let mut root = CompositionRoot::new(effective_request);
+    if !shell_active {
         root.start()?;
     }
-    surface_runtime::run(request.shell, duration)?;
+    surface_runtime::run(shell_active, duration)?;
     if let Some(owner) = owner {
         owner.release()?;
     }
@@ -99,7 +107,7 @@ fn shell_registration_paths()
 fn ensure_current_user_shell_registration() -> Result<(), String> {
     use shell_installer::{
         FileRollbackStore, InstallerCommand, InstallerDisposition, MutationAuthority,
-        ShellRegistry, WindowsShellRegistry, build_enable_plan, execute_plan,
+        RollbackStore, ShellRegistry, WindowsShellRegistry, build_enable_plan, execute_plan,
     };
 
     let (app, guardian, rollback) = shell_registration_paths()?;
@@ -107,14 +115,18 @@ fn ensure_current_user_shell_registration() -> Result<(), String> {
     let observed = registry
         .read_shell()
         .map_err(|error| format!("read:{error:?}"))?;
-    let plan = build_enable_plan(
-        InstallerCommand::Enable,
-        observed,
-        &app,
-        &guardian,
-        &rollback,
-    )
-    .map_err(|error| format!("plan:{error:?}"))?;
+    let mut store = FileRollbackStore::new(rollback.clone());
+    let command = if store
+        .load()
+        .map_err(|error| format!("rollback-read:{error:?}"))?
+        .is_some()
+    {
+        InstallerCommand::Repair
+    } else {
+        InstallerCommand::Enable
+    };
+    let plan = build_enable_plan(command, observed, &app, &guardian, &rollback)
+        .map_err(|error| format!("plan:{error:?}"))?;
     if plan.observed == plan.desired {
         return Ok(());
     }
@@ -123,7 +135,6 @@ fn ensure_current_user_shell_registration() -> Result<(), String> {
         explicit_opt_in: true,
         confirmed_fingerprint: Some(plan.fingerprint.clone()),
     };
-    let mut store = FileRollbackStore::new(rollback);
     let audit = execute_plan(&mut registry, &mut store, &plan, &authority)
         .map_err(|error| format!("apply:{error:?}"))?;
     if audit.disposition != InstallerDisposition::Applied || audit.after != plan.desired {
@@ -233,6 +244,7 @@ mod shell_registration_tests {
         let guardian = lib.find("arm_recovery_guardian()?").expect("guardian arm");
         assert!(registration < guardian);
         assert!(lib.contains("audit.after != plan.desired"));
+        assert!(lib.contains("shell_active = false"));
         assert!(lib.contains("restore_default_explorer_registration"));
         assert!(!runtime.contains("superdesktop-explorer-suppression"));
         assert!(!runtime.contains("EXPLORER_SUPPRESSION_ENABLED"));
