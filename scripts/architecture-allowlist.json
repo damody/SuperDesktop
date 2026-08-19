@@ -13,6 +13,7 @@
     "superdesktop-app",
     "superdesktop-guardian",
     "superdesktop-test-support",
+    "superdesktop-utit",
     "system-status-host",
     "taskbar-state-host",
     "taskbar-ui"
@@ -44,6 +45,7 @@
     ],
     "superdesktop-guardian": ["platform-win"],
     "superdesktop-test-support": ["settings-store", "shell-core", "jsonschema", "serde", "serde_json"],
+    "superdesktop-utit": ["serde", "serde_json"],
     "system-status-host": ["platform-win", "serde_json", "shell-provider-protocol"],
     "taskbar-state-host": ["serde_json", "shell-provider-protocol", "windows", "windows-core"],
     "taskbar-ui": ["gpui", "gpui_windows", "image", "platform-win", "raw-window-handle", "settings-store", "shell-core", "shell-provider-protocol"]

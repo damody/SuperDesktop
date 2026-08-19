@@ -64,6 +64,7 @@ $labels=if($zhTw){@{
 }}else{@{
     Pinned='Pinned';Recommended='Recommended';AllApps='All apps';Settings='Settings';Power='Power';Back='Back to pinned';SignOut='Sign out';Restart='Restart';ShutDown='Shut down'
 }}
+$startLabel=if($zhTw){Utf8-Base64 '6ZaL5aeL'}else{'Start'}
 $env:SUPERDESKTOP_VERIFICATION_SURFACE='taskbar'
 $env:SUPERDESKTOP_ACTION_TRACE=$tracePath
 if($Locale){$env:SUPERDESKTOP_LOCALE=$Locale}
@@ -75,7 +76,7 @@ try {
     if($process.MainWindowHandle -eq [IntPtr]::Zero){throw 'Taskbar window did not appear.'}
     Start-Sleep -Milliseconds 900
     $taskbar=[System.Windows.Automation.AutomationElement]::FromHandle($process.MainWindowHandle)
-    $start=Find-Named $taskbar 'Start'
+    $start=Find-Named $taskbar $startLabel
     if($null -eq $start){throw 'Start button is missing.'}
     $systemStartBefore=@(Get-SystemStartProcessIds)
     $invoke=$start.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)

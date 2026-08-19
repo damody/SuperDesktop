@@ -3803,6 +3803,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "superdesktop-utit"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "sval"
 version = "2.21.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

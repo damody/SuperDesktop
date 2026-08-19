@@ -12,9 +12,9 @@
 **Gate／Evidence：** `G-UTIT-CATALOG`; crate/model test report.
 **完成門檻：** Workspace compiles and every public enum/ID has deterministic serde and validation behavior.
 
-- [ ] 1.1.1 Add `superdesktop-utit` workspace crate, binary entrypoint, and module boundaries.
-- [ ] 1.1.2 Define stable case, suite, tier, prerequisite, recovery, terminal, run, and artifact types.
-- [ ] 1.1.3 Add serialization, stable-order, duplicate-ID, invalid-timeout, and suite-closure tests.
+- [x] 1.1.1 Add `superdesktop-utit` workspace crate, binary entrypoint, and module boundaries.
+- [x] 1.1.2 Define stable case, suite, tier, prerequisite, recovery, terminal, run, and artifact types.
+- [x] 1.1.3 Add serialization, stable-order, duplicate-ID, invalid-timeout, and suite-closure tests.
 
 ### 1.2 Implement canonical catalog and CLI discovery
 
@@ -26,9 +26,9 @@
 **Gate／Evidence：** `G-UTIT-CATALOG`, `G-UTIT-ADMISSION`; catalog/admission report.
 **完成門檻：** Every admitted argv resolves under approved roots; all escape and shell-string fixtures fail before spawn.
 
-- [ ] 1.2.1 Add smoke, shell-parity, full, hardware/external case catalog and tags.
-- [ ] 1.2.2 Implement CLI parsing for list/run/validate-report, suite, case/tag filters, output, and dry-run.
-- [ ] 1.2.3 Test canonical workspace/script/binary roots, traversal, duplicate filters, unknown cases, and partial-run detection.
+- [x] 1.2.1 Add smoke, shell-parity, full, hardware/external case catalog and tags.
+- [x] 1.2.2 Implement CLI parsing for list/run/validate-report, suite, case/tag filters, output, and dry-run.
+- [x] 1.2.3 Test canonical workspace/script/binary roots, traversal, duplicate filters, unknown cases, and partial-run detection.
 
 ## 2. Execution, preflight, and recovery
 
@@ -42,9 +42,9 @@
 **Gate／Evidence：** `G-UTIT-ADMISSION`, `G-UTIT-RECOVERY`; preflight report.
 **完成門檻：** Missing tools, displays, binaries, interactive session, reboot authority, and recovery markers have deterministic dispositions.
 
-- [ ] 2.1.1 Capture OS/build, architecture, interactive session, monitor count, Explorer state, tools, and workspace revision.
-- [ ] 2.1.2 Evaluate tool/file/interactive/multi-display/reboot/external prerequisites without mutation.
-- [ ] 2.1.3 Test current, missing, conditional-not-applicable, one-display-blocked, and unresolved-recovery cases.
+- [x] 2.1.1 Capture OS/build, architecture, interactive session, monitor count, Explorer state, tools, and workspace revision.
+- [x] 2.1.2 Evaluate tool/file/interactive/multi-display/reboot/external prerequisites without mutation.
+- [x] 2.1.3 Test current, missing, conditional-not-applicable, one-display-blocked, and unresolved-recovery cases.
 
 ### 2.2 Implement bounded child execution and recovery checks
 
@@ -56,9 +56,9 @@
 **Gate／Evidence：** `G-UTIT-EXECUTION`, `G-UTIT-RECOVERY`; fixture integration report.
 **完成門檻：** Pass/fail/timeout/missing-artifact and Explorer-watchdog paths reach exact auditable terminal states.
 
-- [ ] 2.2.1 Implement explicit-argv spawn, log capture, polling deadline, exact-child kill, and serial scheduling.
-- [ ] 2.2.2 Add expected-artifact validation, recovery-report admission, and continue/fail-fast policy.
-- [ ] 2.2.3 Add fixture integration tests for pass, nonzero, timeout, blocked, malformed artifact, and recovery rejection.
+- [x] 2.2.1 Implement explicit-argv spawn, log capture, polling deadline, exact-child kill, and serial scheduling.
+- [x] 2.2.2 Add expected-artifact validation, recovery-report admission, and continue/fail-fast policy.
+- [x] 2.2.3 Add fixture integration tests for pass, nonzero, timeout, blocked, malformed artifact, and recovery rejection.
 
 ## 3. Reports and current GUI suite integration
 
@@ -72,9 +72,9 @@
 **Gate／Evidence：** `G-UTIT-REPORT`, `G-TRACE`; report-schema and validator evidence.
 **完成門檻：** Deterministic projections validate; duplicate, drifted, missing, malformed, and inconsistent reports fail closed.
 
-- [ ] 3.1.1 Add run decision/count derivation, canonical JSON writer, and SHA-256 artifact binding.
-- [ ] 3.1.2 Add escaped deterministic JUnit XML and Markdown summary projections.
-- [ ] 3.1.3 Add report validation and tests for Unicode, escaping, hash drift, count/state mismatch, filtering, and incomplete full runs.
+- [x] 3.1.1 Add run decision/count derivation, canonical JSON writer, and SHA-256 artifact binding.
+- [x] 3.1.2 Add escaped deterministic JUnit XML and Markdown summary projections.
+- [x] 3.1.3 Add report validation and tests for Unicode, escaping, hash drift, count/state mismatch, filtering, and incomplete full runs.
 
 ### 3.2 Integrate maintained shell-parity cases
 
@@ -86,9 +86,9 @@
 **Gate／Evidence：** `G-UTIT-SMOKE`, `G-UTIT-SHELL-PARITY`, `G-UTIT-RECOVERY`; `evidence/runs/*`.
 **完成門檻：** Smoke passes; safe current-host GUI cases execute serially and every Explorer suppression records successful recovery.
 
-- [ ] 3.2.1 Wire workspace/focused tests, Clippy, release, strict OpenSpec, and dry-run catalog cases.
-- [ ] 3.2.2 Wire taskbar, Start, desktop marquee, Show desktop, notification, system flyout/IME, resize/lock, and auto-hide scripts.
-- [ ] 3.2.3 Execute and validate smoke plus safe shell-parity runs; preserve truthful blocked full-suite prerequisites.
+- [x] 3.2.1 Wire workspace/focused tests, Clippy, release, strict OpenSpec, and dry-run catalog cases.
+- [x] 3.2.2 Wire taskbar, Start, desktop marquee, Show desktop, notification, system flyout/IME, resize/lock, and auto-hide scripts.
+- [x] 3.2.3 Execute and validate smoke plus safe shell-parity runs; preserve truthful blocked full-suite prerequisites.
 
 ## 4. Product integration and release evidence
 
@@ -102,9 +102,9 @@
 **Gate／Evidence：** `G-UTIT-ADMISSION`, `G-UTIT-RECOVERY`, `G-SHELL-NONINTERFERENCE`; governance report.
 **完成門檻：** No production crate depends on UTIT, no arbitrary shell path exists, and documented commands reproduce admitted runs.
 
-- [ ] 4.1.1 Update architecture allowlist/governance and prove production dependency direction remains one-way.
-- [ ] 4.1.2 Add `run_utit.bat` plus concise operator documentation for list, smoke, shell-parity, full, and report validation.
-- [ ] 4.1.3 Run source-boundary, command-injection, secret-redaction, interruption, and recovery regression gates.
+- [x] 4.1.1 Update architecture allowlist/governance and prove production dependency direction remains one-way.
+- [x] 4.1.2 Add `run_utit.bat` plus concise operator documentation for list, smoke, shell-parity, full, and report validation.
+- [x] 4.1.3 Run source-boundary, command-injection, secret-redaction, interruption, and recovery regression gates.
 
 ### 4.2 Run full quality, packaging, and traceability gates
 
@@ -116,6 +116,6 @@
 **Gate／Evidence：** `G-UTIT-SMOKE`, `G-UTIT-SHELL-PARITY`, `G-TRACE`, `G-PACKAGE`; final evidence.
 **完成門檻：** 24/24 leaves pass, full suite truthfully reports external blockers, strict/detailed validation passes, and the change remains unarchived.
 
-- [ ] 4.2.1 Run fmt, locked/offline workspace tests, Clippy warnings-as-errors, and release build.
+- [x] 4.2.1 Run fmt, locked/offline workspace tests, Clippy warnings-as-errors, and release build.
 - [ ] 4.2.2 Commit implementation and build standalone plus combined NSIS installers without launch.
 - [ ] 4.2.3 Record revisions/binary/package hashes, create 24 unique evidence records, and pass detailed/strict validation.
