@@ -1372,13 +1372,34 @@ fn group_window_ids(stable_id: &str) -> Vec<isize> {
 
 type TaskFlyoutSlot = Rc<RefCell<Option<gpui::WindowHandle<TaskFlyoutView>>>>;
 
-fn preview_cards(stable_id: &str, previews_enabled: bool) -> Vec<PreviewCard> {
+fn preview_card_width_for_size(width: i32, height: i32, maximum_width: f32) -> u16 {
+    if width <= 0 || height <= 0 || maximum_width <= 0.0 {
+        return 1;
+    }
+    ((width as f32 / height as f32) * 188.0 + 16.0)
+        .round()
+        .clamp(160.0_f32.min(maximum_width), maximum_width) as u16
+}
+
+fn preview_cards(
+    stable_id: &str,
+    previews_enabled: bool,
+    monitor: &MonitorRecord,
+) -> Vec<PreviewCard> {
     let group = group_window_ids(stable_id);
     let selected = if group.is_empty() {
         task_hwnd(stable_id).into_iter().collect::<Vec<_>>()
     } else {
         group
     };
+    let selected = selected.into_iter().take(4).collect::<Vec<_>>();
+    let card_count = selected.len().max(1);
+    let scale = monitor.dpi_x as f32 / 96.0;
+    let available_width = (monitor.work_area.right - monitor.work_area.left) as f32 / scale - 16.0;
+    let gaps = 8.0 * card_count.saturating_sub(1) as f32;
+    let maximum_card_width = ((available_width - gaps) / card_count as f32)
+        .floor()
+        .clamp(1.0, 420.0);
     let Ok(windows) = snapshot_task_windows() else {
         return Vec::new();
     };
@@ -1399,6 +1420,12 @@ fn preview_cards(stable_id: &str, previews_enabled: bool) -> Vec<PreviewCard> {
                     ),
                     platform_win::common::taskbar_preview::PreviewAdmission::Available { .. }
                 );
+            let preview_width =
+                platform_win::common::taskbar_preview::source_client_size(window.hwnd_identity)
+                    .map(|(width, height)| {
+                        preview_card_width_for_size(width, height, maximum_card_width)
+                    })
+                    .unwrap_or_else(|_| preview_card_width_for_size(1, 1, maximum_card_width));
             Some(PreviewCard {
                 window_id,
                 title: if window.title.is_empty() {
@@ -1409,6 +1436,7 @@ fn preview_cards(stable_id: &str, previews_enabled: bool) -> Vec<PreviewCard> {
                 minimized: window.minimized,
                 preview_available,
                 preview_source: preview_available.then_some(window.hwnd_identity),
+                preview_width,
             })
         })
         .collect()
@@ -1495,7 +1523,7 @@ fn open_task_preview(
     active_popup: Rc<Cell<isize>>,
     source: PreviewOpenSource,
 ) {
-    let cards = preview_cards(stable_id, previews_enabled);
+    let cards = preview_cards(stable_id, previews_enabled, monitor);
     if cards.is_empty() {
         return;
     }
@@ -1511,7 +1539,7 @@ fn open_task_preview(
     let topmost_for_open = Rc::clone(&topmost_established);
     let anchor_physical_x = physical_cursor_position().ok().map(|(x, _)| x);
     let opened = app.open_window(
-        task_flyout_options(monitor, cards.len(), anchor_physical_x, source),
+        task_flyout_options(monitor, &cards, anchor_physical_x, source),
         move |window, cx| {
             if source.activates_window() {
                 window.activate_window();
@@ -2147,7 +2175,7 @@ struct TaskFlyoutGeometry {
 
 fn task_flyout_geometry(
     monitor: &MonitorRecord,
-    card_count: usize,
+    card_widths: &[u16],
     anchor_physical_x: Option<i32>,
 ) -> TaskFlyoutGeometry {
     const WINDOW_SHADOW_INSET: f32 = 8.0;
@@ -2160,9 +2188,15 @@ fn task_flyout_geometry(
     let available_height = (work_bottom - work_top).max(1.0);
     let inset_x = WINDOW_SHADOW_INSET.min(((available_width - 1.0) / 2.0).max(0.0));
     let inset_y = WINDOW_SHADOW_INSET.min(((available_height - 1.0) / 2.0).max(0.0));
-    let width = (card_count.clamp(1, 4) as f32 * 228.0 + 16.0)
-        .min(928.0)
-        .min((available_width - inset_x * 2.0).max(1.0));
+    let card_count = card_widths.len().clamp(1, 4);
+    let requested_width = card_widths
+        .iter()
+        .take(4)
+        .map(|width| f32::from(*width))
+        .sum::<f32>()
+        + 16.0
+        + 8.0 * card_count.saturating_sub(1) as f32;
+    let width = requested_width.min((available_width - inset_x * 2.0).max(1.0));
     let height = 260.0_f32.min((available_height - inset_y * 2.0).max(1.0));
     let fallback_anchor = work_left + available_width / 2.0;
     let anchor = anchor_physical_x
@@ -2182,11 +2216,15 @@ fn task_flyout_geometry(
 
 fn task_flyout_options(
     monitor: &MonitorRecord,
-    card_count: usize,
+    cards: &[PreviewCard],
     anchor_physical_x: Option<i32>,
     source: PreviewOpenSource,
 ) -> WindowOptions {
-    let geometry = task_flyout_geometry(monitor, card_count, anchor_physical_x);
+    let card_widths = cards
+        .iter()
+        .map(|card| card.preview_width)
+        .collect::<Vec<_>>();
+    let geometry = task_flyout_geometry(monitor, &card_widths, anchor_physical_x);
     WindowOptions {
         window_bounds: Some(WindowBounds::Windowed(Bounds {
             origin: point(px(geometry.left), px(geometry.top)),
@@ -6625,7 +6663,9 @@ mod live_parity_tests {
 
             for cards in 1..=4 {
                 let interior_anchor = -1280;
-                let geometry = super::task_flyout_geometry(&monitor, cards, Some(interior_anchor));
+                let widths = vec![220; cards];
+                let geometry =
+                    super::task_flyout_geometry(&monitor, &widths, Some(interior_anchor));
                 assert!(geometry.left >= work_left + 8.0);
                 assert!(geometry.left + geometry.width <= work_right - 8.0 + 0.01);
                 assert!(geometry.top >= work_top + 8.0);
@@ -6633,12 +6673,12 @@ mod live_parity_tests {
                 let anchor_logical = interior_anchor as f32 / scale;
                 assert!((geometry.left + geometry.width / 2.0 - anchor_logical).abs() < 0.01);
 
-                let left = super::task_flyout_geometry(&monitor, cards, Some(-2559));
+                let left = super::task_flyout_geometry(&monitor, &widths, Some(-2559));
                 assert!((left.left - (work_left + 8.0)).abs() < 0.01);
-                let right = super::task_flyout_geometry(&monitor, cards, Some(-1));
+                let right = super::task_flyout_geometry(&monitor, &widths, Some(-1));
                 assert!((right.left + right.width - (work_right - 8.0)).abs() < 0.01);
 
-                let fallback = super::task_flyout_geometry(&monitor, cards, None);
+                let fallback = super::task_flyout_geometry(&monitor, &widths, None);
                 assert!((fallback.left + fallback.width / 2.0 - (work_left / 2.0)).abs() < 0.01);
             }
         }
@@ -6661,10 +6701,19 @@ mod live_parity_tests {
             dpi_x: 96,
             dpi_y: 96,
         };
-        let geometry = super::task_flyout_geometry(&compact, usize::MAX, Some(100));
+        let geometry = super::task_flyout_geometry(&compact, &[220; 4], Some(100));
         assert_eq!(
             (geometry.left, geometry.top, geometry.width, geometry.height),
             (8.0, 8.0, 184.0, 104.0)
         );
+    }
+
+    #[test]
+    fn task_preview_card_width_tracks_live_window_aspect_and_available_width() {
+        assert_eq!(super::preview_card_width_for_size(1920, 1080, 420.0), 350);
+        assert_eq!(super::preview_card_width_for_size(2560, 1080, 420.0), 420);
+        assert_eq!(super::preview_card_width_for_size(1080, 1920, 420.0), 160);
+        assert_eq!(super::preview_card_width_for_size(1920, 1080, 264.0), 264);
+        assert_eq!(super::preview_card_width_for_size(0, 1080, 420.0), 1);
     }
 }

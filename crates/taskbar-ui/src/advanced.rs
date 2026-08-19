@@ -27,6 +27,7 @@ pub struct PreviewCard {
     pub minimized: bool,
     pub preview_available: bool,
     pub preview_source: Option<isize>,
+    pub preview_width: u16,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -101,7 +102,7 @@ impl Render for TaskFlyoutView {
             .aria_label("Window previews")
             .tab_index(0)
             .track_focus(&self.focus)
-            .w(px(360.))
+            .w_full()
             .h_full()
             .p_2()
             .border_1()
@@ -159,7 +160,7 @@ impl Render for TaskFlyoutView {
                     .role(gpui::Role::Button)
                     .aria_label(card.title.clone())
                     .tab_index(0)
-                    .w(px(220.))
+                    .w(px(f32::from(card.preview_width)))
                     .h_full()
                     .flex_none()
                     .p_2()
@@ -890,6 +891,7 @@ mod tests {
                     minimized: false,
                     preview_available: false,
                     preview_source: None,
+                    preview_width: 220,
                 },
                 PreviewCard {
                     window_id: window("two"),
@@ -897,6 +899,7 @@ mod tests {
                     minimized: true,
                     preview_available: true,
                     preview_source: Some(2),
+                    preview_width: 360,
                 },
             ],
             100,

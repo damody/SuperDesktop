@@ -84,6 +84,7 @@ fn main() -> ExitCode {
                                 minimized: false,
                                 preview_available: false,
                                 preview_source: None,
+                                preview_width: 220,
                             }],
                             Rc::new(|_| {}),
                             Rc::new(|window, _| window.remove_window()),

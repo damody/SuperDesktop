@@ -66,17 +66,9 @@ impl LiveThumbnail {
     }
 
     pub fn update_destination(&self, container: ThumbnailRect) -> Result<(), PreviewUnavailable> {
-        let source = HWND(self.source as *mut c_void);
-        let mut source_client = RECT::default();
-        // SAFETY: source remains an opaque, query-only HWND; output storage is local.
-        unsafe { GetClientRect(source, &mut source_client) }
-            .map_err(|_| PreviewUnavailable::RetiredWindow)?;
-        let destination = aspect_fit_thumbnail_rect(
-            source_client.right - source_client.left,
-            source_client.bottom - source_client.top,
-            container,
-        )
-        .ok_or(PreviewUnavailable::InvalidWindow)?;
+        let (source_width, source_height) = source_client_size(self.source)?;
+        let destination = aspect_fit_thumbnail_rect(source_width, source_height, container)
+            .ok_or(PreviewUnavailable::InvalidWindow)?;
         let properties = DWM_THUMBNAIL_PROPERTIES {
             dwFlags: DWM_TNP_RECTDESTINATION
                 | DWM_TNP_VISIBLE
@@ -98,6 +90,27 @@ impl LiveThumbnail {
         unsafe { DwmUpdateThumbnailProperties(self.handle, &raw const properties) }
             .map_err(|_| PreviewUnavailable::ProbeFailed)
     }
+}
+
+pub fn source_client_size(source: isize) -> Result<(i32, i32), PreviewUnavailable> {
+    if source == 0 {
+        return Err(PreviewUnavailable::InvalidWindow);
+    }
+    let source = HWND(source as *mut c_void);
+    // SAFETY: source is an opaque, query-only HWND and no ownership is assumed.
+    if !unsafe { IsWindow(Some(source)).as_bool() } {
+        return Err(PreviewUnavailable::InvalidWindow);
+    }
+    let mut source_client = RECT::default();
+    // SAFETY: source is query-only and the output rectangle is local writable storage.
+    unsafe { GetClientRect(source, &mut source_client) }
+        .map_err(|_| PreviewUnavailable::RetiredWindow)?;
+    let width = source_client.right - source_client.left;
+    let height = source_client.bottom - source_client.top;
+    if width <= 0 || height <= 0 {
+        return Err(PreviewUnavailable::InvalidWindow);
+    }
+    Ok((width, height))
 }
 
 pub fn aspect_fit_thumbnail_rect(

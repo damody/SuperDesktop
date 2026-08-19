@@ -72,7 +72,7 @@ fn main() {
         }
         return;
     }
-    let request = ExecutionRequest::from_args(args);
+    let request = ExecutionRequest::from_product_args(args);
     if let Err(reason) = run_product(request) {
         eprintln!("SuperDesktop admission failed: {reason}");
         std::process::exit(2);

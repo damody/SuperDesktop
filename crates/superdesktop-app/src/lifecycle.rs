@@ -15,6 +15,11 @@ impl ExecutionRequest {
             shell: args.into_iter().any(|arg| arg == "--shell"),
         }
     }
+
+    pub fn from_product_args(args: impl IntoIterator<Item = OsString>) -> Self {
+        let preview = args.into_iter().any(|arg| arg == "--preview");
+        Self { shell: !preview }
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -391,6 +396,26 @@ mod tests {
         ] {
             assert!(Admission::evaluate(&ExecutionRequest { shell: true }, &facts).is_err());
         }
+    }
+
+    #[test]
+    fn normal_product_launch_is_shell_and_preview_requires_explicit_opt_out() {
+        assert_eq!(
+            ExecutionRequest::from_product_args(Vec::<OsString>::new()),
+            ExecutionRequest { shell: true }
+        );
+        assert_eq!(
+            ExecutionRequest::from_product_args([OsString::from("--shell")]),
+            ExecutionRequest { shell: true }
+        );
+        assert_eq!(
+            ExecutionRequest::from_product_args([OsString::from("--preview")]),
+            ExecutionRequest { shell: false }
+        );
+        assert_eq!(
+            ExecutionRequest::from_args(Vec::<OsString>::new()),
+            ExecutionRequest { shell: false }
+        );
     }
 
     #[test]
