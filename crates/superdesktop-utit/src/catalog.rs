@@ -174,9 +174,10 @@ pub fn catalog() -> Vec<TestCase> {
                 "{out}/start/power.png",
                 "-Locale",
                 "zh-TW",
+                "-SuppressExplorer",
             ],
             &["start/report.json", "start/home.png", "start/all-apps.png"],
-            false,
+            true,
             60,
         ),
         headful_case(

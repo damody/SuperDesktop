@@ -1891,24 +1891,34 @@ struct StartWindowGeometry {
     height: f32,
 }
 
-fn start_window_geometry(monitor: &MonitorRecord) -> StartWindowGeometry {
+fn start_window_geometry(
+    monitor: &MonitorRecord,
+    shell: bool,
+    taskbar_rows: u8,
+) -> StartWindowGeometry {
     let scale = monitor.dpi_x as f32 / 96.0;
     let monitor_width = (monitor.work_area.right - monitor.work_area.left) as f32 / scale;
-    let monitor_height = (monitor.work_area.bottom - monitor.work_area.top) as f32 / scale;
     let width = (monitor_width - 24.0).clamp(1.0, 640.0);
-    let height = (monitor_height - 12.0).clamp(1.0, 720.0);
     let work_left = monitor.work_area.left as f32 / scale;
     let work_top = monitor.work_area.top as f32 / scale;
+    let taskbar_bottom = if shell {
+        monitor.bounds.bottom as f32 / scale
+    } else {
+        monitor.work_area.bottom as f32 / scale
+    };
+    let start_bottom =
+        (taskbar_bottom - 40.0 * f32::from(taskbar_rows.clamp(1, 3)) - 12.0).max(work_top + 1.0);
+    let height = (start_bottom - work_top).clamp(1.0, 720.0);
     StartWindowGeometry {
         left: work_left + (monitor_width - width).max(0.0) / 2.0,
-        top: (monitor.work_area.bottom as f32 / scale - height - 12.0).max(work_top),
+        top: (start_bottom - height).max(work_top),
         width,
         height,
     }
 }
 
-fn start_options(monitor: &MonitorRecord) -> WindowOptions {
-    let geometry = start_window_geometry(monitor);
+fn start_options(monitor: &MonitorRecord, shell: bool, taskbar_rows: u8) -> WindowOptions {
+    let geometry = start_window_geometry(monitor, shell, taskbar_rows);
     WindowOptions {
         window_bounds: Some(WindowBounds::Windowed(Bounds {
             origin: point(px(geometry.left), px(geometry.top)),
@@ -3169,6 +3179,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                             production_taskbar_settings.previews_enabled;
                         let previews_enabled_for_hover =
                             production_taskbar_settings.previews_enabled;
+                        let start_taskbar_rows = production_taskbar_settings.rows;
                         let taskbar_hwnd_for_click = Rc::clone(&taskbar_hwnd_identity);
                         let taskbar_hwnd_for_hover = Rc::clone(&taskbar_hwnd_identity);
                         let active_preview_for_click = Rc::clone(&active_preview_hwnd);
@@ -3240,7 +3251,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                 let persist_store = Rc::clone(&start_settings_store);
                                 let persist_target = Rc::clone(&start_settings_target);
                                 let persist_settings = Rc::clone(&start_persisted_settings);
-                                let opened = app.open_window(start_options(&start_monitor), move |window, cx| {
+                                let opened = app.open_window(start_options(&start_monitor, shell, start_taskbar_rows), move |window, cx| {
                                     window.activate_window();
                                     let provider = Rc::clone(&search_provider);
                                     let dismiss_slot = Rc::clone(&dismiss_slot);
@@ -4997,9 +5008,9 @@ mod live_parity_tests {
             dpi_x: 168,
             dpi_y: 168,
         };
-        let geometry = start_window_geometry(&monitor);
+        let geometry = start_window_geometry(&monitor, false, 1);
         let logical_width = 1920.0 / 1.75;
-        let logical_bottom = 1000.0 / 1.75;
+        let logical_bottom = 1000.0 / 1.75 - 40.0;
         assert_eq!(geometry.width, 640.0);
         assert!((geometry.left - (logical_width - 640.0) / 2.0).abs() < 0.01);
         assert!((logical_bottom - geometry.top - geometry.height - 12.0).abs() < 0.01);
@@ -5009,9 +5020,81 @@ mod live_parity_tests {
         small.work_area.bottom = 400;
         small.dpi_x = 96;
         small.dpi_y = 96;
-        let geometry = start_window_geometry(&small);
+        let geometry = start_window_geometry(&small, false, 1);
         assert_eq!((geometry.left, geometry.top), (12.0, 0.0));
-        assert_eq!((geometry.width, geometry.height), (476.0, 388.0));
+        assert_eq!((geometry.width, geometry.height), (476.0, 348.0));
+    }
+
+    #[test]
+    fn start_geometry_uses_matching_preview_and_shell_taskbar_anchors() {
+        let monitor = MonitorRecord {
+            device_name: "stale-work-area".into(),
+            primary: true,
+            bounds: ScreenRect {
+                left: 0,
+                top: 0,
+                right: 3840,
+                bottom: 2160,
+            },
+            work_area: ScreenRect {
+                left: 0,
+                top: 0,
+                right: 3840,
+                bottom: 2020,
+            },
+            dpi_x: 168,
+            dpi_y: 168,
+        };
+        let preview = start_window_geometry(&monitor, false, 2);
+        let shell = start_window_geometry(&monitor, true, 2);
+        let preview_bottom = 2020.0 / 1.75 - 80.0 - 12.0;
+        let shell_bottom = 2160.0 / 1.75 - 80.0 - 12.0;
+        assert!((preview.top + preview.height - preview_bottom).abs() < 0.01);
+        assert!((shell.top + shell.height - shell_bottom).abs() < 0.01);
+        assert!((shell.top - preview.top - 80.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn start_geometry_matrix_preserves_windows_ratios_without_taskbar_overlap() {
+        for dpi in [96, 144, 168, 216] {
+            let monitor = MonitorRecord {
+                device_name: format!("dpi-{dpi}"),
+                primary: false,
+                bounds: ScreenRect {
+                    left: -3840,
+                    top: -300,
+                    right: 0,
+                    bottom: 2160,
+                },
+                work_area: ScreenRect {
+                    left: -3840,
+                    top: -300,
+                    right: 0,
+                    bottom: 2040,
+                },
+                dpi_x: dpi,
+                dpi_y: dpi,
+            };
+            let scale = dpi as f32 / 96.0;
+            let work_left = -3840.0 / scale;
+            let work_top = -300.0 / scale;
+            let work_width = 3840.0 / scale;
+            for shell in [false, true] {
+                for rows in 1..=3 {
+                    let geometry = start_window_geometry(&monitor, shell, rows);
+                    let taskbar_bottom = if shell { 2160.0 } else { 2040.0 } / scale;
+                    let start_bottom = taskbar_bottom - 40.0 * rows as f32 - 12.0;
+                    assert_eq!(geometry.width, 640.0_f32.min(work_width - 24.0));
+                    assert_eq!(geometry.height, 720.0_f32.min(start_bottom - work_top));
+                    assert!(
+                        (geometry.left - (work_left + (work_width - geometry.width) / 2.0)).abs()
+                            < 0.01
+                    );
+                    assert!(geometry.top >= work_top);
+                    assert!((geometry.top + geometry.height - start_bottom).abs() < 0.01);
+                }
+            }
+        }
     }
 
     #[test]
