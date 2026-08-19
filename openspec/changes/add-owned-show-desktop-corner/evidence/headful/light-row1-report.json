@@ -5,7 +5,7 @@
     "rows":  1,
     "app_sha256":  "ac0d28f689b58b3303bd86504ed12bd70c003c0f01616f18d24f1ce9f06f329d",
     "explorer_before":  [
-                            21564
+                            51408
                         ],
     "explorer_absent_during_capture":  true,
     "uia":  {
@@ -33,16 +33,18 @@
                           "height":  70
                       },
     "cycle_exercised":  true,
+    "uia_cycle":  true,
+    "pointer_cycle":  true,
     "visible_minimized":  2,
     "visible_restored":  2,
     "pre_minimized_preserved":  true,
     "screenshots":  [
                         {
-                            "sha256":  "c4196574c00e4de266a53ac2323a6ad255dff21f855ad6094f2a54dcad340a9b",
+                            "sha256":  "dfd7105422cd8d130e191358c5537f06339e9a461c421cb84c37f7b7e7cb1d4a",
                             "name":  "light-row1-before.png"
                         },
                         {
-                            "sha256":  "2b940a8162376b31a72e110d27279c81643301fd576167080e3470017d022af9",
+                            "sha256":  "fb577301c7ff08b516e111d63b71a612dc0a3482737a81e6300fd5bf9e7c84c4",
                             "name":  "light-row1-focus-hover.png"
                         }
                     ],
