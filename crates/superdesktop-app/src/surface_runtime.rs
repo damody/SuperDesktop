@@ -31,7 +31,7 @@ use platform_win::common::{
     },
 };
 use raw_window_handle::{HasWindowHandle, RawWindowHandle};
-use settings_store::{DesktopSortDirection, DesktopSortKey};
+use settings_store::{DesktopSortDirection, DesktopSortKey, TaskbarSearchMode, TaskbarSettings};
 use shell_provider_protocol::{
     CURRENT_PROTOCOL, CommandDescriptor, CommandId, CommandRisk, Envelope, IconData, IconKey,
     JumpListRequest, MenuContext, MenuEnumeration, MenuInvocation, NotificationEvent,
@@ -1142,6 +1142,31 @@ fn run_show_desktop_cycle(session: &Rc<RefCell<ShowDesktopSession>>) {
             session.borrow_mut().complete_restore();
             trace_action("show-desktop:restored");
         }
+    }
+}
+
+fn apply_taskbar_context_setting(
+    settings: &mut TaskbarSettings,
+    command: TaskbarContextCommand,
+) -> bool {
+    match command {
+        TaskbarContextCommand::CycleSearchMode => {
+            settings.search_mode = match settings.search_mode {
+                TaskbarSearchMode::Hidden => TaskbarSearchMode::Icon,
+                TaskbarSearchMode::Icon => TaskbarSearchMode::Box,
+                TaskbarSearchMode::Box => TaskbarSearchMode::Hidden,
+            };
+            true
+        }
+        TaskbarContextCommand::ToggleTaskView => {
+            settings.show_task_view = !settings.show_task_view;
+            true
+        }
+        TaskbarContextCommand::ToggleLockTaskbar => {
+            settings.locked = !settings.locked;
+            true
+        }
+        _ => false,
     }
 }
 
@@ -2260,7 +2285,7 @@ fn taskbar_context_options(
 ) -> WindowOptions {
     let (left, top, _, _) = taskbar_context_placement(monitor, shell, rows, anchor);
     let width = 220.0;
-    let height = 114.0;
+    let height = 210.0;
     WindowOptions {
         window_bounds: Some(WindowBounds::Windowed(Bounds {
             origin: point(px(left), px(top)),
@@ -2286,7 +2311,7 @@ fn taskbar_context_placement(
 ) -> (f32, f32, f32, f32) {
     let scale = monitor.dpi_x as f32 / 96.0;
     let width = 220.0;
-    let height = 114.0;
+    let height = 210.0;
     let monitor_left = monitor.bounds.left as f32 / scale;
     let monitor_right = monitor.bounds.right as f32 / scale;
     let monitor_top = monitor.bounds.top as f32 / scale;
@@ -2999,6 +3024,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                 let start_window_for_status = Rc::clone(&start_window);
                 let show_desktop_session = Rc::new(RefCell::new(ShowDesktopSession::default()));
                 let show_desktop_session_for_taskbar = Rc::clone(&show_desktop_session);
+                let show_desktop_session_for_context = Rc::clone(&show_desktop_session);
                 let start_provider_for_taskbar = Rc::clone(&provider_client);
                 let start_settings_store = Rc::clone(&settings_store);
                 let start_settings_target = Rc::clone(&settings_target);
@@ -3603,6 +3629,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                 let settings_store = Rc::clone(&context_settings_store);
                                 let settings_target = Rc::clone(&context_settings_target);
                                 let live_settings = Rc::clone(&context_persisted_settings);
+                                let context_show_desktop = Rc::clone(&show_desktop_session_for_context);
                                 let context_rows = live_settings.borrow().taskbar.rows;
                                 let opened = app.open_window(
                                     taskbar_context_options(
@@ -3619,16 +3646,24 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                         let store_for_action = Rc::clone(&settings_store);
                                         let target_for_action = Rc::clone(&settings_target);
                                         let live_for_action = Rc::clone(&live_settings);
-                                        let context_locked = live_for_action.borrow().taskbar.locked;
+                                        let context_show_desktop_for_action = Rc::clone(&context_show_desktop);
+                                        let context_settings = live_for_action.borrow().taskbar.clone();
                                         cx.new(move |cx| {
                                             TaskbarContextView::new(
-                                                context_locked,
+                                                context_settings.locked,
+                                                context_settings.search_mode,
+                                                context_settings.show_task_view,
                                                 Rc::new(move |command, app| match command {
-                                                    TaskbarContextCommand::ToggleLockTaskbar => {
+                                                    TaskbarContextCommand::CycleSearchMode
+                                                    | TaskbarContextCommand::ToggleTaskView
+                                                    | TaskbarContextCommand::ToggleLockTaskbar => {
                                                         let mut updated =
                                                             live_for_action.borrow().clone();
-                                                        updated.taskbar.locked =
-                                                            !updated.taskbar.locked;
+                                                        let changed = apply_taskbar_context_setting(
+                                                            &mut updated.taskbar,
+                                                            command,
+                                                        );
+                                                        debug_assert!(changed);
                                                         match store_for_action
                                                             .borrow_mut()
                                                             .save(&target_for_action, &updated)
@@ -3636,14 +3671,22 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                                             Ok(saved) => {
                                                                 *live_for_action.borrow_mut() =
                                                                     saved;
-                                                                trace_action(
-                                                                    "taskbar:lock-toggled",
-                                                                );
+                                                                trace_action(match command {
+                                                                    TaskbarContextCommand::CycleSearchMode => "taskbar:search-mode-cycled",
+                                                                    TaskbarContextCommand::ToggleTaskView => "taskbar:task-view-toggled",
+                                                                    _ => "taskbar:lock-toggled",
+                                                                });
                                                             }
                                                             Err(_) => trace_action(
-                                                                "taskbar:lock-save-rejected",
+                                                                "taskbar:context-setting-save-rejected",
                                                             ),
                                                         }
+                                                    }
+                                                    TaskbarContextCommand::ShowDesktop => {
+                                                        run_show_desktop_cycle(
+                                                            &context_show_desktop_for_action,
+                                                        );
+                                                        trace_action("taskbar:context-show-desktop");
                                                     }
                                                     TaskbarContextCommand::OpenTaskManager => {
                                                         trace_action(if platform_win::common::taskbar::launch_task_manager().is_ok() {
@@ -4721,16 +4764,18 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
 mod live_parity_tests {
     use super::{
         AttentionRuntime, DEFAULT_FLASH_EDGES, HSHELL_FLASH, HSHELL_WINDOWACTIVATED,
-        ICON_CACHE_LIMIT, MonitorRecord, prune_icon_cache, reconcile_desktop_item_positions,
-        start_window_geometry, taskbar_physical_geometry,
+        ICON_CACHE_LIMIT, MonitorRecord, apply_taskbar_context_setting, prune_icon_cache,
+        reconcile_desktop_item_positions, start_window_geometry, taskbar_physical_geometry,
     };
     use desktop_ui::AccessibleNode;
     use gpui::{WindowBounds, point, px};
     use platform_win::common::appbar_shell_hook::OwnedShellHookEvent;
     use platform_win::common::monitor_dpi_start::ScreenRect;
+    use settings_store::{TaskbarSearchMode, TaskbarSettings};
     use std::collections::{BTreeMap, BTreeSet};
     use std::path::Path;
     use std::time::Instant;
+    use taskbar_ui::TaskbarContextCommand;
 
     #[test]
     fn shell_attention_flashes_then_holds_until_activation() {
@@ -4840,6 +4885,44 @@ mod live_parity_tests {
                 "forbidden show desktop delegation: {forbidden}"
             );
         }
+    }
+
+    #[test]
+    fn taskbar_context_settings_mutate_exactly_one_supported_field() {
+        let original = TaskbarSettings::default();
+        let mut search = original.clone();
+        assert!(apply_taskbar_context_setting(
+            &mut search,
+            TaskbarContextCommand::CycleSearchMode
+        ));
+        assert_eq!(search.search_mode, TaskbarSearchMode::Icon);
+        assert_eq!(search.show_task_view, original.show_task_view);
+        assert_eq!(search.locked, original.locked);
+
+        let mut task_view = original.clone();
+        assert!(apply_taskbar_context_setting(
+            &mut task_view,
+            TaskbarContextCommand::ToggleTaskView
+        ));
+        assert!(!task_view.show_task_view);
+        assert_eq!(task_view.search_mode, original.search_mode);
+        assert_eq!(task_view.locked, original.locked);
+
+        let mut lock = original.clone();
+        assert!(apply_taskbar_context_setting(
+            &mut lock,
+            TaskbarContextCommand::ToggleLockTaskbar
+        ));
+        assert!(!lock.locked);
+        assert_eq!(lock.search_mode, original.search_mode);
+        assert_eq!(lock.show_task_view, original.show_task_view);
+
+        let mut non_setting = original.clone();
+        assert!(!apply_taskbar_context_setting(
+            &mut non_setting,
+            TaskbarContextCommand::ShowDesktop
+        ));
+        assert_eq!(non_setting, original);
     }
 
     #[test]
@@ -5232,8 +5315,8 @@ mod live_parity_tests {
             super::taskbar_context_placement(&monitor, false, 2, point(px(9_999.), px(0.)));
         assert!(left >= -1280.0);
         assert!(left + width <= 0.0);
-        assert_eq!(top, 491.3333);
-        assert_eq!(height, 114.0);
+        assert_eq!(top, 395.3333);
+        assert_eq!(height, 210.0);
         let settings = super::taskbar_settings_options(&monitor);
         let Some(WindowBounds::Windowed(settings)) = settings.window_bounds else {
             panic!("bounds")

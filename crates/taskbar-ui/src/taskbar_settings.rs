@@ -7,9 +7,11 @@ use gpui::{
 use settings_store::{TaskbarAlignment, TaskbarSearchMode, TaskbarSettings};
 
 fn traditional_chinese() -> bool {
-    std::env::var("SUPERDESKTOP_LOCALE").as_deref() == Ok("zh-TW")
-        || platform_win::common::taskbar_status::user_locale_name()
-            .is_some_and(|locale| locale.eq_ignore_ascii_case("zh-TW"))
+    if let Ok(locale) = std::env::var("SUPERDESKTOP_LOCALE") {
+        return locale.eq_ignore_ascii_case("zh-TW");
+    }
+    platform_win::common::taskbar_status::user_locale_name()
+        .is_some_and(|locale| locale.eq_ignore_ascii_case("zh-TW"))
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -181,6 +183,9 @@ const fn setting_glyph(id: TaskbarSettingId) -> &'static str {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum TaskbarContextCommand {
+    CycleSearchMode,
+    ToggleTaskView,
+    ShowDesktop,
     ToggleLockTaskbar,
     OpenTaskManager,
     OpenTaskbarSettings,
@@ -198,9 +203,12 @@ pub struct TaskbarContextModel {
 }
 
 impl TaskbarContextModel {
-    pub const COMMANDS: [TaskbarContextCommand; 3] = [
-        TaskbarContextCommand::ToggleLockTaskbar,
+    pub const COMMANDS: [TaskbarContextCommand; 6] = [
+        TaskbarContextCommand::CycleSearchMode,
+        TaskbarContextCommand::ToggleTaskView,
+        TaskbarContextCommand::ShowDesktop,
         TaskbarContextCommand::OpenTaskManager,
+        TaskbarContextCommand::ToggleLockTaskbar,
         TaskbarContextCommand::OpenTaskbarSettings,
     ];
 
@@ -224,6 +232,8 @@ pub type TaskbarSurfaceDismiss = Rc<dyn Fn(&mut Window, &mut gpui::App)>;
 pub struct TaskbarContextView {
     pub model: TaskbarContextModel,
     pub locked: bool,
+    pub search_mode: TaskbarSearchMode,
+    pub show_task_view: bool,
     action: TaskbarContextAction,
     dismiss: TaskbarSurfaceDismiss,
     focus: FocusHandle,
@@ -232,6 +242,8 @@ pub struct TaskbarContextView {
 impl TaskbarContextView {
     pub fn new(
         locked: bool,
+        search_mode: TaskbarSearchMode,
+        show_task_view: bool,
         action: TaskbarContextAction,
         dismiss: TaskbarSurfaceDismiss,
         _window: &mut Window,
@@ -240,6 +252,8 @@ impl TaskbarContextView {
         Self {
             model: TaskbarContextModel::default(),
             locked,
+            search_mode,
+            show_task_view,
             action,
             dismiss,
             focus: cx.focus_handle(),
@@ -263,7 +277,7 @@ impl Render for TaskbarContextView {
             .left_0()
             .top_0()
             .w(px(220.))
-            .h(px(114.))
+            .h(px(210.))
             .p(px(4.))
             .rounded(px(8.))
             .border_1()
@@ -298,50 +312,36 @@ impl Render for TaskbarContextView {
                 |(index, command)| {
                     let action = self.action.clone();
                     let dismiss = self.dismiss.clone();
-                    let (icon, label) = match command {
-                        TaskbarContextCommand::ToggleLockTaskbar => (
-                            if self.locked { "✓" } else { "" },
-                            if traditional_chinese() {
-                                "鎖定工作列"
+                    let icon = match command {
+                        TaskbarContextCommand::CycleSearchMode => "⌕",
+                        TaskbarContextCommand::ToggleTaskView => "▣",
+                        TaskbarContextCommand::ShowDesktop => "▭",
+                        TaskbarContextCommand::ToggleLockTaskbar => {
+                            if self.locked {
+                                "✓"
                             } else {
-                                "Lock the taskbar"
-                            },
-                        ),
-                        TaskbarContextCommand::OpenTaskManager => (
-                            "▥",
-                            if traditional_chinese() {
-                                "工作管理員"
-                            } else {
-                                "Task Manager"
-                            },
-                        ),
-                        TaskbarContextCommand::OpenTaskbarSettings => (
-                            "⚙",
-                            if traditional_chinese() {
-                                "工作列設定"
-                            } else {
-                                "Taskbar settings"
-                            },
-                        ),
+                                ""
+                            }
+                        }
+                        TaskbarContextCommand::OpenTaskManager => "▥",
+                        TaskbarContextCommand::OpenTaskbarSettings => "⚙",
                     };
+                    let label =
+                        taskbar_context_label(command, self.search_mode, traditional_chinese());
+                    let checked =
+                        taskbar_context_checked(command, self.locked, self.show_task_view);
                     div()
                         .id(format!("taskbar-context-{command:?}"))
                         .role(gpui::Role::MenuItem)
-                        .aria_label(if command == TaskbarContextCommand::ToggleLockTaskbar {
+                        .aria_label(if let Some(checked) = checked {
                             format!(
                                 "{label}, {}",
-                                if self.locked {
-                                    "checked"
-                                } else {
-                                    "not checked"
-                                }
+                                if checked { "checked" } else { "not checked" }
                             )
                         } else {
-                            label.into()
+                            label.clone()
                         })
-                        .aria_selected(
-                            command == TaskbarContextCommand::ToggleLockTaskbar && self.locked,
-                        )
+                        .aria_selected(checked.unwrap_or(false))
                         .tab_index(0)
                         .h(px(32.))
                         .px(px(10.))
@@ -363,6 +363,53 @@ impl Render for TaskbarContextView {
                         .child(label)
                 },
             ))
+    }
+}
+
+fn taskbar_context_checked(
+    command: TaskbarContextCommand,
+    locked: bool,
+    show_task_view: bool,
+) -> Option<bool> {
+    match command {
+        TaskbarContextCommand::ToggleTaskView => Some(show_task_view),
+        TaskbarContextCommand::ToggleLockTaskbar => Some(locked),
+        _ => None,
+    }
+}
+
+fn taskbar_context_label(
+    command: TaskbarContextCommand,
+    search_mode: TaskbarSearchMode,
+    zh_tw: bool,
+) -> String {
+    match (command, zh_tw) {
+        (TaskbarContextCommand::CycleSearchMode, true) => format!(
+            "搜尋：{}",
+            match search_mode {
+                TaskbarSearchMode::Hidden => "隱藏",
+                TaskbarSearchMode::Icon => "僅搜尋圖示",
+                TaskbarSearchMode::Box => "搜尋方塊",
+            }
+        ),
+        (TaskbarContextCommand::CycleSearchMode, false) => format!(
+            "Search: {}",
+            match search_mode {
+                TaskbarSearchMode::Hidden => "Hidden",
+                TaskbarSearchMode::Icon => "Search icon only",
+                TaskbarSearchMode::Box => "Search box",
+            }
+        ),
+        (TaskbarContextCommand::ToggleTaskView, true) => "顯示工作檢視按鈕".into(),
+        (TaskbarContextCommand::ToggleTaskView, false) => "Show Task View button".into(),
+        (TaskbarContextCommand::ShowDesktop, true) => "顯示桌面".into(),
+        (TaskbarContextCommand::ShowDesktop, false) => "Show the desktop".into(),
+        (TaskbarContextCommand::OpenTaskManager, true) => "工作管理員".into(),
+        (TaskbarContextCommand::OpenTaskManager, false) => "Task Manager".into(),
+        (TaskbarContextCommand::ToggleLockTaskbar, true) => "鎖定工作列".into(),
+        (TaskbarContextCommand::ToggleLockTaskbar, false) => "Lock the taskbar".into(),
+        (TaskbarContextCommand::OpenTaskbarSettings, true) => "工作列設定".into(),
+        (TaskbarContextCommand::OpenTaskbarSettings, false) => "Taskbar settings".into(),
     }
 }
 
@@ -989,7 +1036,7 @@ mod tests {
         let mut model = TaskbarContextModel::default();
         assert_eq!(
             model.activate(),
-            TaskbarContextEffect::Command(TaskbarContextCommand::ToggleLockTaskbar)
+            TaskbarContextEffect::Command(TaskbarContextCommand::CycleSearchMode)
         );
         model.move_selection(-1);
         assert_eq!(
@@ -998,6 +1045,51 @@ mod tests {
         );
         model.move_selection(1);
         assert_eq!(model.selected(), 0);
+        assert_eq!(TaskbarContextModel::COMMANDS.len(), 6);
+        assert_eq!(
+            TaskbarContextModel::COMMANDS[4],
+            TaskbarContextCommand::ToggleLockTaskbar
+        );
+    }
+
+    #[test]
+    fn context_labels_and_checked_states_are_truthful_in_both_locales() {
+        assert_eq!(
+            taskbar_context_label(
+                TaskbarContextCommand::CycleSearchMode,
+                TaskbarSearchMode::Icon,
+                false,
+            ),
+            "Search: Search icon only"
+        );
+        assert_eq!(
+            taskbar_context_label(
+                TaskbarContextCommand::CycleSearchMode,
+                TaskbarSearchMode::Box,
+                true,
+            ),
+            "搜尋：搜尋方塊"
+        );
+        assert_eq!(
+            taskbar_context_label(
+                TaskbarContextCommand::ToggleTaskView,
+                TaskbarSearchMode::Hidden,
+                true,
+            ),
+            "顯示工作檢視按鈕"
+        );
+        assert_eq!(
+            taskbar_context_checked(TaskbarContextCommand::ToggleTaskView, false, true),
+            Some(true)
+        );
+        assert_eq!(
+            taskbar_context_checked(TaskbarContextCommand::ToggleLockTaskbar, false, true),
+            Some(false)
+        );
+        assert_eq!(
+            taskbar_context_checked(TaskbarContextCommand::ShowDesktop, false, true),
+            None
+        );
     }
 
     #[test]

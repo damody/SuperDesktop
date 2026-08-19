@@ -57,6 +57,8 @@ fn main() -> ExitCode {
                     cx.new(move |cx| {
                         TaskbarContextView::new(
                             true,
+                            settings_store::TaskbarSearchMode::Hidden,
+                            true,
                             Rc::new(|_, _| {}),
                             Rc::new(|window, _| window.remove_window()),
                             window,

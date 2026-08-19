@@ -1,0 +1,645 @@
+{
+  "schema": "superdesktop-utit-run/v1",
+  "run_id": "shell-parity-final",
+  "suite": "shell-parity",
+  "partial": false,
+  "started_unix_ms": 1787120189796,
+  "finished_unix_ms": 1787120354210,
+  "workspace": "\\\\?\\D:\\SuperExplorer\\SuperDesktop",
+  "host": {
+    "windows_build": 26200,
+    "architecture": "AMD64",
+    "interactive": true,
+    "monitor_count": 1,
+    "explorer_running": true,
+    "workspace_revision": "ec4a5d2468cbed8ca4ab36baa4716dac6021e235",
+    "tools": [
+      "cargo",
+      "certutil",
+      "git",
+      "openspec",
+      "powershell"
+    ]
+  },
+  "counts": {
+    "selected": 17,
+    "passed": 17,
+    "failed": 0,
+    "blocked": 0,
+    "skipped": 0,
+    "not_applicable": 0
+  },
+  "decision": "passed",
+  "cases": [
+    {
+      "id": "unit-utit",
+      "title": "UTIT unit and fixture tests",
+      "state": "passed",
+      "reason": "passed",
+      "duration_ms": 2317,
+      "exit_code": 0,
+      "timed_out": false,
+      "argv": [
+        "cargo.exe",
+        "test",
+        "-p",
+        "superdesktop-utit",
+        "--locked",
+        "--offline"
+      ],
+      "stdout": {
+        "path": "cases/unit-utit/stdout.log",
+        "bytes": 1372,
+        "sha256": "8b43b933c68763cdc6e656db25e2817e4c2e9d46bec60350ba04fdc8d397c73f"
+      },
+      "stderr": {
+        "path": "cases/unit-utit/stderr.log",
+        "bytes": 291,
+        "sha256": "ba0ce6013e9a476f9e0980ff5a7ab0b123ec14acdd65ea5bbddab6b2dd4dc1d9"
+      },
+      "artifacts": [],
+      "recovery_verified": true
+    },
+    {
+      "id": "unit-taskbar-ui",
+      "title": "Taskbar model and GUI contracts",
+      "state": "passed",
+      "reason": "passed",
+      "duration_ms": 4487,
+      "exit_code": 0,
+      "timed_out": false,
+      "argv": [
+        "cargo.exe",
+        "test",
+        "-p",
+        "taskbar-ui",
+        "--locked",
+        "--offline"
+      ],
+      "stdout": {
+        "path": "cases/unit-taskbar-ui/stdout.log",
+        "bytes": 6391,
+        "sha256": "220a24b74acc4414411ae5eb998b0b886f8058741550a456f27973744fa419ca"
+      },
+      "stderr": {
+        "path": "cases/unit-taskbar-ui/stderr.log",
+        "bytes": 264,
+        "sha256": "ab84dbd7ba82e348617b1e369f84cc80a82fccd9cbf976f709ae203b8932061b"
+      },
+      "artifacts": [],
+      "recovery_verified": true
+    },
+    {
+      "id": "unit-superdesktop-app",
+      "title": "SuperDesktop production composition contracts",
+      "state": "passed",
+      "reason": "passed",
+      "duration_ms": 1311,
+      "exit_code": 0,
+      "timed_out": false,
+      "argv": [
+        "cargo.exe",
+        "test",
+        "-p",
+        "superdesktop-app",
+        "--locked",
+        "--offline"
+      ],
+      "stdout": {
+        "path": "cases/unit-superdesktop-app/stdout.log",
+        "bytes": 5066,
+        "sha256": "c7c394baec05d780c638414b0d36db0c7a2dfa3f70ab03fc50ccd61f72c0f9c5"
+      },
+      "stderr": {
+        "path": "cases/unit-superdesktop-app/stderr.log",
+        "bytes": 381,
+        "sha256": "7c5fc8e30d430bb60e45a1011a9150706a8e35462cf83874bd007a580c0f62b3"
+      },
+      "artifacts": [],
+      "recovery_verified": true
+    },
+    {
+      "id": "openspec-strict",
+      "title": "UTIT strict OpenSpec validation",
+      "state": "passed",
+      "reason": "passed",
+      "duration_ms": 1013,
+      "exit_code": 0,
+      "timed_out": false,
+      "argv": [
+        "openspec.cmd",
+        "validate",
+        "add-superdesktop-utit-runner",
+        "--strict",
+        "--json"
+      ],
+      "stdout": {
+        "path": "cases/openspec-strict/stdout.log",
+        "bytes": 391,
+        "sha256": "ffea8b017e3adbd326b9594fb07e854f5c5cef04dd8787bd7e22d9dcdbd90d30"
+      },
+      "stderr": null,
+      "artifacts": [],
+      "recovery_verified": true
+    },
+    {
+      "id": "workspace-tests",
+      "title": "Locked offline workspace tests",
+      "state": "passed",
+      "reason": "passed",
+      "duration_ms": 9564,
+      "exit_code": 0,
+      "timed_out": false,
+      "argv": [
+        "cargo.exe",
+        "test",
+        "--workspace",
+        "--locked",
+        "--offline"
+      ],
+      "stdout": {
+        "path": "cases/workspace-tests/stdout.log",
+        "bytes": 36407,
+        "sha256": "48bc8e90a23b890a02c7fdb244d8b7e5b565438d0ccc372d602bb5b6e31bc013"
+      },
+      "stderr": {
+        "path": "cases/workspace-tests/stderr.log",
+        "bytes": 3699,
+        "sha256": "8e7244e4aee80cde3596d5d5301a59e31a1b91912f8f216f54151597f4dffa04"
+      },
+      "artifacts": [],
+      "recovery_verified": true
+    },
+    {
+      "id": "workspace-clippy",
+      "title": "Workspace Clippy warnings as errors",
+      "state": "passed",
+      "reason": "passed",
+      "duration_ms": 607,
+      "exit_code": 0,
+      "timed_out": false,
+      "argv": [
+        "cargo.exe",
+        "clippy",
+        "--workspace",
+        "--all-targets",
+        "--locked",
+        "--offline",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "stdout": null,
+      "stderr": {
+        "path": "cases/workspace-clippy/stderr.log",
+        "bytes": 72,
+        "sha256": "45f75b19e5718ce74d75d27dc949e2b0cc21908a1e53dca4d31c24e03ebe8e09"
+      },
+      "artifacts": [],
+      "recovery_verified": true
+    },
+    {
+      "id": "workspace-release",
+      "title": "Product workspace release build (running UTIT excluded)",
+      "state": "passed",
+      "reason": "passed",
+      "duration_ms": 607,
+      "exit_code": 0,
+      "timed_out": false,
+      "argv": [
+        "cargo.exe",
+        "build",
+        "--workspace",
+        "--release",
+        "--exclude",
+        "superdesktop-utit",
+        "--locked",
+        "--offline"
+      ],
+      "stdout": null,
+      "stderr": {
+        "path": "cases/workspace-release/stderr.log",
+        "bytes": 62,
+        "sha256": "dd5cbfd46cbc7d90e44f766619e1dd80f5375b42ec46bf848bf1736968f1969b"
+      },
+      "artifacts": [],
+      "recovery_verified": true
+    },
+    {
+      "id": "gui-taskbar-live",
+      "title": "Live taskbar rows and labels",
+      "state": "passed",
+      "reason": "passed",
+      "duration_ms": 10324,
+      "exit_code": 0,
+      "timed_out": false,
+      "argv": [
+        "powershell.exe",
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "D:\\SuperExplorer\\SuperDesktop\\scripts\\capture-taskbar-live-production.ps1",
+        "-Workspace",
+        "D:\\SuperExplorer\\SuperDesktop",
+        "-OutputPath",
+        "D:\\SuperExplorer\\SuperDesktop\\openspec\\changes\\expand-taskbar-context-command-parity\\evidence\\shell-parity-final\\cases\\gui-taskbar-live/taskbar/report.json",
+        "-ScreenshotPath",
+        "D:\\SuperExplorer\\SuperDesktop\\openspec\\changes\\expand-taskbar-context-command-parity\\evidence\\shell-parity-final\\cases\\gui-taskbar-live/taskbar/taskbar.png",
+        "-JumpListScreenshotPath",
+        "D:\\SuperExplorer\\SuperDesktop\\openspec\\changes\\expand-taskbar-context-command-parity\\evidence\\shell-parity-final\\cases\\gui-taskbar-live/taskbar/jump-list.png"
+      ],
+      "stdout": {
+        "path": "cases/gui-taskbar-live/stdout.log",
+        "bytes": 8799,
+        "sha256": "792df50602e163ca1b5a5b2a846bda871adbf7fd3b464ce9704e26d6ac37c920"
+      },
+      "stderr": null,
+      "artifacts": [
+        {
+          "path": "cases/gui-taskbar-live/taskbar/report.json",
+          "bytes": 8798,
+          "sha256": "bf3a035d7dbe04cce5deb36b6d0c72ed33be9cafe36f66b9a6002b41fb6045b4"
+        },
+        {
+          "path": "cases/gui-taskbar-live/taskbar/taskbar.png",
+          "bytes": 119929,
+          "sha256": "b0c79615e82b670cb3ef94ba6939e2056309ed3a5aae8ecede5ad0253f61a277"
+        },
+        {
+          "path": "cases/gui-taskbar-live/taskbar/jump-list.png",
+          "bytes": 63246,
+          "sha256": "d4f0d6b8793562d2420600ad6f5c578eae91cbc35e5b3b52343d9c4e4032096d"
+        }
+      ],
+      "recovery_verified": true
+    },
+    {
+      "id": "gui-start",
+      "title": "Owned Start home and all apps",
+      "state": "passed",
+      "reason": "passed",
+      "duration_ms": 14044,
+      "exit_code": 0,
+      "timed_out": false,
+      "argv": [
+        "powershell.exe",
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "D:\\SuperExplorer\\SuperDesktop\\scripts\\capture-start-production.ps1",
+        "-Workspace",
+        "D:\\SuperExplorer\\SuperDesktop",
+        "-OutputPath",
+        "D:\\SuperExplorer\\SuperDesktop\\openspec\\changes\\expand-taskbar-context-command-parity\\evidence\\shell-parity-final\\cases\\gui-start/start/report.json",
+        "-HomeScreenshotPath",
+        "D:\\SuperExplorer\\SuperDesktop\\openspec\\changes\\expand-taskbar-context-command-parity\\evidence\\shell-parity-final\\cases\\gui-start/start/home.png",
+        "-AllAppsScreenshotPath",
+        "D:\\SuperExplorer\\SuperDesktop\\openspec\\changes\\expand-taskbar-context-command-parity\\evidence\\shell-parity-final\\cases\\gui-start/start/all-apps.png",
+        "-PowerScreenshotPath",
+        "D:\\SuperExplorer\\SuperDesktop\\openspec\\changes\\expand-taskbar-context-command-parity\\evidence\\shell-parity-final\\cases\\gui-start/start/power.png",
+        "-Locale",
+        "zh-TW",
+        "-SuppressExplorer"
+      ],
+      "stdout": {
+        "path": "cases/gui-start/stdout.log",
+        "bytes": 2538,
+        "sha256": "812d437c402c631f15aa810e959581726f14cb860f7265a777aab4b68ddf4aee"
+      },
+      "stderr": null,
+      "artifacts": [
+        {
+          "path": "cases/gui-start/start/report.json",
+          "bytes": 2537,
+          "sha256": "a864f8c77f3f3e9b83ae9f4718a7cf8ff56ab2bdee4b2f2b1ac62007749c5756"
+        },
+        {
+          "path": "cases/gui-start/start/home.png",
+          "bytes": 129112,
+          "sha256": "68e7c2745ed724320da2aed581c55321170c6567154188dc25e889ffb5c2d10d"
+        },
+        {
+          "path": "cases/gui-start/start/all-apps.png",
+          "bytes": 137579,
+          "sha256": "379673b6fb505c12ae091e416c25e1e74e148f270a98a98f2a4993169b49af72"
+        }
+      ],
+      "recovery_verified": true
+    },
+    {
+      "id": "gui-notification-overflow",
+      "title": "Explorer-free hidden notification icons",
+      "state": "passed",
+      "reason": "passed",
+      "duration_ms": 27420,
+      "exit_code": 0,
+      "timed_out": false,
+      "argv": [
+        "powershell.exe",
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "D:\\SuperExplorer\\SuperDesktop\\scripts\\capture-notifyicon-compatibility.ps1",
+        "-Workspace",
+        "D:\\SuperExplorer\\SuperDesktop",
+        "-OutputPath",
+        "D:\\SuperExplorer\\SuperDesktop\\openspec\\changes\\expand-taskbar-context-command-parity\\evidence\\shell-parity-final\\cases\\gui-notification-overflow/notifyicon/report.json",
+        "-ScreenshotPath",
+        "D:\\SuperExplorer\\SuperDesktop\\openspec\\changes\\expand-taskbar-context-command-parity\\evidence\\shell-parity-final\\cases\\gui-notification-overflow/notifyicon/overflow.png"
+      ],
+      "stdout": {
+        "path": "cases/gui-notification-overflow/stdout.log",
+        "bytes": 2581,
+        "sha256": "4bf3caf0db9946efd2941b9096d928d97498fbdf0c840865baa580835272d8d5"
+      },
+      "stderr": null,
+      "artifacts": [
+        {
+          "path": "cases/gui-notification-overflow/notifyicon/report.json",
+          "bytes": 2580,
+          "sha256": "e5d2df262438a55dd147bed36e6f142c4df9424c57095905fdd84794c7bf6551"
+        },
+        {
+          "path": "cases/gui-notification-overflow/notifyicon/overflow.png",
+          "bytes": 36819,
+          "sha256": "0c366bcda380bdd23af83bde23c38b53c4d3ce0af037e96ce9b4bbf64a4e2ae5"
+        }
+      ],
+      "recovery_verified": true
+    },
+    {
+      "id": "gui-desktop-marquee",
+      "title": "Desktop marquee selection",
+      "state": "passed",
+      "reason": "passed",
+      "duration_ms": 8057,
+      "exit_code": 0,
+      "timed_out": false,
+      "argv": [
+        "powershell.exe",
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "D:\\SuperExplorer\\SuperDesktop\\scripts\\capture-desktop-marquee-production.ps1",
+        "-Workspace",
+        "D:\\SuperExplorer\\SuperDesktop",
+        "-OutputPath",
+        "D:\\SuperExplorer\\SuperDesktop\\openspec\\changes\\expand-taskbar-context-command-parity\\evidence\\shell-parity-final\\cases\\gui-desktop-marquee/desktop/report.json",
+        "-ScreenshotPath",
+        "D:\\SuperExplorer\\SuperDesktop\\openspec\\changes\\expand-taskbar-context-command-parity\\evidence\\shell-parity-final\\cases\\gui-desktop-marquee/desktop/marquee.png"
+      ],
+      "stdout": {
+        "path": "cases/gui-desktop-marquee/stdout.log",
+        "bytes": 419,
+        "sha256": "6023c5da54db467000e7e397fc6aa8faeb9cc718363d1447c0bb1e30172aa854"
+      },
+      "stderr": null,
+      "artifacts": [
+        {
+          "path": "cases/gui-desktop-marquee/desktop/report.json",
+          "bytes": 418,
+          "sha256": "31cca332f75fb359aa9b516cb9dde88197b433cad4a10d6a3077034558b4847e"
+        },
+        {
+          "path": "cases/gui-desktop-marquee/desktop/marquee.png",
+          "bytes": 23588059,
+          "sha256": "c28bd7996f9934ef27483fb0f762a1175da9cb85a3db45bf4042bdf1a3a5c6a9"
+        }
+      ],
+      "recovery_verified": true
+    },
+    {
+      "id": "gui-show-desktop",
+      "title": "Explorer-free Show desktop cycles",
+      "state": "passed",
+      "reason": "passed",
+      "duration_ms": 5892,
+      "exit_code": 0,
+      "timed_out": false,
+      "argv": [
+        "powershell.exe",
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "D:\\SuperExplorer\\SuperDesktop\\scripts\\capture-show-desktop-corner.ps1",
+        "-Workspace",
+        "D:\\SuperExplorer\\SuperDesktop",
+        "-EvidenceDirectory",
+        "D:\\SuperExplorer\\SuperDesktop\\openspec\\changes\\expand-taskbar-context-command-parity\\evidence\\shell-parity-final\\cases\\gui-show-desktop/show-desktop",
+        "-Theme",
+        "light",
+        "-Rows",
+        "1",
+        "-SuppressExplorer",
+        "-ExerciseCycle"
+      ],
+      "stdout": {
+        "path": "cases/gui-show-desktop/stdout.log",
+        "bytes": 2007,
+        "sha256": "a0455d19be5423feed49f106d5fa7d83a0aec7600fe20272e0d9e0e08c8b5ae8"
+      },
+      "stderr": null,
+      "artifacts": [
+        {
+          "path": "cases/gui-show-desktop/show-desktop/light-row1-report.json",
+          "bytes": 2007,
+          "sha256": "a0455d19be5423feed49f106d5fa7d83a0aec7600fe20272e0d9e0e08c8b5ae8"
+        }
+      ],
+      "recovery_verified": true
+    },
+    {
+      "id": "gui-notification-center",
+      "title": "Explorer-free notification center",
+      "state": "passed",
+      "reason": "passed",
+      "duration_ms": 6595,
+      "exit_code": 0,
+      "timed_out": false,
+      "argv": [
+        "powershell.exe",
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "D:\\SuperExplorer\\SuperDesktop\\scripts\\capture-notification-center.ps1",
+        "-Workspace",
+        "D:\\SuperExplorer\\SuperDesktop",
+        "-EvidenceDirectory",
+        "D:\\SuperExplorer\\SuperDesktop\\openspec\\changes\\expand-taskbar-context-command-parity\\evidence\\shell-parity-final\\cases\\gui-notification-center/notifications",
+        "-Theme",
+        "light",
+        "-ExerciseActions"
+      ],
+      "stdout": {
+        "path": "cases/gui-notification-center/stdout.log",
+        "bytes": 1659,
+        "sha256": "573c672d2ba0227ec074a0b48ca4129b79ddda574501a9c42306932b11450c79"
+      },
+      "stderr": null,
+      "artifacts": [
+        {
+          "path": "cases/gui-notification-center/notifications/light-report.json",
+          "bytes": 1658,
+          "sha256": "cf384b1d5d1c01f22fa22bea72bb21bd5db895b130397a5cfb3eed9774642fc5"
+        }
+      ],
+      "recovery_verified": true
+    },
+    {
+      "id": "gui-system-status",
+      "title": "Explorer-free system status and IME flyouts",
+      "state": "passed",
+      "reason": "passed",
+      "duration_ms": 22194,
+      "exit_code": 0,
+      "timed_out": false,
+      "argv": [
+        "powershell.exe",
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "D:\\SuperExplorer\\SuperDesktop\\scripts\\capture-system-status-production.ps1",
+        "-Workspace",
+        "D:\\SuperExplorer\\SuperDesktop",
+        "-EvidenceDirectory",
+        "D:\\SuperExplorer\\SuperDesktop\\openspec\\changes\\expand-taskbar-context-command-parity\\evidence\\shell-parity-final\\cases\\gui-system-status/system-status",
+        "-SuppressExplorer"
+      ],
+      "stdout": {
+        "path": "cases/gui-system-status/stdout.log",
+        "bytes": 9525,
+        "sha256": "c024475c6eef2a1a5c22de273c0944b1b14db37a21c412a22eaa093e7732e6d3"
+      },
+      "stderr": null,
+      "artifacts": [
+        {
+          "path": "cases/gui-system-status/system-status/headful-report.json",
+          "bytes": 9524,
+          "sha256": "7943092af2ca5d98e3869a7cbe32519b2c58102405a2ab1804848b5894bc19c9"
+        }
+      ],
+      "recovery_verified": true
+    },
+    {
+      "id": "gui-taskbar-resize",
+      "title": "Explorer-free taskbar resize and lock",
+      "state": "passed",
+      "reason": "passed",
+      "duration_ms": 22247,
+      "exit_code": 0,
+      "timed_out": false,
+      "argv": [
+        "powershell.exe",
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "D:\\SuperExplorer\\SuperDesktop\\scripts\\capture-taskbar-resize-lock.ps1",
+        "-Workspace",
+        "D:\\SuperExplorer\\SuperDesktop",
+        "-EvidenceDirectory",
+        "D:\\SuperExplorer\\SuperDesktop\\openspec\\changes\\expand-taskbar-context-command-parity\\evidence\\shell-parity-final\\cases\\gui-taskbar-resize/resize",
+        "-SuppressExplorer"
+      ],
+      "stdout": {
+        "path": "cases/gui-taskbar-resize/stdout.log",
+        "bytes": 6511,
+        "sha256": "7c5a308390fa02954a738fde8693c118b820321943dc5fc596347e2510a32c87"
+      },
+      "stderr": null,
+      "artifacts": [
+        {
+          "path": "cases/gui-taskbar-resize/resize/headful-report.json",
+          "bytes": 6511,
+          "sha256": "7c5a308390fa02954a738fde8693c118b820321943dc5fc596347e2510a32c87"
+        }
+      ],
+      "recovery_verified": true
+    },
+    {
+      "id": "gui-taskbar-auto-hide",
+      "title": "Explorer-free taskbar auto-hide",
+      "state": "passed",
+      "reason": "passed",
+      "duration_ms": 16108,
+      "exit_code": 0,
+      "timed_out": false,
+      "argv": [
+        "powershell.exe",
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "D:\\SuperExplorer\\SuperDesktop\\scripts\\capture-taskbar-auto-hide.ps1",
+        "-Workspace",
+        "D:\\SuperExplorer\\SuperDesktop",
+        "-EvidenceDirectory",
+        "D:\\SuperExplorer\\SuperDesktop\\openspec\\changes\\expand-taskbar-context-command-parity\\evidence\\shell-parity-final\\cases\\gui-taskbar-auto-hide/auto-hide",
+        "-Rows",
+        "2",
+        "-SuppressExplorer"
+      ],
+      "stdout": {
+        "path": "cases/gui-taskbar-auto-hide/stdout.log",
+        "bytes": 3403,
+        "sha256": "fa50443e3c4825d052a1b64b8d3c370e98105e04137ba48e30be4de3a2e517a7"
+      },
+      "stderr": null,
+      "artifacts": [
+        {
+          "path": "cases/gui-taskbar-auto-hide/auto-hide/headful-report.json",
+          "bytes": 3403,
+          "sha256": "fa50443e3c4825d052a1b64b8d3c370e98105e04137ba48e30be4de3a2e517a7"
+        }
+      ],
+      "recovery_verified": true
+    },
+    {
+      "id": "gui-taskbar-hover-preview",
+      "title": "Explorer-free taskbar hover previews",
+      "state": "passed",
+      "reason": "passed",
+      "duration_ms": 7860,
+      "exit_code": 0,
+      "timed_out": false,
+      "argv": [
+        "powershell.exe",
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "D:\\SuperExplorer\\SuperDesktop\\scripts\\capture-taskbar-hover-preview.ps1",
+        "-Workspace",
+        "D:\\SuperExplorer\\SuperDesktop",
+        "-EvidenceDirectory",
+        "D:\\SuperExplorer\\SuperDesktop\\openspec\\changes\\expand-taskbar-context-command-parity\\evidence\\shell-parity-final\\cases\\gui-taskbar-hover-preview/hover-preview"
+      ],
+      "stdout": {
+        "path": "cases/gui-taskbar-hover-preview/stdout.log",
+        "bytes": 1600,
+        "sha256": "86f65cf1d519b8548a54a36d95bb4ed7b1711c2cc56feb4bd6be3d67159acb18"
+      },
+      "stderr": null,
+      "artifacts": [
+        {
+          "path": "cases/gui-taskbar-hover-preview/hover-preview/headful-report.json",
+          "bytes": 1556,
+          "sha256": "e72e71faf8ae5892d6cae2f826ca8cd5768a88a2c5f7888f1e9ea828a96a3ce5"
+        },
+        {
+          "path": "cases/gui-taskbar-hover-preview/hover-preview/hover-preview.png",
+          "bytes": 176387,
+          "sha256": "385aa3ed1e983343a3bc4e9718740ed443120f15f7ec3868fa868b0a59d75d45"
+        }
+      ],
+      "recovery_verified": true
+    }
+  ]
+}

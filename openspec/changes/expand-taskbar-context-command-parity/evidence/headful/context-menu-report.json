@@ -1,0 +1,141 @@
+{
+    "schema":  "taskbar-resize-lock-headful/v1",
+    "result":  "passed",
+    "shell":  true,
+    "locked":  false,
+    "app_sha256":  "50b6ef1c336807d61e33524ca00c056647b3a9d9ae0263d16a300f459617f2b2",
+    "explorer_before":  [
+                            26748
+                        ],
+    "explorer_absent_during_capture":  true,
+    "appbar_disposition":  "unavailable-owned-shell",
+    "initial_rect":  {
+                         "left":  -12,
+                         "top":  2020,
+                         "right":  3852,
+                         "bottom":  2172,
+                         "width":  3864,
+                         "height":  152
+                     },
+    "initial_client":  {
+                           "left":  0,
+                           "top":  2020,
+                           "width":  3840,
+                           "height":  140,
+                           "right":  3840,
+                           "bottom":  2160
+                       },
+    "three_rows_rect":  {
+                            "left":  -12,
+                            "top":  1950,
+                            "right":  3852,
+                            "bottom":  2172,
+                            "width":  3864,
+                            "height":  222
+                        },
+    "three_rows_client":  {
+                              "left":  0,
+                              "top":  1950,
+                              "width":  3840,
+                              "height":  210,
+                              "right":  3840,
+                              "bottom":  2160
+                          },
+    "one_row_rect":  {
+                         "left":  -12,
+                         "top":  2090,
+                         "right":  3852,
+                         "bottom":  2172,
+                         "width":  3864,
+                         "height":  82
+                     },
+    "one_row_client":  {
+                           "left":  0,
+                           "top":  2090,
+                           "width":  3840,
+                           "height":  70,
+                           "right":  3840,
+                           "bottom":  2160
+                       },
+    "locked_drag_rect":  null,
+    "initial_style":  348389376,
+    "context_menu":  {
+                         "width_dip":  233.71428571428572,
+                         "height_dip":  217.14285714285714,
+                         "dpi":  168,
+                         "interactive_content_contained":  true,
+                         "non_client_shadow_overflow_px":  12,
+                         "items":  [
+                                       {
+                                           "order":  0,
+                                           "name":  "Search: Hidden",
+                                           "left":  9,
+                                           "top":  1712,
+                                           "width":  366,
+                                           "height":  56
+                                       },
+                                       {
+                                           "order":  1,
+                                           "name":  "Show Task View button, checked",
+                                           "left":  9,
+                                           "top":  1771,
+                                           "width":  366,
+                                           "height":  55
+                                       },
+                                       {
+                                           "order":  2,
+                                           "name":  "Show the desktop",
+                                           "left":  9,
+                                           "top":  1829,
+                                           "width":  366,
+                                           "height":  56
+                                       },
+                                       {
+                                           "order":  3,
+                                           "name":  "Task Manager",
+                                           "left":  9,
+                                           "top":  1888,
+                                           "width":  366,
+                                           "height":  56
+                                       },
+                                       {
+                                           "order":  4,
+                                           "name":  "Lock the taskbar, not checked",
+                                           "left":  9,
+                                           "top":  1947,
+                                           "width":  366,
+                                           "height":  55
+                                       },
+                                       {
+                                           "order":  5,
+                                           "name":  "Taskbar settings",
+                                           "left":  9,
+                                           "top":  2005,
+                                           "width":  366,
+                                           "height":  56
+                                       }
+                                   ]
+                     },
+    "final_settings":  {
+                           "lock_action_persisted":  true,
+                           "locked":  true,
+                           "rows":  1
+                       },
+    "screenshots":  [
+                        {
+                            "name":  "taskbar-lock-context.png",
+                            "bytes":  653270,
+                            "sha256":  "61dd52b10b09e4e1635501f32e9cd443645cba8680d4134e77a2ba7dd2a44be4"
+                        },
+                        {
+                            "name":  "taskbar-one-row.png",
+                            "bytes":  698396,
+                            "sha256":  "e8b2da84384aad16312f9160df9373faa5d29308003a001a870e1d4c0fec585d"
+                        },
+                        {
+                            "name":  "taskbar-three-rows.png",
+                            "bytes":  647725,
+                            "sha256":  "0d58c4df6f9fe2b81cceb8d416c741cb369fbf2f5cf08128f4fbaf5917b88d26"
+                        }
+                    ]
+}
