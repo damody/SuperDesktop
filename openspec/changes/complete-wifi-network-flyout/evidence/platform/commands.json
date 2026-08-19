@@ -1,0 +1,17 @@
+{
+  "schema": "superdesktop-wifi-command-evidence/v1",
+  "result": "passed",
+  "unit_safety": [
+    "empty identity rejected",
+    "oversized identity rejected",
+    "stale interface rejected",
+    "unsaved profile rejected",
+    "exact saved-profile and connected-interface admission covered"
+  ],
+  "live_mutation": {
+    "result": "not_applicable",
+    "reason": "No explicit controlled SUPERDESKTOP Wi-Fi mutation fixture was configured; user connectivity was not disrupted."
+  },
+  "credentials_collected": false,
+  "profile_xml_written": false
+}

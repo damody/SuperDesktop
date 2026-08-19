@@ -1,0 +1,7 @@
+{
+  "schema": "superdesktop-evidence-index/v1",
+  "result": "passed",
+  "commands": ["cargo test -p system-status-host --lib -- --nocapture"],
+  "artifacts": [{ "path": "test.log", "sha256": "6561588e7a6c05d28f2353ed6276f5a7cc17c204733507cb6220f965a0020728" }],
+  "coverage": ["typed routing", "Accepted terminal", "network reconciliation", "stale generation", "deadline"]
+}

@@ -2086,7 +2086,7 @@ fn system_flyout_geometry(
     let (preferred_width, preferred_height): (f32, f32) = match kind {
         SystemFlyoutKind::Input => (360.0, 154.0 + input_profile_count.clamp(1, 6) as f32 * 72.0),
         SystemFlyoutKind::Volume => (360.0, 184.0),
-        SystemFlyoutKind::NetworkPower => (360.0, 228.0),
+        SystemFlyoutKind::NetworkPower => (360.0, 640.0),
         SystemFlyoutKind::Calendar => (
             380.0,
             if notification_count == 0 {
@@ -2505,6 +2505,29 @@ fn status(snapshot: Option<&SystemStatusSnapshot>) -> StatusRegion {
     )
 }
 
+fn system_status_command(action: SystemStatusAction) -> SystemStatusCommand {
+    match action {
+        SystemStatusAction::ActivateInputProfile(profile_id) => {
+            SystemStatusCommand::ActivateInputProfile { profile_id }
+        }
+        SystemStatusAction::SetVolume(volume_percent) => {
+            SystemStatusCommand::SetVolume { volume_percent }
+        }
+        SystemStatusAction::SetMute(muted) => SystemStatusCommand::SetMute { muted },
+        SystemStatusAction::RefreshWifi => SystemStatusCommand::RefreshWifi,
+        SystemStatusAction::ConnectWifi {
+            interface_id,
+            profile_name,
+        } => SystemStatusCommand::ConnectWifi {
+            interface_id,
+            profile_name,
+        },
+        SystemStatusAction::DisconnectWifi { interface_id } => {
+            SystemStatusCommand::DisconnectWifi { interface_id }
+        }
+    }
+}
+
 fn apply_system_status_action(
     action: SystemStatusAction,
     app: &mut App,
@@ -2521,15 +2544,7 @@ fn apply_system_status_action(
         trace_action("status:command-provider-unavailable");
         return;
     };
-    let command = match action {
-        SystemStatusAction::ActivateInputProfile(profile_id) => {
-            SystemStatusCommand::ActivateInputProfile { profile_id }
-        }
-        SystemStatusAction::SetVolume(volume_percent) => {
-            SystemStatusCommand::SetVolume { volume_percent }
-        }
-        SystemStatusAction::SetMute(muted) => SystemStatusCommand::SetMute { muted },
-    };
+    let command = system_status_command(action);
     let correlation_id = format!(
         "system-status-{}",
         NEXT_PROVIDER_REQUEST.fetch_add(1, Ordering::Relaxed)
@@ -3962,6 +3977,15 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                         trace_action("status:flyout-closed");
                                         return;
                                     }
+                                }
+                                if kind == SystemFlyoutKind::NetworkPower {
+                                    apply_system_status_action(
+                                        SystemStatusAction::RefreshWifi,
+                                        app,
+                                        &system_flyout_client,
+                                        &system_flyout_status,
+                                        &system_flyout_start,
+                                    );
                                 }
                                 let snapshot = system_flyout_status.borrow().snapshot().cloned();
                                 let notifications =
@@ -5754,7 +5778,7 @@ mod live_parity_tests {
         let kinds: [(super::SystemFlyoutKind, f32, f32); 4] = [
             (super::SystemFlyoutKind::Input, 360.0, 298.0),
             (super::SystemFlyoutKind::Volume, 360.0, 184.0),
-            (super::SystemFlyoutKind::NetworkPower, 360.0, 228.0),
+            (super::SystemFlyoutKind::NetworkPower, 360.0, 640.0),
             (super::SystemFlyoutKind::Calendar, 380.0, 520.0),
         ];
         for dpi in [96, 144, 168, 216] {
@@ -5800,6 +5824,32 @@ mod live_parity_tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn wifi_actions_map_to_exact_typed_commands_without_claiming_observation() {
+        assert_eq!(
+            super::system_status_command(taskbar_ui::SystemStatusAction::RefreshWifi),
+            shell_provider_protocol::SystemStatusCommand::RefreshWifi
+        );
+        assert_eq!(
+            super::system_status_command(taskbar_ui::SystemStatusAction::ConnectWifi {
+                interface_id: "interface-1".into(),
+                profile_name: "profile-1".into(),
+            }),
+            shell_provider_protocol::SystemStatusCommand::ConnectWifi {
+                interface_id: "interface-1".into(),
+                profile_name: "profile-1".into(),
+            }
+        );
+        assert_eq!(
+            super::system_status_command(taskbar_ui::SystemStatusAction::DisconnectWifi {
+                interface_id: "interface-2".into(),
+            }),
+            shell_provider_protocol::SystemStatusCommand::DisconnectWifi {
+                interface_id: "interface-2".into(),
+            }
+        );
     }
 
     #[test]

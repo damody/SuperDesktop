@@ -236,7 +236,7 @@ impl SystemStatusRuntime {
         match request {
             SystemStatusHostRequest::Handshake => SystemStatusHostResponse::Handshake {
                 protocol_major: 1,
-                protocol_minor: 0,
+                protocol_minor: 1,
                 max_frame_bytes: shell_provider_protocol::MAX_FRAME_BYTES,
                 max_pending_commands: MAX_PENDING_COMMANDS,
             },
@@ -296,31 +296,61 @@ impl SystemStatusRuntime {
                 "command deadline expired".into(),
             );
         }
-        let result = match request.command {
-            SystemStatusCommand::ActivateInputProfile { profile_id } => {
+        let (result, accepted) = match request.command {
+            SystemStatusCommand::ActivateInputProfile { profile_id } => (
                 platform_win::common::system_status::request_input_profile(
                     &profile_id,
                     Duration::from_millis(750),
                 )
-                .map(|_| ())
-            }
-            SystemStatusCommand::SetVolume { volume_percent } => {
+                .map(|_| ()),
+                false,
+            ),
+            SystemStatusCommand::SetVolume { volume_percent } => (
                 platform_win::common::system_status::set_volume_and_observe(volume_percent)
-                    .map(|_| ())
+                    .map(|_| ()),
+                false,
+            ),
+            SystemStatusCommand::SetMute { muted } => (
+                platform_win::common::system_status::set_mute_and_observe(muted).map(|_| ()),
+                false,
+            ),
+            SystemStatusCommand::RefreshWifi => {
+                (platform_win::common::system_status::refresh_wifi(), true)
             }
-            SystemStatusCommand::SetMute { muted } => {
-                platform_win::common::system_status::set_mute_and_observe(muted).map(|_| ())
-            }
+            SystemStatusCommand::ConnectWifi {
+                interface_id,
+                profile_name,
+            } => (
+                platform_win::common::system_status::connect_wifi_profile(
+                    &interface_id,
+                    &profile_name,
+                ),
+                true,
+            ),
+            SystemStatusCommand::DisconnectWifi { interface_id } => (
+                platform_win::common::system_status::disconnect_wifi(&interface_id),
+                true,
+            ),
         };
         match result {
             Ok(()) => {
-                self.snapshot_generation = self.snapshot_generation.saturating_add(1).max(1);
-                self.terminal(
-                    request.correlation_id,
-                    SystemStatusTerminalKind::Observed,
-                    Some(self.snapshot_generation),
-                    String::new(),
-                )
+                if accepted {
+                    self.events.push(ProviderEvent::Network);
+                    self.terminal(
+                        request.correlation_id,
+                        SystemStatusTerminalKind::Accepted,
+                        None,
+                        "WLAN request accepted; awaiting authoritative snapshot".into(),
+                    )
+                } else {
+                    self.snapshot_generation = self.snapshot_generation.saturating_add(1).max(1);
+                    self.terminal(
+                        request.correlation_id,
+                        SystemStatusTerminalKind::Observed,
+                        Some(self.snapshot_generation),
+                        String::new(),
+                    )
+                }
             }
             Err(message) => self.terminal(
                 request.correlation_id,
@@ -455,5 +485,63 @@ mod tests {
         assert!(runtime.events.authoritative_pending);
         let _ = runtime.apply(SystemStatusHostRequest::Snapshot);
         assert!(!runtime.events.authoritative_pending);
+    }
+
+    #[test]
+    fn wifi_refresh_returns_accepted_or_truthful_provider_failure_and_routes_network_event() {
+        let mut runtime = SystemStatusRuntime::default();
+        let SystemStatusHostResponse::Handshake {
+            protocol_major,
+            protocol_minor,
+            ..
+        } = runtime.apply(SystemStatusHostRequest::Handshake)
+        else {
+            panic!("handshake")
+        };
+        assert_eq!(protocol_major, 1);
+        assert_eq!(protocol_minor, 1);
+        let SystemStatusHostResponse::Snapshot(snapshot) =
+            runtime.apply(SystemStatusHostRequest::Snapshot)
+        else {
+            panic!("snapshot")
+        };
+        let response = runtime.apply(SystemStatusHostRequest::Command {
+            request: SystemStatusCommandRequest {
+                correlation_id: "wifi-refresh".into(),
+                expected_host_generation: snapshot.host_generation,
+                deadline_unix_ms: unix_ms() + 1_000,
+                command: SystemStatusCommand::RefreshWifi,
+            },
+        });
+        let SystemStatusHostResponse::Terminal(terminal) = response else {
+            panic!("terminal")
+        };
+        assert!(matches!(
+            terminal.terminal,
+            SystemStatusTerminalKind::Accepted | SystemStatusTerminalKind::ProviderFailure
+        ));
+        if terminal.terminal == SystemStatusTerminalKind::Accepted {
+            assert_eq!(terminal.observed_snapshot_generation, None);
+            assert!(runtime.events.pending.contains(&ProviderEvent::Network));
+        }
+    }
+
+    #[test]
+    fn wifi_host_source_routes_only_typed_identity_bound_commands() {
+        let source = include_str!("lib.rs");
+        let production = source.split("#[cfg(test)]").next().unwrap_or(source);
+        for required in [
+            "SystemStatusCommand::RefreshWifi",
+            "SystemStatusCommand::ConnectWifi",
+            "SystemStatusCommand::DisconnectWifi",
+            "SystemStatusTerminalKind::Accepted",
+            "self.events.push(ProviderEvent::Network)",
+            "connect_wifi_profile",
+            "disconnect_wifi",
+        ] {
+            assert!(production.contains(required), "missing {required}");
+        }
+        assert!(!production.contains("WlanConnect"));
+        assert!(!production.contains("profile xml"));
     }
 }

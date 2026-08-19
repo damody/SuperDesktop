@@ -1,0 +1,11 @@
+{
+  "schema": "superdesktop-quality-evidence/v1",
+  "result": "passed",
+  "checks": [
+    { "command": "cargo fmt --all -- --check", "result": "passed" },
+    { "command": "cargo check --workspace --all-targets --locked", "result": "passed" },
+    { "command": "cargo test --workspace --locked", "result": "passed" },
+    { "command": "cargo clippy --workspace --all-targets --locked -- -D warnings", "result": "passed" },
+    { "command": "openspec validate complete-wifi-network-flyout --strict", "result": "passed" }
+  ]
+}

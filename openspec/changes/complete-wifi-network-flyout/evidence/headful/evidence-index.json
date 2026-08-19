@@ -1,0 +1,17 @@
+{
+  "schema": "superdesktop-wifi-headful/v1",
+  "result": "passed",
+  "dpi": 168,
+  "themes": ["light", "dark", "high-contrast"],
+  "network_panel": {
+    "width_dip": 373.7142857142857,
+    "height_dip": 646.8571428571429,
+    "contained": true,
+    "refresh_uia_invoked": true,
+    "scroll_list_visible": true,
+    "connected_disconnect_visible": true,
+    "unsaved_password_required_visible": true
+  },
+  "screenshots_committed": false,
+  "reason": "Machine SSIDs are visible in live screenshots; only redacted results are retained."
+}

@@ -239,6 +239,9 @@ mod tests {
                 connected: true,
                 internet: true,
                 display_name: "network".into(),
+                wifi: StatusAvailability::Unavailable {
+                    reason: "fixture".into(),
+                },
             }),
             audio: StatusAvailability::Available(AudioStatus {
                 endpoint_id: "audio".into(),
@@ -296,5 +299,25 @@ mod tests {
         assert!(!reconciler.restart_allowed());
         assert!(reconciler.apply(SystemStatusHostResponse::Snapshot(snapshot(9, 1))));
         assert!(reconciler.restart_allowed());
+    }
+
+    #[test]
+    fn accepted_wifi_terminal_never_advances_or_fakes_an_observed_snapshot() {
+        let mut reconciler = StatusReconciler::default();
+        assert!(reconciler.apply(SystemStatusHostResponse::Snapshot(snapshot(3, 7))));
+        assert!(reconciler.apply(SystemStatusHostResponse::Terminal(
+            SystemStatusCommandTerminal {
+                correlation_id: "wifi-connect".into(),
+                host_generation: 3,
+                observed_snapshot_generation: None,
+                terminal: SystemStatusTerminalKind::Accepted,
+                message: "awaiting authoritative snapshot".into(),
+            }
+        )));
+        assert_eq!(reconciler.snapshot().unwrap().snapshot_generation, 7);
+        assert_eq!(
+            reconciler.terminal("wifi-connect").unwrap().terminal,
+            SystemStatusTerminalKind::Accepted
+        );
     }
 }

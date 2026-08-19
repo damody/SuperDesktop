@@ -321,6 +321,14 @@ try {
     Invoke-Element $network
     $networkDialog = Find-OwnedPopupElement $process.Id $process.MainWindowHandle { param($item) $item.Current.ControlType -eq [System.Windows.Automation.ControlType]::Window }
     if ($null -eq $networkDialog) { throw 'Owned network and power flyout did not appear.' }
+    $wifiRefresh = Find-Element $networkDialog {
+        param($item)
+        $item.Current.ControlType -eq [System.Windows.Automation.ControlType]::Button -and
+            ($item.Current.Name -eq 'Refresh Wi-Fi networks' -or $item.Current.Name -like '*Wi-Fi*')
+    }
+    if ($null -eq $wifiRefresh) { throw 'Owned Wi-Fi refresh action is missing from UI Automation.' }
+    Invoke-Element $wifiRefresh
+    Start-Sleep -Milliseconds 1500
     $geometryRecords += Measure-OwnedFlyout 'network-power' $process.Id $taskbar $process.MainWindowHandle 360.0
     Capture-Screen (Join-Path $EvidenceDirectory 'network-power-flyout.png')
 

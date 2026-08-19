@@ -1,0 +1,7 @@
+{
+  "schema": "superdesktop-evidence-index/v1",
+  "result": "passed",
+  "commands": ["cargo test -p shell-provider-protocol system_status --lib -- --nocapture"],
+  "artifacts": [{ "path": "test.log", "sha256": "8e940419d7314b43e3a5955d7a11e94127b4d9901674c4fe44a30b0b0d0dc830" }],
+  "coverage": ["additive JSON", "bounds", "duplicates", "typed commands", "Accepted terminal"]
+}

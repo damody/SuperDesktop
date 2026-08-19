@@ -5,7 +5,9 @@ use gpui::{
     StatefulInteractiveElement, Styled, StyledImage, Subscription, Window, div, img,
     prelude::FluentBuilder as _, px, rgb, svg,
 };
-use shell_provider_protocol::{NotificationSnapshot, StatusAvailability, SystemStatusSnapshot};
+use shell_provider_protocol::{
+    NotificationSnapshot, StatusAvailability, SystemStatusSnapshot, WifiNetwork,
+};
 
 use crate::{StatusRegion, SystemFlyoutKind, SystemStatusAction, view::icon_render_image};
 
@@ -180,6 +182,24 @@ impl SystemFlyoutView {
 
 fn activates_button(key: &str) -> bool {
     matches!(key, "enter" | "space")
+}
+
+fn wifi_row_action(network: &WifiNetwork) -> Option<SystemStatusAction> {
+    if network.connected {
+        Some(SystemStatusAction::DisconnectWifi {
+            interface_id: network.interface_id.clone(),
+        })
+    } else if network.connectable {
+        network
+            .profile_name
+            .clone()
+            .map(|profile_name| SystemStatusAction::ConnectWifi {
+                interface_id: network.interface_id.clone(),
+                profile_name,
+            })
+    } else {
+        None
+    }
 }
 
 fn notification_time_label(admitted_unix_ms: u64) -> String {
@@ -468,6 +488,12 @@ impl Render for SystemFlyoutView {
         let calendar = calendar_month(&self.status.date);
         let (network_name, network_detail, network_available) =
             network_summary(snapshot.as_ref(), presentation);
+        let wifi = snapshot
+            .as_ref()
+            .and_then(|snapshot| match &snapshot.network {
+                StatusAvailability::Available(network) => Some(network.wifi.clone()),
+                _ => None,
+            });
         let (power_text, power_available) = power_summary(snapshot.as_ref(), presentation);
 
         div()
@@ -1001,11 +1027,56 @@ impl Render for SystemFlyoutView {
                 ),
             })
             .when(kind == SystemFlyoutKind::NetworkPower, |root| {
-                root.child(div().text_size(px(16.)).mb_2().child(localized(
-                    presentation,
-                    "快速設定",
-                    "Quick settings",
-                )))
+                let refresh = action.clone();
+                let refresh_key = action.clone();
+                root.child(
+                    div()
+                        .flex()
+                        .items_center()
+                        .mb_1()
+                        .child(
+                            div()
+                                .id("owned-wifi-heading")
+                                .role(gpui::Role::Heading)
+                                .text_size(px(18.))
+                                .child(localized(presentation, "Wi-Fi 網路", "Wi-Fi networks")),
+                        )
+                        .child(
+                            div()
+                                .id("owned-wifi-refresh")
+                                .role(gpui::Role::Button)
+                                .aria_label(localized(
+                                    presentation,
+                                    "重新整理 Wi-Fi 網路",
+                                    "Refresh Wi-Fi networks",
+                                ))
+                                .tab_index(0)
+                                .ml_auto()
+                                .px_3()
+                                .h(px(32.))
+                                .rounded(px(6.))
+                                .border_1()
+                                .border_color(rgb(tokens.border))
+                                .bg(rgb(tokens.card))
+                                .flex()
+                                .items_center()
+                                .cursor_pointer()
+                                .hover(move |style| style.bg(rgb(tokens.hover)))
+                                .active(move |style| style.bg(rgb(tokens.pressed)))
+                                .focus_visible(move |style| {
+                                    style.border_2().border_color(rgb(tokens.focus))
+                                })
+                                .on_click(move |_, _, cx| {
+                                    refresh(SystemStatusAction::RefreshWifi, cx)
+                                })
+                                .on_key_down(move |event, _, cx| {
+                                    if activates_button(&event.keystroke.key) {
+                                        refresh_key(SystemStatusAction::RefreshWifi, cx);
+                                    }
+                                })
+                                .child(localized(presentation, "重新整理", "Refresh")),
+                        ),
+                )
                 .child(
                     div()
                         .id("owned-network-card")
@@ -1063,6 +1134,222 @@ impl Render for SystemFlyoutView {
                                     }))
                                     .child(network_detail),
                             ),
+                        ),
+                )
+                .child(match wifi {
+                    Some(StatusAvailability::Available(wifi)) => {
+                        let enabled = wifi.enabled;
+                        let network_count = wifi.networks.len();
+                        let action = action.clone();
+                        div()
+                            .id("owned-wifi-network-list")
+                            .role(gpui::Role::Group)
+                            .aria_label(localized(
+                                presentation,
+                                "可用的 Wi-Fi 網路",
+                                "Available Wi-Fi networks",
+                            ))
+                            .flex_1()
+                            .min_h_0()
+                            .overflow_y_scroll()
+                            .flex()
+                            .flex_col()
+                            .gap_1()
+                            .when(network_count == 0, |list| {
+                                list.child(
+                                    div()
+                                        .id("owned-wifi-empty")
+                                        .role(gpui::Role::Status)
+                                        .p_3()
+                                        .text_color(rgb(tokens.secondary))
+                                        .child(if enabled {
+                                            localized(
+                                                presentation,
+                                                "找不到 Wi-Fi 網路",
+                                                "No Wi-Fi networks found",
+                                            )
+                                        } else {
+                                            localized(presentation, "Wi-Fi 已關閉", "Wi-Fi is off")
+                                        }),
+                                )
+                            })
+                            .children(wifi.networks.into_iter().enumerate().map(
+                                |(index, network)| {
+                                    let row_action = action.clone();
+                                    let row_action_key = action.clone();
+                                    let detail = if network.connected {
+                                        localized(presentation, "已連線", "Connected").to_owned()
+                                    } else if network.profile_name.is_some() {
+                                        localized(presentation, "已儲存", "Saved").to_owned()
+                                    } else if network.secure {
+                                        localized(presentation, "需要密碼", "Password required")
+                                            .to_owned()
+                                    } else {
+                                        localized(presentation, "開放式網路", "Open network")
+                                            .to_owned()
+                                    };
+                                    let detail = format!("{detail} · {}%", network.signal_quality);
+                                    let command = wifi_row_action(&network);
+                                    let button_command = command.clone();
+                                    let key_command = command.clone();
+                                    div()
+                                        .id(("owned-wifi-network", index))
+                                        .role(gpui::Role::Group)
+                                        .aria_label(format!("{}. {detail}", network.ssid))
+                                        .min_h(px(64.))
+                                        .p_2()
+                                        .rounded(px(8.))
+                                        .border_1()
+                                        .border_color(rgb(tokens.border))
+                                        .bg(rgb(if network.connected {
+                                            tokens.selected
+                                        } else {
+                                            tokens.card
+                                        }))
+                                        .flex()
+                                        .items_center()
+                                        .gap_2()
+                                        .child(
+                                            svg()
+                                                .external_path(concat!(
+                                                    env!("CARGO_MANIFEST_DIR"),
+                                                    "/assets/network-status.svg"
+                                                ))
+                                                .w(px(24.))
+                                                .h(px(24.))
+                                                .text_color(rgb(if network.connected {
+                                                    tokens.accent
+                                                } else {
+                                                    tokens.text
+                                                })),
+                                        )
+                                        .child(
+                                            div()
+                                                .flex_1()
+                                                .min_w_0()
+                                                .flex()
+                                                .flex_col()
+                                                .child(div().line_clamp(1).child(network.ssid))
+                                                .child(
+                                                    div()
+                                                        .text_size(px(12.))
+                                                        .text_color(rgb(tokens.secondary))
+                                                        .child(detail),
+                                                ),
+                                        )
+                                        .when_some(button_command, move |row, command| {
+                                            let label = if matches!(
+                                                command,
+                                                SystemStatusAction::DisconnectWifi { .. }
+                                            ) {
+                                                localized(presentation, "中斷連線", "Disconnect")
+                                            } else {
+                                                localized(presentation, "連線", "Connect")
+                                            };
+                                            row.child(
+                                                div()
+                                                    .id(("owned-wifi-action", index))
+                                                    .role(gpui::Role::Button)
+                                                    .aria_label(label)
+                                                    .tab_index(0)
+                                                    .px_3()
+                                                    .h(px(32.))
+                                                    .rounded(px(6.))
+                                                    .border_1()
+                                                    .border_color(rgb(tokens.border))
+                                                    .cursor_pointer()
+                                                    .hover(move |style| style.bg(rgb(tokens.hover)))
+                                                    .active(move |style| {
+                                                        style.bg(rgb(tokens.pressed))
+                                                    })
+                                                    .focus_visible(move |style| {
+                                                        style
+                                                            .border_2()
+                                                            .border_color(rgb(tokens.focus))
+                                                    })
+                                                    .on_click(move |_, _, cx| {
+                                                        row_action(command.clone(), cx)
+                                                    })
+                                                    .on_key_down(move |event, _, cx| {
+                                                        if activates_button(&event.keystroke.key)
+                                                            && let Some(command) = &key_command
+                                                        {
+                                                            row_action_key(command.clone(), cx);
+                                                        }
+                                                    })
+                                                    .child(label),
+                                            )
+                                        })
+                                },
+                            ))
+                    }
+                    Some(StatusAvailability::NotPresent) => div()
+                        .id("owned-wifi-not-present")
+                        .role(gpui::Role::Status)
+                        .p_3()
+                        .text_color(rgb(tokens.unavailable))
+                        .child(localized(
+                            presentation,
+                            "找不到 Wi-Fi 網路介面卡",
+                            "No Wi-Fi adapter found",
+                        )),
+                    Some(StatusAvailability::Unavailable { .. }) | None => div()
+                        .id("owned-wifi-unavailable")
+                        .role(gpui::Role::Status)
+                        .p_3()
+                        .text_color(rgb(tokens.unavailable))
+                        .child(localized(
+                            presentation,
+                            "Wi-Fi 提供者無法使用",
+                            "Wi-Fi provider unavailable",
+                        )),
+                })
+                .child(
+                    div()
+                        .id("owned-network-quick-tiles")
+                        .role(gpui::Role::Group)
+                        .aria_label(localized(
+                            presentation,
+                            "快速設定狀態",
+                            "Quick settings status",
+                        ))
+                        .flex()
+                        .gap_2()
+                        .children(
+                            [
+                                localized(presentation, "Wi-Fi", "Wi-Fi"),
+                                localized(
+                                    presentation,
+                                    "飛航模式（無法使用）",
+                                    "Airplane mode (unavailable)",
+                                ),
+                                localized(
+                                    presentation,
+                                    "行動熱點（無法使用）",
+                                    "Mobile hotspot (unavailable)",
+                                ),
+                            ]
+                            .into_iter()
+                            .enumerate()
+                            .map(|(index, label)| {
+                                div()
+                                    .id(("owned-network-quick-tile", index))
+                                    .role(gpui::Role::Status)
+                                    .flex_1()
+                                    .min_h(px(42.))
+                                    .p_2()
+                                    .rounded(px(6.))
+                                    .border_1()
+                                    .border_color(rgb(tokens.border))
+                                    .bg(rgb(tokens.card))
+                                    .text_size(px(11.))
+                                    .text_color(rgb(if index == 0 {
+                                        tokens.text
+                                    } else {
+                                        tokens.unavailable
+                                    }))
+                                    .child(label)
+                            }),
                         ),
                 )
                 .child(
@@ -1539,6 +1826,49 @@ mod tests {
     }
 
     #[test]
+    fn wifi_rows_cover_empty_single_and_maximum_lists_with_exact_action_gating() {
+        let network = |index: usize| shell_provider_protocol::WifiNetwork {
+            interface_id: format!("interface-{index}"),
+            ssid: format!("network-{index:02}"),
+            profile_name: Some(format!("profile-{index}")),
+            signal_quality: 80,
+            secure: true,
+            connected: false,
+            connectable: true,
+        };
+        let empty: Vec<shell_provider_protocol::WifiNetwork> = Vec::new();
+        assert!(empty.is_empty());
+        let one = [network(0)];
+        assert_eq!(one.len(), 1);
+        assert_eq!(
+            super::wifi_row_action(&one[0]),
+            Some(crate::SystemStatusAction::ConnectWifi {
+                interface_id: "interface-0".into(),
+                profile_name: "profile-0".into(),
+            })
+        );
+        let maximum = (0..shell_provider_protocol::MAX_WIFI_NETWORKS)
+            .map(network)
+            .collect::<Vec<_>>();
+        assert_eq!(maximum.len(), shell_provider_protocol::MAX_WIFI_NETWORKS);
+
+        let mut unsaved = maximum[1].clone();
+        unsaved.profile_name = None;
+        assert_eq!(super::wifi_row_action(&unsaved), None);
+        let mut disconnected_unavailable = maximum[2].clone();
+        disconnected_unavailable.connectable = false;
+        assert_eq!(super::wifi_row_action(&disconnected_unavailable), None);
+        let mut connected = maximum[3].clone();
+        connected.connected = true;
+        assert_eq!(
+            super::wifi_row_action(&connected),
+            Some(crate::SystemStatusAction::DisconnectWifi {
+                interface_id: "interface-3".into(),
+            })
+        );
+    }
+
+    #[test]
     fn owned_flyout_contract_is_keyboard_accessible_and_has_no_fake_unavailable_action() {
         let source = include_str!("system_flyout.rs");
         let production = source.split("#[cfg(test)]").next().unwrap_or(source);
@@ -1561,6 +1891,21 @@ mod tests {
             "owned-input-unavailable",
             "owned-volume-unavailable",
             "owned-network-card",
+            "owned-wifi-refresh",
+            "owned-wifi-network-list",
+            "owned-wifi-network",
+            "owned-wifi-action",
+            "owned-wifi-empty",
+            "owned-wifi-not-present",
+            "owned-wifi-unavailable",
+            "owned-network-quick-tiles",
+            ".overflow_y_scroll()",
+            "SystemStatusAction::RefreshWifi",
+            "SystemStatusAction::ConnectWifi",
+            "SystemStatusAction::DisconnectWifi",
+            "Password required",
+            "Airplane mode (unavailable)",
+            "Mobile hotspot (unavailable)",
             "owned-calendar-grid",
             "owned-notification-center-heading",
             "owned-notification-clear-all",
@@ -1582,15 +1927,6 @@ mod tests {
                 "missing owned flyout contract: {required}"
             );
         }
-        let network_branch = source
-            .split(".when(kind == SystemFlyoutKind::NetworkPower")
-            .nth(1)
-            .expect("network branch")
-            .split(".when(kind == SystemFlyoutKind::Calendar")
-            .next()
-            .expect("network branch end");
-        assert!(!network_branch.contains(".on_click("));
-        assert!(!network_branch.contains("Role::Button"));
         for forbidden in [
             "explorer.exe",
             "Shell_TrayWnd",

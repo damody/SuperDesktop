@@ -52,6 +52,14 @@ pub enum SystemStatusAction {
     ActivateInputProfile(String),
     SetVolume(u8),
     SetMute(bool),
+    RefreshWifi,
+    ConnectWifi {
+        interface_id: String,
+        profile_name: String,
+    },
+    DisconnectWifi {
+        interface_id: String,
+    },
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

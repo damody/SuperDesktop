@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::{MAX_COLLECTION_ITEMS, MAX_TEXT_BYTES, Validate, ValidationError};
 
 pub const MAX_INPUT_PROFILES: usize = 64;
+pub const MAX_WIFI_NETWORKS: usize = 64;
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "state", content = "value", rename_all = "snake_case")]
@@ -33,6 +34,68 @@ pub struct NetworkStatus {
     pub connected: bool,
     pub internet: bool,
     pub display_name: String,
+    #[serde(default = "legacy_wifi_unavailable")]
+    pub wifi: StatusAvailability<WifiStatus>,
+}
+
+fn legacy_wifi_unavailable() -> StatusAvailability<WifiStatus> {
+    StatusAvailability::Unavailable {
+        reason: "Wi-Fi status was not supplied by this provider".into(),
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct WifiNetwork {
+    pub interface_id: String,
+    pub ssid: String,
+    pub profile_name: Option<String>,
+    pub signal_quality: u8,
+    pub secure: bool,
+    pub connected: bool,
+    pub connectable: bool,
+}
+
+impl Validate for WifiNetwork {
+    fn validate(&self) -> Result<(), ValidationError> {
+        validate_text(&self.interface_id, "system_status.wifi.interface_id")?;
+        validate_text(&self.ssid, "system_status.wifi.ssid")?;
+        if let Some(profile_name) = &self.profile_name {
+            validate_text(profile_name, "system_status.wifi.profile_name")?;
+        }
+        if self.signal_quality > 100 {
+            Err(ValidationError::OutOfRange(
+                "system_status.wifi.signal_quality",
+            ))
+        } else {
+            Ok(())
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct WifiStatus {
+    pub enabled: bool,
+    pub networks: Vec<WifiNetwork>,
+}
+
+impl Validate for WifiStatus {
+    fn validate(&self) -> Result<(), ValidationError> {
+        if self.networks.len() > MAX_WIFI_NETWORKS || self.networks.len() > MAX_COLLECTION_ITEMS {
+            return Err(ValidationError::CollectionTooLarge(
+                "system_status.wifi.networks",
+            ));
+        }
+        let mut ssids = std::collections::BTreeSet::new();
+        for network in &self.networks {
+            network.validate()?;
+            if !ssids.insert(network.ssid.as_str()) {
+                return Err(ValidationError::InvalidValue(
+                    "system_status.wifi.duplicate_ssid",
+                ));
+            }
+        }
+        Ok(())
+    }
 }
 
 impl Validate for NetworkStatus {
@@ -46,7 +109,7 @@ impl Validate for NetworkStatus {
                 "system_status.network.internet",
             ))
         } else {
-            Ok(())
+            self.wifi.validate()
         }
     }
 }
@@ -184,9 +247,23 @@ impl Validate for SystemStatusSnapshot {
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum SystemStatusCommand {
-    ActivateInputProfile { profile_id: String },
-    SetVolume { volume_percent: u8 },
-    SetMute { muted: bool },
+    ActivateInputProfile {
+        profile_id: String,
+    },
+    SetVolume {
+        volume_percent: u8,
+    },
+    SetMute {
+        muted: bool,
+    },
+    RefreshWifi,
+    ConnectWifi {
+        interface_id: String,
+        profile_name: String,
+    },
+    DisconnectWifi {
+        interface_id: String,
+    },
 }
 
 impl Validate for SystemStatusCommand {
@@ -198,7 +275,17 @@ impl Validate for SystemStatusCommand {
             Self::SetVolume { volume_percent } if *volume_percent > 100 => Err(
                 ValidationError::OutOfRange("system_status.command.volume_percent"),
             ),
-            Self::SetVolume { .. } | Self::SetMute { .. } => Ok(()),
+            Self::ConnectWifi {
+                interface_id,
+                profile_name,
+            } => {
+                validate_text(interface_id, "system_status.command.wifi_interface_id")?;
+                validate_text(profile_name, "system_status.command.wifi_profile_name")
+            }
+            Self::DisconnectWifi { interface_id } => {
+                validate_text(interface_id, "system_status.command.wifi_interface_id")
+            }
+            Self::SetVolume { .. } | Self::SetMute { .. } | Self::RefreshWifi => Ok(()),
         }
     }
 }
@@ -227,6 +314,7 @@ impl Validate for SystemStatusCommandRequest {
 #[serde(rename_all = "snake_case")]
 pub enum SystemStatusTerminalKind {
     Observed,
+    Accepted,
     Unavailable,
     Cancelled,
     Timeout,
@@ -307,12 +395,18 @@ impl Validate for SystemStatusCommandTerminal {
                 "system_status.terminal.message",
             ));
         }
-        if self.terminal == SystemStatusTerminalKind::Observed
-            && self.observed_snapshot_generation.is_none()
-        {
-            return Err(ValidationError::InvalidValue(
-                "system_status.terminal.observed_generation",
-            ));
+        match self.terminal {
+            SystemStatusTerminalKind::Observed if self.observed_snapshot_generation.is_none() => {
+                return Err(ValidationError::InvalidValue(
+                    "system_status.terminal.observed_generation",
+                ));
+            }
+            SystemStatusTerminalKind::Accepted if self.observed_snapshot_generation.is_some() => {
+                return Err(ValidationError::InvalidValue(
+                    "system_status.terminal.accepted_generation",
+                ));
+            }
+            _ => {}
         }
         Ok(())
     }
@@ -340,6 +434,18 @@ mod tests {
                 connected: true,
                 internet: true,
                 display_name: "Ethernet".into(),
+                wifi: StatusAvailability::Available(WifiStatus {
+                    enabled: true,
+                    networks: vec![WifiNetwork {
+                        interface_id: "interface-1".into(),
+                        ssid: "network-1".into(),
+                        profile_name: Some("profile-1".into()),
+                        signal_quality: 80,
+                        secure: true,
+                        connected: true,
+                        connectable: true,
+                    }],
+                }),
             }),
             audio: StatusAvailability::Available(AudioStatus {
                 endpoint_id: "endpoint".into(),
@@ -426,5 +532,103 @@ mod tests {
         let json = serde_json::to_string(&host_request).unwrap();
         let decoded: SystemStatusHostRequest = serde_json::from_str(&json).unwrap();
         assert_eq!(decoded, host_request);
+    }
+
+    #[test]
+    fn wifi_snapshot_is_additive_bounded_and_rejects_duplicate_ssids() {
+        let legacy: NetworkStatus =
+            serde_json::from_str(r#"{"connected":true,"internet":true,"display_name":"legacy"}"#)
+                .unwrap();
+        assert!(matches!(
+            legacy.wifi,
+            StatusAvailability::Unavailable { .. }
+        ));
+
+        let snapshot = fixture_snapshot();
+        snapshot.validate().unwrap();
+        let encoded = serde_json::to_string(&snapshot).unwrap();
+        assert_eq!(
+            serde_json::from_str::<SystemStatusSnapshot>(&encoded).unwrap(),
+            snapshot
+        );
+
+        let mut duplicate = fixture_snapshot();
+        if let StatusAvailability::Available(network) = &mut duplicate.network
+            && let StatusAvailability::Available(wifi) = &mut network.wifi
+        {
+            wifi.networks.push(wifi.networks[0].clone());
+        }
+        assert!(duplicate.validate().is_err());
+
+        let mut oversized = fixture_snapshot();
+        if let StatusAvailability::Available(network) = &mut oversized.network
+            && let StatusAvailability::Available(wifi) = &mut network.wifi
+        {
+            wifi.networks.clear();
+            for index in 0..=MAX_WIFI_NETWORKS {
+                wifi.networks.push(WifiNetwork {
+                    interface_id: "interface".into(),
+                    ssid: format!("network-{index}"),
+                    profile_name: None,
+                    signal_quality: 50,
+                    secure: true,
+                    connected: false,
+                    connectable: false,
+                });
+            }
+        }
+        assert!(oversized.validate().is_err());
+    }
+
+    #[test]
+    fn wifi_commands_and_accepted_terminal_require_exact_bounded_identity() {
+        for command in [
+            SystemStatusCommand::RefreshWifi,
+            SystemStatusCommand::ConnectWifi {
+                interface_id: "interface-1".into(),
+                profile_name: "profile-1".into(),
+            },
+            SystemStatusCommand::DisconnectWifi {
+                interface_id: "interface-1".into(),
+            },
+        ] {
+            command.validate().unwrap();
+        }
+        assert!(
+            SystemStatusCommand::ConnectWifi {
+                interface_id: String::new(),
+                profile_name: "profile".into(),
+            }
+            .validate()
+            .is_err()
+        );
+        assert!(
+            SystemStatusCommand::DisconnectWifi {
+                interface_id: "x".repeat(MAX_TEXT_BYTES + 1),
+            }
+            .validate()
+            .is_err()
+        );
+
+        SystemStatusCommandTerminal {
+            correlation_id: "wifi".into(),
+            host_generation: 1,
+            observed_snapshot_generation: None,
+            terminal: SystemStatusTerminalKind::Accepted,
+            message: "WLAN request accepted".into(),
+        }
+        .validate()
+        .unwrap();
+        assert!(
+            SystemStatusCommandTerminal {
+                correlation_id: "wifi".into(),
+                host_generation: 1,
+                observed_snapshot_generation: Some(2),
+                terminal: SystemStatusTerminalKind::Accepted,
+                message: String::new(),
+            }
+            .validate()
+            .is_err()
+        );
     }
 }

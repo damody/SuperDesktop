@@ -10,14 +10,21 @@ use std::{
 };
 
 use shell_provider_protocol::{
-    AudioStatus, ClockCalendarStatus, InputProfile, InputStatus, NetworkStatus, PowerStatus,
-    StatusAvailability, SystemStatusSnapshot,
+    AudioStatus, ClockCalendarStatus, InputProfile, InputStatus, MAX_TEXT_BYTES, MAX_WIFI_NETWORKS,
+    NetworkStatus, PowerStatus, StatusAvailability, SystemStatusSnapshot, WifiNetwork, WifiStatus,
 };
 use windows::Win32::{
-    Foundation::{LPARAM, RPC_E_CHANGED_MODE, WPARAM},
+    Foundation::{HANDLE, LPARAM, RPC_E_CHANGED_MODE, WPARAM},
     Globalization::{GetUserDefaultLocaleName, LCIDToLocaleName},
     Media::Audio::{
         Endpoints::IAudioEndpointVolume, IMMDeviceEnumerator, MMDeviceEnumerator, eConsole, eRender,
+    },
+    NetworkManagement::WiFi::{
+        WLAN_AVAILABLE_NETWORK, WLAN_AVAILABLE_NETWORK_CONNECTED,
+        WLAN_AVAILABLE_NETWORK_HAS_PROFILE, WLAN_AVAILABLE_NETWORK_LIST,
+        WLAN_CONNECTION_PARAMETERS, WLAN_INTERFACE_INFO_LIST, WlanCloseHandle, WlanConnect,
+        WlanDisconnect, WlanEnumInterfaces, WlanFreeMemory, WlanGetAvailableNetworkList,
+        WlanOpenHandle, WlanScan, dot11_BSS_type_any, wlan_connection_mode_profile,
     },
     Networking::NetworkListManager::{
         INetworkListManager, NLM_ENUM_NETWORK_CONNECTED, NetworkListManager,
@@ -37,6 +44,7 @@ use windows::Win32::{
         },
     },
 };
+use windows::core::{GUID, PCWSTR};
 
 const LOCALE_NAME_CAPACITY: usize = 85;
 
@@ -47,6 +55,82 @@ unsafe extern "system" {
 }
 
 struct ComApartment(bool);
+
+const MAX_WIFI_INTERFACES: usize = 64;
+const MAX_NATIVE_WIFI_NETWORKS: usize = MAX_WIFI_NETWORKS * 4;
+
+struct WlanClient {
+    handle: HANDLE,
+}
+
+impl WlanClient {
+    fn open() -> Result<Self, String> {
+        let mut negotiated = 0;
+        let mut handle = HANDLE::default();
+        let status = unsafe { WlanOpenHandle(2, None, &mut negotiated, &mut handle) };
+        if status != 0 {
+            return Err(format!("WLAN service unavailable ({status})"));
+        }
+        Ok(Self { handle })
+    }
+
+    fn interfaces(&self) -> Result<Vec<WlanInterface>, String> {
+        let mut raw = std::ptr::null_mut::<WLAN_INTERFACE_INFO_LIST>();
+        let status = unsafe { WlanEnumInterfaces(self.handle, None, &mut raw) };
+        if status != 0 || raw.is_null() {
+            return Err(format!("WLAN interface enumeration failed ({status})"));
+        }
+        let memory = WlanMemory(raw);
+        let count = unsafe { (*memory.0).dwNumberOfItems as usize }.min(MAX_WIFI_INTERFACES);
+        let entries =
+            unsafe { std::slice::from_raw_parts((*memory.0).InterfaceInfo.as_ptr(), count) };
+        Ok(entries
+            .iter()
+            .map(|entry| WlanInterface {
+                guid: entry.InterfaceGuid,
+                id: wifi_interface_id(&entry.InterfaceGuid),
+            })
+            .collect())
+    }
+
+    fn available_networks(&self, interface: &WlanInterface) -> Result<Vec<WifiNetwork>, String> {
+        let mut raw = std::ptr::null_mut::<WLAN_AVAILABLE_NETWORK_LIST>();
+        let status =
+            unsafe { WlanGetAvailableNetworkList(self.handle, &interface.guid, 0, None, &mut raw) };
+        if status != 0 || raw.is_null() {
+            return Err(format!("WLAN network enumeration failed ({status})"));
+        }
+        let memory = WlanMemory(raw);
+        let count = unsafe { (*memory.0).dwNumberOfItems as usize }.min(MAX_NATIVE_WIFI_NETWORKS);
+        let entries = unsafe { std::slice::from_raw_parts((*memory.0).Network.as_ptr(), count) };
+        Ok(entries
+            .iter()
+            .filter_map(|entry| wifi_network_from_native(&interface.id, entry))
+            .collect())
+    }
+}
+
+impl Drop for WlanClient {
+    fn drop(&mut self) {
+        let _ = unsafe { WlanCloseHandle(self.handle, None) };
+    }
+}
+
+struct WlanMemory<T>(*mut T);
+
+impl<T> Drop for WlanMemory<T> {
+    fn drop(&mut self) {
+        if !self.0.is_null() {
+            unsafe { WlanFreeMemory(self.0.cast()) };
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+struct WlanInterface {
+    guid: GUID,
+    id: String,
+}
 
 impl ComApartment {
     fn enter() -> Result<Self, String> {
@@ -133,7 +217,193 @@ pub fn network_status() -> Result<NetworkStatus, String> {
         connected,
         internet,
         display_name,
+        wifi: wifi_status().unwrap_or_else(|reason| StatusAvailability::Unavailable { reason }),
     })
+}
+
+pub fn wifi_status() -> Result<StatusAvailability<WifiStatus>, String> {
+    let client = WlanClient::open()?;
+    let interfaces = client.interfaces()?;
+    if interfaces.is_empty() {
+        return Ok(StatusAvailability::NotPresent);
+    }
+    let mut networks = Vec::new();
+    let mut failures = Vec::new();
+    for interface in &interfaces {
+        match client.available_networks(interface) {
+            Ok(items) => networks.extend(items),
+            Err(error) => failures.push(error),
+        }
+    }
+    if networks.is_empty() && failures.len() == interfaces.len() {
+        return Err("all WLAN interfaces rejected network enumeration".into());
+    }
+    Ok(StatusAvailability::Available(WifiStatus {
+        enabled: true,
+        networks: reduce_wifi_networks(networks),
+    }))
+}
+
+pub fn refresh_wifi() -> Result<(), String> {
+    let client = WlanClient::open()?;
+    let interfaces = client.interfaces()?;
+    if interfaces.is_empty() {
+        return Err("no WLAN interface is present".into());
+    }
+    let accepted = interfaces
+        .iter()
+        .filter(|interface| unsafe {
+            WlanScan(client.handle, &interface.guid, None, None, None) == 0
+        })
+        .count();
+    if accepted == 0 {
+        Err("every WLAN interface rejected scan".into())
+    } else {
+        Ok(())
+    }
+}
+
+pub fn connect_wifi_profile(interface_id: &str, profile_name: &str) -> Result<(), String> {
+    if interface_id.trim().is_empty() || profile_name.trim().is_empty() {
+        return Err("WLAN interface and profile identity are required".into());
+    }
+    if interface_id.len() > MAX_TEXT_BYTES || profile_name.len() > MAX_TEXT_BYTES {
+        return Err("WLAN interface or profile identity exceeds the text limit".into());
+    }
+    let client = WlanClient::open()?;
+    let interface = client
+        .interfaces()?
+        .into_iter()
+        .find(|interface| interface.id == interface_id)
+        .ok_or_else(|| "WLAN interface identity is stale".to_owned())?;
+    let admitted = client
+        .available_networks(&interface)?
+        .into_iter()
+        .any(|network| {
+            network.connectable && network.profile_name.as_deref() == Some(profile_name)
+        });
+    if !admitted {
+        return Err("saved WLAN profile is not currently connectable".into());
+    }
+    let profile_wide = profile_name
+        .encode_utf16()
+        .chain(std::iter::once(0))
+        .collect::<Vec<_>>();
+    let parameters = WLAN_CONNECTION_PARAMETERS {
+        wlanConnectionMode: wlan_connection_mode_profile,
+        strProfile: PCWSTR(profile_wide.as_ptr()),
+        pDot11Ssid: std::ptr::null_mut(),
+        pDesiredBssidList: std::ptr::null_mut(),
+        dot11BssType: dot11_BSS_type_any,
+        dwFlags: 0,
+    };
+    let status = unsafe { WlanConnect(client.handle, &interface.guid, &parameters, None) };
+    if status == 0 {
+        Ok(())
+    } else {
+        Err(format!("WLAN connect request rejected ({status})"))
+    }
+}
+
+pub fn disconnect_wifi(interface_id: &str) -> Result<(), String> {
+    if interface_id.trim().is_empty() {
+        return Err("WLAN interface identity is required".into());
+    }
+    if interface_id.len() > MAX_TEXT_BYTES {
+        return Err("WLAN interface identity exceeds the text limit".into());
+    }
+    let client = WlanClient::open()?;
+    let interface = client
+        .interfaces()?
+        .into_iter()
+        .find(|interface| interface.id == interface_id)
+        .ok_or_else(|| "WLAN interface identity is stale".to_owned())?;
+    let connected = client
+        .available_networks(&interface)?
+        .iter()
+        .any(|network| network.connected);
+    if !connected {
+        return Err("WLAN interface is not connected".into());
+    }
+    let status = unsafe { WlanDisconnect(client.handle, &interface.guid, None) };
+    if status == 0 {
+        Ok(())
+    } else {
+        Err(format!("WLAN disconnect request rejected ({status})"))
+    }
+}
+
+fn wifi_interface_id(guid: &GUID) -> String {
+    format!("{guid:?}")
+}
+
+fn wifi_network_from_native(
+    interface_id: &str,
+    native: &WLAN_AVAILABLE_NETWORK,
+) -> Option<WifiNetwork> {
+    let ssid_length = usize::try_from(native.dot11Ssid.uSSIDLength)
+        .ok()?
+        .min(native.dot11Ssid.ucSSID.len());
+    if ssid_length == 0 {
+        return None;
+    }
+    let ssid = String::from_utf8_lossy(&native.dot11Ssid.ucSSID[..ssid_length])
+        .trim()
+        .to_owned();
+    if ssid.is_empty() {
+        return None;
+    }
+    let has_profile = native.dwFlags & WLAN_AVAILABLE_NETWORK_HAS_PROFILE != 0;
+    let profile_name = has_profile
+        .then(|| utf16_nul_terminated(&native.strProfileName))
+        .flatten()
+        .filter(|profile| !profile.trim().is_empty());
+    Some(WifiNetwork {
+        interface_id: interface_id.to_owned(),
+        ssid,
+        profile_name,
+        signal_quality: native.wlanSignalQuality.min(100) as u8,
+        secure: native.bSecurityEnabled.as_bool(),
+        connected: native.dwFlags & WLAN_AVAILABLE_NETWORK_CONNECTED != 0,
+        connectable: native.bNetworkConnectable.as_bool(),
+    })
+}
+
+fn reduce_wifi_networks(networks: Vec<WifiNetwork>) -> Vec<WifiNetwork> {
+    let mut by_ssid = std::collections::BTreeMap::<String, WifiNetwork>::new();
+    for network in networks {
+        let replace = by_ssid
+            .get(&network.ssid)
+            .is_none_or(|current| wifi_network_rank(&network) > wifi_network_rank(current));
+        if replace {
+            by_ssid.insert(network.ssid.clone(), network);
+        }
+    }
+    let mut networks = by_ssid.into_values().collect::<Vec<_>>();
+    networks.sort_by(|left, right| {
+        right
+            .connected
+            .cmp(&left.connected)
+            .then_with(|| {
+                right
+                    .profile_name
+                    .is_some()
+                    .cmp(&left.profile_name.is_some())
+            })
+            .then_with(|| right.signal_quality.cmp(&left.signal_quality))
+            .then_with(|| left.ssid.cmp(&right.ssid))
+    });
+    networks.truncate(MAX_WIFI_NETWORKS);
+    networks
+}
+
+fn wifi_network_rank(network: &WifiNetwork) -> (bool, bool, u8, bool) {
+    (
+        network.connected,
+        network.profile_name.is_some(),
+        network.signal_quality,
+        network.connectable,
+    )
 }
 
 pub fn power_status() -> Result<StatusAvailability<PowerStatus>, String> {
@@ -499,5 +769,106 @@ mod tests {
         snapshot.validate().unwrap();
         assert_eq!(snapshot.host_generation, 1);
         assert_eq!(snapshot.snapshot_generation, 1);
+    }
+
+    #[test]
+    fn wifi_native_decoder_bounds_lengths_and_preserves_truthful_flags() {
+        let mut native = WLAN_AVAILABLE_NETWORK::default();
+        native.dot11Ssid.uSSIDLength = 40;
+        native.dot11Ssid.ucSSID[..4].copy_from_slice(b"wifi");
+        native.strProfileName[..8].copy_from_slice(&[
+            b'p' as u16,
+            b'r' as u16,
+            b'o' as u16,
+            b'f' as u16,
+            b'i' as u16,
+            b'l' as u16,
+            b'e' as u16,
+            0,
+        ]);
+        native.wlanSignalQuality = 140;
+        native.bSecurityEnabled = true.into();
+        native.bNetworkConnectable = true.into();
+        native.dwFlags = WLAN_AVAILABLE_NETWORK_CONNECTED | WLAN_AVAILABLE_NETWORK_HAS_PROFILE;
+        let decoded = wifi_network_from_native("interface", &native).unwrap();
+        assert!(decoded.ssid.starts_with("wifi"));
+        assert_eq!(decoded.profile_name.as_deref(), Some("profile"));
+        assert_eq!(decoded.signal_quality, 100);
+        assert!(decoded.secure && decoded.connected && decoded.connectable);
+
+        native.dot11Ssid.uSSIDLength = 0;
+        assert!(wifi_network_from_native("interface", &native).is_none());
+    }
+
+    #[test]
+    fn wifi_reducer_deduplicates_and_orders_connected_saved_strongest() {
+        let network =
+            |ssid: &str, interface: &str, connected: bool, saved: bool, signal_quality: u8| {
+                WifiNetwork {
+                    interface_id: interface.into(),
+                    ssid: ssid.into(),
+                    profile_name: saved.then(|| format!("profile-{ssid}")),
+                    signal_quality,
+                    secure: true,
+                    connected,
+                    connectable: true,
+                }
+            };
+        let reduced = reduce_wifi_networks(vec![
+            network("same", "weak", false, false, 20),
+            network("same", "saved", false, true, 10),
+            network("connected", "live", true, true, 30),
+            network("strong", "strong", false, false, 90),
+        ]);
+        assert_eq!(reduced.len(), 3);
+        assert_eq!(reduced[0].ssid, "connected");
+        assert_eq!(reduced[1].ssid, "same");
+        assert_eq!(reduced[1].interface_id, "saved");
+        assert_eq!(reduced[2].ssid, "strong");
+    }
+
+    #[test]
+    fn wifi_adapter_source_owns_handles_memory_and_exact_command_identity() {
+        let source = include_str!("system_status.rs");
+        let production = source.split("#[cfg(test)]").next().unwrap_or(source);
+        for required in [
+            "struct WlanClient",
+            "WlanCloseHandle",
+            "struct WlanMemory",
+            "WlanFreeMemory",
+            "WlanEnumInterfaces",
+            "WlanGetAvailableNetworkList",
+            "WlanScan",
+            "WlanConnect",
+            "WlanDisconnect",
+            "saved WLAN profile is not currently connectable",
+            "WLAN interface identity is stale",
+        ] {
+            assert!(production.contains(required), "missing {required}");
+        }
+        for forbidden in ["WlanSetProfile", "profile xml", "password"] {
+            assert!(!production.contains(forbidden), "forbidden {forbidden}");
+        }
+    }
+
+    #[test]
+    fn wifi_commands_reject_empty_oversized_stale_and_unsaved_identity_before_mutation() {
+        assert!(connect_wifi_profile("", "profile").is_err());
+        assert!(connect_wifi_profile("interface", "").is_err());
+        assert!(disconnect_wifi("").is_err());
+        let oversized = "x".repeat(MAX_TEXT_BYTES + 1);
+        assert!(connect_wifi_profile(&oversized, "profile").is_err());
+        assert!(connect_wifi_profile("interface", &oversized).is_err());
+        assert!(disconnect_wifi(&oversized).is_err());
+        assert!(disconnect_wifi("{00000000-0000-0000-0000-000000000000}").is_err());
+
+        if let Ok(StatusAvailability::Available(wifi)) = wifi_status()
+            && let Some(network) = wifi.networks.first()
+        {
+            assert!(
+                connect_wifi_profile(&network.interface_id, "superdesktop-unsaved-fixture")
+                    .is_err()
+            );
+        }
     }
 }
