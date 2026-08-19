@@ -1,0 +1,27 @@
+{
+  "schema": "owned-show-desktop-corner-package/v1",
+  "result": "passed",
+  "implementation_commit": "115692d2822c39a0d1ba9126312a1e0ad34c6842",
+  "release": {
+    "superdesktop_app_sha256": "ac0d28f689b58b3303bd86504ed12bd70c003c0f01616f18d24f1ce9f06f329d",
+    "superdesktop_guardian_sha256": "c0463bcab0444f553b54adb6a36f2770cd6388d17277b6db3f244fd5b3e3241b"
+  },
+  "installers": [
+    {
+      "path": "D:/SuperExplorer/dist/SuperDesktop-Test-Setup-1.2026.8.19-x64.exe",
+      "bytes": 5859992,
+      "sha256": "7c68b3e78202c063df67269d4756f55748603c9e449fee7a6f74247adee287a6",
+      "component": "superdesktop",
+      "launched": false
+    },
+    {
+      "path": "D:/SuperExplorer/dist/SuperExplorer-Setup-1.2026.8.19-x64.exe",
+      "bytes": 13630198,
+      "sha256": "164ee96383407725a9a90a960ee2921c49d7721a6e5e23117827656ce723eb25",
+      "component": "superexplorer-plus-superdesktop",
+      "launched": false
+    }
+  ],
+  "submodule_pointer_verified": true,
+  "change_archived": false
+}

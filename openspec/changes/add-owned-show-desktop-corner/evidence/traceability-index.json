@@ -1,0 +1,31 @@
+{
+  "schema": "owned-show-desktop-corner-traceability/v1",
+  "result": "passed",
+  "change": "add-owned-show-desktop-corner",
+  "implementation_commit": "115692d2822c39a0d1ba9126312a1e0ad34c6842",
+  "leaf_count": 18,
+  "records": [
+    {"task":"1.1.1","result":"passed","evidence":"crates/taskbar-ui/src/show_desktop.rs#types"},
+    {"task":"1.1.2","result":"passed","evidence":"crates/taskbar-ui/src/show_desktop.rs#ShowDesktopSession-plan"},
+    {"task":"1.1.3","result":"passed","evidence":"cargo test -p taskbar-ui show_desktop --locked --offline (5 passed)"},
+    {"task":"1.2.1","result":"passed","evidence":"crates/platform-win/src/common/taskbar.rs#WindowAction-Restore"},
+    {"task":"1.2.2","result":"passed","evidence":"crates/superdesktop-app/src/surface_runtime.rs#run_show_desktop_cycle"},
+    {"task":"1.2.3","result":"passed","evidence":"evidence/automated-gates.json#platform_taskbar_tests"},
+    {"task":"2.1.1","result":"passed","evidence":"evidence/headful/light-row1-report.json#corner_bounds"},
+    {"task":"2.1.2","result":"passed","evidence":"evidence/headful/dark-row2-focus-hover.png"},
+    {"task":"2.1.3","result":"passed","evidence":"evidence/headful/high-contrast-row3-report.json#corner_bounds"},
+    {"task":"2.2.1","result":"passed","evidence":"crates/superdesktop-app/src/surface_runtime.rs#show_desktop-callback"},
+    {"task":"2.2.2","result":"passed","evidence":"evidence/headful/light-row1-report.json#uia"},
+    {"task":"2.2.3","result":"passed","evidence":"cargo test -p superdesktop-app show_desktop_product_path --locked --offline"},
+    {"task":"3.1.1","result":"passed","evidence":"scripts/capture-show-desktop-corner.ps1"},
+    {"task":"3.1.2","result":"passed","evidence":"evidence/headful/light-row1-before.png;evidence/headful/dark-row2-before.png;evidence/headful/high-contrast-row3-before.png"},
+    {"task":"3.1.3","result":"passed","evidence":"evidence/headful/light-row1-report.json#cycle_exercised"},
+    {"task":"3.2.1","result":"passed","evidence":"evidence/automated-gates.json"},
+    {"task":"3.2.2","result":"passed","evidence":"evidence/package-report.json#installers"},
+    {"task":"3.2.3","result":"passed","evidence":"evidence/traceability-index.json#leaf_count"}
+  ],
+  "unique_task_records": true,
+  "detailed_task_validation": "passed",
+  "strict_openspec_validation": "passed",
+  "change_archived": false
+}
