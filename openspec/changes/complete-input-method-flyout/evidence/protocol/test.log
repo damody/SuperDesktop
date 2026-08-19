@@ -1,0 +1,20 @@
+﻿cargo.exe :    Compiling shell-provider-protocol v0.1.0 (D:\SuperExplorer\SuperDesktop\crates\shell-provider-protocol)
+At line:2 char:537
++ ... e = $false; & cargo test -p shell-provider-protocol system_status --l ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (   Compiling sh...vider-protocol):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.75s
+     Running unittests src\lib.rs (target\debug\deps\shell_provider_protocol-2867189716d79169.exe)
+
+running 7 tests
+test system_status::tests::language_preferences_is_fieldless_and_accepted_is_not_observed ... ok
+test system_status::tests::wifi_commands_and_accepted_terminal_require_exact_bounded_identity ... ok
+test system_status::tests::bounds_duplicate_and_active_identity_fail_closed ... ok
+test system_status::tests::input_profiles_are_additive_exact_and_bounded ... ok
+test system_status::tests::commands_and_observed_terminals_require_bounded_identity_and_generation ... ok
+test system_status::tests::wifi_snapshot_is_additive_bounded_and_rejects_duplicate_ssids ... ok
+test system_status::tests::snapshot_round_trips_deterministically ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 17 filtered out; finished in 0.00s

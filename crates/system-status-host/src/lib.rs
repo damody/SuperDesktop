@@ -236,7 +236,7 @@ impl SystemStatusRuntime {
         match request {
             SystemStatusHostRequest::Handshake => SystemStatusHostResponse::Handshake {
                 protocol_major: 1,
-                protocol_minor: 1,
+                protocol_minor: 2,
                 max_frame_bytes: shell_provider_protocol::MAX_FRAME_BYTES,
                 max_pending_commands: MAX_PENDING_COMMANDS,
             },
@@ -296,27 +296,37 @@ impl SystemStatusRuntime {
                 "command deadline expired".into(),
             );
         }
-        let (result, accepted) = match request.command {
+        let (result, accepted_event, accepted_message) = match request.command {
             SystemStatusCommand::ActivateInputProfile { profile_id } => (
                 platform_win::common::system_status::request_input_profile(
                     &profile_id,
                     Duration::from_millis(750),
                 )
                 .map(|_| ()),
-                false,
+                None,
+                "",
+            ),
+            SystemStatusCommand::OpenLanguagePreferences => (
+                platform_win::common::system_status::open_language_preferences(),
+                Some(None),
+                "Language preferences launch accepted",
             ),
             SystemStatusCommand::SetVolume { volume_percent } => (
                 platform_win::common::system_status::set_volume_and_observe(volume_percent)
                     .map(|_| ()),
-                false,
+                None,
+                "",
             ),
             SystemStatusCommand::SetMute { muted } => (
                 platform_win::common::system_status::set_mute_and_observe(muted).map(|_| ()),
-                false,
+                None,
+                "",
             ),
-            SystemStatusCommand::RefreshWifi => {
-                (platform_win::common::system_status::refresh_wifi(), true)
-            }
+            SystemStatusCommand::RefreshWifi => (
+                platform_win::common::system_status::refresh_wifi(),
+                Some(Some(ProviderEvent::Network)),
+                "WLAN request accepted; awaiting authoritative snapshot",
+            ),
             SystemStatusCommand::ConnectWifi {
                 interface_id,
                 profile_name,
@@ -325,22 +335,26 @@ impl SystemStatusRuntime {
                     &interface_id,
                     &profile_name,
                 ),
-                true,
+                Some(Some(ProviderEvent::Network)),
+                "WLAN request accepted; awaiting authoritative snapshot",
             ),
             SystemStatusCommand::DisconnectWifi { interface_id } => (
                 platform_win::common::system_status::disconnect_wifi(&interface_id),
-                true,
+                Some(Some(ProviderEvent::Network)),
+                "WLAN request accepted; awaiting authoritative snapshot",
             ),
         };
         match result {
             Ok(()) => {
-                if accepted {
-                    self.events.push(ProviderEvent::Network);
+                if let Some(event) = accepted_event {
+                    if let Some(event) = event {
+                        self.events.push(event);
+                    }
                     self.terminal(
                         request.correlation_id,
                         SystemStatusTerminalKind::Accepted,
                         None,
-                        "WLAN request accepted; awaiting authoritative snapshot".into(),
+                        accepted_message.into(),
                     )
                 } else {
                     self.snapshot_generation = self.snapshot_generation.saturating_add(1).max(1);
@@ -499,7 +513,7 @@ mod tests {
             panic!("handshake")
         };
         assert_eq!(protocol_major, 1);
-        assert_eq!(protocol_minor, 1);
+        assert_eq!(protocol_minor, 2);
         let SystemStatusHostResponse::Snapshot(snapshot) =
             runtime.apply(SystemStatusHostRequest::Snapshot)
         else {
@@ -535,7 +549,7 @@ mod tests {
             "SystemStatusCommand::ConnectWifi",
             "SystemStatusCommand::DisconnectWifi",
             "SystemStatusTerminalKind::Accepted",
-            "self.events.push(ProviderEvent::Network)",
+            "Some(Some(ProviderEvent::Network))",
             "connect_wifi_profile",
             "disconnect_wifi",
         ] {
@@ -543,5 +557,22 @@ mod tests {
         }
         assert!(!production.contains("WlanConnect"));
         assert!(!production.contains("profile xml"));
+    }
+
+    #[test]
+    fn language_preferences_route_is_fieldless_fixed_and_accepted_without_observation() {
+        let source = include_str!("lib.rs");
+        let production = source.split("#[cfg(test)]").next().unwrap_or(source);
+        for required in [
+            "SystemStatusCommand::OpenLanguagePreferences",
+            "open_language_preferences()",
+            "Some(None)",
+            "Language preferences launch accepted",
+        ] {
+            assert!(production.contains(required), "missing {required}");
+        }
+        for forbidden in ["explorer.exe", "uri:", "executable:", "arguments:"] {
+            assert!(!production.contains(forbidden), "forbidden {forbidden}");
+        }
     }
 }

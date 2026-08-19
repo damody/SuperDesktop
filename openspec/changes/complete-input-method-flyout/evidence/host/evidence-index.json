@@ -1,0 +1,10 @@
+{
+  "schema": "superdesktop-evidence-index/v1",
+  "result": "passed",
+  "command": "cargo test -p system-status-host --lib -- --nocapture",
+  "artifact": { "path": "test.log", "sha256": "d59d8cdd780a67bc56d0d17c8666e6cea7711704ca8365a1d75d6281abad35fa" },
+  "subchecks": {
+    "3.1.1": "passed", "3.1.2": "passed", "3.1.3": "passed",
+    "3.1.4": "passed", "3.1.5": "passed"
+  }
+}

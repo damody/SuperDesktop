@@ -1,0 +1,11 @@
+{
+  "schema": "superdesktop-input-redacted/v1",
+  "result": "passed",
+  "profile_count": 3,
+  "input_processor_count": 3,
+  "keyboard_count": 0,
+  "legacy_fallback_count": 0,
+  "authoritatively_named_count": 3,
+  "active_present": true,
+  "identities_redacted": true
+}

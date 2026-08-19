@@ -1,0 +1,20 @@
+﻿cargo.exe :    Compiling taskbar-ui v0.1.0 (D:\SuperExplorer\SuperDesktop\crates\taskbar-ui)
+At line:2 char:1408
++ ... EXITCODE }; & cargo test -p taskbar-ui system_flyout --lib -- --nocap ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (   Compiling ta...tes\taskbar-ui):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.87s
+     Running unittests src\lib.rs (target\debug\deps\taskbar_ui-b1812cd765cddb8a.exe)
+
+running 7 tests
+test system_flyout::tests::windows_style_calendar_grid_handles_leap_year_and_selected_day ... ok
+test system_flyout::tests::network_and_power_summaries_distinguish_not_present_from_failure ... ok
+test system_flyout::tests::flyout_tokens_locale_and_profile_tags_are_bounded_and_distinct ... ok
+test system_flyout::tests::wifi_rows_cover_empty_single_and_maximum_lists_with_exact_action_gating ... ok
+test system_flyout::tests::input_method_rows_keep_duplicate_languages_distinct_and_bounded ... ok
+test view::tests::system_flyouts_are_exclusive_and_rapid_switches_are_deterministic ... ok
+test system_flyout::tests::owned_flyout_contract_is_keyboard_accessible_and_has_no_fake_unavailable_action ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 69 filtered out; finished in 0.00s

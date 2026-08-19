@@ -35,11 +35,11 @@ pub use search::{
     SearchBatch, SearchProvider, SearchProviderState, SearchQuery, rank_search_results,
 };
 pub use system_status::{
-    AudioStatus, ClockCalendarStatus, InputProfile, InputStatus, MAX_INPUT_PROFILES,
-    MAX_WIFI_NETWORKS, NetworkStatus, PowerStatus, StatusAvailability, SystemStatusCommand,
-    SystemStatusCommandRequest, SystemStatusCommandTerminal, SystemStatusHostHealth,
-    SystemStatusHostRequest, SystemStatusHostResponse, SystemStatusSnapshot,
-    SystemStatusTerminalKind, WifiNetwork, WifiStatus,
+    AudioStatus, ClockCalendarStatus, InputProfile, InputProfileKind, InputStatus,
+    MAX_INPUT_PROFILES, MAX_WIFI_NETWORKS, NetworkStatus, PowerStatus, StatusAvailability,
+    SystemStatusCommand, SystemStatusCommandRequest, SystemStatusCommandTerminal,
+    SystemStatusHostHealth, SystemStatusHostRequest, SystemStatusHostResponse,
+    SystemStatusSnapshot, SystemStatusTerminalKind, WifiNetwork, WifiStatus,
 };
 pub use taskbar_state::{
     TaskbarAttentionMode, TaskbarAttentionState, TaskbarProgressKind, TaskbarProgressState,

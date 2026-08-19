@@ -1,0 +1,27 @@
+﻿cargo.exe :    Compiling shell-provider-protocol v0.1.0 (D:\SuperExplorer\SuperDesktop\crates\shell-provider-protocol)
+At line:2 char:766
++ ... EXITCODE }; & cargo test -p platform-win common::system_status::tests ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (   Compiling sh...vider-protocol):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+   Compiling platform-win v0.1.0 (D:\SuperExplorer\SuperDesktop\crates\platform-win)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.95s
+     Running unittests src\lib.rs (target\debug\deps\platform_win-6e9612d80b04175f.exe)
+
+running 13 tests
+test common::system_status::tests::tsf_profile_ids_are_kind_specific_stable_and_exact ... ok
+test common::system_status::tests::wifi_native_decoder_bounds_lengths_and_preserves_truthful_flags ... ok
+test common::system_status::tests::wifi_adapter_source_owns_handles_memory_and_exact_command_identity ... ok
+test common::system_status::tests::wifi_reducer_deduplicates_and_orders_connected_saved_strongest ... ok
+test common::system_status::tests::input_provider_source_is_tsf_first_bounded_and_fixed_launch_only ... ok
+test common::system_status::tests::real_input_profiles_are_bounded_stable_and_include_active_profile ... ok
+test common::system_status::tests::wrong_session_and_unobserved_activation_timeout_fail_closed ... ok
+test common::system_status::tests::malformed_and_stale_tsf_profile_ids_fail_before_activation ... ok
+test common::system_status::tests::invalid_missing_and_same_profile_requests_are_fail_closed_or_observed ... ok
+test common::system_status::tests::real_audio_network_and_power_observations_are_bounded ... ok
+test common::system_status::tests::audio_commands_validate_ranges_and_confirm_current_state_without_drift ... ok
+test common::system_status::tests::live_clock_and_complete_snapshot_are_real_and_valid ... ok
+test common::system_status::tests::wifi_commands_reject_empty_oversized_stale_and_unsaved_identity_before_mutation ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 73 filtered out; finished in 0.03s

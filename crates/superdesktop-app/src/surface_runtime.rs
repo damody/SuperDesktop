@@ -2510,6 +2510,7 @@ fn system_status_command(action: SystemStatusAction) -> SystemStatusCommand {
         SystemStatusAction::ActivateInputProfile(profile_id) => {
             SystemStatusCommand::ActivateInputProfile { profile_id }
         }
+        SystemStatusAction::OpenLanguagePreferences => SystemStatusCommand::OpenLanguagePreferences,
         SystemStatusAction::SetVolume(volume_percent) => {
             SystemStatusCommand::SetVolume { volume_percent }
         }
@@ -5828,6 +5829,10 @@ mod live_parity_tests {
 
     #[test]
     fn wifi_actions_map_to_exact_typed_commands_without_claiming_observation() {
+        assert_eq!(
+            super::system_status_command(taskbar_ui::SystemStatusAction::OpenLanguagePreferences),
+            shell_provider_protocol::SystemStatusCommand::OpenLanguagePreferences
+        );
         assert_eq!(
             super::system_status_command(taskbar_ui::SystemStatusAction::RefreshWifi),
             shell_provider_protocol::SystemStatusCommand::RefreshWifi

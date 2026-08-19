@@ -6,7 +6,8 @@ use gpui::{
     prelude::FluentBuilder as _, px, rgb, svg,
 };
 use shell_provider_protocol::{
-    NotificationSnapshot, StatusAvailability, SystemStatusSnapshot, WifiNetwork,
+    InputProfile, InputProfileKind, NotificationSnapshot, StatusAvailability, SystemStatusSnapshot,
+    WifiNetwork,
 };
 
 use crate::{StatusRegion, SystemFlyoutKind, SystemStatusAction, view::icon_render_image};
@@ -120,7 +121,6 @@ pub struct SystemFlyoutView {
     pub status: StatusRegion,
     pub notifications: Option<NotificationSnapshot>,
     presentation: SystemFlyoutPresentation,
-    keyboard_settings_open: bool,
     action: SystemFlyoutAction,
     notification_action: NotificationCenterActionHandler,
     notification_error: Option<String>,
@@ -154,7 +154,6 @@ impl SystemFlyoutView {
             status,
             notifications,
             presentation,
-            keyboard_settings_open: false,
             action,
             notification_action,
             notification_error: None,
@@ -237,13 +236,27 @@ fn compact_profile_tag(language_tag: &str) -> String {
     }
 }
 
-fn input_profile_glyph(language_tag: &str) -> &'static str {
-    let normalized = language_tag.replace('_', "-");
+fn input_profile_glyph(profile: &InputProfile) -> &'static str {
+    let method = profile.input_method_name.to_ascii_lowercase();
+    if method.contains("boshiamy")
+        || profile.input_method_name.contains("嘸蝦米")
+        || method.contains("cangjie")
+        || profile.input_method_name.contains("倉頡")
+    {
+        return "無";
+    }
+    if method.contains("bopomofo") || profile.input_method_name.contains("注音") {
+        return "ㄅ";
+    }
+    if method.contains("pinyin") || profile.input_method_name.contains("拼音") {
+        return "拼";
+    }
+    let normalized = profile.language_tag.replace('_', "-");
     let primary = normalized.split('-').next().unwrap_or_default();
     if primary.eq_ignore_ascii_case("zh") && normalized.to_ascii_lowercase().contains("-cn") {
         "拼"
-    } else if primary.eq_ignore_ascii_case("zh") {
-        "ㄅ"
+    } else if profile.kind == InputProfileKind::InputProcessor {
+        "輸"
     } else if primary.eq_ignore_ascii_case("en") {
         "A"
     } else {
@@ -252,11 +265,14 @@ fn input_profile_glyph(language_tag: &str) -> &'static str {
 }
 
 fn input_profile_primary(
-    language_tag: &str,
+    profile: &InputProfile,
     fallback: &str,
     presentation: SystemFlyoutPresentation,
 ) -> String {
-    let normalized = language_tag.replace('_', "-").to_ascii_lowercase();
+    if !profile.display_name.trim().is_empty() && profile.display_name != profile.language_tag {
+        return profile.display_name.clone();
+    }
+    let normalized = profile.language_tag.replace('_', "-").to_ascii_lowercase();
     if normalized.starts_with("zh-tw") {
         localized(
             presentation,
@@ -279,16 +295,19 @@ fn input_profile_primary(
 }
 
 fn input_profile_subtitle(
-    language_tag: &str,
+    profile: &InputProfile,
     presentation: SystemFlyoutPresentation,
-) -> &'static str {
-    let normalized = language_tag.replace('_', "-").to_ascii_lowercase();
+) -> String {
+    if !profile.input_method_name.trim().is_empty() {
+        return profile.input_method_name.clone();
+    }
+    let normalized = profile.language_tag.replace('_', "-").to_ascii_lowercase();
     if normalized.starts_with("zh-cn") {
-        localized(presentation, "微軟拼音", "Microsoft Pinyin")
+        localized(presentation, "微軟拼音", "Microsoft Pinyin").into()
     } else if normalized.starts_with("zh-tw") {
-        localized(presentation, "微軟注音", "Microsoft Bopomofo")
+        localized(presentation, "微軟注音", "Microsoft Bopomofo").into()
     } else {
-        localized(presentation, "鍵盤", "Keyboard")
+        localized(presentation, "鍵盤", "Keyboard").into()
     }
 }
 
@@ -477,7 +496,6 @@ impl Render for SystemFlyoutView {
         let notification_snapshot = self.notifications.clone();
         let notification_error = self.notification_error.clone();
         let presentation = self.presentation;
-        let keyboard_settings_open = self.keyboard_settings_open;
         let tokens = SystemFlyoutChromeTokens::new(presentation.theme);
         let volume = match (&self.status.core.volume, &self.status.core.muted) {
             (crate::ProviderState::Available(volume), crate::ProviderState::Available(muted)) => {
@@ -547,187 +565,199 @@ impl Render for SystemFlyoutView {
                                 .items_center()
                                 .text_size(px(18.))
                                 .mb_2()
-                                .child(if keyboard_settings_open {
-                                    localized(presentation, "鍵盤設定", "Keyboard settings")
-                                } else {
-                                    localized(presentation, "鍵盤配置", "Keyboard layout")
-                                })
-                                .when(!keyboard_settings_open, |heading| {
-                                    heading.child(
+                                .child(localized(presentation, "輸入法", "Input methods"))
+                                .child(
+                                    div()
+                                        .ml_auto()
+                                        .flex()
+                                        .items_center()
+                                        .gap_1()
+                                        .text_size(px(12.))
+                                        .text_color(rgb(tokens.secondary))
+                                        .child(
+                                            div()
+                                                .h(px(24.))
+                                                .px_2()
+                                                .rounded(px(4.))
+                                                .border_1()
+                                                .border_color(rgb(tokens.border))
+                                                .bg(rgb(tokens.card))
+                                                .flex()
+                                                .items_center()
+                                                .child("⊞"),
+                                        )
+                                        .child("+")
+                                        .child(
+                                            div()
+                                                .h(px(24.))
+                                                .px_2()
+                                                .rounded(px(4.))
+                                                .border_1()
+                                                .border_color(rgb(tokens.border))
+                                                .bg(rgb(tokens.card))
+                                                .flex()
+                                                .items_center()
+                                                .child(localized(presentation, "空格鍵", "Space")),
+                                        ),
+                                ),
+                        )
+                        .child(
+                            div()
+                                .id("owned-input-profile-list")
+                                .role(gpui::Role::Group)
+                                .aria_label(localized(
+                                    presentation,
+                                    "可用的輸入法",
+                                    "Available input methods",
+                                ))
+                                .flex_1()
+                                .min_h_0()
+                                .overflow_y_scroll()
+                                .flex()
+                                .flex_col()
+                                .when(input.profiles.is_empty(), |list| {
+                                    list.child(
                                         div()
-                                            .ml_auto()
+                                            .id("owned-input-empty")
+                                            .role(gpui::Role::Status)
+                                            .p_3()
+                                            .text_color(rgb(tokens.secondary))
+                                            .child(localized(
+                                                presentation,
+                                                "找不到可用的輸入法",
+                                                "No input methods found",
+                                            )),
+                                    )
+                                })
+                                .children(input.profiles.into_iter().enumerate().map(
+                                    |(index, profile)| {
+                                        let click_action = action.clone();
+                                        let key_action = action.clone();
+                                        let click_id = profile.id.clone();
+                                        let key_id = profile.id.clone();
+                                        let active = profile.id == input.active_profile_id;
+                                        let primary = input_profile_primary(
+                                            &profile,
+                                            &profile.display_name,
+                                            presentation,
+                                        );
+                                        let subtitle =
+                                            input_profile_subtitle(&profile, presentation);
+                                        let accessible_name = format!(
+                                            "{primary}. {subtitle}{}",
+                                            if active {
+                                                localized(presentation, "，使用中", ", active")
+                                            } else {
+                                                ""
+                                            }
+                                        );
+                                        let glyph = input_profile_glyph(&profile);
+                                        div()
+                                            .id(("owned-input-profile", index))
+                                            .role(gpui::Role::Button)
+                                            .aria_label(accessible_name)
+                                            .tab_index(0)
+                                            .relative()
+                                            .min_h(px(72.))
+                                            .px_4()
+                                            .rounded(px(8.))
                                             .flex()
                                             .items_center()
-                                            .gap_1()
-                                            .text_size(px(12.))
-                                            .text_color(rgb(tokens.secondary))
+                                            .gap_3()
+                                            .cursor_pointer()
+                                            .when(active, |entry| {
+                                                entry
+                                                    .bg(rgb(tokens.selected))
+                                                    .border_2()
+                                                    .border_color(rgb(
+                                                        if presentation.theme
+                                                            == SystemFlyoutTheme::HighContrast
+                                                        {
+                                                            tokens.accent
+                                                        } else {
+                                                            tokens.selected
+                                                        },
+                                                    ))
+                                            })
+                                            .when(active, |entry| {
+                                                entry.child(
+                                                    div()
+                                                        .absolute()
+                                                        .left_0()
+                                                        .top(px(22.))
+                                                        .w(px(4.))
+                                                        .h(px(28.))
+                                                        .rounded_full()
+                                                        .bg(rgb(tokens.accent)),
+                                                )
+                                            })
+                                            .hover(move |style| style.bg(rgb(tokens.hover)))
+                                            .active(move |style| style.bg(rgb(tokens.pressed)))
+                                            .focus_visible(move |style| {
+                                                style.border_2().border_color(rgb(tokens.focus))
+                                            })
+                                            .on_click(move |_, _, cx| {
+                                                click_action(
+                                                    SystemStatusAction::ActivateInputProfile(
+                                                        click_id.clone(),
+                                                    ),
+                                                    cx,
+                                                );
+                                            })
+                                            .on_key_down(move |event, _, cx| {
+                                                if activates_button(&event.keystroke.key) {
+                                                    key_action(
+                                                        SystemStatusAction::ActivateInputProfile(
+                                                            key_id.clone(),
+                                                        ),
+                                                        cx,
+                                                    );
+                                                }
+                                            })
                                             .child(
                                                 div()
-                                                    .h(px(24.))
-                                                    .px_2()
-                                                    .rounded(px(4.))
-                                                    .border_1()
-                                                    .border_color(rgb(tokens.border))
-                                                    .bg(rgb(tokens.card))
-                                                    .flex()
-                                                    .items_center()
-                                                    .child("⊞"),
+                                                    .w(px(48.))
+                                                    .text_size(px(25.))
+                                                    .text_color(rgb(tokens.text))
+                                                    .child(glyph),
                                             )
-                                            .child("+")
                                             .child(
                                                 div()
-                                                    .h(px(24.))
-                                                    .px_2()
-                                                    .rounded(px(4.))
-                                                    .border_1()
-                                                    .border_color(rgb(tokens.border))
-                                                    .bg(rgb(tokens.card))
+                                                    .min_w_0()
                                                     .flex()
-                                                    .items_center()
-                                                    .child(localized(
-                                                        presentation,
-                                                        "空格鍵",
-                                                        "Space",
-                                                    )),
-                                            ),
-                                    )
-                                }),
+                                                    .flex_col()
+                                                    .gap_1()
+                                                    .overflow_hidden()
+                                                    .child(
+                                                        div()
+                                                            .whitespace_nowrap()
+                                                            .text_ellipsis()
+                                                            .text_size(px(15.))
+                                                            .child(primary),
+                                                    )
+                                                    .child(
+                                                        div()
+                                                            .whitespace_nowrap()
+                                                            .text_ellipsis()
+                                                            .text_size(px(12.))
+                                                            .text_color(rgb(tokens.secondary))
+                                                            .child(subtitle),
+                                                    ),
+                                            )
+                                    },
+                                )),
                         )
-                        .children(input.profiles.into_iter().map(|profile| {
-                            let click_action = action.clone();
-                            let key_action = action.clone();
-                            let click_id = profile.id.clone();
-                            let key_id = profile.id.clone();
-                            let active = profile.id == input.active_profile_id;
-                            let accessible_name = format!(
-                                "{} ({}, {}){}",
-                                profile.display_name,
-                                profile.language_tag,
-                                profile.id,
-                                if active {
-                                    localized(presentation, "，使用中", ", active")
-                                } else {
-                                    ""
-                                }
-                            );
-                            let glyph = input_profile_glyph(&profile.language_tag);
-                            let primary = input_profile_primary(
-                                &profile.language_tag,
-                                &profile.display_name,
-                                presentation,
-                            );
-                            let subtitle =
-                                input_profile_subtitle(&profile.language_tag, presentation);
-                            let detail = if keyboard_settings_open {
-                                format!("{subtitle} · {}", profile.id)
-                            } else {
-                                subtitle.into()
-                            };
-                            div()
-                                .id(format!("owned-input-profile-{}", profile.id))
-                                .role(gpui::Role::Button)
-                                .aria_label(accessible_name)
-                                .tab_index(0)
-                                .relative()
-                                .h(px(72.))
-                                .px_4()
-                                .rounded(px(8.))
-                                .flex()
-                                .items_center()
-                                .gap_3()
-                                .cursor_pointer()
-                                .when(active, |entry| {
-                                    entry.bg(rgb(tokens.selected)).border_2().border_color(rgb(
-                                        if presentation.theme == SystemFlyoutTheme::HighContrast {
-                                            tokens.accent
-                                        } else {
-                                            tokens.selected
-                                        },
-                                    ))
-                                })
-                                .when(active, |entry| {
-                                    entry.child(
-                                        div()
-                                            .absolute()
-                                            .left_0()
-                                            .top(px(22.))
-                                            .w(px(4.))
-                                            .h(px(28.))
-                                            .rounded_full()
-                                            .bg(rgb(tokens.accent)),
-                                    )
-                                })
-                                .hover(move |style| style.bg(rgb(tokens.hover)))
-                                .active(move |style| style.bg(rgb(tokens.pressed)))
-                                .focus_visible(move |style| {
-                                    style.border_2().border_color(rgb(tokens.focus))
-                                })
-                                .on_click(move |_, _, cx| {
-                                    click_action(
-                                        SystemStatusAction::ActivateInputProfile(click_id.clone()),
-                                        cx,
-                                    );
-                                })
-                                .on_key_down(move |event, _, cx| {
-                                    if activates_button(&event.keystroke.key) {
-                                        key_action(
-                                            SystemStatusAction::ActivateInputProfile(
-                                                key_id.clone(),
-                                            ),
-                                            cx,
-                                        );
-                                    }
-                                })
-                                .child(
-                                    div()
-                                        .w(px(48.))
-                                        .text_size(px(25.))
-                                        .text_color(rgb(tokens.text))
-                                        .child(glyph),
-                                )
-                                .child(
-                                    div()
-                                        .min_w_0()
-                                        .flex()
-                                        .flex_col()
-                                        .gap_1()
-                                        .overflow_hidden()
-                                        .child(
-                                            div()
-                                                .whitespace_nowrap()
-                                                .text_ellipsis()
-                                                .text_size(px(15.))
-                                                .child(primary),
-                                        )
-                                        .child(
-                                            div()
-                                                .whitespace_nowrap()
-                                                .text_ellipsis()
-                                                .text_size(px(12.))
-                                                .text_color(rgb(tokens.secondary))
-                                                .child(detail),
-                                        ),
-                                )
-                        }))
                         .child(
                             div()
                                 .id("owned-input-settings-footer")
                                 .role(gpui::Role::Button)
-                                .aria_label(if keyboard_settings_open {
-                                    localized(
-                                        presentation,
-                                        "返回鍵盤配置",
-                                        "Back to keyboard layouts",
-                                    )
-                                } else {
-                                    localized(
-                                        presentation,
-                                        "更多鍵盤設定",
-                                        "More keyboard settings",
-                                    )
-                                })
+                                .aria_label(localized(
+                                    presentation,
+                                    "語言喜好設定",
+                                    "Language preferences",
+                                ))
                                 .tab_index(0)
-                                .h(px(46.))
+                                .min_h(px(56.))
                                 .mt_2()
                                 .border_t_1()
                                 .border_color(rgb(tokens.border))
@@ -741,28 +771,26 @@ impl Render for SystemFlyoutView {
                                 .focus_visible(move |style| {
                                     style.border_2().border_color(rgb(tokens.focus))
                                 })
-                                .on_click(cx.listener(|this, _, _, cx| {
-                                    this.keyboard_settings_open = !this.keyboard_settings_open;
-                                    cx.notify();
-                                }))
-                                .on_key_down(cx.listener(
-                                    |this, event: &gpui::KeyDownEvent, _, cx| {
+                                .on_click({
+                                    let action = action.clone();
+                                    move |_, _, cx| {
+                                        action(SystemStatusAction::OpenLanguagePreferences, cx);
+                                    }
+                                })
+                                .on_key_down({
+                                    let action = action.clone();
+                                    move |event, _, cx| {
                                         if activates_button(&event.keystroke.key) {
-                                            this.keyboard_settings_open =
-                                                !this.keyboard_settings_open;
-                                            cx.notify();
+                                            action(SystemStatusAction::OpenLanguagePreferences, cx);
                                         }
-                                    },
-                                ))
-                                .child(if keyboard_settings_open {
-                                    localized(presentation, "返回", "Back")
-                                } else {
-                                    localized(
-                                        presentation,
-                                        "更多鍵盤設定",
-                                        "More keyboard settings",
-                                    )
-                                }),
+                                    }
+                                })
+                                .child(div().w(px(48.)).text_size(px(20.)).child("A字"))
+                                .child(localized(
+                                    presentation,
+                                    "語言喜好設定",
+                                    "Language preferences",
+                                )),
                         ),
                     None => root.child(
                         div()
@@ -1767,13 +1795,33 @@ mod tests {
         assert_eq!(super::compact_profile_tag("de-DE"), "DE");
         assert_eq!(super::compact_profile_tag(""), "—");
         assert!(super::compact_profile_tag("abcdef").chars().count() <= 3);
-        assert_eq!(super::input_profile_glyph("zh-TW"), "ㄅ");
-        assert_eq!(super::input_profile_glyph("zh-CN"), "拼");
+        let bopomofo = shell_provider_protocol::InputProfile {
+            id: "fixture-bopomofo".into(),
+            language_tag: "zh-TW".into(),
+            display_name: "繁體中文（台灣）".into(),
+            input_method_name: "微軟注音".into(),
+            kind: shell_provider_protocol::InputProfileKind::InputProcessor,
+            language_id: 0x0404,
+            tsf_class_id: None,
+            tsf_profile_id: None,
+            hkl: None,
+        };
+        let pinyin = shell_provider_protocol::InputProfile {
+            language_tag: "zh-CN".into(),
+            display_name: "簡體中文（中國）".into(),
+            input_method_name: "Microsoft Pinyin".into(),
+            ..bopomofo.clone()
+        };
+        assert_eq!(super::input_profile_glyph(&bopomofo), "ㄅ");
+        assert_eq!(super::input_profile_glyph(&pinyin), "拼");
         assert_eq!(
-            super::input_profile_primary("zh-TW", "zh-TW", zh),
+            super::input_profile_primary(&bopomofo, "zh-TW", zh),
             "繁體中文（台灣）"
         );
-        assert_eq!(super::input_profile_subtitle("zh-CN", zh), "微軟拼音");
+        assert_eq!(
+            super::input_profile_subtitle(&pinyin, zh),
+            "Microsoft Pinyin"
+        );
         assert_eq!(super::notification_time_label(0), "00:00");
         assert_eq!(
             super::notification_time_label(23 * 60 * 60 * 1_000),
@@ -1869,15 +1917,53 @@ mod tests {
     }
 
     #[test]
+    fn input_method_rows_keep_duplicate_languages_distinct_and_bounded() {
+        let profile = |index: usize, method: &str| shell_provider_protocol::InputProfile {
+            id: format!("fixture-{index}"),
+            language_tag: "zh-TW".into(),
+            display_name: "繁體中文（台灣）".into(),
+            input_method_name: method.into(),
+            kind: shell_provider_protocol::InputProfileKind::InputProcessor,
+            language_id: 0x0404,
+            tsf_class_id: None,
+            tsf_profile_id: None,
+            hkl: None,
+        };
+        let cangjie = profile(0, "微軟倉頡");
+        let bopomofo = profile(1, "微軟注音");
+        assert_eq!(super::input_profile_glyph(&cangjie), "無");
+        assert_eq!(super::input_profile_glyph(&bopomofo), "ㄅ");
+        assert_ne!(
+            super::input_profile_subtitle(
+                &cangjie,
+                super::SystemFlyoutPresentation::new(super::SystemFlyoutTheme::Light, true)
+            ),
+            super::input_profile_subtitle(
+                &bopomofo,
+                super::SystemFlyoutPresentation::new(super::SystemFlyoutTheme::Light, true)
+            )
+        );
+        let maximum = (0..shell_provider_protocol::MAX_INPUT_PROFILES)
+            .map(|index| profile(index, &format!("method-{index}")))
+            .collect::<Vec<_>>();
+        assert_eq!(maximum.len(), shell_provider_protocol::MAX_INPUT_PROFILES);
+        assert!(Vec::<shell_provider_protocol::InputProfile>::new().is_empty());
+    }
+
+    #[test]
     fn owned_flyout_contract_is_keyboard_accessible_and_has_no_fake_unavailable_action() {
         let source = include_str!("system_flyout.rs");
         let production = source.split("#[cfg(test)]").next().unwrap_or(source);
         for required in [
             "owned-system-flyout",
             "event.keystroke.key == \"escape\"",
-            "owned-input-profile-",
+            "owned-input-profile-list",
+            "owned-input-profile",
+            "owned-input-empty",
             "owned-input-settings-footer",
-            "More keyboard settings",
+            "Language preferences",
+            "SystemStatusAction::OpenLanguagePreferences",
+            "A字",
             "⊞",
             "input_profile_glyph",
             "input_profile_primary",
@@ -1927,6 +2013,7 @@ mod tests {
                 "missing owned flyout contract: {required}"
             );
         }
+        assert!(!production.contains("keyboard_settings_open"));
         for forbidden in [
             "explorer.exe",
             "Shell_TrayWnd",

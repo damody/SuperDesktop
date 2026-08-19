@@ -50,6 +50,7 @@ pub enum SystemFlyoutKind {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum SystemStatusAction {
     ActivateInputProfile(String),
+    OpenLanguagePreferences,
     SetVolume(u8),
     SetMute(bool),
     RefreshWifi,

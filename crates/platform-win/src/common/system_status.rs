@@ -4,18 +4,22 @@
 
 use std::{
     ffi::c_void,
+    mem::size_of,
     thread,
     time::{Duration, Instant},
     time::{SystemTime, UNIX_EPOCH},
 };
 
 use shell_provider_protocol::{
-    AudioStatus, ClockCalendarStatus, InputProfile, InputStatus, MAX_TEXT_BYTES, MAX_WIFI_NETWORKS,
-    NetworkStatus, PowerStatus, StatusAvailability, SystemStatusSnapshot, WifiNetwork, WifiStatus,
+    AudioStatus, ClockCalendarStatus, InputProfile, InputProfileKind, InputStatus,
+    MAX_INPUT_PROFILES, MAX_TEXT_BYTES, MAX_WIFI_NETWORKS, NetworkStatus, PowerStatus,
+    StatusAvailability, SystemStatusSnapshot, WifiNetwork, WifiStatus,
 };
 use windows::Win32::{
     Foundation::{HANDLE, LPARAM, RPC_E_CHANGED_MODE, WPARAM},
-    Globalization::{GetUserDefaultLocaleName, LCIDToLocaleName},
+    Globalization::{
+        GetLocaleInfoEx, GetUserDefaultLocaleName, LCIDToLocaleName, LOCALE_SLOCALIZEDDISPLAYNAME,
+    },
     Media::Audio::{
         Endpoints::IAudioEndpointVolume, IMMDeviceEnumerator, MMDeviceEnumerator, eConsole, eRender,
     },
@@ -35,12 +39,20 @@ use windows::Win32::{
             CoUninitialize,
         },
         Power::{GetSystemPowerStatus, SYSTEM_POWER_STATUS},
+        Registry::{HKEY_LOCAL_MACHINE, RRF_RT_REG_SZ, RegGetValueW},
         Time::{DYNAMIC_TIME_ZONE_INFORMATION, GetDynamicTimeZoneInformation},
     },
     UI::{
         Input::KeyboardAndMouse::{GetKeyboardLayout, GetKeyboardLayoutList, HKL},
+        Shell::{SEE_MASK_FLAG_NO_UI, SHELLEXECUTEINFOW, ShellExecuteExW},
+        TextServices::{
+            CLSID_TF_InputProcessorProfiles, GUID_TFCAT_TIP_KEYBOARD, ITfInputProcessorProfileMgr,
+            ITfInputProcessorProfiles, TF_INPUTPROCESSORPROFILE, TF_IPP_FLAG_ENABLED,
+            TF_IPPMF_FORSESSION, TF_PROFILETYPE_INPUTPROCESSOR, TF_PROFILETYPE_KEYBOARDLAYOUT,
+        },
         WindowsAndMessaging::{
-            GetForegroundWindow, GetWindowThreadProcessId, PostMessageW, WM_INPUTLANGCHANGEREQUEST,
+            GetForegroundWindow, GetWindowThreadProcessId, PostMessageW, SW_SHOWNORMAL,
+            WM_INPUTLANGCHANGEREQUEST,
         },
     },
 };
@@ -450,7 +462,271 @@ fn connected_network_name(manager: &INetworkListManager) -> Option<String> {
         .map(|name| name.to_string())
 }
 
+#[derive(Clone, Debug)]
+struct NativeInputProfile {
+    dto: InputProfile,
+    profile_type: u32,
+    class_id: GUID,
+    profile_id: GUID,
+    hkl: HKL,
+}
+
 pub fn input_status() -> Result<InputStatus, String> {
+    let _apartment = ComApartment::enter()?;
+    tsf_input_profiles().or_else(|_| hkl_input_status())
+}
+
+fn tsf_input_profiles() -> Result<InputStatus, String> {
+    let (mut native, active_profile_id) = enumerate_tsf_input_profiles()?;
+    let active_language_id = native
+        .iter()
+        .find(|profile| profile.dto.id == active_profile_id)
+        .map(|profile| profile.dto.language_id)
+        .ok_or_else(|| "active TSF input profile was not enumerated".to_owned())?;
+    native.sort_by(|left, right| {
+        (left.dto.id != active_profile_id)
+            .cmp(&(right.dto.id != active_profile_id))
+            .then_with(|| {
+                (left.dto.language_id != active_language_id)
+                    .cmp(&(right.dto.language_id != active_language_id))
+            })
+            .then_with(|| left.dto.display_name.cmp(&right.dto.display_name))
+            .then_with(|| left.dto.input_method_name.cmp(&right.dto.input_method_name))
+            .then_with(|| left.dto.id.cmp(&right.dto.id))
+    });
+    native.dedup_by(|left, right| left.dto.id == right.dto.id);
+    native.truncate(MAX_INPUT_PROFILES);
+    let profiles = native
+        .into_iter()
+        .map(|profile| profile.dto)
+        .collect::<Vec<_>>();
+    if !profiles
+        .iter()
+        .any(|profile| profile.id == active_profile_id)
+    {
+        return Err("active TSF input profile was not enumerated".into());
+    }
+    Ok(InputStatus {
+        active_profile_id,
+        profiles,
+    })
+}
+
+fn enumerate_tsf_input_profiles() -> Result<(Vec<NativeInputProfile>, String), String> {
+    let manager: ITfInputProcessorProfileMgr =
+        unsafe { CoCreateInstance(&CLSID_TF_InputProcessorProfiles, None, CLSCTX_ALL) }
+            .map_err(|error| format!("TSF profile manager is unavailable: {error}"))?;
+    let descriptions: ITfInputProcessorProfiles =
+        unsafe { CoCreateInstance(&CLSID_TF_InputProcessorProfiles, None, CLSCTX_ALL) }
+            .map_err(|error| format!("TSF profile descriptions are unavailable: {error}"))?;
+
+    let mut language_pointer = std::ptr::null_mut::<u16>();
+    let mut language_count = 0u32;
+    unsafe { descriptions.GetLanguageList(&mut language_pointer, &mut language_count) }
+        .map_err(|error| format!("TSF language enumeration failed: {error}"))?;
+    if language_pointer.is_null() || language_count == 0 {
+        return Err("TSF returned no installed input languages".into());
+    }
+    let bounded_language_count = usize::try_from(language_count)
+        .unwrap_or(usize::MAX)
+        .min(MAX_INPUT_PROFILES);
+    let language_ids =
+        unsafe { std::slice::from_raw_parts(language_pointer, bounded_language_count).to_vec() };
+    unsafe { CoTaskMemFree(Some(language_pointer.cast())) };
+
+    let mut profiles = Vec::new();
+    for language_id in language_ids {
+        let enumerator = unsafe { manager.EnumProfiles(language_id) }
+            .map_err(|error| format!("TSF profile enumeration failed: {error}"))?;
+        loop {
+            let mut item = [TF_INPUTPROCESSORPROFILE::default()];
+            let mut fetched = 0u32;
+            unsafe { enumerator.Next(&mut item, &mut fetched) }
+                .map_err(|error| format!("TSF profile read failed: {error}"))?;
+            if fetched == 0 {
+                break;
+            }
+            if item[0].dwFlags & TF_IPP_FLAG_ENABLED == 0 {
+                continue;
+            }
+            if let Some(profile) = native_input_profile(&descriptions, &item[0]) {
+                profiles.push(profile);
+                if profiles.len() >= MAX_INPUT_PROFILES * 4 {
+                    break;
+                }
+            }
+        }
+        if profiles.len() >= MAX_INPUT_PROFILES * 4 {
+            break;
+        }
+    }
+    if profiles.is_empty() {
+        return Err("TSF returned no enabled input profiles".into());
+    }
+
+    let mut active = TF_INPUTPROCESSORPROFILE::default();
+    unsafe { manager.GetActiveProfile(&GUID_TFCAT_TIP_KEYBOARD, &mut active) }
+        .map_err(|error| format!("active TSF profile is unavailable: {error}"))?;
+    let active_profile_id = stable_input_profile_id(&active)
+        .ok_or_else(|| "active TSF profile identity is unsupported".to_owned())?;
+    Ok((profiles, active_profile_id))
+}
+
+fn native_input_profile(
+    descriptions: &ITfInputProcessorProfiles,
+    native: &TF_INPUTPROCESSORPROFILE,
+) -> Option<NativeInputProfile> {
+    let kind = match native.dwProfileType {
+        TF_PROFILETYPE_INPUTPROCESSOR => InputProfileKind::InputProcessor,
+        TF_PROFILETYPE_KEYBOARDLAYOUT => InputProfileKind::KeyboardLayout,
+        _ => return None,
+    };
+    let id = stable_input_profile_id(native)?;
+    let language_tag = locale_name(u32::from(native.langid))
+        .unwrap_or_else(|| format!("und-{:04x}", native.langid));
+    let display_name =
+        localized_language_name(&language_tag).unwrap_or_else(|| language_tag.clone());
+    let input_method_name = match kind {
+        InputProfileKind::InputProcessor => unsafe {
+            descriptions.GetLanguageProfileDescription(
+                &native.clsid,
+                native.langid,
+                &native.guidProfile,
+            )
+        }
+        .ok()
+        .map(|description| description.to_string())
+        .filter(|description| !description.trim().is_empty())
+        .unwrap_or_else(|| "Input method".into()),
+        InputProfileKind::KeyboardLayout => {
+            keyboard_layout_name(native.hkl).unwrap_or_else(|| "Keyboard".into())
+        }
+        InputProfileKind::LegacyKeyboardLayout => unreachable!(),
+    };
+    let hkl = (!native.hkl.0.is_null()).then(|| format_hkl(native.hkl));
+    Some(NativeInputProfile {
+        dto: InputProfile {
+            id,
+            language_tag,
+            display_name,
+            input_method_name,
+            kind: kind.clone(),
+            language_id: native.langid,
+            tsf_class_id: (kind == InputProfileKind::InputProcessor)
+                .then(|| format_guid(native.clsid)),
+            tsf_profile_id: (kind == InputProfileKind::InputProcessor)
+                .then(|| format_guid(native.guidProfile)),
+            hkl,
+        },
+        profile_type: native.dwProfileType,
+        class_id: native.clsid,
+        profile_id: native.guidProfile,
+        hkl: native.hkl,
+    })
+}
+
+fn stable_input_profile_id(native: &TF_INPUTPROCESSORPROFILE) -> Option<String> {
+    match native.dwProfileType {
+        TF_PROFILETYPE_INPUTPROCESSOR if native.langid != 0 => Some(format!(
+            "input:v1:tip:{:04x}:{}:{}:{}",
+            native.langid,
+            format_guid(native.clsid),
+            format_guid(native.guidProfile),
+            if native.hkl.0.is_null() {
+                "none".into()
+            } else {
+                format_hkl(native.hkl)
+            }
+        )),
+        TF_PROFILETYPE_KEYBOARDLAYOUT if native.langid != 0 && !native.hkl.0.is_null() => {
+            Some(format!(
+                "input:v1:kbd:{:04x}:{}",
+                native.langid,
+                format_hkl(native.hkl)
+            ))
+        }
+        _ => None,
+    }
+}
+
+fn format_guid(guid: GUID) -> String {
+    format!("{:032x}", guid.to_u128())
+}
+
+fn format_hkl(layout: HKL) -> String {
+    format!("{:016x}", layout.0 as usize as u64)
+}
+
+fn localized_language_name(language_tag: &str) -> Option<String> {
+    let wide = language_tag
+        .encode_utf16()
+        .chain(std::iter::once(0))
+        .collect::<Vec<_>>();
+    let mut buffer = [0u16; 128];
+    let written = unsafe {
+        GetLocaleInfoEx(
+            PCWSTR(wide.as_ptr()),
+            LOCALE_SLOCALIZEDDISPLAYNAME,
+            Some(&mut buffer),
+        )
+    };
+    (written > 1).then(|| String::from_utf16_lossy(&buffer[..written as usize - 1]))
+}
+
+fn keyboard_layout_name(layout: HKL) -> Option<String> {
+    let key = format!(
+        "SYSTEM\\CurrentControlSet\\Control\\Keyboard Layouts\\{:08X}",
+        (layout.0 as usize as u64) as u32
+    );
+    registry_string(HKEY_LOCAL_MACHINE, &key, "Layout Text")
+}
+
+fn registry_string(
+    root: windows::Win32::System::Registry::HKEY,
+    subkey: &str,
+    value_name: &str,
+) -> Option<String> {
+    let subkey = subkey
+        .encode_utf16()
+        .chain(std::iter::once(0))
+        .collect::<Vec<_>>();
+    let value_name = value_name
+        .encode_utf16()
+        .chain(std::iter::once(0))
+        .collect::<Vec<_>>();
+    let mut bytes = 0u32;
+    let status = unsafe {
+        RegGetValueW(
+            root,
+            PCWSTR(subkey.as_ptr()),
+            PCWSTR(value_name.as_ptr()),
+            RRF_RT_REG_SZ,
+            None,
+            None,
+            Some(&mut bytes),
+        )
+    };
+    if status.0 != 0 || bytes < 2 || bytes as usize > MAX_TEXT_BYTES * 2 {
+        return None;
+    }
+    let mut buffer = vec![0u16; (bytes as usize).div_ceil(2)];
+    let status = unsafe {
+        RegGetValueW(
+            root,
+            PCWSTR(subkey.as_ptr()),
+            PCWSTR(value_name.as_ptr()),
+            RRF_RT_REG_SZ,
+            None,
+            Some(buffer.as_mut_ptr().cast()),
+            Some(&mut bytes),
+        )
+    };
+    (status.0 == 0)
+        .then(|| utf16_nul_terminated(&buffer))
+        .flatten()
+}
+
+fn hkl_input_status() -> Result<InputStatus, String> {
     let mut layouts = keyboard_layouts()?;
     let active = foreground_layout()?;
     if !layouts.iter().any(|layout| layout.0 == active.0) {
@@ -559,6 +835,9 @@ pub fn request_input_profile_for_session(
         return Err("input profile request belongs to another session".into());
     }
     let before = input_status()?;
+    if before.active_profile_id == profile_id {
+        return Ok(before);
+    }
     if !before
         .profiles
         .iter()
@@ -566,7 +845,41 @@ pub fn request_input_profile_for_session(
     {
         return Err("requested input profile is not installed".into());
     }
-    let layout = parse_profile_id(profile_id)?;
+    if profile_id.starts_with("input:v1:") {
+        let _apartment = ComApartment::enter()?;
+        let (profiles, _) = enumerate_tsf_input_profiles()?;
+        let profile = profiles
+            .into_iter()
+            .find(|profile| profile.dto.id == profile_id)
+            .ok_or_else(|| "requested input profile identity is stale".to_owned())?;
+        if profile.profile_type == TF_PROFILETYPE_INPUTPROCESSOR {
+            let manager: ITfInputProcessorProfileMgr =
+                unsafe { CoCreateInstance(&CLSID_TF_InputProcessorProfiles, None, CLSCTX_ALL) }
+                    .map_err(|error| format!("TSF profile manager is unavailable: {error}"))?;
+            unsafe {
+                manager.ActivateProfile(
+                    profile.profile_type,
+                    profile.dto.language_id,
+                    &profile.class_id,
+                    &profile.profile_id,
+                    profile.hkl,
+                    TF_IPPMF_FORSESSION,
+                )
+            }
+            .map_err(|error| format!("TSF input profile request failed: {error}"))?;
+        } else if profile.profile_type == TF_PROFILETYPE_KEYBOARDLAYOUT {
+            request_keyboard_layout(profile.hkl)?;
+        } else {
+            return Err("requested TSF profile type is unsupported".into());
+        }
+    } else {
+        request_keyboard_layout(parse_profile_id(profile_id)?)?;
+    }
+
+    wait_for_input_profile_observation(profile_id, timeout, input_status)
+}
+
+fn request_keyboard_layout(layout: HKL) -> Result<(), String> {
     let hwnd = unsafe { GetForegroundWindow() };
     if hwnd.0.is_null() {
         return Err("foreground window is unavailable".into());
@@ -580,8 +893,24 @@ pub fn request_input_profile_for_session(
         )
     }
     .map_err(|error| format!("input profile request failed: {error}"))?;
+    Ok(())
+}
 
-    wait_for_input_profile_observation(profile_id, timeout, input_status)
+pub fn open_language_preferences() -> Result<(), String> {
+    const REGION_LANGUAGE_SETTINGS: &str = "ms-settings:regionlanguage";
+    let target = REGION_LANGUAGE_SETTINGS
+        .encode_utf16()
+        .chain(std::iter::once(0))
+        .collect::<Vec<_>>();
+    let mut info = SHELLEXECUTEINFOW {
+        cbSize: size_of::<SHELLEXECUTEINFOW>() as u32,
+        fMask: SEE_MASK_FLAG_NO_UI,
+        lpFile: PCWSTR(target.as_ptr()),
+        nShow: SW_SHOWNORMAL.0,
+        ..Default::default()
+    };
+    unsafe { ShellExecuteExW(&mut info) }
+        .map_err(|error| format!("Language preferences launch failed: {error}"))
 }
 
 fn wait_for_input_profile_observation(
@@ -641,6 +970,12 @@ fn profile_from_hkl(layout: HKL) -> InputProfile {
         id: profile_id(layout),
         display_name: language_tag.clone(),
         language_tag,
+        input_method_name: "Keyboard".into(),
+        kind: InputProfileKind::LegacyKeyboardLayout,
+        language_id: language_id as u16,
+        tsf_class_id: None,
+        tsf_profile_id: None,
+        hkl: Some(format_hkl(layout)),
     }
 }
 
@@ -690,6 +1025,76 @@ mod tests {
                 .iter()
                 .any(|profile| profile.id == status.active_profile_id)
         );
+        assert!(
+            status
+                .profiles
+                .iter()
+                .all(|profile| !profile.input_method_name.trim().is_empty())
+        );
+    }
+
+    #[test]
+    fn tsf_profile_ids_are_kind_specific_stable_and_exact() {
+        let processor = TF_INPUTPROCESSORPROFILE {
+            dwProfileType: TF_PROFILETYPE_INPUTPROCESSOR,
+            langid: 0x0404,
+            clsid: GUID::from_u128(0xb115690a_ea02_48d5_a231_e3578d2fdf80),
+            guidProfile: GUID::from_u128(0xb2f9c502_1742_11d4_9790_0080c882687e),
+            dwFlags: TF_IPP_FLAG_ENABLED,
+            ..Default::default()
+        };
+        assert_eq!(
+            stable_input_profile_id(&processor).as_deref(),
+            Some(
+                "input:v1:tip:0404:b115690aea0248d5a231e3578d2fdf80:b2f9c502174211d497900080c882687e:none"
+            )
+        );
+        let keyboard = TF_INPUTPROCESSORPROFILE {
+            dwProfileType: TF_PROFILETYPE_KEYBOARDLAYOUT,
+            langid: 0x0409,
+            hkl: HKL(0x0409usize as *mut c_void),
+            dwFlags: TF_IPP_FLAG_ENABLED,
+            ..Default::default()
+        };
+        assert_eq!(
+            stable_input_profile_id(&keyboard).as_deref(),
+            Some("input:v1:kbd:0409:0000000000000409")
+        );
+        let mut disabled = keyboard;
+        disabled.langid = 0;
+        assert!(stable_input_profile_id(&disabled).is_none());
+    }
+
+    #[test]
+    fn input_provider_source_is_tsf_first_bounded_and_fixed_launch_only() {
+        let source = include_str!("system_status.rs");
+        let production = source.split("#[cfg(test)]").next().unwrap_or(source);
+        for required in [
+            "ITfInputProcessorProfileMgr",
+            "ITfInputProcessorProfiles",
+            "TF_IPP_FLAG_ENABLED",
+            "MAX_INPUT_PROFILES * 4",
+            "GetLanguageProfileDescription",
+            "ActivateProfile(",
+            "TF_IPPMF_FORSESSION",
+            "ms-settings:regionlanguage",
+            "ShellExecuteExW",
+            "SEE_MASK_FLAG_NO_UI",
+        ] {
+            assert!(production.contains(required), "missing {required}");
+        }
+        for forbidden in ["explorer.exe", "Win+Space", "powershell.exe"] {
+            assert!(!production.contains(forbidden), "forbidden {forbidden}");
+        }
+        assert_eq!(production.matches("ms-settings:regionlanguage").count(), 1);
+    }
+
+    #[test]
+    fn malformed_and_stale_tsf_profile_ids_fail_before_activation() {
+        assert!(request_input_profile("input:v1:tip:malformed", Duration::ZERO).is_err());
+        assert!(
+            request_input_profile("input:v1:kbd:0409:ffffffffffffffff", Duration::ZERO).is_err()
+        );
     }
 
     #[test]
@@ -721,6 +1126,12 @@ mod tests {
                 id: "hkl:0000000000000001".into(),
                 language_tag: "und".into(),
                 display_name: "fixture".into(),
+                input_method_name: "fixture keyboard".into(),
+                kind: InputProfileKind::LegacyKeyboardLayout,
+                language_id: 1,
+                tsf_class_id: None,
+                tsf_profile_id: None,
+                hkl: Some("0000000000000001".into()),
             }],
         };
         assert!(

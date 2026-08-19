@@ -227,8 +227,8 @@ impl StatusReconciler {
 mod tests {
     use super::*;
     use shell_provider_protocol::{
-        AudioStatus, ClockCalendarStatus, InputProfile, InputStatus, NetworkStatus, PowerStatus,
-        StatusAvailability, SystemStatusTerminalKind,
+        AudioStatus, ClockCalendarStatus, InputProfile, InputProfileKind, InputStatus,
+        NetworkStatus, PowerStatus, StatusAvailability, SystemStatusTerminalKind,
     };
 
     fn snapshot(host: u64, generation: u64) -> SystemStatusSnapshot {
@@ -264,6 +264,12 @@ mod tests {
                     id: "input".into(),
                     language_tag: "en-US".into(),
                     display_name: "English".into(),
+                    input_method_name: "US keyboard".into(),
+                    kind: InputProfileKind::LegacyKeyboardLayout,
+                    language_id: 0x0409,
+                    tsf_class_id: None,
+                    tsf_profile_id: None,
+                    hkl: None,
                 }],
             }),
             overflowed: false,

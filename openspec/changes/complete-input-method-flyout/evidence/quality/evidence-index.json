@@ -1,0 +1,16 @@
+{
+  "schema": "superdesktop-quality-evidence/v1",
+  "result": "passed",
+  "checks": [
+    { "command": "cargo fmt --all -- --check", "result": "passed" },
+    { "command": "cargo check --workspace --all-targets --locked", "result": "passed" },
+    { "command": "cargo test --workspace --locked", "result": "passed" },
+    { "command": "cargo clippy --workspace --all-targets --locked -- -D warnings", "result": "passed" },
+    { "command": "openspec validate complete-input-method-flyout --strict", "result": "passed" },
+    { "command": "validate_tasks.py openspec/changes/complete-input-method-flyout/tasks.md", "result": "passed", "counts": { "L1": 6, "L2": 8, "L3": 55 } }
+  ],
+  "subchecks": {
+    "6.1.1": "passed", "6.1.2": "passed", "6.1.3": "passed",
+    "6.1.4": "passed", "6.1.5": "passed", "6.1.6": "passed", "6.1.7": "pending_commit"
+  }
+}

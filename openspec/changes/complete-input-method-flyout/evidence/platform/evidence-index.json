@@ -1,0 +1,13 @@
+{
+  "schema": "superdesktop-evidence-index/v1",
+  "result": "passed",
+  "command": "cargo test -p platform-win common::system_status::tests --lib -- --nocapture",
+  "artifact": { "path": "test.log", "sha256": "2051d4484344a5487ad3b5668e4f7b28d99b9b286e53aae878ac85d69fc16292" },
+  "reports": ["enumeration.json", "commands.json"],
+  "subchecks": {
+    "2.1.1": "passed", "2.1.2": "passed", "2.1.3": "passed", "2.1.4": "passed",
+    "2.1.5": "passed", "2.1.6": "passed", "2.1.7": "passed", "2.1.8": "passed",
+    "2.2.1": "passed", "2.2.2": "passed", "2.2.3": "passed", "2.2.4": "passed",
+    "2.2.5": "passed", "2.2.6": "passed", "2.2.7": "passed"
+  }
+}

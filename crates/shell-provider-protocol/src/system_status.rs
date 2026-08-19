@@ -167,18 +167,111 @@ impl Validate for ClockCalendarStatus {
     }
 }
 
+#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum InputProfileKind {
+    #[default]
+    LegacyKeyboardLayout,
+    KeyboardLayout,
+    InputProcessor,
+}
+
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct InputProfile {
     pub id: String,
     pub language_tag: String,
     pub display_name: String,
+    #[serde(default)]
+    pub input_method_name: String,
+    #[serde(default)]
+    pub kind: InputProfileKind,
+    #[serde(default)]
+    pub language_id: u16,
+    #[serde(default)]
+    pub tsf_class_id: Option<String>,
+    #[serde(default)]
+    pub tsf_profile_id: Option<String>,
+    #[serde(default)]
+    pub hkl: Option<String>,
 }
 
 impl Validate for InputProfile {
     fn validate(&self) -> Result<(), ValidationError> {
         validate_text(&self.id, "system_status.input.id")?;
         validate_text(&self.language_tag, "system_status.input.language_tag")?;
-        validate_text(&self.display_name, "system_status.input.display_name")
+        validate_text(&self.display_name, "system_status.input.display_name")?;
+        if !self.input_method_name.is_empty() {
+            validate_text(
+                &self.input_method_name,
+                "system_status.input.input_method_name",
+            )?;
+        }
+        match self.kind {
+            InputProfileKind::LegacyKeyboardLayout => Ok(()),
+            InputProfileKind::KeyboardLayout => {
+                if self.input_method_name.trim().is_empty() {
+                    return Err(ValidationError::Empty(
+                        "system_status.input.input_method_name",
+                    ));
+                }
+                if self.language_id == 0
+                    || self.tsf_class_id.is_some()
+                    || self.tsf_profile_id.is_some()
+                {
+                    return Err(ValidationError::InvalidValue(
+                        "system_status.input.keyboard_identity",
+                    ));
+                }
+                let hkl = self.hkl.as_deref().ok_or(ValidationError::InvalidValue(
+                    "system_status.input.keyboard_hkl",
+                ))?;
+                validate_fixed_hex(hkl, 16, "system_status.input.keyboard_hkl")?;
+                let expected = format!("input:v1:kbd:{:04x}:{hkl}", self.language_id);
+                if self.id == expected {
+                    Ok(())
+                } else {
+                    Err(ValidationError::InvalidValue(
+                        "system_status.input.keyboard_id",
+                    ))
+                }
+            }
+            InputProfileKind::InputProcessor => {
+                if self.language_id == 0 || self.input_method_name.trim().is_empty() {
+                    return Err(ValidationError::InvalidValue(
+                        "system_status.input.processor_language",
+                    ));
+                }
+                let class_id =
+                    self.tsf_class_id
+                        .as_deref()
+                        .ok_or(ValidationError::InvalidValue(
+                            "system_status.input.processor_class",
+                        ))?;
+                let profile_id =
+                    self.tsf_profile_id
+                        .as_deref()
+                        .ok_or(ValidationError::InvalidValue(
+                            "system_status.input.processor_profile",
+                        ))?;
+                validate_fixed_hex(class_id, 32, "system_status.input.processor_class")?;
+                validate_fixed_hex(profile_id, 32, "system_status.input.processor_profile")?;
+                let hkl = self.hkl.as_deref().unwrap_or("none");
+                if hkl != "none" {
+                    validate_fixed_hex(hkl, 16, "system_status.input.processor_hkl")?;
+                }
+                let expected = format!(
+                    "input:v1:tip:{:04x}:{class_id}:{profile_id}:{hkl}",
+                    self.language_id
+                );
+                if self.id == expected {
+                    Ok(())
+                } else {
+                    Err(ValidationError::InvalidValue(
+                        "system_status.input.processor_id",
+                    ))
+                }
+            }
+        }
     }
 }
 
@@ -250,6 +343,7 @@ pub enum SystemStatusCommand {
     ActivateInputProfile {
         profile_id: String,
     },
+    OpenLanguagePreferences,
     SetVolume {
         volume_percent: u8,
     },
@@ -285,7 +379,10 @@ impl Validate for SystemStatusCommand {
             Self::DisconnectWifi { interface_id } => {
                 validate_text(interface_id, "system_status.command.wifi_interface_id")
             }
-            Self::SetVolume { .. } | Self::SetMute { .. } | Self::RefreshWifi => Ok(()),
+            Self::SetVolume { .. }
+            | Self::SetMute { .. }
+            | Self::RefreshWifi
+            | Self::OpenLanguagePreferences => Ok(()),
         }
     }
 }
@@ -422,6 +519,18 @@ fn validate_text(value: &str, field: &'static str) -> Result<(), ValidationError
     }
 }
 
+fn validate_fixed_hex(
+    value: &str,
+    length: usize,
+    field: &'static str,
+) -> Result<(), ValidationError> {
+    if value.len() == length && value.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+        Ok(())
+    } else {
+        Err(ValidationError::InvalidValue(field))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -464,6 +573,12 @@ mod tests {
                     id: "profile:zh-tw".into(),
                     language_tag: "zh-TW".into(),
                     display_name: "Traditional Chinese".into(),
+                    input_method_name: String::new(),
+                    kind: InputProfileKind::LegacyKeyboardLayout,
+                    language_id: 0,
+                    tsf_class_id: None,
+                    tsf_profile_id: None,
+                    hkl: None,
                 }],
             }),
             overflowed: false,
@@ -622,6 +737,107 @@ mod tests {
         assert!(
             SystemStatusCommandTerminal {
                 correlation_id: "wifi".into(),
+                host_generation: 1,
+                observed_snapshot_generation: Some(2),
+                terminal: SystemStatusTerminalKind::Accepted,
+                message: String::new(),
+            }
+            .validate()
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn input_profiles_are_additive_exact_and_bounded() {
+        let legacy: InputProfile = serde_json::from_str(
+            r#"{"id":"hkl:0000000000000409","language_tag":"en-US","display_name":"English"}"#,
+        )
+        .unwrap();
+        assert_eq!(legacy.kind, InputProfileKind::LegacyKeyboardLayout);
+        legacy.validate().unwrap();
+
+        let keyboard = InputProfile {
+            id: "input:v1:kbd:0409:0000000000000409".into(),
+            language_tag: "en-US".into(),
+            display_name: "English (United States)".into(),
+            input_method_name: "US keyboard".into(),
+            kind: InputProfileKind::KeyboardLayout,
+            language_id: 0x0409,
+            tsf_class_id: None,
+            tsf_profile_id: None,
+            hkl: Some("0000000000000409".into()),
+        };
+        keyboard.validate().unwrap();
+
+        let processor = InputProfile {
+            id: "input:v1:tip:0404:b115690aea0248d5a231e3578d2fdf80:b2f9c502174211d497900080c882687e:none".into(),
+            language_tag: "zh-TW".into(),
+            display_name: "Chinese (Traditional, Taiwan)".into(),
+            input_method_name: "Microsoft Bopomofo".into(),
+            kind: InputProfileKind::InputProcessor,
+            language_id: 0x0404,
+            tsf_class_id: Some("b115690aea0248d5a231e3578d2fdf80".into()),
+            tsf_profile_id: Some("b2f9c502174211d497900080c882687e".into()),
+            hkl: None,
+        };
+        processor.validate().unwrap();
+        let encoded = serde_json::to_string(&processor).unwrap();
+        assert_eq!(
+            serde_json::from_str::<InputProfile>(&encoded).unwrap(),
+            processor
+        );
+
+        let mut invalid = keyboard.clone();
+        invalid.id.push('0');
+        assert!(invalid.validate().is_err());
+        let mut invalid = processor;
+        invalid.tsf_profile_id = Some("not-a-guid".into());
+        assert!(invalid.validate().is_err());
+
+        let profiles = (1..=MAX_INPUT_PROFILES)
+            .map(|index| {
+                let hkl = format!("{index:016x}");
+                InputProfile {
+                    id: format!("input:v1:kbd:0409:{hkl}"),
+                    hkl: Some(hkl),
+                    ..keyboard.clone()
+                }
+            })
+            .collect::<Vec<_>>();
+        InputStatus {
+            active_profile_id: profiles[0].id.clone(),
+            profiles: profiles.clone(),
+        }
+        .validate()
+        .unwrap();
+        let mut oversized = profiles;
+        let hkl = format!("{:016x}", MAX_INPUT_PROFILES + 1);
+        oversized.push(InputProfile {
+            id: format!("input:v1:kbd:0409:{hkl}"),
+            hkl: Some(hkl),
+            ..keyboard
+        });
+        assert!(
+            InputStatus {
+                active_profile_id: oversized[0].id.clone(),
+                profiles: oversized,
+            }
+            .validate()
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn language_preferences_is_fieldless_and_accepted_is_not_observed() {
+        let command = SystemStatusCommand::OpenLanguagePreferences;
+        command.validate().unwrap();
+        assert_eq!(
+            serde_json::to_string(&command).unwrap(),
+            r#"{"kind":"open_language_preferences"}"#
+        );
+        assert!(
+            SystemStatusCommandTerminal {
+                correlation_id: "settings".into(),
                 host_generation: 1,
                 observed_snapshot_generation: Some(2),
                 terminal: SystemStatusTerminalKind::Accepted,

@@ -1,0 +1,10 @@
+{
+  "schema": "superdesktop-evidence-index/v1",
+  "result": "passed",
+  "command": "cargo test -p superdesktop-app --lib -- --nocapture",
+  "artifact": { "path": "test.log", "sha256": "b9bfaf63d01e7baf8a9b015bfacaff64556a5677837917eec128d3fe7057fb4b" },
+  "subchecks": {
+    "3.2.1": "passed", "3.2.2": "passed", "3.2.3": "passed",
+    "3.2.4": "passed", "3.2.5": "passed"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "schema": "superdesktop-input-switch-redacted/v1",
+  "result": "passed",
+  "profile_count": 3,
+  "same_language_alternate_used": true,
+  "switched_observed": true,
+  "original_restored": true,
+  "fixed_settings_uri_admission_tested": true,
+  "settings_visibility_claimed": false,
+  "identities_redacted": true
+}

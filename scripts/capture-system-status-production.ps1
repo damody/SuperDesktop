@@ -2,7 +2,8 @@ param(
     [string]$Workspace = '',
     [Parameter(Mandatory = $true)][string]$EvidenceDirectory,
     [switch]$SkipStartFocusVerification,
-    [switch]$SuppressExplorer
+    [switch]$SuppressExplorer,
+    [switch]$VerifyLanguagePreferences
 )
 
 $ErrorActionPreference = 'Stop'
@@ -370,14 +371,17 @@ try {
     )
     $alternate = $null
     $original = $null
+    $activeSuffix = -join @([char]0xff0c, [char]0x4f7f, [char]0x7528, [char]0x4e2d)
     for ($index = 0; $index -lt $profiles.Count; $index++) {
         $profile = $profiles.Item($index)
         $name = [string]$profile.Current.Name
-        if ($name.StartsWith($originalLanguage)) { $original = $profile }
-        elseif ($null -eq $alternate) { $alternate = $profile }
+        $isPreferences = $name -eq 'Language preferences' -or $name -eq (-join @([char]0x8a9e,[char]0x8a00,[char]0x559c,[char]0x597d,[char]0x8a2d,[char]0x5b9a))
+        if ($name.EndsWith($activeSuffix) -or $name.EndsWith(', active')) { $original = $profile }
+        elseif (-not $isPreferences -and $null -eq $alternate) { $alternate = $profile }
     }
     if ($null -eq $alternate -or $null -eq $original) { throw 'Two real input profiles are required for the controlled switch.' }
     $alternateName = [string]$alternate.Current.Name
+    $originalName = ([string]$original.Current.Name).Replace($activeSuffix, '').Replace(', active', '')
     Invoke-Element $alternate
     Start-Sleep -Milliseconds 1000
     if (-not $SkipStartFocusVerification) {
@@ -392,9 +396,32 @@ try {
     Invoke-Element $input
     $inputDialog = Find-OwnedPopupElement $process.Id $process.MainWindowHandle { param($item) $item.Current.ControlType -eq [System.Windows.Automation.ControlType]::Window }
     if ($null -eq $inputDialog) { throw 'Owned input flyout did not remain available for profile restoration.' }
-    $restore = Find-Element $inputDialog { param($item) $item.Current.ControlType -eq $button -and $item.Current.Name.StartsWith($originalLanguage) }
+    $restore = Find-Element $inputDialog { param($item) $item.Current.ControlType -eq $button -and ([string]$item.Current.Name).StartsWith($originalName) }
     Invoke-Element $restore
     Start-Sleep -Milliseconds 750
+
+    $languagePreferencesInvoked = $false
+    if ($VerifyLanguagePreferences) {
+        $settingsHandlesBefore = @(Get-Process SystemSettings -ErrorAction SilentlyContinue | ForEach-Object { $_.MainWindowHandle })
+        [System.Windows.Forms.SendKeys]::SendWait('{ESC}')
+        Start-Sleep -Milliseconds 150
+        $input = Find-Element $taskbar { param($item) $item.Current.ControlType -eq $button -and $item.Current.Name.StartsWith('Input language ') }
+        Invoke-Element $input
+        $inputDialog = Find-OwnedPopupElement $process.Id $process.MainWindowHandle { param($item) $item.Current.ControlType -eq [System.Windows.Automation.ControlType]::Window }
+        if ($null -eq $inputDialog) { throw 'Owned input flyout did not open for Language preferences verification.' }
+        $preferences = Find-Element $inputDialog {
+            param($item)
+            $name = [string]$item.Current.Name
+            $item.Current.ControlType -eq [System.Windows.Automation.ControlType]::Button -and
+                ($name -eq 'Language preferences' -or $name -eq (-join @([char]0x8a9e,[char]0x8a00,[char]0x559c,[char]0x597d,[char]0x8a2d,[char]0x5b9a)))
+        }
+        Invoke-Element $preferences
+        Start-Sleep -Milliseconds 750
+        $languagePreferencesInvoked = $true
+        Get-Process SystemSettings -ErrorAction SilentlyContinue | Where-Object {
+            $_.MainWindowHandle -ne [IntPtr]::Zero -and $_.MainWindowHandle -notin $settingsHandlesBefore
+        } | ForEach-Object { $_.CloseMainWindow() | Out-Null }
+    }
 
     $process.WaitForExit()
     $explorerAbsentDuringCapture = -not [bool](Get-Process explorer -ErrorAction SilentlyContinue)
@@ -416,6 +443,8 @@ try {
         original_input_profile=$originalLanguage
         switched_input_profile=$alternateName
         original_profile_restored=$true
+        language_preferences_invoked=$languagePreferencesInvoked
+        language_preferences_visibility_claimed=$false
         start_survived_switch=if($SkipStartFocusVerification){$null}else{$true}
         start_focus_restored_trace=if($SkipStartFocusVerification){$null}else{$true}
         owned_flyouts=@('network-power','input','volume','calendar')

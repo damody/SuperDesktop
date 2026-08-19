@@ -1,0 +1,25 @@
+﻿cargo.exe :    Compiling platform-win v0.1.0 (D:\SuperExplorer\SuperDesktop\crates\platform-win)
+At line:2 char:999
++ ... EXITCODE }; & cargo test -p system-status-host --lib -- --nocapture 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (   Compiling pl...s\platform-win):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+   Compiling system-status-host v0.1.0 (D:\SuperExplorer\SuperDesktop\crates\system-status-host)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.02s
+     Running unittests src\lib.rs (target\debug\deps\system_status_host-3174d4a6af693f3b.exe)
+
+running 6 tests
+
+thread 'tests::callback_panic_shutdown_coalescing_and_overflow_are_bounded' (15676) panicked at crates\system-status-ho
+st\src\lib.rs:465:47:
+fixture callback panic
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test tests::wifi_host_source_routes_only_typed_identity_bound_commands ... ok
+test tests::language_preferences_route_is_fieldless_fixed_and_accepted_without_observation ... ok
+test tests::handshake_snapshot_health_and_stale_command_are_deterministic ... ok
+test tests::authoritative_reconciliation_timer_is_single_flight ... ok
+test tests::callback_panic_shutdown_coalescing_and_overflow_are_bounded ... ok
+test tests::wifi_refresh_returns_accepted_or_truthful_provider_failure_and_routes_network_event ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
