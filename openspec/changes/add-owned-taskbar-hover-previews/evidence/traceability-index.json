@@ -1,0 +1,30 @@
+{
+  "schema": "owned-taskbar-hover-previews-traceability/v1",
+  "result": "passed",
+  "leaf_count": 18,
+  "implementation_commit": "85ec29df7383abcb61266894e3d7f28c1ff88398",
+  "records": [
+    {"task_id":"1.1.1","status":"passed","artifact":"crates/taskbar-ui/src/advanced.rs#HoverPreviewController"},
+    {"task_id":"1.1.2","status":"passed","artifact":"crates/taskbar-ui/src/advanced.rs#HOVER_PREVIEW_*"},
+    {"task_id":"1.1.3","status":"passed","artifact":"cargo test -p taskbar-ui"},
+    {"task_id":"1.2.1","status":"passed","artifact":"crates/taskbar-ui/src/view.rs#task_hover"},
+    {"task_id":"1.2.2","status":"passed","artifact":"crates/superdesktop-app/src/surface_runtime.rs#preview_cards"},
+    {"task_id":"1.2.3","status":"passed","artifact":"crates/superdesktop-app/src/surface_runtime.rs#schedule_preview_pointer_monitor"},
+    {"task_id":"2.1.1","status":"passed","artifact":"crates/taskbar-ui/src/advanced.rs#PreviewTokens"},
+    {"task_id":"2.1.2","status":"passed","artifact":"evidence/headful/hover-preview.png"},
+    {"task_id":"2.1.3","status":"passed","artifact":"evidence/headful/headful-report.json"},
+    {"task_id":"2.2.1","status":"passed","artifact":"scripts/capture-taskbar-hover-preview.ps1"},
+    {"task_id":"2.2.2","status":"passed","artifact":"crates/superdesktop-utit/src/catalog.rs#gui-taskbar-hover-preview"},
+    {"task_id":"2.2.3","status":"passed","artifact":"evidence/shell-parity/report.json"},
+    {"task_id":"3.1.1","status":"passed","artifact":"evidence/shell-parity/report.json#workspace-tests"},
+    {"task_id":"3.1.2","status":"passed","artifact":"evidence/shell-parity/report.json#workspace-clippy,workspace-release"},
+    {"task_id":"3.1.3","status":"passed","artifact":"evidence/headful/hover-preview.png;openspec strict/detailed"},
+    {"task_id":"3.2.1","status":"passed","artifact":"implementation commit 85ec29df"},
+    {"task_id":"3.2.2","status":"passed","artifact":"evidence/package-report.json"},
+    {"task_id":"3.2.3","status":"passed","artifact":"evidence/traceability-index.json"}
+  ],
+  "unique_task_records": true,
+  "strict_openspec_validation": "passed",
+  "detailed_task_validation": "passed",
+  "change_archived": false
+}

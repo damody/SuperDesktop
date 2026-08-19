@@ -87,5 +87,5 @@
 **完成門檻：** 18/18 leaves, both installers, validated reports, and unarchived change.
 
 - [x] 3.2.1 Commit implementation and update the SuperExplorer submodule pointer.
-- [ ] 3.2.2 Build standalone and combined NSIS installers without launch and record hashes.
-- [ ] 3.2.3 Create 18 unique evidence records, revalidate, commit evidence, and keep change unarchived.
+- [x] 3.2.2 Build standalone and combined NSIS installers without launch and record hashes.
+- [x] 3.2.3 Create 18 unique evidence records, revalidate, commit evidence, and keep change unarchived.

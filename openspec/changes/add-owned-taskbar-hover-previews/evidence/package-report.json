@@ -1,0 +1,15 @@
+{
+  "schema": "owned-taskbar-hover-previews-package/v1",
+  "result": "passed",
+  "implementation_commit": "85ec29df7383abcb61266894e3d7f28c1ff88398",
+  "evidence_commit": "542229ecd258a9e56cb761384cb495b7ca571161",
+  "binaries": {
+    "superdesktop_app_sha256": "3ac1509866dfc9763865a89f3c5ce10589cf60427c91faf0a54c84ec76cf53e1",
+    "superdesktop_utit_sha256": "3278241ba4b3d3a96a5b234ad02238a108e4e0e0f6a6a4b764187330172db3d3"
+  },
+  "installers": [
+    {"path":"D:/SuperExplorer/dist/SuperDesktop-Test-Setup-1.2026.8.19-x64.exe","bytes":5871260,"sha256":"b6ca751bb966bc068d1bfd2b222add106b28a066c29fcf848ec498bc5e61c2fa","launched":false},
+    {"path":"D:/SuperExplorer/dist/SuperExplorer-Setup-1.2026.8.19-x64.exe","bytes":13650070,"sha256":"2fdb48ad5ba38aeb6cf6813f5c5e987dcf065f351f02bd7a82f30fe593540be2","launched":false}
+  ],
+  "change_archived": false
+}
