@@ -8,6 +8,7 @@ Owned Jump Lists render every ordinary command as a bullet and omit group headin
 - Replace generic bullets with typed semantic glyphs.
 - Include headings in content-sized geometry while preserving keyboard/action behavior.
 - Extend UTIT/source/screenshot gates; keep unarchived.
+- Reserve the dynamic notification-area width so one-row task buttons never overlap tray controls.
 
 ## Capabilities
 

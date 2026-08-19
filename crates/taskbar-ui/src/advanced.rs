@@ -577,6 +577,30 @@ pub enum JumpListGroup {
     Local,
 }
 
+impl JumpListGroup {
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::Recent => "Recent",
+            Self::Frequent => "Frequent",
+            Self::Tasks => "Tasks",
+            Self::Local => "Actions",
+        }
+    }
+}
+
+fn jump_list_glyph(group: JumpListGroup, command: &CommandDescriptor) -> &'static str {
+    if command.risk == shell_provider_protocol::CommandRisk::Destructive {
+        return "×";
+    }
+    match (group, command.id.0.as_str()) {
+        (JumpListGroup::Recent, _) => "↶",
+        (JumpListGroup::Frequent, _) => "☆",
+        (JumpListGroup::Tasks, _) => "›",
+        (JumpListGroup::Local, "local:taskbar-pin") => "⌖",
+        (JumpListGroup::Local, _) => "›",
+    }
+}
+
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct JumpListModel {
     groups: BTreeMap<JumpListGroup, Vec<CommandDescriptor>>,
@@ -690,9 +714,9 @@ impl Render for JumpListView {
             .into_iter()
             .enumerate()
             .scan(None, |previous, (focus_index, (group, index, command))| {
-                let separator = previous.is_some_and(|value| value != group);
+                let first_in_group = previous.is_none_or(|value| value != group);
                 *previous = Some(group);
-                Some((focus_index, group, index, command.clone(), separator))
+                Some((focus_index, group, index, command.clone(), first_in_group))
             })
             .collect::<Vec<_>>();
         let tokens = CommandSurfaceTokens::current();
@@ -734,58 +758,67 @@ impl Render for JumpListView {
                     cx.notify();
                 }),
             )
-            .children(
-                entries
-                    .into_iter()
-                    .map(|(focus_index, group, index, command, separator)| {
-                        let invoke = self.invoke.clone();
-                        let dismiss = self.dismiss.clone();
-                        let enabled = command.enabled;
-                        let label = command.label.clone();
-                        let invoked_command = command.clone();
-                        let risk = command.risk.clone();
-                        div()
-                            .id(format!("jump-list-{group:?}-{index}"))
-                            .role(gpui::Role::MenuItem)
-                            .aria_label(label.clone())
-                            .tab_index(0)
-                            .h(px(32.))
-                            .px(px(10.))
-                            .rounded(px(4.))
-                            .flex()
-                            .items_center()
-                            .gap(px(10.))
-                            .when(separator, |element| {
-                                element.border_t_1().border_color(rgb(tokens.border))
-                            })
-                            .when(self.focused == focus_index, |element| {
-                                element
-                                    .bg(rgb(tokens.selected))
-                                    .text_color(rgb(tokens.selected_foreground))
-                            })
-                            .when(!enabled, |element| element.opacity(0.5))
-                            .when(
-                                risk == shell_provider_protocol::CommandRisk::Destructive,
-                                |element| element.text_color(rgb(tokens.destructive)),
-                            )
-                            .when(enabled, |element| {
-                                element.cursor_pointer().on_click(cx.listener(
-                                    move |_, _, window, cx| {
-                                        invoke(&invoked_command);
-                                        dismiss(window, cx);
-                                    },
-                                ))
-                            })
-                            .child(div().w(px(16.)).flex_none().child(
-                                if risk == shell_provider_protocol::CommandRisk::Destructive {
-                                    "×"
-                                } else {
-                                    "•"
+            .children(entries.into_iter().map(
+                |(focus_index, group, index, command, first_in_group)| {
+                    let invoke = self.invoke.clone();
+                    let dismiss = self.dismiss.clone();
+                    let enabled = command.enabled;
+                    let label = command.label.clone();
+                    let invoked_command = command.clone();
+                    let risk = command.risk.clone();
+                    let glyph = jump_list_glyph(group, &command);
+                    let item = div()
+                        .id(format!("jump-list-{group:?}-{index}"))
+                        .role(gpui::Role::MenuItem)
+                        .aria_label(label.clone())
+                        .tab_index(0)
+                        .h(px(32.))
+                        .px(px(10.))
+                        .rounded(px(4.))
+                        .flex()
+                        .items_center()
+                        .gap(px(10.))
+                        .when(self.focused == focus_index, |element| {
+                            element
+                                .bg(rgb(tokens.selected))
+                                .text_color(rgb(tokens.selected_foreground))
+                        })
+                        .when(!enabled, |element| element.opacity(0.5))
+                        .when(
+                            risk == shell_provider_protocol::CommandRisk::Destructive,
+                            |element| element.text_color(rgb(tokens.destructive)),
+                        )
+                        .when(enabled, |element| {
+                            element.cursor_pointer().on_click(cx.listener(
+                                move |_, _, window, cx| {
+                                    invoke(&invoked_command);
+                                    dismiss(window, cx);
                                 },
                             ))
-                            .child(label)
-                    }),
-            )
+                        })
+                        .child(div().w(px(16.)).flex_none().child(glyph))
+                        .child(label);
+                    div()
+                        .flex()
+                        .flex_col()
+                        .when(first_in_group, |element| {
+                            element.child(
+                                div()
+                                    .id(format!("jump-list-heading-{group:?}"))
+                                    .role(gpui::Role::Heading)
+                                    .aria_label(group.label())
+                                    .h(px(24.))
+                                    .px(px(10.))
+                                    .flex()
+                                    .items_center()
+                                    .text_size(px(12.))
+                                    .opacity(0.68)
+                                    .child(group.label()),
+                            )
+                        })
+                        .child(item)
+                },
+            ))
     }
 }
 
@@ -923,6 +956,18 @@ mod tests {
         );
         assert_eq!(list.groups().values().map(Vec::len).sum::<usize>(), 2);
         assert!(list.invoke(JumpListGroup::Tasks, 0).is_none());
+        let source = include_str!("advanced.rs");
+        for required in [
+            "Recent",
+            "Frequent",
+            "Tasks",
+            "Actions",
+            "jump-list-heading-",
+            ".h(px(24.))",
+        ] {
+            assert!(source.contains(required), "missing {required}");
+        }
+        assert!(!source.contains(".child(\"•\")"));
         let mut overlay = TaskOverlay::default();
         overlay.set_progress(ProgressState::Error(500));
         overlay.set_attention(true);

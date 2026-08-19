@@ -76,6 +76,16 @@ try {
     if (-not $fixedFound -or $taskBounds.Count -lt 2 -or $singleCharacterLabels -ne 0 -or $rows.Count -lt 2) {
         throw "Production taskbar parity failed: fixed=$fixedFound tasks=$($taskBounds.Count) single=$singleCharacterLabels rows=$($rows.Count)"
     }
+    $rootBounds=$root.Current.BoundingRectangle
+    $rightControlLeft=[double]::PositiveInfinity
+    for($index=0;$index-lt$buttons.Count;$index++){
+        $button=$buttons.Item($index);$name=[string]$button.Current.Name;$controlBounds=$button.Current.BoundingRectangle
+        if($controlBounds.Left-lt($rootBounds.Left+$rootBounds.Width/2)){continue}
+        if($name-match '^(.+) \[(active|minimized|attention|available|unavailable|group:\d+)\]$'){continue}
+        $rightControlLeft=[Math]::Min($rightControlLeft,$controlBounds.Left)
+    }
+    $maxTaskRight=@($taskBounds|ForEach-Object{$_.left+$_.width}|Measure-Object -Maximum).Maximum
+    if([double]::IsPositiveInfinity($rightControlLeft)-or$maxTaskRight-gt$rightControlLeft){throw "One-row task overlap: maxTaskRight=$maxTaskRight reservedLeft=$rightControlLeft"}
 
     $sourceBounds=$taskButton.Current.BoundingRectangle
     [LiveTaskbarDpi]::RightClick([int]($sourceBounds.Left+$sourceBounds.Width/2),[int]($sourceBounds.Top+$sourceBounds.Height/2))
@@ -99,7 +109,8 @@ try {
     $anchorDelta=[Math]::Abs(($jumpBounds.Left+$jumpBounds.Width/2)-($sourceBounds.Left+$sourceBounds.Width/2))/$scale
     $menuItemCondition=[System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::ControlTypeProperty,[System.Windows.Automation.ControlType]::MenuItem)
     $menuItems=$jumpWindow.FindAll([System.Windows.Automation.TreeScope]::Descendants,$menuItemCondition)
-    if([Math]::Abs($widthDip-360)-gt16-or$heightDip-gt496-or$gapDip-lt2-or$gapDip-gt16-or$anchorDelta-gt24-or$menuItems.Count-lt2){throw "Jump List geometry rejected width=$widthDip height=$heightDip gap=$gapDip anchor=$anchorDelta items=$($menuItems.Count)"}
+    $headingNames=@();foreach($headingName in @('Recent','Frequent','Tasks','Actions')){if($null-ne(Find-Named $jumpWindow $headingName)){$headingNames+=$headingName}}
+    if([Math]::Abs($widthDip-360)-gt16-or$heightDip-gt496-or$gapDip-lt2-or$gapDip-gt16-or$anchorDelta-gt24-or$menuItems.Count-lt2-or$headingNames-notcontains'Actions'){throw "Jump List rejected width=$widthDip height=$heightDip gap=$gapDip anchor=$anchorDelta items=$($menuItems.Count) headings=$($headingNames-join',')"}
     $jumpBitmap=[Drawing.Bitmap]::new([int]$jumpBounds.Width,[int]$jumpBounds.Height);$jumpGraphics=[Drawing.Graphics]::FromImage($jumpBitmap);$jumpGraphics.CopyFromScreen([int]$jumpBounds.Left,[int]$jumpBounds.Top,0,0,$jumpBitmap.Size);New-Item -ItemType Directory -Force (Split-Path -Parent $JumpListScreenshotPath)|Out-Null;$jumpBitmap.Save($JumpListScreenshotPath,[Drawing.Imaging.ImageFormat]::Png);$jumpGraphics.Dispose();$jumpBitmap.Dispose()
 
     $bounds = $root.Current.BoundingRectangle
@@ -121,11 +132,14 @@ try {
         distinct_task_rows=$rows.Count
         single_character_labels=$singleCharacterLabels
         fixed_superexplorer=$fixedFound
+        maximum_task_right=$maxTaskRight
+        reserved_right_controls_left=$rightControlLeft
+        right_control_overlap=$false
         screenshot=(Split-Path -Leaf $ScreenshotPath)
         screenshot_sha256=(Get-FileHash -Algorithm SHA256 -LiteralPath $ScreenshotPath).Hash
         raw_titles_persisted=$false
         frame_visible=$true
-        jump_list=[ordered]@{width_dip=$widthDip;height_dip=$heightDip;taskbar_gap_dip=$gapDip;source_anchor_delta_dip=$anchorDelta;menu_item_count=$menuItems.Count;screenshot=(Split-Path -Leaf $JumpListScreenshotPath);screenshot_sha256=(Get-FileHash -Algorithm SHA256 $JumpListScreenshotPath).Hash}
+        jump_list=[ordered]@{width_dip=$widthDip;height_dip=$heightDip;taskbar_gap_dip=$gapDip;source_anchor_delta_dip=$anchorDelta;menu_item_count=$menuItems.Count;headings=$headingNames;screenshot=(Split-Path -Leaf $JumpListScreenshotPath);screenshot_sha256=(Get-FileHash -Algorithm SHA256 $JumpListScreenshotPath).Hash}
     }
     [IO.File]::WriteAllText($OutputPath,(($report|ConvertTo-Json -Depth 8)+"`n"),[Text.UTF8Encoding]::new($false))
     $report | ConvertTo-Json -Depth 8

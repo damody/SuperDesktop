@@ -2200,7 +2200,8 @@ fn jump_list_geometry(
     let entries = entry_count.max(1) as f32;
     let gaps = entry_count.saturating_sub(1) as f32 * 2.0;
     let separators = group_count.saturating_sub(1) as f32;
-    let preferred_height = (8.0 + entries * 32.0 + gaps + separators).min(480.0);
+    let headings = group_count.max(1) as f32 * 24.0;
+    let preferred_height = (8.0 + headings + entries * 32.0 + gaps + separators).min(480.0);
     let height = preferred_height.min((popup_bottom - work_top).max(1.0));
     let fallback_anchor = work_left + (work_right - work_left) / 2.0;
     let anchor = anchor_physical_x
@@ -5421,7 +5422,7 @@ mod live_parity_tests {
         let scale = 1.75;
         let preview = super::jump_list_geometry(&monitor, false, 2, Some(-1920), 2, 1);
         let shell = super::jump_list_geometry(&monitor, true, 2, Some(-1920), 2, 1);
-        assert_eq!((preview.width, preview.height), (360.0, 74.0));
+        assert_eq!((preview.width, preview.height), (360.0, 98.0));
         assert!((preview.left + preview.width / 2.0 - (-1920.0 / scale)).abs() < 0.01);
         assert!((shell.top - preview.top - 80.0).abs() < 0.01);
 

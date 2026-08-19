@@ -17,3 +17,10 @@ UTIT SHALL retain a screenshot and prove headings, MenuItems, dimensions, hashes
 #### Scenario: Runtime/source gate
 - **WHEN** the taskbar Jump List case runs
 - **THEN** the owned grouped presentation passes UIA and source checks
+
+### Requirement: One-row notification-area exclusion
+Task buttons SHALL reserve the complete visible notification-area width and SHALL never render beneath tray, input, network, volume, clock, or show-desktop controls.
+
+#### Scenario: Crowded one-row taskbar
+- **WHEN** long labeled tasks and notification icons exceed available width
+- **THEN** tasks clip or overflow before the reserved notification/status regions without control overlap

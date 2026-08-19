@@ -379,6 +379,8 @@ impl Render for TaskbarView {
             .cloned()
             .collect::<Vec<_>>();
         let has_overflow = !overflow_notifications.is_empty();
+        let notification_area_reserved_width =
+            visible_notifications.len() as f32 * 36.0 + if has_overflow { 32.0 } else { 0.0 };
         let theme = std::env::var("SUPERDESKTOP_THEME").ok();
         let high_contrast = theme.as_deref() == Some("high-contrast");
         let tokens = TaskbarChromeTokens::new(theme.as_deref());
@@ -738,6 +740,7 @@ impl Render for TaskbarView {
                     .flex()
                     .flex_col()
                     .flex_wrap()
+                    .pr(px(notification_area_reserved_width))
                     .when(alignment == TaskbarAlignment::Left, |element| element.content_start())
                     .when(alignment == TaskbarAlignment::Center, |element| element.content_center())
                     .items_start()
@@ -1535,6 +1538,8 @@ mod tests {
             ".focus_visible(move |style|",
             "let task_width = if labeled_button { 160.0 } else { 44.0 }",
             ".w(px(210.))",
+            "notification_area_reserved_width",
+            ".pr(px(notification_area_reserved_width))",
             "compact_input_language(value)",
             ".text_size(px(12.))",
             ".text_size(px(11.))",

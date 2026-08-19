@@ -9,6 +9,7 @@ Source design: `docs/superpowers/specs/2026-08-19-taskbar-jump-list-presentation
 - MenuItems remain 32 DIP; 16 DIP glyphs derive from typed group/command/risk.
 - Geometry adds 24 DIP per non-empty group and remains capped at 480 DIP.
 - UTIT/source gates reject generic bullet presentation and require headings/MenuItems.
+- The task strip reserves `visible icons × 36 DIP + overflow control 32 DIP` before wrapping/truncating tasks.
 - Rollback is source revert; no migration. Presentation corrections reopen artifacts; delegation or behavior changes require approval.
 
 ## Open Questions
