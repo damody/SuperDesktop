@@ -26,9 +26,13 @@ impl Default for SearchLimits {
 }
 
 pub fn discover_applications(roots: &[PathBuf], limit: usize) -> Vec<SearchResult> {
+    search_applications("", roots, limit)
+}
+
+pub fn search_applications(query: &str, roots: &[PathBuf], limit: usize) -> Vec<SearchResult> {
     let extensions = ["lnk", "url", "appref-ms", "exe"];
     bounded_paths(
-        "",
+        query,
         roots,
         SearchLimits {
             max_results: limit,
@@ -265,11 +269,44 @@ mod tests {
             )
             .is_empty()
         );
+        for index in 0..20 {
+            fs::write(root.join(format!("A{index:02}.lnk")), b"fixture").unwrap();
+        }
+        fs::write(root.join("Snow Shot.lnk"), b"fixture").unwrap();
+        let applications = search_applications("snow shot", std::slice::from_ref(&root), 1);
+        assert_eq!(applications.len(), 1);
+        assert_eq!(applications[0].title, "Snow Shot");
         assert!(is_path_within(
             &root.join("Alpha.lnk"),
             std::slice::from_ref(&root)
         ));
         assert!(!settings_catalog().is_empty());
         fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn installed_ditto_and_snow_shot_shortcuts_are_found_when_present() {
+        let roots = default_application_roots();
+        for title in ["Ditto", "Snow Shot"] {
+            let installed = roots.iter().any(|root| {
+                bounded_paths(
+                    &title.to_lowercase(),
+                    std::slice::from_ref(root),
+                    SearchLimits::default(),
+                    || true,
+                )
+                .iter()
+                .any(|path| path.extension().is_some_and(|extension| extension == "lnk"))
+            });
+            if installed {
+                let results = search_applications(title, &roots, 10);
+                assert!(
+                    results
+                        .iter()
+                        .any(|result| result.title.eq_ignore_ascii_case(title)),
+                    "installed {title} shortcut was not searchable"
+                );
+            }
+        }
     }
 }

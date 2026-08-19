@@ -454,7 +454,7 @@ impl Render for TaskbarView {
             .aria_label(self.accessible_root_name.clone())
             .tab_index(0)
             .when_some(keyboard_focus, |element, focus| element.track_focus(&focus))
-            .on_mouse_down(gpui::MouseButton::Right, move |event, _, cx| {
+            .on_mouse_up(gpui::MouseButton::Right, move |event, _, cx| {
                 if let Some(callback) = &taskbar_context_callback {
                     callback(event.position, cx);
                     cx.stop_propagation();
@@ -949,7 +949,7 @@ impl Render for TaskbarView {
                                             callback(&key_stable_id, cx);
                                         }
                                     })
-                                    .on_mouse_down(gpui::MouseButton::Right, move |_, _, cx| {
+                                    .on_mouse_up(gpui::MouseButton::Right, move |_, _, cx| {
                                         if let Some(callback) = &context_callback {
                                             callback(&context_stable_id, cx);
                                         }

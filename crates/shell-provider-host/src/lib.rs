@@ -6,8 +6,8 @@ compile_error!("shell-provider-host is supported only on Windows targets.");
 use std::collections::{BTreeMap, BTreeSet};
 
 use platform_win::common::start_search::{
-    SearchLimits, default_application_roots, default_file_roots, discover_applications,
-    search_files, settings_catalog,
+    SearchLimits, default_application_roots, default_file_roots, search_applications, search_files,
+    settings_catalog,
 };
 use shell_provider_protocol::{
     CURRENT_PROTOCOL, CommandDescriptor, CommandId, CommandRisk, Envelope, Handshake, HostHealth,
@@ -251,7 +251,7 @@ fn dispatch_search(query: &SearchQuery) -> Vec<SearchBatch> {
     for provider in &query.providers {
         let mut results = match provider {
             SearchProvider::Applications => {
-                discover_applications(&default_application_roots(), query.max_results)
+                search_applications(&query.text, &default_application_roots(), query.max_results)
             }
             SearchProvider::Settings => settings_catalog(),
             SearchProvider::Files => search_files(

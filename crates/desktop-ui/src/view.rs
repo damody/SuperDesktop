@@ -208,6 +208,7 @@ pub struct DesktopView {
     rename_buffer: String,
     context_menu: Option<MenuModel>,
     context_target: Option<String>,
+    context_anchor: Option<(f32, f32)>,
     item_positions: BTreeMap<String, (f32, f32)>,
     drag_position: Option<(f32, f32)>,
     drag_consumed: bool,
@@ -243,6 +244,7 @@ impl DesktopView {
             rename_buffer: String::new(),
             context_menu: None,
             context_target: None,
+            context_anchor: None,
             item_positions: BTreeMap::new(),
             drag_position: None,
             drag_consumed: false,
@@ -436,11 +438,23 @@ impl DesktopView {
     }
 
     fn open_context_menu(&mut self, stable_id: &str) {
+        let anchor = self
+            .item_positions
+            .get(stable_id)
+            .map(|(x, y)| (*x + 52.0, *y + 52.0));
+        self.open_context_menu_at(stable_id, anchor);
+    }
+
+    fn open_context_menu_at(&mut self, stable_id: &str, anchor: Option<(f32, f32)>) {
         self.context_menu = self
             .context_menu_action
             .as_ref()
             .and_then(|action| action(stable_id));
         self.context_target = self.context_menu.as_ref().map(|_| stable_id.to_owned());
+        self.context_anchor = self
+            .context_menu
+            .as_ref()
+            .map(|_| anchor.unwrap_or((16.0, 16.0)));
     }
 
     fn invoke_context(&mut self, index: Option<usize>) {
@@ -456,6 +470,7 @@ impl DesktopView {
         let target = self.context_target.clone();
         self.context_menu = None;
         self.context_target = None;
+        self.context_anchor = None;
         let (Some(command), Some(target)) = (command.as_deref(), target.as_deref()) else {
             return;
         };
@@ -512,7 +527,7 @@ impl DesktopView {
 }
 
 impl Render for DesktopView {
-    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let fixed_action = self.fixed_action.clone();
         let root_action = fixed_action.clone();
         let root_refresh = self.refresh_action.clone();
@@ -547,6 +562,16 @@ impl Render for DesktopView {
             rgb(0x101820)
         };
         let has_context_menu = !context_nodes.is_empty();
+        let menu_width = 220.0;
+        let menu_height = context_nodes.len() as f32 * 40.0 + 8.0;
+        let window_size = window.bounds().size;
+        let (anchor_x, anchor_y) = self.context_anchor.unwrap_or((16.0, 16.0));
+        let context_left = anchor_x
+            .max(8.0)
+            .min((window_size.width.as_f32() - menu_width - 8.0).max(8.0));
+        let context_top = anchor_y
+            .max(8.0)
+            .min((window_size.height.as_f32() - menu_height - 8.0).max(8.0));
         let transfer_status_element = transfer_status.map(|status| {
             let percent = status
                 .completed_bytes
@@ -588,8 +613,8 @@ impl Render for DesktopView {
             .id("desktop-context-menu")
             .role(gpui::Role::Menu)
             .absolute()
-            .right_4()
-            .top_4()
+            .left(px(context_left))
+            .top(px(context_top))
             .min_w(px(220.))
             .p_1()
             .rounded_md()
@@ -627,6 +652,7 @@ impl Render for DesktopView {
                 cx.listener(|this, event: &MouseDownEvent, _, cx| {
                     this.context_menu = None;
                     this.context_target = None;
+                    this.context_anchor = None;
                     this.begin_marquee(
                         (f32::from(event.position.x), f32::from(event.position.y)),
                         event.modifiers.control,
@@ -660,10 +686,13 @@ impl Render for DesktopView {
                     }
                 }),
             )
-            .on_mouse_down(
+            .on_mouse_up(
                 MouseButton::Right,
-                cx.listener(|this, _, _, cx| {
-                    this.open_context_menu("desktop-background");
+                cx.listener(|this, event: &MouseUpEvent, _, cx| {
+                    this.open_context_menu_at(
+                        "desktop-background",
+                        Some((f32::from(event.position.x), f32::from(event.position.y))),
+                    );
                     cx.stop_propagation();
                     cx.notify();
                 }),
@@ -684,6 +713,7 @@ impl Render for DesktopView {
                             menu.dismiss();
                             this.context_menu = None;
                             this.context_target = None;
+                            this.context_anchor = None;
                         }
                         _ => return,
                     }
@@ -860,14 +890,20 @@ impl Render for DesktopView {
                                     rgb(0xffffff)
                                 })
                             })
-                            .on_mouse_down(
+                            .on_mouse_up(
                                 MouseButton::Right,
-                                cx.listener(move |this, _, _, cx| {
+                                cx.listener(move |this, event: &MouseUpEvent, _, cx| {
                                     for candidate in &mut this.items {
                                         candidate.selected = candidate.stable_id == context_id;
                                         candidate.focused = candidate.selected;
                                     }
-                                    this.open_context_menu(&context_id);
+                                    this.open_context_menu_at(
+                                        &context_id,
+                                        Some((
+                                            f32::from(event.position.x),
+                                            f32::from(event.position.y),
+                                        )),
+                                    );
                                     cx.stop_propagation();
                                     cx.notify();
                                 }),
@@ -1175,5 +1211,35 @@ mod tests {
         view.open_context_menu("item");
         view.invoke_context(None);
         assert_eq!(invoked.get(), 2);
+    }
+
+    #[test]
+    fn context_menu_keeps_pointer_anchor_and_uses_mouse_up_source_contract() {
+        use shell_provider_protocol::{CommandDescriptor, CommandId, CommandRisk, MenuEnumeration};
+        let mut view = DesktopView::new(vec![node("item")], false).with_context_menu_action(
+            Rc::new(|stable_id| {
+                MenuModel::new(MenuEnumeration {
+                    generation: 1,
+                    selection_fingerprint: stable_id.into(),
+                    commands: vec![CommandDescriptor {
+                        id: CommandId("open".into()),
+                        label: "Open".into(),
+                        enabled: true,
+                        risk: CommandRisk::Normal,
+                        children: Vec::new(),
+                    }],
+                    optional_enrichment_complete: true,
+                })
+                .ok()
+            }),
+        );
+        view.open_context_menu_at("item", Some((321.0, 654.0)));
+        assert_eq!(view.context_anchor, Some((321.0, 654.0)));
+        view.invoke_context(Some(0));
+        assert_eq!(view.context_anchor, None);
+        let source = include_str!("view.rs");
+        assert!(source.contains(".on_mouse_up(\n                MouseButton::Right"));
+        assert!(source.contains(".left(px(context_left))"));
+        assert!(!source.contains(".id(\"desktop-context-menu\")\n            .role(gpui::Role::Menu)\n            .absolute()\n            .right_4()"));
     }
 }
