@@ -58,7 +58,7 @@
 
 - [x] 2.2.1 Add controlled single/group fixture and real pointer hover capture.
 - [x] 2.2.2 Add UTIT catalog/artifact/recovery contract and focused runner tests.
-- [ ] 2.2.3 Execute focused and shell-parity UTIT runs and validate every report hash.
+- [x] 2.2.3 Execute focused and shell-parity UTIT runs and validate every report hash.
 
 ## 3. Full admission and packaging
 
@@ -86,6 +86,6 @@
 **Gate／Evidence：** `G-PACKAGE`, `G-TRACE`; package/final evidence.
 **完成門檻：** 18/18 leaves, both installers, validated reports, and unarchived change.
 
-- [ ] 3.2.1 Commit implementation and update the SuperExplorer submodule pointer.
+- [x] 3.2.1 Commit implementation and update the SuperExplorer submodule pointer.
 - [ ] 3.2.2 Build standalone and combined NSIS installers without launch and record hashes.
 - [ ] 3.2.3 Create 18 unique evidence records, revalidate, commit evidence, and keep change unarchived.
