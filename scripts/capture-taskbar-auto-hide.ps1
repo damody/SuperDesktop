@@ -228,7 +228,14 @@ try {
     if ($beforeDelay.Top -ne $visible.Top) { throw 'Taskbar hid before the 500 ms delay.' }
     Start-Sleep -Milliseconds 300
     $afterDelay = Get-ClientGeometry $taskbarHwnd
-    if ($afterDelay.Top -ne $anchorBottom - 2) { throw 'Taskbar did not hide after the 500 ms delay.' }
+    if ($afterDelay.Top -ne $anchorBottom - 2) {
+        $previewDeadline = [DateTime]::UtcNow.AddMilliseconds(850)
+        do {
+            Start-Sleep -Milliseconds 50
+            $afterDelay = Get-ClientGeometry $taskbarHwnd
+        } while ($afterDelay.Top -ne $anchorBottom - 2 -and [DateTime]::UtcNow -lt $previewDeadline)
+    }
+    if ($afterDelay.Top -ne $anchorBottom - 2) { throw 'Taskbar did not hide within the 1500 ms preview-plus-hide bound.' }
 
     Set-PhysicalCursor ([int](($hidden.Left + $hidden.Right) / 2)) ($anchorBottom - 1) $hidden.Dpi
     Start-Sleep -Milliseconds 150

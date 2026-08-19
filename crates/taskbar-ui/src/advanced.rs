@@ -5,7 +5,7 @@ use std::{
 };
 
 use gpui::{
-    Context, FocusHandle, InteractiveElement, IntoElement, ParentElement, Render,
+    App, Context, FocusHandle, InteractiveElement, IntoElement, ParentElement, Render,
     StatefulInteractiveElement, Styled, Window, canvas, div, prelude::FluentBuilder as _, px, rgb,
 };
 use platform_win::common::taskbar_preview::{LiveThumbnail, ThumbnailRect};
@@ -17,6 +17,7 @@ use shell_provider_protocol::{CommandDescriptor, validate_command_tree};
 use crate::taskbar_settings::CommandSurfaceTokens;
 
 pub const HOVER_PREVIEW_DELAY_MS: u64 = 400;
+pub const HOVER_PREVIEW_CLOSE_GRACE_MS: u64 = 250;
 pub const MAX_JUMP_LIST_ITEMS: usize = 60;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -44,12 +45,14 @@ pub struct FlyoutModel {
 
 pub type FlyoutWindowAction = Rc<dyn Fn(FlyoutAction)>;
 pub type FlyoutDismissAction = Rc<dyn Fn(&mut Window, &mut gpui::App)>;
+pub type FlyoutHoverAction = Rc<dyn Fn(bool, &mut App)>;
 pub type JumpListInvokeAction = Rc<dyn Fn(&CommandDescriptor)>;
 
 pub struct TaskFlyoutView {
     pub model: FlyoutModel,
     action: FlyoutWindowAction,
     dismiss: FlyoutDismissAction,
+    hover: FlyoutHoverAction,
     focus: FocusHandle,
     destination_hwnd: isize,
     thumbnails: Rc<RefCell<BTreeMap<WindowId, LiveThumbnail>>>,
@@ -60,6 +63,7 @@ impl TaskFlyoutView {
         cards: Vec<PreviewCard>,
         action: FlyoutWindowAction,
         dismiss: FlyoutDismissAction,
+        hover: FlyoutHoverAction,
         destination_hwnd: isize,
         cx: &mut Context<Self>,
     ) -> Self {
@@ -70,6 +74,7 @@ impl TaskFlyoutView {
             model,
             action,
             dismiss,
+            hover,
             focus: cx.focus_handle(),
             destination_hwnd,
             thumbnails: Rc::new(RefCell::new(BTreeMap::new())),
@@ -82,6 +87,8 @@ impl Render for TaskFlyoutView {
         window.focus(&self.focus, cx);
         let action_for_key = self.action.clone();
         let dismiss_for_key = self.dismiss.clone();
+        let hover_action = self.hover.clone();
+        let tokens = preview_tokens();
         let scale_factor = window.scale_factor();
         div()
             .id("task-group-flyout")
@@ -90,12 +97,16 @@ impl Render for TaskFlyoutView {
             .tab_index(0)
             .track_focus(&self.focus)
             .w(px(360.))
-            .h(px(480.))
+            .h_full()
             .p_2()
+            .border_1()
+            .border_color(rgb(tokens.border))
+            .rounded_md()
             .flex()
             .gap_2()
-            .bg(rgb(0x182028))
-            .text_color(rgb(0xf4f7fa))
+            .bg(rgb(tokens.panel))
+            .text_color(rgb(tokens.text))
+            .on_hover(cx.listener(move |_, &hovered, _, cx| hover_action(hovered, cx)))
             .on_key_down(
                 cx.listener(move |this, event: &gpui::KeyDownEvent, window, cx| {
                     match event.keystroke.key.as_str() {
@@ -145,24 +156,63 @@ impl Render for TaskFlyoutView {
                     .tab_index(0)
                     .w(px(220.))
                     .h_full()
+                    .flex_none()
                     .p_2()
                     .rounded_md()
                     .flex()
                     .flex_col()
                     .gap_2()
                     .when(self.model.focused == Some(index), |element| {
-                        element.border_2().border_color(rgb(0x4aa3ff))
+                        element.border_2().border_color(rgb(tokens.focus))
                     })
+                    .hover(move |style| style.bg(rgb(tokens.hover)))
                     .on_click(cx.listener(move |_, _, window, cx| {
                         action(activate_effect.clone());
                         dismiss(window, cx);
                     }))
                     .child(
                         div()
+                            .h(px(32.))
+                            .flex_none()
+                            .flex()
+                            .items_center()
+                            .gap_1()
+                            .child(
+                                div()
+                                    .flex_1()
+                                    .min_w_0()
+                                    .overflow_hidden()
+                                    .whitespace_nowrap()
+                                    .text_ellipsis()
+                                    .child(card.title.clone()),
+                            )
+                            .child(
+                                div()
+                                    .id(format!("flyout-close-{index}"))
+                                    .role(gpui::Role::Button)
+                                    .aria_label(format!("Close {}", card.title))
+                                    .tab_index(0)
+                                    .w(px(28.))
+                                    .h(px(28.))
+                                    .flex()
+                                    .items_center()
+                                    .justify_center()
+                                    .rounded_md()
+                                    .hover(move |style| style.bg(rgb(tokens.hover)))
+                                    .on_click(cx.listener(move |_, _, window, cx| {
+                                        close_action(close_effect.clone());
+                                        close_dismiss(window, cx);
+                                        cx.stop_propagation();
+                                    }))
+                                    .child("×"),
+                            ),
+                    )
+                    .child(
+                        div()
                             .flex_1()
                             .relative()
                             .rounded_md()
-                            .bg(rgb(0x2a343e))
+                            .bg(rgb(tokens.card))
                             .flex()
                             .items_center()
                             .justify_center()
@@ -217,23 +267,96 @@ impl Render for TaskFlyoutView {
                                 element.child("Preview unavailable")
                             }),
                     )
-                    .child(card.title.clone())
-                    .child(
-                        div()
-                            .id(format!("flyout-close-{index}"))
-                            .role(gpui::Role::Button)
-                            .aria_label(format!("Close {}", card.title))
-                            .tab_index(0)
-                            .px_2()
-                            .py_1()
-                            .on_click(cx.listener(move |_, _, window, cx| {
-                                close_action(close_effect.clone());
-                                close_dismiss(window, cx);
-                                cx.stop_propagation();
-                            }))
-                            .child("Close"),
-                    )
             }))
+    }
+}
+
+#[derive(Clone, Copy)]
+struct PreviewTokens {
+    panel: u32,
+    card: u32,
+    text: u32,
+    hover: u32,
+    focus: u32,
+    border: u32,
+}
+
+fn preview_tokens() -> PreviewTokens {
+    match std::env::var("SUPERDESKTOP_THEME").as_deref() {
+        Ok("dark") => PreviewTokens {
+            panel: 0x202020,
+            card: 0x2b2b2b,
+            text: 0xffffff,
+            hover: 0x3b3b3b,
+            focus: 0x60cdff,
+            border: 0x454545,
+        },
+        Ok("high-contrast") => PreviewTokens {
+            panel: 0x000000,
+            card: 0x000000,
+            text: 0xffffff,
+            hover: 0x1f1f1f,
+            focus: 0xffff00,
+            border: 0xffffff,
+        },
+        _ => PreviewTokens {
+            panel: 0xf3f3f3,
+            card: 0xffffff,
+            text: 0x202020,
+            hover: 0xe5e5e5,
+            focus: 0x0067c0,
+            border: 0xd2d2d2,
+        },
+    }
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct HoverPreviewController {
+    task: Option<String>,
+    popup_hovered: bool,
+    generation: u64,
+}
+
+impl HoverPreviewController {
+    pub fn enter_task(&mut self, task: impl Into<String>) -> u64 {
+        let task = task.into();
+        if self.task.as_ref() != Some(&task) {
+            self.generation = self.generation.wrapping_add(1);
+            self.task = Some(task);
+        }
+        self.generation
+    }
+
+    pub fn leave_task(&mut self, task: &str) -> u64 {
+        if self.task.as_deref() == Some(task) {
+            self.generation = self.generation.wrapping_add(1);
+            self.task = None;
+        }
+        self.generation
+    }
+
+    pub fn enter_popup(&mut self) -> u64 {
+        if !self.popup_hovered {
+            self.generation = self.generation.wrapping_add(1);
+            self.popup_hovered = true;
+        }
+        self.generation
+    }
+
+    pub fn leave_popup(&mut self) -> u64 {
+        if self.popup_hovered {
+            self.generation = self.generation.wrapping_add(1);
+            self.popup_hovered = false;
+        }
+        self.generation
+    }
+
+    pub fn can_open(&self, task: &str, token: u64) -> bool {
+        self.generation == token && self.task.as_deref() == Some(task)
+    }
+
+    pub fn can_close(&self, token: u64) -> bool {
+        self.generation == token && self.task.is_none() && !self.popup_hovered
     }
 }
 
@@ -751,6 +874,38 @@ mod tests {
         assert_eq!(model.close(0), Some(FlyoutAction::Close(window("one"))));
         model.reconcile(&[window("two")].into_iter().collect());
         assert_eq!(model.cards.len(), 1);
+    }
+
+    #[test]
+    fn hover_preview_generation_rejects_stale_open_and_close_timers() {
+        assert_eq!(HOVER_PREVIEW_DELAY_MS, 400);
+        assert_eq!(HOVER_PREVIEW_CLOSE_GRACE_MS, 250);
+        let mut controller = HoverPreviewController::default();
+        let first = controller.enter_task("one");
+        assert!(controller.can_open("one", first));
+        let leave = controller.leave_task("one");
+        assert!(!controller.can_open("one", first));
+        assert!(controller.can_close(leave));
+        let second = controller.enter_task("two");
+        assert!(!controller.can_close(leave));
+        assert!(controller.can_open("two", second));
+        assert!(!controller.can_open("one", first));
+    }
+
+    #[test]
+    fn popup_crossing_invalidates_close_and_repeated_cycles_stay_exact() {
+        let mut controller = HoverPreviewController::default();
+        let open = controller.enter_task("one");
+        assert!(controller.can_open("one", open));
+        let close = controller.leave_task("one");
+        let popup = controller.enter_popup();
+        assert!(!controller.can_close(close));
+        assert!(!controller.can_close(popup));
+        let final_close = controller.leave_popup();
+        assert!(controller.can_close(final_close));
+        let repeat = controller.enter_task("one");
+        assert!(controller.can_open("one", repeat));
+        assert!(!controller.can_close(final_close));
     }
 
     #[test]

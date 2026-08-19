@@ -279,6 +279,23 @@ pub fn catalog() -> Vec<TestCase> {
             true,
             60,
         ),
+        headful_case(
+            "gui-taskbar-hover-preview",
+            "Explorer-free taskbar hover previews",
+            "capture-taskbar-hover-preview.ps1",
+            &[
+                "-Workspace",
+                "{workspace}",
+                "-EvidenceDirectory",
+                "{out}/hover-preview",
+            ],
+            &[
+                "hover-preview/headful-report.json",
+                "hover-preview/hover-preview.png",
+            ],
+            true,
+            75,
+        ),
     ];
     cases.extend([
         TestCase {

@@ -7,6 +7,7 @@ SuperDesktop can render DWM live-thumbnail cards, but only after clicking a grou
 - Add stale-safe 400 ms task-hover opening and 250 ms leave grace behavior.
 - Open owned DWM previews for both single windows and grouped applications without changing click behavior.
 - Keep the popup alive while the pointer crosses into it and close only after both task and popup are left.
+- Coordinate auto-hide so an owned preview holds visibility, then the existing hide delay resumes after preview grace closes.
 - Align preview card geometry, themes, focus, UIA, close, activation, and unavailable states with Windows.
 - Add a real-pointer Explorer-free UTIT case plus automated, traceability, release, and package evidence without archiving.
 

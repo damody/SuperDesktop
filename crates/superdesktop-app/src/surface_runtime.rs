@@ -1,5 +1,5 @@
 use std::{
-    cell::RefCell,
+    cell::{Cell, RefCell},
     collections::{BTreeMap, BTreeSet},
     path::{Path, PathBuf},
     rc::Rc,
@@ -43,7 +43,8 @@ use shell_provider_protocol::{
 };
 use taskbar_ui::{
     AccessibleTask, AutoHideEffect, AutoHideInput, AutoHideState, ClockLocale, CoreStatus,
-    FlyoutAction, JumpListModel, JumpListView, NotificationAreaModel, NotificationCenterAction,
+    FlyoutAction, HOVER_PREVIEW_CLOSE_GRACE_MS, HOVER_PREVIEW_DELAY_MS, HoverPreviewController,
+    JumpListModel, JumpListView, NotificationAreaModel, NotificationCenterAction,
     NotificationOverflowView, PreviewCard, ProgressState, ProviderState, ShowDesktopObservation,
     ShowDesktopPlan, ShowDesktopSession, ShowDesktopTarget, StartActions, StartPowerAction,
     StartSnapshot, StartView, StatusRegion, SystemFlyoutKind, SystemFlyoutPresentation,
@@ -1203,6 +1204,234 @@ fn group_window_ids(stable_id: &str) -> Vec<isize> {
         .filter_map(|value| usize::from_str_radix(value, 16).ok())
         .map(|value| value as isize)
         .collect()
+}
+
+type TaskFlyoutSlot = Rc<RefCell<Option<gpui::WindowHandle<TaskFlyoutView>>>>;
+
+fn preview_cards(stable_id: &str, previews_enabled: bool) -> Vec<PreviewCard> {
+    let group = group_window_ids(stable_id);
+    let selected = if group.is_empty() {
+        task_hwnd(stable_id).into_iter().collect::<Vec<_>>()
+    } else {
+        group
+    };
+    let Ok(windows) = snapshot_task_windows() else {
+        return Vec::new();
+    };
+    let now = unix_time_ms();
+    windows
+        .into_iter()
+        .filter(|window| selected.contains(&window.hwnd_identity))
+        .take(4)
+        .filter_map(|window| {
+            let window_id = shell_core::WindowId::new(window.window_identity).ok()?;
+            let preview_available = previews_enabled
+                && matches!(
+                    platform_win::common::taskbar_preview::admit_live_preview(
+                        window.hwnd_identity,
+                        false,
+                        now,
+                        unix_time_ms(),
+                    ),
+                    platform_win::common::taskbar_preview::PreviewAdmission::Available { .. }
+                );
+            Some(PreviewCard {
+                window_id,
+                title: if window.title.is_empty() {
+                    window.application_identity
+                } else {
+                    window.title
+                },
+                minimized: window.minimized,
+                preview_available,
+                preview_source: preview_available.then_some(window.hwnd_identity),
+            })
+        })
+        .collect()
+}
+
+fn schedule_preview_close(
+    app: &mut App,
+    controller: Rc<RefCell<HoverPreviewController>>,
+    slot: TaskFlyoutSlot,
+    active_popup: Rc<Cell<isize>>,
+    token: u64,
+) {
+    let background = app.background_executor().clone();
+    let foreground = app.foreground_executor().clone();
+    let async_app = app.to_async();
+    foreground
+        .spawn(async move {
+            background
+                .timer(Duration::from_millis(HOVER_PREVIEW_CLOSE_GRACE_MS))
+                .await;
+            async_app.update(|app| {
+                if controller.borrow().can_close(token)
+                    && let Some(handle) = slot.borrow_mut().take()
+                {
+                    let _ = handle.update(app, |_, window, _| window.remove_window());
+                    active_popup.set(0);
+                    trace_action("task-preview:hover-closed");
+                }
+            });
+        })
+        .detach();
+}
+
+fn schedule_preview_pointer_monitor(
+    app: &mut App,
+    slot: TaskFlyoutSlot,
+    active_popup: Rc<Cell<isize>>,
+    taskbar_hwnd: isize,
+    popup_hwnd: isize,
+) {
+    let background = app.background_executor().clone();
+    let foreground = app.foreground_executor().clone();
+    let async_app = app.to_async();
+    foreground
+        .spawn(async move {
+            let mut outside_since = None::<Instant>;
+            loop {
+                background.timer(Duration::from_millis(50)).await;
+                if active_popup.get() != popup_hwnd {
+                    return;
+                }
+                let cursor_root = platform_win::common::taskbar::cursor_root_window().unwrap_or(0);
+                if cursor_root == taskbar_hwnd || cursor_root == popup_hwnd {
+                    outside_since = None;
+                    continue;
+                }
+                let start = *outside_since.get_or_insert_with(Instant::now);
+                if start.elapsed() < Duration::from_millis(HOVER_PREVIEW_CLOSE_GRACE_MS) {
+                    continue;
+                }
+                async_app.update(|app| {
+                    if active_popup.get() == popup_hwnd {
+                        if let Some(handle) = slot.borrow_mut().take() {
+                            let _ = handle.update(app, |_, window, _| window.remove_window());
+                        }
+                        active_popup.set(0);
+                        trace_action("task-preview:hover-closed");
+                    }
+                });
+                return;
+            }
+        })
+        .detach();
+}
+
+fn open_task_preview(
+    stable_id: &str,
+    app: &mut App,
+    slot: &TaskFlyoutSlot,
+    monitor: &MonitorRecord,
+    previews_enabled: bool,
+    controller: Rc<RefCell<HoverPreviewController>>,
+    taskbar_hwnd: isize,
+    active_popup: Rc<Cell<isize>>,
+) {
+    let cards = preview_cards(stable_id, previews_enabled);
+    if cards.is_empty() {
+        return;
+    }
+    if let Some(existing) = slot.borrow_mut().take() {
+        let _ = existing.update(app, |_, window, _| window.remove_window());
+    }
+    let dismiss_slot = Rc::clone(slot);
+    let hover_slot = Rc::clone(slot);
+    let hover_controller = Rc::clone(&controller);
+    let popup_identity = Rc::clone(&active_popup);
+    let monitor_slot = Rc::clone(slot);
+    let opened = app.open_window(
+        task_flyout_options(monitor, cards.len()),
+        move |window, cx| {
+            window.activate_window();
+            let destination_hwnd = hwnd(window).unwrap_or_default();
+            let dismiss_slot = Rc::clone(&dismiss_slot);
+            let hover_slot = Rc::clone(&hover_slot);
+            let hover_controller = Rc::clone(&hover_controller);
+            popup_identity.set(destination_hwnd);
+            schedule_preview_pointer_monitor(
+                cx,
+                Rc::clone(&monitor_slot),
+                Rc::clone(&popup_identity),
+                taskbar_hwnd,
+                destination_hwnd,
+            );
+            let dismiss_popup_identity = Rc::clone(&popup_identity);
+            let hover_popup_identity = Rc::clone(&popup_identity);
+            cx.new(move |cx| {
+                TaskFlyoutView::new(
+                    cards,
+                    Rc::new(apply_flyout_action),
+                    Rc::new(move |window, _| {
+                        window.remove_window();
+                        *dismiss_slot.borrow_mut() = None;
+                        dismiss_popup_identity.set(0);
+                    }),
+                    Rc::new(move |hovered, app| {
+                        let token = if hovered {
+                            hover_controller.borrow_mut().enter_popup()
+                        } else {
+                            hover_controller.borrow_mut().leave_popup()
+                        };
+                        if !hovered {
+                            schedule_preview_close(
+                                app,
+                                Rc::clone(&hover_controller),
+                                Rc::clone(&hover_slot),
+                                Rc::clone(&hover_popup_identity),
+                                token,
+                            );
+                        }
+                    }),
+                    destination_hwnd,
+                    cx,
+                )
+            })
+        },
+    );
+    if let Ok(handle) = opened {
+        *slot.borrow_mut() = Some(handle);
+        trace_action("task-preview:hover-opened");
+    }
+}
+
+fn schedule_preview_open(
+    app: &mut App,
+    stable_id: String,
+    controller: Rc<RefCell<HoverPreviewController>>,
+    slot: TaskFlyoutSlot,
+    monitor: MonitorRecord,
+    previews_enabled: bool,
+    taskbar_hwnd: isize,
+    active_popup: Rc<Cell<isize>>,
+    token: u64,
+) {
+    let background = app.background_executor().clone();
+    let foreground = app.foreground_executor().clone();
+    let async_app = app.to_async();
+    foreground
+        .spawn(async move {
+            background
+                .timer(Duration::from_millis(HOVER_PREVIEW_DELAY_MS))
+                .await;
+            async_app.update(|app| {
+                if controller.borrow().can_open(&stable_id, token) {
+                    open_task_preview(
+                        &stable_id,
+                        app,
+                        &slot,
+                        &monitor,
+                        previews_enabled,
+                        Rc::clone(&controller),
+                        taskbar_hwnd,
+                        Rc::clone(&active_popup),
+                    );
+                }
+            });
+        })
+        .detach();
 }
 
 fn progress_for_task(
@@ -2634,7 +2863,15 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                 let flyout_window =
                     Rc::new(RefCell::new(None::<gpui::WindowHandle<TaskFlyoutView>>));
                 let flyout_window_for_taskbar = Rc::clone(&flyout_window);
+                let flyout_window_for_hover = Rc::clone(&flyout_window);
                 let flyout_monitor = taskbar_monitor.clone();
+                let flyout_hover_monitor = taskbar_monitor.clone();
+                let hover_preview_controller =
+                    Rc::new(RefCell::new(HoverPreviewController::default()));
+                let hover_preview_for_click = Rc::clone(&hover_preview_controller);
+                let hover_preview_for_task = Rc::clone(&hover_preview_controller);
+                let taskbar_hwnd_identity = Rc::new(Cell::new(0_isize));
+                let active_preview_hwnd = Rc::new(Cell::new(0_isize));
                 let jump_list_window =
                     Rc::new(RefCell::new(None::<gpui::WindowHandle<JumpListView>>));
                 let jump_list_window_for_taskbar = Rc::clone(&jump_list_window);
@@ -2700,6 +2937,9 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                         production_taskbar_settings.rows,
                     ),
                     move |window, cx| {
+                    if let Ok(raw) = hwnd(window) {
+                        taskbar_hwnd_identity.set(raw);
+                    }
                     if interactive {
                         window.activate_window();
                     }
@@ -2854,6 +3094,14 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                     .then(|| (task.stable_id.clone(), overlay))
                             })
                             .collect();
+                        let previews_enabled_for_click =
+                            production_taskbar_settings.previews_enabled;
+                        let previews_enabled_for_hover =
+                            production_taskbar_settings.previews_enabled;
+                        let taskbar_hwnd_for_click = Rc::clone(&taskbar_hwnd_identity);
+                        let taskbar_hwnd_for_hover = Rc::clone(&taskbar_hwnd_identity);
+                        let active_preview_for_click = Rc::clone(&active_preview_hwnd);
+                        let active_preview_for_hover = Rc::clone(&active_preview_hwnd);
                         let mut view = TaskbarView {
                         accessible_root_name: "SuperTaskbar".into(),
                         layout: TaskbarLayout::calculate(
@@ -3023,73 +3271,49 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                     activate_task(stable_id);
                                     return;
                                 }
-                                if let Some(existing) = *flyout_window_for_taskbar.borrow() {
-                                    if existing
-                                        .update(app, |_, window, _| window.remove_window())
-                                        .is_ok()
-                                    {
-                                        *flyout_window_for_taskbar.borrow_mut() = None;
-                                        return;
-                                    }
-                                    *flyout_window_for_taskbar.borrow_mut() = None;
-                                }
-                                let Ok(windows) = snapshot_task_windows() else {
-                                    return;
-                                };
-                                let now = unix_time_ms();
-                                let cards = windows
-                                    .into_iter()
-                                    .filter(|window| group_ids.contains(&window.hwnd_identity))
-                                    .filter_map(|window| {
-                                        let window_id = shell_core::WindowId::new(window.window_identity).ok()?;
-                                        let preview_available = production_taskbar_settings.previews_enabled && matches!(
-                                            platform_win::common::taskbar_preview::admit_live_preview(
-                                                window.hwnd_identity,
-                                                false,
-                                                now,
-                                                unix_time_ms(),
-                                            ),
-                                            platform_win::common::taskbar_preview::PreviewAdmission::Available { .. }
-                                        );
-                                        Some(PreviewCard {
-                                            window_id,
-                                            title: if window.title.is_empty() {
-                                                window.application_identity
-                                            } else {
-                                                window.title
-                                            },
-                                            minimized: window.minimized,
-                                            preview_available,
-                                            preview_source: preview_available.then_some(window.hwnd_identity),
-                                        })
-                                    })
-                                    .collect::<Vec<_>>();
-                                if cards.is_empty() {
-                                    return;
-                                }
-                                let dismiss_slot = Rc::clone(&flyout_window_for_taskbar);
-                                let opened = app.open_window(
-                                    task_flyout_options(&flyout_monitor, cards.len()),
-                                    move |window, cx| {
-                                        window.activate_window();
-                                        let destination_hwnd = hwnd(window).unwrap_or_default();
-                                        let dismiss_slot = Rc::clone(&dismiss_slot);
-                                        cx.new(move |cx| {
-                                            TaskFlyoutView::new(
-                                                cards,
-                                                Rc::new(apply_flyout_action),
-                                                Rc::new(move |window, _| {
-                                                    window.remove_window();
-                                                    *dismiss_slot.borrow_mut() = None;
-                                                }),
-                                                destination_hwnd,
-                                                cx,
-                                            )
-                                        })
-                                    },
+                                open_task_preview(
+                                    stable_id,
+                                    app,
+                                    &flyout_window_for_taskbar,
+                                    &flyout_monitor,
+                                    previews_enabled_for_click,
+                                    Rc::clone(&hover_preview_for_click),
+                                    taskbar_hwnd_for_click.get(),
+                                    Rc::clone(&active_preview_for_click),
                                 );
-                                if let Ok(handle) = opened {
-                                    *flyout_window_for_taskbar.borrow_mut() = Some(handle);
+                            }),
+                            task_hover: Rc::new(move |stable_id, hovered, app| {
+                                if !previews_enabled_for_hover {
+                                    return;
+                                }
+                                if hovered {
+                                    trace_action("task-preview:hover-enter");
+                                    let token = hover_preview_for_task
+                                        .borrow_mut()
+                                        .enter_task(stable_id.to_owned());
+                                    schedule_preview_open(
+                                        app,
+                                        stable_id.to_owned(),
+                                        Rc::clone(&hover_preview_for_task),
+                                        Rc::clone(&flyout_window_for_hover),
+                                        flyout_hover_monitor.clone(),
+                                        true,
+                                        taskbar_hwnd_for_hover.get(),
+                                        Rc::clone(&active_preview_for_hover),
+                                        token,
+                                    );
+                                } else {
+                                    trace_action("task-preview:hover-leave");
+                                    let token = hover_preview_for_task
+                                        .borrow_mut()
+                                        .leave_task(stable_id);
+                                    schedule_preview_close(
+                                        app,
+                                        Rc::clone(&hover_preview_for_task),
+                                        Rc::clone(&flyout_window_for_hover),
+                                        Rc::clone(&active_preview_for_hover),
+                                        token,
+                                    );
                                 }
                             }),
                             task_context: Rc::new(move |stable_id, app| {
@@ -4451,6 +4675,36 @@ mod live_parity_tests {
             assert!(
                 !implementation.contains(forbidden),
                 "forbidden show desktop delegation: {forbidden}"
+            );
+        }
+    }
+
+    #[test]
+    fn task_hover_preview_path_is_owned_delayed_and_exact_identity_resolved() {
+        let source = include_str!("surface_runtime.rs");
+        let implementation = source
+            .split("fn preview_cards")
+            .nth(1)
+            .and_then(|tail| tail.split("fn progress_for_task").next())
+            .expect("hover preview implementation source");
+        for required in [
+            "snapshot_task_windows()",
+            "admit_live_preview",
+            "HOVER_PREVIEW_DELAY_MS",
+            "HOVER_PREVIEW_CLOSE_GRACE_MS",
+            "can_open",
+            "can_close",
+            "TaskFlyoutView::new",
+        ] {
+            assert!(
+                implementation.contains(required),
+                "missing hover preview route: {required}"
+            );
+        }
+        for forbidden in ["explorer.exe", "Shell_TrayWnd", "SendInput", "keybd_event"] {
+            assert!(
+                !implementation.contains(forbidden),
+                "forbidden hover delegation: {forbidden}"
             );
         }
     }

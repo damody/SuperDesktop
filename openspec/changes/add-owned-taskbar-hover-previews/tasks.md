@@ -12,9 +12,9 @@
 **Gate／Evidence：** `G-HOVER-MODEL`; focused tests.
 **完成門檻：** Early leave, stable enter, rapid switch, popup crossing, close grace, and stale timers are exact.
 
-- [ ] 1.1.1 Add task/popup hover state, generation tokens, and open/close predicates.
-- [ ] 1.1.2 Add 400 ms open and 250 ms close constants/effect transitions.
-- [ ] 1.1.3 Test boundary timing, switches, crossing, repeated cycles, and stale tokens.
+- [x] 1.1.1 Add task/popup hover state, generation tokens, and open/close predicates.
+- [x] 1.1.2 Add 400 ms open and 250 ms close constants/effect transitions.
+- [x] 1.1.3 Test boundary timing, switches, crossing, repeated cycles, and stale tokens.
 
 ### 1.2 Wire fresh single/group preview composition
 
@@ -26,9 +26,9 @@
 **Gate／Evidence：** `G-HOVER-COMPOSITION`, `G-SHELL-NONINTERFERENCE`; app tests.
 **完成門檻：** Single/group hover resolves fresh identities; stale/empty/disabled paths are zero-effect.
 
-- [ ] 1.2.1 Add typed task-hover and popup-hover callbacks.
-- [ ] 1.2.2 Refactor shared single/group card resolution and owned popup opening.
-- [ ] 1.2.3 Add executor timers, exact popup-slot dismissal, and source no-delegation tests.
+- [x] 1.2.1 Add typed task-hover and popup-hover callbacks.
+- [x] 1.2.2 Refactor shared single/group card resolution and owned popup opening.
+- [x] 1.2.3 Add executor timers, exact popup-slot dismissal, and source no-delegation tests.
 
 ## 2. Windows presentation and automated GUI gate
 
@@ -42,9 +42,9 @@
 **Gate／Evidence：** `G-HOVER-UI`, `G-HOVER-A11Y`; UI/source tests.
 **完成門檻：** Single/group light/dark/high-contrast cards remain actionable and never use fixed empty height.
 
-- [ ] 2.1.1 Add Windows light/dark/high-contrast popup/card/close/focus tokens.
-- [ ] 2.1.2 Make geometry content-sized and preserve live DWM canvas plus truthful fallback.
-- [ ] 2.1.3 Test Button roles/names, Enter/Delete/Escape, pointer actions, geometry, and RAII source contracts.
+- [x] 2.1.1 Add Windows light/dark/high-contrast popup/card/close/focus tokens.
+- [x] 2.1.2 Make geometry content-sized and preserve live DWM canvas plus truthful fallback.
+- [x] 2.1.3 Test Button roles/names, Enter/Delete/Escape, pointer actions, geometry, and RAII source contracts.
 
 ### 2.2 Add real-pointer UTIT hover coverage
 
@@ -56,8 +56,8 @@
 **Gate／Evidence：** `G-UTIT`, `G-SHELL-NONINTERFERENCE`; `evidence/runs/*`.
 **完成門檻：** Early/delayed/crossing/close/switch/UIA/recovery observations all pass against one binary hash.
 
-- [ ] 2.2.1 Add controlled single/group fixture and real pointer hover capture.
-- [ ] 2.2.2 Add UTIT catalog/artifact/recovery contract and focused runner tests.
+- [x] 2.2.1 Add controlled single/group fixture and real pointer hover capture.
+- [x] 2.2.2 Add UTIT catalog/artifact/recovery contract and focused runner tests.
 - [ ] 2.2.3 Execute focused and shell-parity UTIT runs and validate every report hash.
 
 ## 3. Full admission and packaging
@@ -72,9 +72,9 @@
 **Gate／Evidence：** `G-HOVER-*`, `G-UTIT`, `G-TRACE`; automated evidence.
 **完成門檻：** All automated gates exit zero and current-host shell-parity remains passed.
 
-- [ ] 3.1.1 Run fmt and locked/offline focused plus workspace tests.
-- [ ] 3.1.2 Run Clippy warnings-as-errors, architecture, release, and source boundaries.
-- [ ] 3.1.3 Inspect screenshots and validate strict OpenSpec plus detailed task structure.
+- [x] 3.1.1 Run fmt and locked/offline focused plus workspace tests.
+- [x] 3.1.2 Run Clippy warnings-as-errors, architecture, release, and source boundaries.
+- [x] 3.1.3 Inspect screenshots and validate strict OpenSpec plus detailed task structure.
 
 ### 3.2 Commit, package, and finalize traceability
 

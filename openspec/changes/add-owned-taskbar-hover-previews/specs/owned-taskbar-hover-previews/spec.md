@@ -26,6 +26,10 @@ The preview SHALL remain open while either its source task or popup is hovered a
 - **WHEN** neither source task nor popup is hovered for 250 ms
 - **THEN** the popup closes and unregisters all thumbnails
 
+#### Scenario: Auto-hidden taskbar preview
+- **WHEN** an auto-hidden taskbar is revealed over a task and its owned preview opens
+- **THEN** the preview holds taskbar visibility, closes after its 250 ms grace, and the existing 500 ms hide delay completes within 1500 ms total scheduler tolerance
+
 ### Requirement: Owned Windows preview presentation
 The popup SHALL render content-sized Windows-style single/group cards with live thumbnail, title, close control, themes, keyboard, and UIA semantics.
 

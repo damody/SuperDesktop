@@ -227,6 +227,7 @@ pub struct TaskbarView {
 }
 
 pub type TaskCallback = Rc<dyn Fn(&str, &mut App)>;
+pub type TaskHoverCallback = Rc<dyn Fn(&str, bool, &mut App)>;
 pub type NotificationCallback = Rc<dyn Fn(&IconKey, NotificationEventKind)>;
 pub type NotificationOverflowCallback = Rc<dyn Fn(Vec<NotificationAccessibleNode>, &mut App)>;
 pub type SystemStatusCallback = Rc<dyn Fn(SystemStatusAction, &mut App)>;
@@ -261,6 +262,7 @@ pub struct TaskbarCallbacks {
     pub task_view: Rc<dyn Fn(&mut App)>,
     pub fixed: Rc<dyn Fn()>,
     pub task: TaskCallback,
+    pub task_hover: TaskHoverCallback,
     pub task_context: TaskCallback,
     pub taskbar_context: TaskbarBackgroundContextCallback,
     pub resize_rows: TaskbarResizeCallback,
@@ -308,6 +310,10 @@ impl Render for TaskbarView {
             .map(|value| Rc::clone(&value.task_view));
         let fixed = self.callbacks.as_ref().map(|value| Rc::clone(&value.fixed));
         let task_callback = self.callbacks.as_ref().map(|value| Rc::clone(&value.task));
+        let task_hover_callback = self
+            .callbacks
+            .as_ref()
+            .map(|value| Rc::clone(&value.task_hover));
         let task_context_callback = self
             .callbacks
             .as_ref()
@@ -804,9 +810,11 @@ impl Render for TaskbarView {
                         let callback = task_callback.clone();
                         let key_callback = callback.clone();
                         let context_callback = task_context_callback.clone();
+                        let hover_callback = task_hover_callback.clone();
                         let stable_id = task.stable_id.clone();
                         let key_stable_id = stable_id.clone();
                         let context_stable_id = stable_id.clone();
+                        let hover_stable_id = stable_id.clone();
                         let available = task.available;
                         let overlay =
                             overlays
@@ -915,6 +923,11 @@ impl Render for TaskbarView {
                                             callback(&context_stable_id, cx);
                                         }
                                         cx.stop_propagation();
+                                    })
+                                    .on_hover(move |&hovered, _, cx| {
+                                        if let Some(callback) = &hover_callback {
+                                            callback(&hover_stable_id, hovered, cx);
+                                        }
                                     })
                             })
                             .when_some(icon, |element, icon| {

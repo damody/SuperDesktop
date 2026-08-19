@@ -21,8 +21,10 @@ mod tracker;
 mod view;
 
 pub use advanced::{
-    AdvancedTaskbarPreferences, FlyoutAction, FlyoutModel, JumpListGroup, JumpListModel,
-    JumpListView, PreviewCard, ProgressState, TaskFlyoutView, TaskOverlay, TaskVisualState,
+    AdvancedTaskbarPreferences, FlyoutAction, FlyoutHoverAction, FlyoutModel,
+    HOVER_PREVIEW_CLOSE_GRACE_MS, HOVER_PREVIEW_DELAY_MS, HoverPreviewController, JumpListGroup,
+    JumpListModel, JumpListView, PreviewCard, ProgressState, TaskFlyoutView, TaskOverlay,
+    TaskVisualState,
 };
 pub use auto_hide::{
     AUTO_HIDE_DELAY_MS, AUTO_HIDE_REVEAL_PIXELS, AutoHideEffect, AutoHideEndpoints, AutoHideInput,
@@ -72,8 +74,8 @@ pub use tracker::{
     Eligibility, OwnedWindowEvent, TaskWindow, TrackerPush, WindowObservation, WindowTracker,
 };
 pub use view::{
-    NotificationOverflowCallback, SystemFlyoutCallback, TaskbarBackgroundContextCallback,
-    TaskbarCallbacks, TaskbarResizeCallback, TaskbarView,
+    NotificationOverflowCallback, SystemFlyoutCallback, TaskHoverCallback,
+    TaskbarBackgroundContextCallback, TaskbarCallbacks, TaskbarResizeCallback, TaskbarView,
 };
 
 pub const CRATE_ROLE: &str = "taskbar GPUI surface and window-management boundary";

@@ -1,0 +1,16 @@
+{
+    "schema":  "owned-taskbar-hover-preview-headful/v1",
+    "result":  "passed",
+    "app_sha256":  "b7ede055f84b64d56e02785586d37c1c810f8a464124387c5316ce293a8dccbc",
+    "early_absence":  true,
+    "delay_ms":  400,
+    "close_grace_ms":  250,
+    "group_cards":  2,
+    "single_cards":  1,
+    "popup_crossing":  true,
+    "uia_dialog":  "Window previews",
+    "explorer_absent_during_capture":  true,
+    "explorer_recovered":  true,
+    "screenshot":  "hover-preview.png",
+    "screenshot_sha256":  "08f0c062315b10b7fe7811c3f696936e8b2f0d7306f9a76e4217cd84d6e45449"
+}

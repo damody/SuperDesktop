@@ -22,14 +22,14 @@ use windows::Win32::{
     UI::{
         Shell::{DefSubclassProc, RemoveWindowSubclass, SetWindowSubclass},
         WindowsAndMessaging::{
-            EnumWindows, GW_OWNER, GWL_EXSTYLE, GWL_STYLE, GetClientRect, GetCursorPos,
-            GetForegroundWindow, GetWindow, GetWindowLongPtrW, GetWindowRect, GetWindowTextLengthW,
-            GetWindowTextW, GetWindowThreadProcessId, HTCLIENT, HWND_TOPMOST, IsIconic, IsWindow,
-            IsWindowVisible, PostMessageW, RegisterWindowMessageW, SW_MINIMIZE, SW_RESTORE,
-            SWP_FRAMECHANGED, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER, SWP_SHOWWINDOW,
-            SetForegroundWindow, SetWindowLongPtrW, SetWindowPos, ShowWindow, WM_CLOSE,
-            WM_ENTERSIZEMOVE, WM_EXITSIZEMOVE, WM_NCDESTROY, WM_NCHITTEST, WS_EX_NOACTIVATE,
-            WS_EX_TOOLWINDOW, WS_THICKFRAME,
+            EnumWindows, GA_ROOT, GW_OWNER, GWL_EXSTYLE, GWL_STYLE, GetAncestor, GetClientRect,
+            GetCursorPos, GetForegroundWindow, GetWindow, GetWindowLongPtrW, GetWindowRect,
+            GetWindowTextLengthW, GetWindowTextW, GetWindowThreadProcessId, HTCLIENT, HWND_TOPMOST,
+            IsIconic, IsWindow, IsWindowVisible, PostMessageW, RegisterWindowMessageW, SW_MINIMIZE,
+            SW_RESTORE, SWP_FRAMECHANGED, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER,
+            SWP_SHOWWINDOW, SetForegroundWindow, SetWindowLongPtrW, SetWindowPos, ShowWindow,
+            WM_CLOSE, WM_ENTERSIZEMOVE, WM_EXITSIZEMOVE, WM_NCDESTROY, WM_NCHITTEST,
+            WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_THICKFRAME, WindowFromPoint,
         },
     },
 };
@@ -355,6 +355,21 @@ pub fn snapshot_task_windows() -> Result<Vec<OwnedTaskWindow>, String> {
     .map_err(|error| error.to_string())?;
     windows.sort_by(|a, b| a.window_identity.cmp(&b.window_identity));
     Ok(windows)
+}
+
+pub fn cursor_root_window() -> Result<isize, String> {
+    let mut point = POINT::default();
+    unsafe { GetCursorPos(&mut point) }.map_err(|error| error.to_string())?;
+    let window = unsafe { WindowFromPoint(point) };
+    if window.0.is_null() {
+        return Ok(0);
+    }
+    let root = unsafe { GetAncestor(window, GA_ROOT) };
+    Ok(if root.0.is_null() {
+        window.0 as isize
+    } else {
+        root.0 as isize
+    })
 }
 
 fn snapshot_one(hwnd: HWND) -> Option<OwnedTaskWindow> {
