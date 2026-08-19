@@ -1452,7 +1452,6 @@ fn alt_tab_cards() -> Vec<PreviewCard> {
     let now = unix_time_ms();
     windows
         .into_iter()
-        .take(12)
         .filter_map(|window| {
             let window_id = shell_core::WindowId::new(window.window_identity).ok()?;
             let preview_available = matches!(
@@ -1524,24 +1523,27 @@ fn open_or_cycle_alt_tab(app: &mut App, slot: &AltTabSlot, monitor: &MonitorReco
         return;
     }
     let dismiss_slot = Rc::clone(slot);
-    let opened = app.open_window(alt_tab_options(monitor, cards.len()), move |window, cx| {
-        let destination_hwnd = hwnd(window).unwrap_or_default();
-        if promote_owned_popup_topmost(destination_hwnd).is_err() {
-            window.remove_window();
-        }
-        cx.new(|_| {
-            AltTabView::new(
-                cards,
-                delta,
-                Rc::new(apply_flyout_action),
-                Rc::new(move |window, _| {
-                    window.remove_window();
-                    *dismiss_slot.borrow_mut() = None;
-                }),
-                destination_hwnd,
-            )
-        })
-    });
+    let opened = app.open_window(
+        alt_tab_options(monitor, cards.len().min(12)),
+        move |window, cx| {
+            let destination_hwnd = hwnd(window).unwrap_or_default();
+            if promote_owned_popup_topmost(destination_hwnd).is_err() {
+                window.remove_window();
+            }
+            cx.new(|_| {
+                AltTabView::new(
+                    cards,
+                    delta,
+                    Rc::new(apply_flyout_action),
+                    Rc::new(move |window, _| {
+                        window.remove_window();
+                        *dismiss_slot.borrow_mut() = None;
+                    }),
+                    destination_hwnd,
+                )
+            })
+        },
+    );
     if let Ok(handle) = opened {
         *slot.borrow_mut() = Some(handle);
         trace_action("alt-tab:opened");

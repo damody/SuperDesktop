@@ -116,6 +116,8 @@ impl Render for AltTabView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let tokens = preview_tokens();
         let scale_factor = window.scale_factor();
+        let page_start = self.selected / 12 * 12;
+        let page_end = (page_start + 12).min(self.cards.len());
         div()
             .id("alt-tab-switcher")
             .role(gpui::Role::Dialog)
@@ -131,104 +133,107 @@ impl Render for AltTabView {
             .gap_2()
             .bg(rgb(tokens.panel))
             .text_color(rgb(tokens.text))
-            .children(self.cards.iter().enumerate().map(|(index, card)| {
-                let action = self.action.clone();
-                let dismiss = self.dismiss.clone();
-                let effect = FlyoutAction::Activate(card.window_id.clone());
-                let preview_source = card.preview_source;
-                let preview_window = card.window_id.clone();
-                let destination_hwnd = self.destination_hwnd;
-                let thumbnails = Rc::clone(&self.thumbnails);
-                div()
-                    .id(format!("alt-tab-card-{index}"))
-                    .role(gpui::Role::Button)
-                    .aria_label(card.title.clone())
-                    .w(px(220.))
-                    .h(px(170.))
-                    .flex_none()
-                    .p_2()
-                    .rounded_md()
-                    .border_2()
-                    .border_color(rgb(if self.selected == index {
-                        tokens.focus
-                    } else {
-                        tokens.border
-                    }))
-                    .flex()
-                    .flex_col()
-                    .gap_2()
-                    .hover(move |style| style.bg(rgb(tokens.hover)))
-                    .on_click(cx.listener(move |_, _, window, cx| {
-                        action(effect.clone());
-                        dismiss(window, cx);
-                    }))
-                    .child(
-                        div()
-                            .h(px(28.))
-                            .flex_none()
-                            .overflow_hidden()
-                            .whitespace_nowrap()
-                            .text_ellipsis()
-                            .child(card.title.clone()),
-                    )
-                    .child(
-                        div()
-                            .flex_1()
-                            .relative()
-                            .rounded_md()
-                            .bg(rgb(tokens.card))
-                            .when_some(preview_source, move |element, source| {
-                                element.child(
-                                    canvas(
-                                        |bounds, _, _| bounds,
-                                        move |bounds, _, _, _| {
-                                            let rect = ThumbnailRect {
-                                                left: (bounds.origin.x.as_f32() * scale_factor)
-                                                    .round()
-                                                    as i32,
-                                                top: (bounds.origin.y.as_f32() * scale_factor)
-                                                    .round()
-                                                    as i32,
-                                                right: ((bounds.origin.x + bounds.size.width)
-                                                    .as_f32()
-                                                    * scale_factor)
-                                                    .round()
-                                                    as i32,
-                                                bottom: ((bounds.origin.y + bounds.size.height)
-                                                    .as_f32()
-                                                    * scale_factor)
-                                                    .round()
-                                                    as i32,
-                                            };
-                                            let mut thumbnails = thumbnails.borrow_mut();
-                                            if !thumbnails.contains_key(&preview_window)
-                                                && let Ok(thumbnail) = LiveThumbnail::register(
-                                                    destination_hwnd,
-                                                    source,
-                                                )
-                                            {
-                                                thumbnails
-                                                    .insert(preview_window.clone(), thumbnail);
-                                            }
-                                            let failed = thumbnails
-                                                .get(&preview_window)
-                                                .is_some_and(|thumbnail| {
-                                                    thumbnail.update_destination(rect).is_err()
-                                                });
-                                            if failed {
-                                                thumbnails.remove(&preview_window);
-                                            }
-                                        },
+            .children(self.cards[page_start..page_end].iter().enumerate().map(
+                |(page_index, card)| {
+                    let index = page_start + page_index;
+                    let action = self.action.clone();
+                    let dismiss = self.dismiss.clone();
+                    let effect = FlyoutAction::Activate(card.window_id.clone());
+                    let preview_source = card.preview_source;
+                    let preview_window = card.window_id.clone();
+                    let destination_hwnd = self.destination_hwnd;
+                    let thumbnails = Rc::clone(&self.thumbnails);
+                    div()
+                        .id(format!("alt-tab-card-{index}"))
+                        .role(gpui::Role::Button)
+                        .aria_label(card.title.clone())
+                        .w(px(220.))
+                        .h(px(170.))
+                        .flex_none()
+                        .p_2()
+                        .rounded_md()
+                        .border_2()
+                        .border_color(rgb(if self.selected == index {
+                            tokens.focus
+                        } else {
+                            tokens.border
+                        }))
+                        .flex()
+                        .flex_col()
+                        .gap_2()
+                        .hover(move |style| style.bg(rgb(tokens.hover)))
+                        .on_click(cx.listener(move |_, _, window, cx| {
+                            action(effect.clone());
+                            dismiss(window, cx);
+                        }))
+                        .child(
+                            div()
+                                .h(px(28.))
+                                .flex_none()
+                                .overflow_hidden()
+                                .whitespace_nowrap()
+                                .text_ellipsis()
+                                .child(card.title.clone()),
+                        )
+                        .child(
+                            div()
+                                .flex_1()
+                                .relative()
+                                .rounded_md()
+                                .bg(rgb(tokens.card))
+                                .when_some(preview_source, move |element, source| {
+                                    element.child(
+                                        canvas(
+                                            |bounds, _, _| bounds,
+                                            move |bounds, _, _, _| {
+                                                let rect = ThumbnailRect {
+                                                    left: (bounds.origin.x.as_f32() * scale_factor)
+                                                        .round()
+                                                        as i32,
+                                                    top: (bounds.origin.y.as_f32() * scale_factor)
+                                                        .round()
+                                                        as i32,
+                                                    right: ((bounds.origin.x + bounds.size.width)
+                                                        .as_f32()
+                                                        * scale_factor)
+                                                        .round()
+                                                        as i32,
+                                                    bottom: ((bounds.origin.y + bounds.size.height)
+                                                        .as_f32()
+                                                        * scale_factor)
+                                                        .round()
+                                                        as i32,
+                                                };
+                                                let mut thumbnails = thumbnails.borrow_mut();
+                                                if !thumbnails.contains_key(&preview_window)
+                                                    && let Ok(thumbnail) = LiveThumbnail::register(
+                                                        destination_hwnd,
+                                                        source,
+                                                    )
+                                                {
+                                                    thumbnails
+                                                        .insert(preview_window.clone(), thumbnail);
+                                                }
+                                                let failed = thumbnails
+                                                    .get(&preview_window)
+                                                    .is_some_and(|thumbnail| {
+                                                        thumbnail.update_destination(rect).is_err()
+                                                    });
+                                                if failed {
+                                                    thumbnails.remove(&preview_window);
+                                                }
+                                            },
+                                        )
+                                        .absolute()
+                                        .inset_0(),
                                     )
-                                    .absolute()
-                                    .inset_0(),
-                                )
-                            })
-                            .when(!card.preview_available, |element| {
-                                element.child("Preview unavailable")
-                            }),
-                    )
-            }))
+                                })
+                                .when(!card.preview_available, |element| {
+                                    element.child("Preview unavailable")
+                                }),
+                        )
+                },
+            ))
     }
 }
 
