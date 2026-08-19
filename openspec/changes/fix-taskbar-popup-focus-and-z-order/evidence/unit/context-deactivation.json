@@ -1,0 +1,13 @@
+{
+  "schema": "superdesktop-focused-test/v1",
+  "task_id": "1.2.3",
+  "recorded_at": "2026-08-19T15:35:35+08:00",
+  "command": "cargo test -p taskbar-ui context_menu_observes_window_deactivation_without_descendant_focus_hooks --locked -- --nocapture",
+  "expected": "The context view retains a window-activation observer and does not use descendant blur/focus-out dismissal.",
+  "actual": "One selected taskbar-ui lifecycle contract test passed.",
+  "exit_status": 0,
+  "log": "context-deactivation.log",
+  "log_bytes": 1476,
+  "log_sha256": "a832638bf997ce6eb2fa412ddcb798fb647e9a22edef98c3880d4159581d7a5d",
+  "gates": ["G-CONTEXT-DEACTIVATE"]
+}

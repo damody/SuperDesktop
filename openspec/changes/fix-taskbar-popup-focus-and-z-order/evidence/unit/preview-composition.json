@@ -1,0 +1,13 @@
+{
+  "schema": "superdesktop-focused-test/v1",
+  "task_id": "2.1.4",
+  "recorded_at": "2026-08-19T15:35:35+08:00",
+  "command": "cargo test -p superdesktop-app task_preview_open_source_keeps_hover_passive_and_click_keyboard_focused --locked -- --nocapture",
+  "expected": "Preview composition promotes before publication, traces success/rejection, keeps hover passive, and retains click activation.",
+  "actual": "The selected superdesktop-app preview composition test passed for the library target; no Explorer delegation token is present.",
+  "exit_status": 0,
+  "log": "preview-composition.log",
+  "log_bytes": 1932,
+  "log_sha256": "29ad3ada91ff03b6df18859c6fd8e46339c220fbc0a46e4a534df9db412c681d",
+  "gates": ["G-PREVIEW-TOPMOST", "G-PREVIEW-FAIL-CLOSED"]
+}

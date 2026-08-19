@@ -1,0 +1,50 @@
+{
+  "schema": "taskbar-popup-final-review/v1",
+  "change": "fix-taskbar-popup-focus-and-z-order",
+  "recorded_at": "2026-08-19T15:44:36+08:00",
+  "result": "passed",
+  "validation": {
+    "openspec_strict": {
+      "exit_status": 0,
+      "log": "openspec-validation.log",
+      "log_sha256": "de8dd5b1a15667c87d61fdee3e2bd245a096034770eed7d4da74c17bdb11da4a"
+    },
+    "detailed_tasks": {
+      "exit_status": 0,
+      "log": "task-structure-validation.log",
+      "log_sha256": "cda61976d6248199c10961f92f04cc04812bd00446fe853ef4d36127a6fc10df",
+      "counts": {"phases": 3, "work_packages": 6, "atomic_tasks": 19}
+    },
+    "format": {"exit_status": 0, "log": "final-format.log", "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"},
+    "json_parse": {"exit_status": 0},
+    "diff_check": {"exit_status": 0, "log": "diff-check.log", "log_sha256": "39418f08269be0af9e491c2392dbc9c9d87a81d83541f35cc9e578b7354f1fb6"}
+  },
+  "artifact_lineage": {
+    "proposal_sha256": "702aaee2686d5bdda0fd27b6767f5712870cd879b39acb425d8d8b0e6c7af842",
+    "design_sha256": "0f2bb7106fa612df580cf0800fe2206080135df2953b7174a4886002821afc1f",
+    "spec_sha256": "36d68ab1674bafd5835b25c8a9a0a8f06f5f532b1b548e105d5ec296749992d4"
+  },
+  "scenario_traceability": [
+    {"scenario": "User activates another window", "tasks": ["1.2.1", "1.2.2", "3.2.1"], "evidence": "headful/context-deactivation/report.json"},
+    {"scenario": "User navigates within the menu", "tasks": ["1.2.2", "3.1.3"], "evidence": "quality/evidence-index.json#focused-tests"},
+    {"scenario": "Deactivation races with another dismissal route", "tasks": ["1.2.1", "3.1.3"], "evidence": "quality/evidence-index.json#focused-tests"},
+    {"scenario": "Hover preview overlaps an ordinary application window", "tasks": ["1.1.1", "2.1.1", "3.2.2"], "evidence": "headful/preview-topmost/report.json"},
+    {"scenario": "Click preview opens with keyboard interaction", "tasks": ["2.1.3", "2.1.4"], "evidence": "unit/preview-composition.json"},
+    {"scenario": "Pointer leaves taskbar and preview", "tasks": ["2.1.3", "3.1.3"], "evidence": "quality/evidence-index.json#focused-tests"},
+    {"scenario": "Current-process preview HWND is valid", "tasks": ["1.1.1", "1.1.2", "1.1.3"], "evidence": "unit/platform-popup-topmost.json"},
+    {"scenario": "Preview HWND is invalid or foreign", "tasks": ["1.1.1", "1.1.2", "2.1.2"], "evidence": "unit/platform-popup-topmost.json"},
+    {"scenario": "Explorer-free boundary remains intact", "tasks": ["2.1.3", "2.1.4"], "evidence": "unit/preview-composition.json"}
+  ],
+  "review": {
+    "placeholders": "none",
+    "contradictions": "none",
+    "failed_or_stale_evidence": "none",
+    "unresolved_p0_p1": "none",
+    "reviewer": "Primary integrator"
+  },
+  "task_links": [
+    {"task_id": "3.3.1", "subcheck": "strict-validation"},
+    {"task_id": "3.3.2", "subcheck": "scenario-traceability"},
+    {"task_id": "3.3.3", "subcheck": "current-evidence-review"}
+  ]
+}

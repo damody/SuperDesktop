@@ -1,0 +1,13 @@
+{
+    "schema":  "taskbar-context-deactivation-headful/v1",
+    "result":  "passed",
+    "popup_hwnd":  44371348,
+    "ordinary_hwnd":  11142656,
+    "foreground_after":  11142656,
+    "foreground_switched_to_ordinary":  true,
+    "popup_removed_after_deactivation":  true,
+    "screenshots":  [
+                        "before-deactivation.png",
+                        "after-deactivation.png"
+                    ]
+}

@@ -584,6 +584,37 @@ pub fn configure_and_show_popup_window(
     .map_err(|error| error.to_string())
 }
 
+/// Promotes a live popup owned by this process into the topmost band without
+/// moving, resizing, showing, or activating it.
+pub fn promote_owned_popup_topmost(hwnd_identity: isize) -> Result<(), String> {
+    if hwnd_identity == 0 {
+        return Err("popup-window-invalid".into());
+    }
+    let hwnd = HWND(hwnd_identity as *mut c_void);
+    let mut owner_pid = 0;
+    // SAFETY: the z-order mutation is admitted only for a currently live HWND
+    // owned by this process. GPUI retains ownership and destruction authority.
+    unsafe {
+        if !IsWindow(Some(hwnd)).as_bool() {
+            return Err("popup-window-retired".into());
+        }
+        GetWindowThreadProcessId(hwnd, Some(&mut owner_pid));
+        if owner_pid != GetCurrentProcessId() {
+            return Err("popup-window-foreign".into());
+        }
+        SetWindowPos(
+            hwnd,
+            Some(HWND_TOPMOST),
+            0,
+            0,
+            0,
+            0,
+            SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
+        )
+    }
+    .map_err(|error| error.to_string())
+}
+
 pub fn apply_window_action(hwnd_identity: isize, action: WindowAction) -> Result<(), String> {
     let hwnd = HWND(hwnd_identity as *mut c_void);
     // SAFETY: mutation is admitted only for a currently valid top-level HWND.
@@ -655,6 +686,54 @@ mod tests {
     #[test]
     fn retired_window_action_fails_closed() {
         assert!(apply_window_action(1, WindowAction::Activate).is_err())
+    }
+    #[test]
+    fn owned_popup_topmost_promotion_is_nonactivating_and_fails_closed() {
+        use windows::Win32::UI::WindowsAndMessaging::{
+            CreateWindowExW, DestroyWindow, WS_EX_TOPMOST, WS_POPUP,
+        };
+
+        assert!(promote_owned_popup_topmost(0).is_err());
+        assert!(promote_owned_popup_topmost(1).is_err());
+
+        let hwnd = unsafe {
+            CreateWindowExW(
+                Default::default(),
+                w!("STATIC"),
+                w!("SuperDesktop popup topmost test"),
+                WS_POPUP,
+                -20_000,
+                -20_000,
+                32,
+                32,
+                None,
+                None,
+                None,
+                None,
+            )
+        }
+        .expect("owned popup test hwnd");
+        let foreground_before = unsafe { GetForegroundWindow() };
+        promote_owned_popup_topmost(hwnd.0 as isize).expect("promote owned popup");
+        let foreground_after = unsafe { GetForegroundWindow() };
+        let extended_style = unsafe { GetWindowLongPtrW(hwnd, GWL_EXSTYLE) } as u32;
+        assert_ne!(extended_style & WS_EX_TOPMOST.0, 0);
+        assert_eq!(foreground_after, foreground_before);
+        unsafe { DestroyWindow(hwnd).expect("destroy owned popup") };
+        assert!(promote_owned_popup_topmost(hwnd.0 as isize).is_err());
+
+        let production = include_str!("taskbar.rs")
+            .split("#[cfg(test)]")
+            .next()
+            .unwrap();
+        for required in [
+            "pub fn promote_owned_popup_topmost",
+            "owner_pid != GetCurrentProcessId()",
+            "Some(HWND_TOPMOST)",
+            "SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE",
+        ] {
+            assert!(production.contains(required), "missing {required}");
+        }
     }
     #[test]
     fn retired_exact_identity_action_fails_closed() {

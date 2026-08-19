@@ -1,0 +1,43 @@
+{
+  "schema": "taskbar-popup-quality-evidence/v1",
+  "change": "fix-taskbar-popup-focus-and-z-order",
+  "recorded_at": "2026-08-19T15:36:44+08:00",
+  "result": "passed",
+  "records": {
+    "format": {
+      "command": "cargo fmt --all -- --check",
+      "expected": "All workspace Rust sources are formatted.",
+      "actual": "Formatting check exited successfully with no output.",
+      "exit_status": 0,
+      "log": "fmt.log",
+      "log_bytes": 0,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "gates": ["G-FORMAT"]
+    },
+    "check": {
+      "command": "cargo check -p platform-win -p taskbar-ui -p superdesktop-app --locked",
+      "expected": "All affected crates compile with the locked dependency graph.",
+      "actual": "platform-win, taskbar-ui, superdesktop-app and their affected local dependencies compiled successfully.",
+      "exit_status": 0,
+      "log": "check.log",
+      "log_bytes": 1714,
+      "log_sha256": "ca7cd90c4245ec566830b6b26fb400ac859149c4ea1be080be107fdbe188b1e9",
+      "gates": ["G-CHECK"]
+    },
+    "focused-tests": {
+      "command": "cargo test -p platform-win -p taskbar-ui -p superdesktop-app --locked --no-fail-fast",
+      "expected": "All affected crate tests, including popup regressions, pass.",
+      "actual": "193 unit tests passed across the three affected crates; all doc-test targets passed.",
+      "exit_status": 0,
+      "log": "focused-tests.log",
+      "log_bytes": 41324,
+      "log_sha256": "cc7e5fe92a07c94d0de6a9c0c7059774a2f843220cbd4550cd43e76f3f1f3461",
+      "gates": ["G-FOCUSED-TESTS"]
+    }
+  },
+  "task_links": [
+    {"task_id": "3.1.1", "record": "format"},
+    {"task_id": "3.1.2", "record": "check"},
+    {"task_id": "3.1.3", "record": "focused-tests"}
+  ]
+}

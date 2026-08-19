@@ -1,0 +1,41 @@
+{
+  "schema": "taskbar-popup-headful-evidence/v1",
+  "change": "fix-taskbar-popup-focus-and-z-order",
+  "recorded_at": "2026-08-19T15:43:55+08:00",
+  "host": "Windows interactive desktop",
+  "result": "passed",
+  "records": {
+    "context-deactivation": {
+      "artifact": "context-deactivation/report.json",
+      "artifact_sha256": "9bc93784b7feb42bc861bc6b367fff90607ffb4a9baef424b08736971a9b37b0",
+      "expected": "Activating another owned window removes the taskbar context popup.",
+      "actual": "Foreground switched to HWND 11142656, the context HWND 44371348 disappeared, and before/after captures show the menu replaced by the newly active settings surface.",
+      "reviewer": "Primary integrator",
+      "trace": "context-deactivation/trace.log",
+      "trace_sha256": "0b535be8287f4c3deb05a06dc387de72101563fdbf182b3dc3f008939ea7662c",
+      "screenshots": [
+        {"path": "context-deactivation/before-deactivation.png", "sha256": "c45dc221697bade5b068c9de75e514f8515318a634e75e3e9c4f0fe2786c4eb8"},
+        {"path": "context-deactivation/after-deactivation.png", "sha256": "ac899f0408b25d89a5a653ceae179495d0cf3ccc74e858fb9df17e12cc322770"}
+      ],
+      "gates": ["G-CONTEXT-HEADFUL"]
+    },
+    "preview-topmost": {
+      "artifact": "preview-topmost/report.json",
+      "artifact_sha256": "596f4cb15af692be4acc413a4676a50c66ecf3a3fdd4a4bfe4249ff78bd8a4e1",
+      "expected": "A passive preview is topmost above an overlapping ordinary window without taking foreground focus.",
+      "actual": "Preview HWND 25955510 reported WS_EX_TOPMOST while foreground remained ordinary HWND 22482996 before and after; the capture was visually reviewed.",
+      "reviewer": "Primary integrator",
+      "trace": "preview-topmost/trace.log",
+      "trace_sha256": "3ffdca10f302d800103ddeb53d39dc238d8686742a90d829fe3d939f31643fae",
+      "screenshot": "preview-topmost/overlap-topmost.png",
+      "screenshot_sha256": "0d9c2497296a90e908ef108329bbca6447eaf8ecca885be564da616269d9be5a",
+      "gates": ["G-PREVIEW-HEADFUL"]
+    }
+  },
+  "task_links": [
+    {"task_id": "3.2.1", "record": "context-deactivation"},
+    {"task_id": "3.2.2", "record": "preview-topmost"},
+    {"task_id": "3.2.3", "record": "context-deactivation", "subcheck": "hashed-index"},
+    {"task_id": "3.2.3", "record": "preview-topmost", "subcheck": "hashed-index"}
+  ]
+}

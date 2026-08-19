@@ -1,0 +1,11 @@
+{
+    "schema":  "taskbar-preview-topmost-headful/v1",
+    "result":  "passed",
+    "popup_hwnd":  25955510,
+    "ordinary_hwnd":  22482996,
+    "ws_ex_topmost":  true,
+    "foreground_before":  22482996,
+    "foreground_after":  22482996,
+    "foreground_unchanged":  true,
+    "screenshot":  "overlap-topmost.png"
+}

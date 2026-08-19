@@ -6,19 +6,32 @@ use gpui::{
     App, AppContext, Bounds, WindowBackgroundAppearance, WindowBounds, WindowKind, WindowOptions,
     point, px, size,
 };
+use platform_win::common::taskbar::promote_owned_popup_topmost;
+use raw_window_handle::{HasWindowHandle, RawWindowHandle};
 use settings_store::TaskbarSettings;
-use taskbar_ui::{TaskbarContextView, TaskbarSettingsEffect, TaskbarSettingsView};
+use shell_core::WindowId;
+use taskbar_ui::{
+    PreviewCard, TaskFlyoutView, TaskbarContextView, TaskbarSettingsEffect, TaskbarSettingsView,
+};
 
 fn options(surface: &str, _cx: &App) -> WindowOptions {
-    let width = if surface == "context" { 220.0 } else { 1100.0 };
-    let height = if surface == "context" { 114.0 } else { 860.0 };
+    let width = match surface {
+        "context" => 220.0,
+        "preview" => 380.0,
+        _ => 1100.0,
+    };
+    let height = match surface {
+        "context" => 210.0,
+        "preview" => 260.0,
+        _ => 860.0,
+    };
     WindowOptions {
         window_bounds: Some(WindowBounds::Windowed(Bounds {
             origin: point(px(0.), px(0.)),
             size: size(px(width), px(height)),
         })),
         titlebar: None,
-        focus: true,
+        focus: surface != "preview",
         show: true,
         kind: WindowKind::PopUp,
         is_movable: false,
@@ -27,6 +40,14 @@ fn options(surface: &str, _cx: &App) -> WindowOptions {
         window_background: WindowBackgroundAppearance::Opaque,
         ..Default::default()
     }
+}
+
+fn hwnd(window: &gpui::Window) -> Result<isize, &'static str> {
+    let handle = HasWindowHandle::window_handle(window).map_err(|_| "gpui-window-handle")?;
+    let RawWindowHandle::Win32(handle) = handle.as_raw() else {
+        return Err("gpui-non-win32-hwnd");
+    };
+    Ok(handle.hwnd.get())
 }
 
 fn main() -> ExitCode {
@@ -51,7 +72,42 @@ fn main() -> ExitCode {
             let background = cx.background_executor().clone();
             let foreground = cx.foreground_executor().clone();
             let app = cx.to_async();
-            if surface == "context" {
+            if surface == "preview" {
+                let Ok(handle) = cx.open_window(options(&surface, cx), move |window, cx| {
+                    let destination_hwnd = hwnd(window).expect("preview hwnd");
+                    promote_owned_popup_topmost(destination_hwnd).expect("topmost preview");
+                    cx.new(move |cx| {
+                        TaskFlyoutView::new(
+                            vec![PreviewCard {
+                                window_id: WindowId::new("headful-preview").unwrap(),
+                                title: "SuperDesktop hover preview".into(),
+                                minimized: false,
+                                preview_available: false,
+                                preview_source: None,
+                            }],
+                            Rc::new(|_| {}),
+                            Rc::new(|window, _| window.remove_window()),
+                            Rc::new(|_, _| {}),
+                            destination_hwnd,
+                            false,
+                            cx,
+                        )
+                    })
+                }) else {
+                    cx.quit();
+                    return;
+                };
+                foreground
+                    .spawn(async move {
+                        background.timer(Duration::from_millis(hold_ms)).await;
+                        app.update(|app| {
+                            let _ = handle.update(app, |_, window, _| window.remove_window());
+                            *terminal_for_app.borrow_mut() = true;
+                            app.quit();
+                        });
+                    })
+                    .detach();
+            } else if surface == "context" {
                 let Ok(handle) = cx.open_window(options(&surface, cx), move |window, cx| {
                     window.activate_window();
                     cx.new(move |cx| {

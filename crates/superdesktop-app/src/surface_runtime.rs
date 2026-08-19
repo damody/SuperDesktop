@@ -27,7 +27,8 @@ use platform_win::common::{
     monitor_dpi_start::{MonitorRecord, enable_per_monitor_v2, snapshot_real_monitors},
     taskbar::{
         configure_and_show_taskbar_window, move_owned_taskbar_client, owned_taskbar_resize_active,
-        physical_cursor_position, post_owned_taskbar_reveal, snapshot_task_windows,
+        physical_cursor_position, post_owned_taskbar_reveal, promote_owned_popup_topmost,
+        snapshot_task_windows,
     },
 };
 use raw_window_handle::{HasWindowHandle, RawWindowHandle};
@@ -1368,6 +1369,8 @@ fn open_task_preview(
     let hover_controller = Rc::clone(&controller);
     let popup_identity = Rc::clone(&active_popup);
     let monitor_slot = Rc::clone(slot);
+    let topmost_established = Rc::new(Cell::new(false));
+    let topmost_for_open = Rc::clone(&topmost_established);
     let anchor_physical_x = physical_cursor_position().ok().map(|(x, _)| x);
     let opened = app.open_window(
         task_flyout_options(monitor, cards.len(), anchor_physical_x, source),
@@ -1376,17 +1379,28 @@ fn open_task_preview(
                 window.activate_window();
             }
             let destination_hwnd = hwnd(window).unwrap_or_default();
+            if promote_owned_popup_topmost(destination_hwnd).is_err() {
+                trace_action("task-preview:topmost-rejected");
+                window.remove_window();
+            } else {
+                topmost_for_open.set(true);
+                trace_action("task-preview:topmost-established");
+            }
             let dismiss_slot = Rc::clone(&dismiss_slot);
             let hover_slot = Rc::clone(&hover_slot);
             let hover_controller = Rc::clone(&hover_controller);
-            popup_identity.set(destination_hwnd);
-            schedule_preview_pointer_monitor(
-                cx,
-                Rc::clone(&monitor_slot),
-                Rc::clone(&popup_identity),
-                taskbar_hwnd,
-                destination_hwnd,
-            );
+            if topmost_for_open.get() {
+                popup_identity.set(destination_hwnd);
+                schedule_preview_pointer_monitor(
+                    cx,
+                    Rc::clone(&monitor_slot),
+                    Rc::clone(&popup_identity),
+                    taskbar_hwnd,
+                    destination_hwnd,
+                );
+            } else {
+                popup_identity.set(0);
+            }
             let dismiss_popup_identity = Rc::clone(&popup_identity);
             let hover_popup_identity = Rc::clone(&popup_identity);
             cx.new(move |cx| {
@@ -1422,8 +1436,12 @@ fn open_task_preview(
         },
     );
     if let Ok(handle) = opened {
-        *slot.borrow_mut() = Some(handle);
-        trace_action("task-preview:hover-opened");
+        if topmost_established.get() {
+            *slot.borrow_mut() = Some(handle);
+            trace_action("task-preview:hover-opened");
+        } else {
+            let _ = handle.update(app, |_, window, _| window.remove_window());
+        }
     }
 }
 
@@ -5879,6 +5897,10 @@ mod live_parity_tests {
         assert!(production.contains("PreviewOpenSource::Click"));
         assert!(production.contains("if source.activates_window()"));
         assert!(production.contains("source.assigns_keyboard_focus()"));
+        assert!(production.contains("promote_owned_popup_topmost(destination_hwnd)"));
+        assert!(production.contains("task-preview:topmost-established"));
+        assert!(production.contains("task-preview:topmost-rejected"));
+        assert!(production.contains("if topmost_established.get()"));
         assert!(!production.contains("Shell_TrayWnd"));
         assert!(!production.contains("explorer.exe"));
 

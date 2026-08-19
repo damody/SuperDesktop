@@ -2,7 +2,8 @@ use std::{collections::BTreeSet, rc::Rc};
 
 use gpui::{
     Context, FocusHandle, InteractiveElement, IntoElement, ParentElement, Render,
-    StatefulInteractiveElement, Styled, Toggled, Window, div, prelude::FluentBuilder as _, px, rgb,
+    StatefulInteractiveElement, Styled, Subscription, Toggled, Window, div,
+    prelude::FluentBuilder as _, px, rgb,
 };
 use settings_store::{TaskbarAlignment, TaskbarSearchMode, TaskbarSettings};
 
@@ -237,6 +238,7 @@ pub struct TaskbarContextView {
     action: TaskbarContextAction,
     dismiss: TaskbarSurfaceDismiss,
     focus: FocusHandle,
+    _activation_subscription: Subscription,
 }
 
 impl TaskbarContextView {
@@ -246,9 +248,15 @@ impl TaskbarContextView {
         show_task_view: bool,
         action: TaskbarContextAction,
         dismiss: TaskbarSurfaceDismiss,
-        _window: &mut Window,
+        window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
+        let activation_subscription = cx.observe_window_activation(window, |this, window, cx| {
+            if !window.is_window_active() {
+                let dismiss = this.dismiss.clone();
+                dismiss(window, cx);
+            }
+        });
         Self {
             model: TaskbarContextModel::default(),
             locked,
@@ -257,6 +265,7 @@ impl TaskbarContextView {
             action,
             dismiss,
             focus: cx.focus_handle(),
+            _activation_subscription: activation_subscription,
         }
     }
 }
@@ -1050,6 +1059,23 @@ mod tests {
             TaskbarContextModel::COMMANDS[4],
             TaskbarContextCommand::ToggleLockTaskbar
         );
+    }
+
+    #[test]
+    fn context_menu_observes_window_deactivation_without_descendant_focus_hooks() {
+        let source = include_str!("taskbar_settings.rs");
+        let production = source.split("#[cfg(test)]").next().unwrap_or(source);
+        for required in [
+            "_activation_subscription: Subscription",
+            "cx.observe_window_activation(window",
+            "if !window.is_window_active()",
+            "let dismiss = this.dismiss.clone()",
+            "dismiss(window, cx)",
+        ] {
+            assert!(production.contains(required), "missing {required}");
+        }
+        assert!(!production.contains("cx.on_focus_out"));
+        assert!(!production.contains("cx.on_blur"));
     }
 
     #[test]

@@ -1,0 +1,3 @@
+preview-popup-observed hwnd=25955510
+topmost-style ws_ex_topmost=True
+foreground-preserved hwnd=22482996 result=passed
