@@ -44,13 +44,13 @@ use shell_provider_protocol::{
 use taskbar_ui::{
     AccessibleTask, AutoHideEffect, AutoHideInput, AutoHideState, ClockLocale, CoreStatus,
     FlyoutAction, JumpListModel, JumpListView, NotificationAreaModel, NotificationCenterAction,
-    NotificationOverflowView, PreviewCard, ProgressState, ProviderState, StartActions,
-    StartPowerAction, StartSnapshot, StartView, StatusRegion, SystemFlyoutKind,
-    SystemFlyoutPresentation, SystemFlyoutTheme, SystemFlyoutView, SystemStatusAction, TaskAction,
-    TaskFlyoutView, TaskViewEffect, TaskViewModel, TaskViewSurface, TaskbarCallbacks,
-    TaskbarContextCommand, TaskbarContextView, TaskbarLayout, TaskbarSettingId,
-    TaskbarSettingsEffect, TaskbarSettingsView, TaskbarView, TestClock, auto_hide_endpoints,
-    reduce_auto_hide,
+    NotificationOverflowView, PreviewCard, ProgressState, ProviderState, ShowDesktopObservation,
+    ShowDesktopPlan, ShowDesktopSession, ShowDesktopTarget, StartActions, StartPowerAction,
+    StartSnapshot, StartView, StatusRegion, SystemFlyoutKind, SystemFlyoutPresentation,
+    SystemFlyoutTheme, SystemFlyoutView, SystemStatusAction, TaskAction, TaskFlyoutView,
+    TaskViewEffect, TaskViewModel, TaskViewSurface, TaskbarCallbacks, TaskbarContextCommand,
+    TaskbarContextView, TaskbarLayout, TaskbarSettingId, TaskbarSettingsEffect,
+    TaskbarSettingsView, TaskbarView, TestClock, auto_hide_endpoints, reduce_auto_hide,
 };
 
 use crate::{
@@ -1078,6 +1078,70 @@ fn activate_task(stable_id: &str) {
         platform_win::common::taskbar::WindowAction::Activate
     };
     let _ = platform_win::common::taskbar::apply_window_action(window.hwnd_identity, action);
+}
+
+fn show_desktop_observation(
+    window: platform_win::common::taskbar::OwnedTaskWindow,
+) -> ShowDesktopObservation {
+    ShowDesktopObservation {
+        target: ShowDesktopTarget {
+            hwnd_identity: window.hwnd_identity,
+            process_id: window.process_id,
+            window_identity: window.window_identity,
+        },
+        visible: window.visible,
+        tool_window: window.tool_window,
+        cloaked: window.cloaked,
+        owned_transient: window.owned_transient,
+        minimized: window.minimized,
+    }
+}
+
+fn run_show_desktop_cycle(session: &Rc<RefCell<ShowDesktopSession>>) {
+    let Ok(windows) = snapshot_task_windows() else {
+        trace_action("show-desktop:snapshot-rejected");
+        return;
+    };
+    let snapshot = windows
+        .into_iter()
+        .map(show_desktop_observation)
+        .collect::<Vec<_>>();
+    let plan = session.borrow().plan(&snapshot);
+    match plan {
+        ShowDesktopPlan::Minimize(targets) => {
+            let succeeded = targets
+                .into_iter()
+                .filter(|target| {
+                    platform_win::common::taskbar::apply_window_action_to_owned_identity(
+                        target.hwnd_identity,
+                        target.process_id,
+                        &target.window_identity,
+                        platform_win::common::taskbar::WindowAction::Minimize,
+                    )
+                    .is_ok()
+                })
+                .collect::<Vec<_>>();
+            let active = !succeeded.is_empty();
+            session.borrow_mut().complete_minimize(succeeded);
+            trace_action(if active {
+                "show-desktop:minimized"
+            } else {
+                "show-desktop:no-targets"
+            });
+        }
+        ShowDesktopPlan::Restore(targets) => {
+            for target in targets {
+                let _ = platform_win::common::taskbar::apply_window_action_to_owned_identity(
+                    target.hwnd_identity,
+                    target.process_id,
+                    &target.window_identity,
+                    platform_win::common::taskbar::WindowAction::Restore,
+                );
+            }
+            session.borrow_mut().complete_restore();
+            trace_action("show-desktop:restored");
+        }
+    }
 }
 
 fn task_hwnd(stable_id: &str) -> Option<isize> {
@@ -2560,6 +2624,8 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                 let start_window = Rc::new(RefCell::new(None::<gpui::WindowHandle<StartView>>));
                 let start_window_for_taskbar = Rc::clone(&start_window);
                 let start_window_for_status = Rc::clone(&start_window);
+                let show_desktop_session = Rc::new(RefCell::new(ShowDesktopSession::default()));
+                let show_desktop_session_for_taskbar = Rc::clone(&show_desktop_session);
                 let start_provider_for_taskbar = Rc::clone(&provider_client);
                 let start_settings_store = Rc::clone(&settings_store);
                 let start_settings_target = Rc::clone(&settings_target);
@@ -2908,6 +2974,9 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                     }
                                     Err(_) => trace_action("start:owned-open-failed"),
                                 }
+                            }),
+                            show_desktop: Rc::new(move |_| {
+                                run_show_desktop_cycle(&show_desktop_session_for_taskbar)
                             }),
                             task_view: Rc::new(move |app| {
                                 if let Some(existing) = *task_view_window_for_taskbar.borrow() {
@@ -4345,6 +4414,45 @@ mod live_parity_tests {
             }
         "#;
         assert!(!product_status_has_no_fixed_provider_values(fixed_fixture));
+    }
+
+    #[test]
+    fn show_desktop_product_path_is_exact_identity_owned_and_never_delegates() {
+        let source = include_str!("surface_runtime.rs");
+        let implementation = source
+            .split("fn run_show_desktop_cycle")
+            .nth(1)
+            .and_then(|tail| tail.split("fn task_hwnd").next())
+            .expect("show desktop implementation source");
+        for required in [
+            "snapshot_task_windows()",
+            "ShowDesktopPlan::Minimize",
+            "ShowDesktopPlan::Restore",
+            "apply_window_action_to_owned_identity",
+            "WindowAction::Minimize",
+            "WindowAction::Restore",
+            "complete_minimize",
+            "complete_restore",
+        ] {
+            assert!(
+                implementation.contains(required),
+                "missing owned route: {required}"
+            );
+        }
+        for forbidden in [
+            "explorer.exe",
+            "Shell_TrayWnd",
+            "ShellExperienceHost",
+            "SystemSettings",
+            "Win+D",
+            "keybd_event",
+            "SendInput",
+        ] {
+            assert!(
+                !implementation.contains(forbidden),
+                "forbidden show desktop delegation: {forbidden}"
+            );
+        }
     }
 
     #[test]

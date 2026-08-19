@@ -420,6 +420,7 @@ fn process_image(process_id: u32) -> Option<String> {
 pub enum WindowAction {
     Activate,
     Minimize,
+    Restore,
     RestoreAndActivate,
     Close,
 }
@@ -582,6 +583,10 @@ pub fn apply_window_action(hwnd_identity: isize, action: WindowAction) -> Result
         WindowAction::Activate => unsafe { SetForegroundWindow(hwnd) }
             .ok()
             .map_err(|e| e.to_string()),
+        WindowAction::Restore => {
+            let _ = unsafe { ShowWindow(hwnd, SW_RESTORE) };
+            Ok(())
+        }
         WindowAction::RestoreAndActivate => {
             let _ = unsafe { ShowWindow(hwnd, SW_RESTORE) };
             unsafe { SetForegroundWindow(hwnd) }
@@ -593,6 +598,20 @@ pub fn apply_window_action(hwnd_identity: isize, action: WindowAction) -> Result
                 .map_err(|e| e.to_string())
         }
     }
+}
+
+pub fn apply_window_action_to_owned_identity(
+    hwnd_identity: isize,
+    process_id: u32,
+    window_identity: &str,
+    action: WindowAction,
+) -> Result<(), String> {
+    let hwnd = HWND(hwnd_identity as *mut c_void);
+    let observed = snapshot_one(hwnd).ok_or("task-window-retired")?;
+    if observed.process_id != process_id || observed.window_identity != window_identity {
+        return Err("task-window-identity-mismatch".into());
+    }
+    apply_window_action(hwnd_identity, action)
 }
 
 #[cfg(test)]
@@ -621,6 +640,13 @@ mod tests {
     #[test]
     fn retired_window_action_fails_closed() {
         assert!(apply_window_action(1, WindowAction::Activate).is_err())
+    }
+    #[test]
+    fn retired_exact_identity_action_fails_closed() {
+        assert!(
+            apply_window_action_to_owned_identity(1, 99, "win:99:1", WindowAction::Restore)
+                .is_err()
+        )
     }
     #[test]
     fn taskbar_resize_style_rejects_invalid_and_foreign_windows() {

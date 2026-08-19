@@ -1,0 +1,53 @@
+{
+    "schema":  "owned-show-desktop-corner-headful/v1",
+    "result":  "passed",
+    "theme":  "dark",
+    "rows":  2,
+    "app_sha256":  "ac0d28f689b58b3303bd86504ed12bd70c003c0f01616f18d24f1ce9f06f329d",
+    "explorer_before":  [
+                            38136
+                        ],
+    "explorer_absent_during_capture":  true,
+    "uia":  {
+                "control_type":  "ControlType.Button",
+                "name":  "Show desktop",
+                "invoke_pattern":  true
+            },
+    "root_bounds":  {
+                        "left":  -12,
+                        "width":  3864,
+                        "top":  2020,
+                        "height":  152
+                    },
+    "monitor_bounds":  {
+                           "left":  0,
+                           "width":  3840,
+                           "top":  0,
+                           "height":  2160
+                       },
+    "corner_bounds":  {
+                          "left":  3826,
+                          "width":  14,
+                          "top":  2022,
+                          "right_gap":  0,
+                          "height":  140
+                      },
+    "cycle_exercised":  false,
+    "visible_minimized":  0,
+    "visible_restored":  0,
+    "pre_minimized_preserved":  false,
+    "screenshots":  [
+                        {
+                            "sha256":  "aa0b39859fe06c2b8be7e8c9392acb3c9b157757db6bd9b39ea000efb3af4b3f",
+                            "name":  "dark-row2-before.png"
+                        },
+                        {
+                            "sha256":  "2a8ef84324ef944b4c5bd398300046beb8b41282c7b828d7c604b80e2e5def70",
+                            "name":  "dark-row2-focus-hover.png"
+                        }
+                    ],
+    "forbidden_processes_launched":  [
+
+                                     ],
+    "shell_delegation":  false
+}

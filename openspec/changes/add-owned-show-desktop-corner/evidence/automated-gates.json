@@ -1,0 +1,19 @@
+{
+  "schema": "owned-show-desktop-corner-automated-gates/v1",
+  "result": "passed",
+  "commands": [
+    "cargo fmt --all",
+    "cargo test --workspace --locked --offline",
+    "cargo clippy --workspace --all-targets --locked --offline -- -D warnings",
+    "cargo build --workspace --release --locked --offline"
+  ],
+  "focused": {
+    "show_desktop_reducer_tests": 5,
+    "taskbar_ui_tests": 65,
+    "platform_taskbar_tests": 10,
+    "superdesktop_app_tests": 34
+  },
+  "release_app_sha256": "ac0d28f689b58b3303bd86504ed12bd70c003c0f01616f18d24f1ce9f06f329d",
+  "warnings_as_errors": true,
+  "offline_locked": true
+}

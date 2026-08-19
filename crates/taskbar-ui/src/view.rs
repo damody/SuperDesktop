@@ -28,6 +28,7 @@ thread_local! {
 }
 
 const ICON_RENDER_CACHE_LIMIT: usize = 2_048;
+const SHOW_DESKTOP_CORNER_WIDTH: f32 = 8.0;
 
 fn icon_hash(icon: &IconData) -> u64 {
     let mut hasher = DefaultHasher::new();
@@ -138,9 +139,9 @@ struct TaskbarChromeTokens {
 }
 
 impl TaskbarChromeTokens {
-    const fn new(high_contrast: bool) -> Self {
-        if high_contrast {
-            Self {
+    fn new(theme: Option<&str>) -> Self {
+        match theme {
+            Some("high-contrast") => Self {
                 panel: 0x000000,
                 border: 0xffffff,
                 text: 0xffffff,
@@ -150,9 +151,19 @@ impl TaskbarChromeTokens {
                 focus: 0xffff00,
                 active: 0x000000,
                 attention: 0x000000,
-            }
-        } else {
-            Self {
+            },
+            Some("dark") => Self {
+                panel: 0x202020,
+                border: 0x454545,
+                text: 0xffffff,
+                secondary_text: 0xcacaca,
+                hover: 0x323232,
+                pressed: 0x3e3e3e,
+                focus: 0x60cdff,
+                active: 0x292929,
+                attention: 0x5c4700,
+            },
+            _ => Self {
                 panel: 0xf3f3f3,
                 border: 0xd8d8d8,
                 text: 0x202020,
@@ -162,7 +173,7 @@ impl TaskbarChromeTokens {
                 focus: 0x0067c0,
                 active: 0xe9e9e9,
                 attention: 0xffd28a,
-            }
+            },
         }
     }
 }
@@ -246,6 +257,7 @@ impl Render for NotificationTooltip {
 #[derive(Clone)]
 pub struct TaskbarCallbacks {
     pub start: Rc<dyn Fn(&mut App)>,
+    pub show_desktop: Rc<dyn Fn(&mut App)>,
     pub task_view: Rc<dyn Fn(&mut App)>,
     pub fixed: Rc<dyn Fn()>,
     pub task: TaskCallback,
@@ -285,6 +297,11 @@ impl Render for TaskbarView {
     fn render(&mut self, window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
         let bar_height = px(self.layout.height / window.scale_factor());
         let start = self.callbacks.as_ref().map(|value| Rc::clone(&value.start));
+        let show_desktop = self
+            .callbacks
+            .as_ref()
+            .map(|value| Rc::clone(&value.show_desktop));
+        let show_desktop_key = show_desktop.clone();
         let task_view = self
             .callbacks
             .as_ref()
@@ -356,8 +373,9 @@ impl Render for TaskbarView {
             .cloned()
             .collect::<Vec<_>>();
         let has_overflow = !overflow_notifications.is_empty();
-        let high_contrast = std::env::var("SUPERDESKTOP_THEME").as_deref() == Ok("high-contrast");
-        let tokens = TaskbarChromeTokens::new(high_contrast);
+        let theme = std::env::var("SUPERDESKTOP_THEME").ok();
+        let high_contrast = theme.as_deref() == Some("high-contrast");
+        let tokens = TaskbarChromeTokens::new(theme.as_deref());
         let locale = std::env::var("SUPERDESKTOP_LOCALE")
             .ok()
             .or_else(platform_win::common::taskbar_status::user_locale_name);
@@ -965,7 +983,7 @@ impl Render for TaskbarView {
                     .w(px(210.))
                     .h(bar_height)
                     .flex_none()
-                    .px_1()
+                    .pl_1()
                     .relative()
                     .flex()
                     .items_center()
@@ -1200,6 +1218,41 @@ impl Render for TaskbarView {
                                     .child(self.status.date.clone()),
                             ),
                     )
+                    .child(
+                        div()
+                            .id("show-desktop-corner")
+                            .role(gpui::Role::Button)
+                            .aria_label(if zh_tw { "顯示桌面" } else { "Show desktop" })
+                            .tab_index(0)
+                            .w(px(SHOW_DESKTOP_CORNER_WIDTH))
+                            .h(bar_height)
+                            .flex_none()
+                            .relative()
+                            .cursor_pointer()
+                            .border_l_1()
+                            .border_color(rgb(tokens.border))
+                            .hover(move |style| {
+                                style.bg(rgb(tokens.hover)).border_color(rgb(tokens.focus))
+                            })
+                            .active(move |style| style.bg(rgb(tokens.pressed)))
+                            .focus_visible(move |style| {
+                                style.border_2().border_color(rgb(tokens.focus))
+                            })
+                            .on_click(_cx.listener(move |_, _, _, cx| {
+                                if let Some(callback) = &show_desktop {
+                                    callback(cx);
+                                }
+                            }))
+                            .on_key_down(_cx.listener(
+                                move |_, event: &gpui::KeyDownEvent, _, cx| {
+                                    if activates_button(&event.keystroke.key)
+                                        && let Some(callback) = &show_desktop_key
+                                    {
+                                        callback(cx);
+                                    }
+                                },
+                            )),
+                    )
                     .when_some(system_flyout, |region, flyout| {
                         region.child(
                             div()
@@ -1320,9 +1373,9 @@ impl Render for TaskbarView {
 #[cfg(test)]
 mod tests {
     use super::{
-        TaskbarChromeTokens, activates_button, bc7_render_image, compact_input_language,
-        icon_render_image, task_display_label, taskbar_rows_for_logical_height,
-        taskbar_search_label, toggled_system_flyout,
+        SHOW_DESKTOP_CORNER_WIDTH, TaskbarChromeTokens, activates_button, bc7_render_image,
+        compact_input_language, icon_render_image, task_display_label,
+        taskbar_rows_for_logical_height, taskbar_search_label, toggled_system_flyout,
     };
     use crate::SystemFlyoutKind;
     use shell_provider_protocol::IconData;
@@ -1382,6 +1435,37 @@ mod tests {
     }
 
     #[test]
+    fn show_desktop_corner_is_exact_owned_accessible_and_full_height() {
+        assert_eq!(SHOW_DESKTOP_CORNER_WIDTH, 8.0);
+        assert!(activates_button("enter"));
+        assert!(activates_button("space"));
+        assert!(!activates_button("escape"));
+        let source = include_str!("view.rs");
+        for required in [
+            "show-desktop-corner",
+            "顯示桌面",
+            "Show desktop",
+            ".role(gpui::Role::Button)",
+            ".w(px(SHOW_DESKTOP_CORNER_WIDTH))",
+            ".h(bar_height)",
+            ".border_l_1()",
+            "callback(cx)",
+        ] {
+            assert!(
+                source.contains(required),
+                "missing show desktop UI contract: {required}"
+            );
+        }
+        let corner = source
+            .split("show-desktop-corner")
+            .nth(1)
+            .and_then(|tail| tail.split("system-status-flyout").next())
+            .expect("show desktop render source");
+        assert!(!corner.contains("border_b_1"));
+        assert!(!corner.contains("Shell_TrayWnd"));
+    }
+
+    #[test]
     fn task_visual_source_contract_uses_windows_indicators_and_background_progress() {
         let source = include_str!("view.rs");
         for required in [
@@ -1408,10 +1492,14 @@ mod tests {
 
     #[test]
     fn taskbar_chrome_tokens_and_compact_locale_labels_are_deterministic() {
-        let light = TaskbarChromeTokens::new(false);
-        let contrast = TaskbarChromeTokens::new(true);
+        let light = TaskbarChromeTokens::new(Some("light"));
+        let dark = TaskbarChromeTokens::new(Some("dark"));
+        let contrast = TaskbarChromeTokens::new(Some("high-contrast"));
         assert_ne!(light.panel, light.hover);
         assert_ne!(light.hover, light.pressed);
+        assert_eq!(dark.panel, 0x202020);
+        assert_eq!(dark.text, 0xffffff);
+        assert_ne!(dark.hover, dark.pressed);
         assert_eq!(contrast.panel, 0x000000);
         assert_eq!(contrast.border, 0xffffff);
         assert_eq!(contrast.focus, 0xffff00);

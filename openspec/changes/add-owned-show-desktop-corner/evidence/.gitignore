@@ -1,0 +1,15 @@
+/debug/
+/headful/profile-*/
+/headful/light-action.log
+/headful/light-before.png
+/headful/light-desktop-shown.png
+/headful/light-focus-hover.png
+/headful/light-report.json
+/headful/dark-action.log
+/headful/dark-before.png
+/headful/dark-focus-hover.png
+/headful/dark-report.json
+/headful/high-contrast-action.log
+/headful/high-contrast-before.png
+/headful/high-contrast-focus-hover.png
+/headful/high-contrast-report.json

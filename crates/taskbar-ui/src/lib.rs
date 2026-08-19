@@ -10,6 +10,7 @@ mod interaction;
 mod layout;
 mod notification_area;
 mod notification_overflow;
+mod show_desktop;
 mod start;
 mod status;
 mod surface;
@@ -38,6 +39,9 @@ pub use notification_area::{
 };
 pub use notification_overflow::{
     NotificationOverflowAction, NotificationOverflowDismiss, NotificationOverflowView,
+};
+pub use show_desktop::{
+    ShowDesktopObservation, ShowDesktopPlan, ShowDesktopSession, ShowDesktopTarget,
 };
 pub use start::{
     StartAccessibilityNode, StartActions, StartAvailability, StartControl, StartEffect,
