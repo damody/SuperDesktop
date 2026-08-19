@@ -54,6 +54,7 @@ pub struct TaskFlyoutView {
     dismiss: FlyoutDismissAction,
     hover: FlyoutHoverAction,
     focus: FocusHandle,
+    keyboard_focus: bool,
     destination_hwnd: isize,
     thumbnails: Rc<RefCell<BTreeMap<WindowId, LiveThumbnail>>>,
 }
@@ -65,6 +66,7 @@ impl TaskFlyoutView {
         dismiss: FlyoutDismissAction,
         hover: FlyoutHoverAction,
         destination_hwnd: isize,
+        keyboard_focus: bool,
         cx: &mut Context<Self>,
     ) -> Self {
         let mut model = FlyoutModel::default();
@@ -76,6 +78,7 @@ impl TaskFlyoutView {
             dismiss,
             hover,
             focus: cx.focus_handle(),
+            keyboard_focus,
             destination_hwnd,
             thumbnails: Rc::new(RefCell::new(BTreeMap::new())),
         }
@@ -84,7 +87,9 @@ impl TaskFlyoutView {
 
 impl Render for TaskFlyoutView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        window.focus(&self.focus, cx);
+        if self.keyboard_focus {
+            window.focus(&self.focus, cx);
+        }
         let action_for_key = self.action.clone();
         let dismiss_for_key = self.dismiss.clone();
         let hover_action = self.hover.clone();

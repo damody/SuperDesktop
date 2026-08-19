@@ -3460,6 +3460,15 @@
                          "vendor_checksum_sha256":  null
                      },
                      {
+                         "name":  "superdesktop-utit",
+                         "version":  "0.1.0",
+                         "source":  "workspace",
+                         "revision":  null,
+                         "license":  "MIT OR Apache-2.0",
+                         "manifest_path":  "\u003cworkspace\u003e\\crates\\superdesktop-utit\\Cargo.toml",
+                         "vendor_checksum_sha256":  null
+                     },
+                     {
                          "name":  "sval",
                          "version":  "2.21.1",
                          "source":  "registry+https://github.com/rust-lang/crates.io-index",

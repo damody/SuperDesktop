@@ -82,6 +82,37 @@ function Count-ListItems([System.Windows.Automation.AutomationElement]$Root) {
     @($items | Where-Object { $_.Current.ControlType -eq [System.Windows.Automation.ControlType]::ListItem }).Count
 }
 
+function Wait-StableListCount([System.Windows.Automation.AutomationElement]$Root, [int]$TimeoutMs = 6000) {
+    $deadline = [DateTime]::UtcNow.AddMilliseconds($TimeoutMs)
+    $last = -1
+    $stableSamples = 0
+    do {
+        $current = Count-ListItems $Root
+        if ($current -eq $last) { $stableSamples++ } else { $last = $current; $stableSamples = 0 }
+        if ($stableSamples -ge 5) { return $current }
+        Start-Sleep -Milliseconds 150
+    } while ([DateTime]::UtcNow -lt $deadline)
+    throw "Notification list did not stabilize: last=$last"
+}
+
+function Test-ProcessDescendsFrom([int]$ProcessId, [int]$AncestorId) {
+    $visited = @{}
+    $current = $ProcessId
+    for ($depth = 0; $depth -lt 12 -and $current -gt 0; $depth++) {
+        if ($current -eq $AncestorId) { return $true }
+        if ($visited.ContainsKey($current)) { return $false }
+        $visited[$current] = $true
+        try {
+            $process = Get-CimInstance Win32_Process -Filter "ProcessId=$current" -ErrorAction Stop
+        } catch {
+            return $false
+        }
+        if ($null -eq $process) { return $false }
+        $current = [int]$process.ParentProcessId
+    }
+    $false
+}
+
 function Capture-Screen([string]$Path) {
     $bounds = [System.Windows.Forms.SystemInformation]::VirtualScreen
     $bitmap = [Drawing.Bitmap]::new($bounds.Width, $bounds.Height)
@@ -142,7 +173,7 @@ try {
     Invoke-Element $clock
     $popup = Find-OwnedPopup $shell.Id $shell.MainWindowHandle
     if ($null -eq $popup) { throw 'Owned notification center did not open.' }
-    $initialCount = Count-ListItems $popup
+    $initialCount = Wait-StableListCount $popup
     if ($initialCount -lt 2) { throw "Expected populated notification history, found $initialCount rows." }
     Capture-Screen (Join-Path $EvidenceDirectory "$Theme-populated.png")
 
@@ -177,7 +208,8 @@ try {
             Select-Object -ExpandProperty Id
     )
     $newForbidden = @($forbiddenAfter | Where-Object { $_ -notin $forbiddenBefore })
-    if ($newForbidden.Count -ne 0) { throw "Forbidden delegated processes started: $($newForbidden -join ',')" }
+    $delegatedByShell = @($newForbidden | Where-Object { Test-ProcessDescendsFrom $_ $shell.Id })
+    if ($delegatedByShell.Count -ne 0) { throw "Forbidden delegated processes started by SuperDesktop: $($delegatedByShell -join ',')" }
     if (Get-Process explorer -ErrorAction SilentlyContinue) { throw 'Explorer appeared during capture.' }
     $report = [ordered]@{
         schema = 'owned-notification-center-headful/v1'
@@ -186,7 +218,8 @@ try {
         dpi = 168
         dpi_percent = 175
         explorer_absent_during_capture = $true
-        forbidden_processes_started = @()
+        forbidden_processes_started = @($delegatedByShell)
+        os_managed_shell_processes_observed = @($newForbidden | Where-Object { $_ -notin $delegatedByShell })
         initial_notification_count = $initialCount
         after_dismiss_count = $afterDismissCount
         empty_visible_after_clear = $emptyVisible

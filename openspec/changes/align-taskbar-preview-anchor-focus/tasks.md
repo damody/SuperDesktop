@@ -12,9 +12,9 @@
 **Gate／Evidence：** `G-FOCUS`; focused Rust tests.
 **完成門檻：** Hover is non-activating/non-focusing and click remains activating/focusing at every layer.
 
-- [ ] 1.1.1 Add `Hover` and `Click` source variants with exact policy methods.
-- [ ] 1.1.2 Pass the source explicitly from hover and grouped-click call sites.
-- [ ] 1.1.3 Apply policy to window options, native activation, and view focus with tests.
+- [x] 1.1.1 Add `Hover` and `Click` source variants with exact policy methods.
+- [x] 1.1.2 Pass the source explicitly from hover and grouped-click call sites.
+- [x] 1.1.3 Apply policy to window options, native activation, and view focus with tests.
 
 ### 1.2 Implement source-relative clamped geometry
 
@@ -26,9 +26,9 @@
 **Gate／Evidence：** `G-ANCHOR`; geometry matrix tests.
 **完成門檻：** Interior, edge, negative-origin, DPI, fallback, and 1-4 card cases remain within bounds.
 
-- [ ] 1.2.1 Add pure geometry result and physical-to-logical anchor conversion.
-- [ ] 1.2.2 Clamp both edges and retain monitor-center fallback for unavailable pointer.
-- [ ] 1.2.3 Test 96-216 DPI, negative origins, both edges, fallback, and card widths.
+- [x] 1.2.1 Add pure geometry result and physical-to-logical anchor conversion.
+- [x] 1.2.2 Clamp both edges and retain monitor-center fallback for unavailable pointer.
+- [x] 1.2.3 Test 96-216 DPI, negative origins, both edges, fallback, and card widths.
 
 ## 2. Composition and UTIT admission
 
@@ -42,9 +42,9 @@
 **Gate／Evidence：** `G-FOCUS`, `G-SHELL-NONINTERFERENCE`; app/UI tests.
 **完成門檻：** Hover never activates/focuses; click keyboard behavior and pointer/UIA actions remain intact.
 
-- [ ] 2.1.1 Capture the physical source anchor during preview admission.
-- [ ] 2.1.2 Make popup activation and internal focus conditional on open source.
-- [ ] 2.1.3 Add regression tests for both paths and Explorer-free source boundaries.
+- [x] 2.1.1 Capture the physical source anchor during preview admission.
+- [x] 2.1.2 Make popup activation and internal focus conditional on open source.
+- [x] 2.1.3 Add regression tests for both paths and Explorer-free source boundaries.
 
 ### 2.2 Extend the real-pointer UTIT gate
 
@@ -56,9 +56,9 @@
 **Gate／Evidence：** `G-UTIT`, `G-ANCHOR`, `G-FOCUS`; `evidence/headful/*`.
 **完成門檻：** Foreground HWND is preserved, popup is contained and anchored within two physical pixels, and recovery passes.
 
-- [ ] 2.2.1 Record foreground, source/popup/monitor rectangles, expected center, delta, and clamp state.
-- [ ] 2.2.2 Fail the case on activation, containment, anchor, Explorer absence, or recovery violations.
-- [ ] 2.2.3 Run focused and shell-parity UTIT and validate JSON/JUnit/Markdown hashes.
+- [x] 2.2.1 Record foreground, source/popup/monitor rectangles, expected center, delta, and clamp state.
+- [x] 2.2.2 Fail the case on activation, containment, anchor, Explorer absence, or recovery violations.
+- [x] 2.2.3 Run focused and shell-parity UTIT and validate JSON/JUnit/Markdown hashes.
 
 ## 3. Full admission and packaging
 
@@ -72,9 +72,9 @@
 **Gate／Evidence：** `G-ANCHOR`, `G-FOCUS`, `G-UTIT`, `G-TRACE`; automated evidence.
 **完成門檻：** Every locally runnable blocking gate exits zero against one source revision.
 
-- [ ] 3.1.1 Run format and locked/offline focused plus workspace tests.
-- [ ] 3.1.2 Run Clippy warnings-as-errors, architecture/source checks, and release build.
-- [ ] 3.1.3 Inspect the popup screenshot and validate strict OpenSpec plus detailed tasks.
+- [x] 3.1.1 Run format and locked/offline focused plus workspace tests.
+- [x] 3.1.2 Run Clippy warnings-as-errors, architecture/source checks, and release build.
+- [x] 3.1.3 Inspect the popup screenshot and validate strict OpenSpec plus detailed tasks.
 
 ### 3.2 Commit, package, and finalize traceability
 

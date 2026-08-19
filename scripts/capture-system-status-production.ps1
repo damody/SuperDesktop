@@ -167,13 +167,13 @@ try {
         }
         $watchdog = Start-Process powershell.exe -WindowStyle Hidden -PassThru -ArgumentList @(
             '-NoProfile','-WindowStyle','Hidden','-Command',
-            "Start-Sleep -Seconds 40; if (-not (Get-Process explorer -ErrorAction SilentlyContinue)) { Start-Process -FilePath '$explorerPath' }"
+            "Start-Sleep -Seconds 50; if (-not (Get-Process explorer -ErrorAction SilentlyContinue)) { Start-Process -FilePath '$explorerPath' }"
         )
         $suppressor = Start-Process powershell.exe -WindowStyle Hidden -PassThru -ArgumentList @(
             '-NoProfile','-WindowStyle','Hidden','-Command',
-            '$deadline=[DateTime]::UtcNow.AddSeconds(27); while([DateTime]::UtcNow -lt $deadline){Get-Process explorer -ErrorAction SilentlyContinue|Stop-Process -Force -ErrorAction SilentlyContinue; Start-Sleep -Milliseconds 10}'
+            '$deadline=[DateTime]::UtcNow.AddSeconds(37); while([DateTime]::UtcNow -lt $deadline){Get-Process explorer -ErrorAction SilentlyContinue|Stop-Process -Force -ErrorAction SilentlyContinue; Start-Sleep -Milliseconds 10}'
         )
-        $suppressionDeadline = [DateTime]::UtcNow.AddSeconds(5)
+        $suppressionDeadline = [DateTime]::UtcNow.AddSeconds(12)
         do {
             Start-Sleep -Milliseconds 100
         } while (

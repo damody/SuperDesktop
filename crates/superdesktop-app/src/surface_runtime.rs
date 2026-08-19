@@ -1329,6 +1329,7 @@ fn open_task_preview(
     controller: Rc<RefCell<HoverPreviewController>>,
     taskbar_hwnd: isize,
     active_popup: Rc<Cell<isize>>,
+    source: PreviewOpenSource,
 ) {
     let cards = preview_cards(stable_id, previews_enabled);
     if cards.is_empty() {
@@ -1342,10 +1343,13 @@ fn open_task_preview(
     let hover_controller = Rc::clone(&controller);
     let popup_identity = Rc::clone(&active_popup);
     let monitor_slot = Rc::clone(slot);
+    let anchor_physical_x = physical_cursor_position().ok().map(|(x, _)| x);
     let opened = app.open_window(
-        task_flyout_options(monitor, cards.len()),
+        task_flyout_options(monitor, cards.len(), anchor_physical_x, source),
         move |window, cx| {
-            window.activate_window();
+            if source.activates_window() {
+                window.activate_window();
+            }
             let destination_hwnd = hwnd(window).unwrap_or_default();
             let dismiss_slot = Rc::clone(&dismiss_slot);
             let hover_slot = Rc::clone(&hover_slot);
@@ -1386,6 +1390,7 @@ fn open_task_preview(
                         }
                     }),
                     destination_hwnd,
+                    source.assigns_keyboard_focus(),
                     cx,
                 )
             })
@@ -1427,6 +1432,7 @@ fn schedule_preview_open(
                         Rc::clone(&controller),
                         taskbar_hwnd,
                         Rc::clone(&active_popup),
+                        PreviewOpenSource::Hover,
                     );
                 }
             });
@@ -1920,22 +1926,79 @@ fn start_options(monitor: &MonitorRecord) -> WindowOptions {
     }
 }
 
-fn task_flyout_options(monitor: &MonitorRecord, card_count: usize) -> WindowOptions {
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum PreviewOpenSource {
+    Hover,
+    Click,
+}
+
+impl PreviewOpenSource {
+    const fn activates_window(self) -> bool {
+        matches!(self, Self::Click)
+    }
+
+    const fn assigns_keyboard_focus(self) -> bool {
+        matches!(self, Self::Click)
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct TaskFlyoutGeometry {
+    left: f32,
+    top: f32,
+    width: f32,
+    height: f32,
+}
+
+fn task_flyout_geometry(
+    monitor: &MonitorRecord,
+    card_count: usize,
+    anchor_physical_x: Option<i32>,
+) -> TaskFlyoutGeometry {
+    const WINDOW_SHADOW_INSET: f32 = 8.0;
     let scale = monitor.dpi_x as f32 / 96.0;
-    let width = (card_count.clamp(1, 4) as f32 * 228.0 + 16.0).min(928.0);
-    let height = 260.0;
-    let monitor_width = (monitor.work_area.right - monitor.work_area.left) as f32 / scale;
-    let left = monitor.work_area.left as f32 / scale + (monitor_width - width).max(0.0) / 2.0;
+    let work_left = monitor.work_area.left as f32 / scale;
+    let work_right = monitor.work_area.right as f32 / scale;
+    let work_top = monitor.work_area.top as f32 / scale;
+    let work_bottom = monitor.work_area.bottom as f32 / scale;
+    let available_width = (work_right - work_left).max(1.0);
+    let available_height = (work_bottom - work_top).max(1.0);
+    let inset_x = WINDOW_SHADOW_INSET.min(((available_width - 1.0) / 2.0).max(0.0));
+    let inset_y = WINDOW_SHADOW_INSET.min(((available_height - 1.0) / 2.0).max(0.0));
+    let width = (card_count.clamp(1, 4) as f32 * 228.0 + 16.0)
+        .min(928.0)
+        .min((available_width - inset_x * 2.0).max(1.0));
+    let height = 260.0_f32.min((available_height - inset_y * 2.0).max(1.0));
+    let fallback_anchor = work_left + available_width / 2.0;
+    let anchor = anchor_physical_x
+        .map(|x| x as f32 / scale)
+        .unwrap_or(fallback_anchor);
+    let left = (anchor - width / 2.0).clamp(
+        work_left + inset_x,
+        (work_right - inset_x - width).max(work_left + inset_x),
+    );
+    TaskFlyoutGeometry {
+        left,
+        top: (work_bottom - inset_y - height).max(work_top + inset_y),
+        width,
+        height,
+    }
+}
+
+fn task_flyout_options(
+    monitor: &MonitorRecord,
+    card_count: usize,
+    anchor_physical_x: Option<i32>,
+    source: PreviewOpenSource,
+) -> WindowOptions {
+    let geometry = task_flyout_geometry(monitor, card_count, anchor_physical_x);
     WindowOptions {
         window_bounds: Some(WindowBounds::Windowed(Bounds {
-            origin: point(
-                px(left),
-                px(monitor.work_area.bottom as f32 / scale - height),
-            ),
-            size: size(px(width), px(height)),
+            origin: point(px(geometry.left), px(geometry.top)),
+            size: size(px(geometry.width), px(geometry.height)),
         })),
         titlebar: None,
-        focus: true,
+        focus: source.assigns_keyboard_focus(),
         show: true,
         kind: WindowKind::PopUp,
         is_movable: false,
@@ -3280,6 +3343,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                     Rc::clone(&hover_preview_for_click),
                                     taskbar_hwnd_for_click.get(),
                                     Rc::clone(&active_preview_for_click),
+                                    PreviewOpenSource::Click,
                                 );
                             }),
                             task_hover: Rc::new(move |stable_id, hovered, app| {
@@ -5332,5 +5396,98 @@ mod live_parity_tests {
         }
         assert!(!production.contains("Shell_TrayWnd"));
         assert!(!production.contains("StartMenuExperienceHost"));
+    }
+
+    #[test]
+    fn task_preview_open_source_keeps_hover_passive_and_click_keyboard_focused() {
+        assert!(!super::PreviewOpenSource::Hover.activates_window());
+        assert!(!super::PreviewOpenSource::Hover.assigns_keyboard_focus());
+        assert!(super::PreviewOpenSource::Click.activates_window());
+        assert!(super::PreviewOpenSource::Click.assigns_keyboard_focus());
+
+        let source = include_str!("surface_runtime.rs");
+        let production = source.split("#[cfg(test)]").next().unwrap_or(source);
+        assert!(production.contains("PreviewOpenSource::Hover"));
+        assert!(production.contains("PreviewOpenSource::Click"));
+        assert!(production.contains("if source.activates_window()"));
+        assert!(production.contains("source.assigns_keyboard_focus()"));
+        assert!(!production.contains("Shell_TrayWnd"));
+        assert!(!production.contains("explorer.exe"));
+
+        let view = include_str!("../../taskbar-ui/src/advanced.rs");
+        assert!(view.contains("if self.keyboard_focus"));
+        assert!(view.contains("window.focus(&self.focus, cx)"));
+    }
+
+    #[test]
+    fn task_preview_geometry_anchors_clamps_and_scales_once() {
+        for dpi in [96, 144, 168, 216] {
+            let monitor = MonitorRecord {
+                device_name: format!("dpi-{dpi}"),
+                primary: false,
+                bounds: ScreenRect {
+                    left: -2560,
+                    top: -200,
+                    right: 0,
+                    bottom: 1440,
+                },
+                work_area: ScreenRect {
+                    left: -2560,
+                    top: -200,
+                    right: 0,
+                    bottom: 1380,
+                },
+                dpi_x: dpi,
+                dpi_y: dpi,
+            };
+            let scale = dpi as f32 / 96.0;
+            let work_left = -2560.0 / scale;
+            let work_right = 0.0;
+            let work_top = -200.0 / scale;
+            let work_bottom = 1380.0 / scale;
+
+            for cards in 1..=4 {
+                let interior_anchor = -1280;
+                let geometry = super::task_flyout_geometry(&monitor, cards, Some(interior_anchor));
+                assert!(geometry.left >= work_left + 8.0);
+                assert!(geometry.left + geometry.width <= work_right - 8.0 + 0.01);
+                assert!(geometry.top >= work_top + 8.0);
+                assert!(geometry.top + geometry.height <= work_bottom - 8.0 + 0.01);
+                let anchor_logical = interior_anchor as f32 / scale;
+                assert!((geometry.left + geometry.width / 2.0 - anchor_logical).abs() < 0.01);
+
+                let left = super::task_flyout_geometry(&monitor, cards, Some(-2559));
+                assert!((left.left - (work_left + 8.0)).abs() < 0.01);
+                let right = super::task_flyout_geometry(&monitor, cards, Some(-1));
+                assert!((right.left + right.width - (work_right - 8.0)).abs() < 0.01);
+
+                let fallback = super::task_flyout_geometry(&monitor, cards, None);
+                assert!((fallback.left + fallback.width / 2.0 - (work_left / 2.0)).abs() < 0.01);
+            }
+        }
+
+        let compact = MonitorRecord {
+            device_name: "compact".into(),
+            primary: true,
+            bounds: ScreenRect {
+                left: 0,
+                top: 0,
+                right: 200,
+                bottom: 120,
+            },
+            work_area: ScreenRect {
+                left: 0,
+                top: 0,
+                right: 200,
+                bottom: 120,
+            },
+            dpi_x: 96,
+            dpi_y: 96,
+        };
+        let geometry = super::task_flyout_geometry(&compact, usize::MAX, Some(100));
+        assert_eq!(
+            (geometry.left, geometry.top, geometry.width, geometry.height),
+            (8.0, 8.0, 184.0, 104.0)
+        );
     }
 }
