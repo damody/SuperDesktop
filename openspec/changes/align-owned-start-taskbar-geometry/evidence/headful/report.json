@@ -1,0 +1,62 @@
+{
+    "schema":  "windows11-owned-start-production/v3",
+    "result":  "passed",
+    "app_sha256":  "B87CE20B7C220A267E9FCA35828AE559964E9EDF75C75943F58A5A079A83C0AA",
+    "owned_start_pid":  15676,
+    "taskbar_pid":  15676,
+    "system_start_process_ids_before":  [
+                                            29844,
+                                            54144
+                                        ],
+    "system_start_process_ids_after":  [
+                                           29844,
+                                           54144
+                                       ],
+    "new_system_start_process_ids":  [
+
+                                     ],
+    "explorer_absent_during_capture":  true,
+    "explorer_recovered":  true,
+    "locale":  "zh-TW",
+    "home_sections":  [
+                          "已釘選",
+                          "建議",
+                          "設定",
+                          "電源"
+                      ],
+    "power_collapsed":  true,
+    "all_apps_count":  75,
+    "centered_home_bounds":  {
+                                 "left":  1348,
+                                 "top":  733,
+                                 "width":  1144,
+                                 "height":  1272
+                             },
+    "taskbar_bounds":  {
+                           "left":  -12,
+                           "top":  2020,
+                           "right":  3852,
+                           "bottom":  2172
+                       },
+    "monitor_bounds":  {
+                           "left":  0,
+                           "top":  0,
+                           "right":  3840,
+                           "bottom":  2160
+                       },
+    "geometry":  {
+                     "dpi":  168,
+                     "scale":  1.75,
+                     "width_dip":  653.71428571428567,
+                     "height_dip":  726.85714285714289,
+                     "taskbar_gap_dip":  8.5714285714285712,
+                     "overlap_physical_px":  -15,
+                     "contained":  true
+                 },
+    "home_screenshot":  "home.png",
+    "home_sha256":  "8E089D786398FCF9F614DAA36F32B0AC2B5EBF6513349DEDCC54941AAB094318",
+    "all_apps_screenshot":  "all-apps.png",
+    "all_apps_sha256":  "313BFE4FB410F4A01DADF4FC1AD507E28F838492DAD487A8DE3D3F111C47D12A",
+    "power_screenshot":  "power.png",
+    "power_sha256":  "6805EA1C2DE0D89B2417EA1DDA06740711666494A762740C33580FB1C3DDB8ED"
+}
