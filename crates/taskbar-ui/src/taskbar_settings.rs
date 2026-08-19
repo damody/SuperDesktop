@@ -239,6 +239,7 @@ pub enum TaskbarContextCommand {
     ToggleLockTaskbar,
     OpenTaskManager,
     OpenTaskbarSettings,
+    ReturnToDefaultExplorer,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -253,13 +254,14 @@ pub struct TaskbarContextModel {
 }
 
 impl TaskbarContextModel {
-    pub const COMMANDS: [TaskbarContextCommand; 6] = [
+    pub const COMMANDS: [TaskbarContextCommand; 7] = [
         TaskbarContextCommand::CycleSearchMode,
         TaskbarContextCommand::ToggleTaskView,
         TaskbarContextCommand::ShowDesktop,
         TaskbarContextCommand::OpenTaskManager,
         TaskbarContextCommand::ToggleLockTaskbar,
         TaskbarContextCommand::OpenTaskbarSettings,
+        TaskbarContextCommand::ReturnToDefaultExplorer,
     ];
 
     pub fn selected(&self) -> usize {
@@ -335,7 +337,7 @@ impl Render for TaskbarContextView {
             .left_0()
             .top_0()
             .w(px(220.))
-            .h(px(210.))
+            .h(px(244.))
             .p(px(4.))
             .rounded(px(8.))
             .border_1()
@@ -383,6 +385,7 @@ impl Render for TaskbarContextView {
                         }
                         TaskbarContextCommand::OpenTaskManager => "▥",
                         TaskbarContextCommand::OpenTaskbarSettings => "⚙",
+                        TaskbarContextCommand::ReturnToDefaultExplorer => "↩",
                     };
                     let label =
                         taskbar_context_label(command, self.search_mode, traditional_chinese());
@@ -468,6 +471,10 @@ fn taskbar_context_label(
         (TaskbarContextCommand::ToggleLockTaskbar, false) => "Lock the taskbar".into(),
         (TaskbarContextCommand::OpenTaskbarSettings, true) => "工作列設定".into(),
         (TaskbarContextCommand::OpenTaskbarSettings, false) => "Taskbar settings".into(),
+        (TaskbarContextCommand::ReturnToDefaultExplorer, true) => "回到預設 Explorer".into(),
+        (TaskbarContextCommand::ReturnToDefaultExplorer, false) => {
+            "Return to default Explorer".into()
+        }
     }
 }
 
@@ -1299,14 +1306,18 @@ mod tests {
         model.move_selection(-1);
         assert_eq!(
             model.activate(),
-            TaskbarContextEffect::Command(TaskbarContextCommand::OpenTaskbarSettings)
+            TaskbarContextEffect::Command(TaskbarContextCommand::ReturnToDefaultExplorer)
         );
         model.move_selection(1);
         assert_eq!(model.selected(), 0);
-        assert_eq!(TaskbarContextModel::COMMANDS.len(), 6);
+        assert_eq!(TaskbarContextModel::COMMANDS.len(), 7);
         assert_eq!(
             TaskbarContextModel::COMMANDS[4],
             TaskbarContextCommand::ToggleLockTaskbar
+        );
+        assert_eq!(
+            TaskbarContextModel::COMMANDS[6],
+            TaskbarContextCommand::ReturnToDefaultExplorer
         );
     }
 

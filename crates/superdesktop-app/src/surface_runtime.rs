@@ -2445,7 +2445,7 @@ fn taskbar_context_options(
 ) -> WindowOptions {
     let (left, top, _, _) = taskbar_context_placement(monitor, shell, rows, anchor);
     let width = 220.0;
-    let height = 210.0;
+    let height = 244.0;
     WindowOptions {
         window_bounds: Some(WindowBounds::Windowed(Bounds {
             origin: point(px(left), px(top)),
@@ -2471,7 +2471,7 @@ fn taskbar_context_placement(
 ) -> (f32, f32, f32, f32) {
     let scale = monitor.dpi_x as f32 / 96.0;
     let width = 220.0;
-    let height = 210.0;
+    let height = 244.0;
     let monitor_left = monitor.bounds.left as f32 / scale;
     let monitor_right = monitor.bounds.right as f32 / scale;
     let monitor_top = monitor.bounds.top as f32 / scale;
@@ -2836,6 +2836,25 @@ fn superexplorer_executable() -> Option<PathBuf> {
 
 pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> {
     enable_per_monitor_v2()?;
+    if shell {
+        match platform_win::common::explorer_recovery::shutdown_trusted_explorer_shell() {
+            Ok(platform_win::common::explorer_recovery::ShellShutdownOutcome::AlreadyAbsent) => {
+                trace_action("explorer-takeover:already-absent");
+            }
+            Ok(
+                platform_win::common::explorer_recovery::ShellShutdownOutcome::ClosedGracefully {
+                    ..
+                },
+            ) => trace_action("explorer-takeover:closed-gracefully"),
+            Ok(platform_win::common::explorer_recovery::ShellShutdownOutcome::Terminated {
+                ..
+            }) => trace_action("explorer-takeover:terminated"),
+            Err(error) => {
+                report_error("explorer-takeover", error);
+                return Err("explorer-takeover-failed");
+            }
+        }
+    }
     let shell_hotkeys = Rc::new(if shell {
         match platform_win::common::shell_hotkey::ShellHotkeys::start() {
             Ok(hotkey) => {
@@ -4026,6 +4045,18 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                                         if let Ok(handle) = settings_opened {
                                                             *settings_dismiss_slot.borrow_mut() = Some(handle);
                                                             trace_action("taskbar:settings-opened");
+                                                        }
+                                                    }
+                                                    TaskbarContextCommand::ReturnToDefaultExplorer => {
+                                                        match platform_win::common::explorer_recovery::recover_explorer_shell() {
+                                                            Ok(_) => {
+                                                                trace_action("explorer-return:verified");
+                                                                app.quit();
+                                                            }
+                                                            Err(error) => report_error(
+                                                                "explorer-return",
+                                                                error,
+                                                            ),
                                                         }
                                                     }
                                                 }),
@@ -5918,8 +5949,8 @@ mod live_parity_tests {
             super::taskbar_context_placement(&monitor, false, 2, point(px(9_999.), px(0.)));
         assert!(left >= -1280.0);
         assert!(left + width <= 0.0);
-        assert_eq!(top, 395.3333);
-        assert_eq!(height, 210.0);
+        assert_eq!(top, 361.3333);
+        assert_eq!(height, 244.0);
         let settings = super::taskbar_settings_options(&monitor);
         let Some(WindowBounds::Windowed(settings)) = settings.window_bounds else {
             panic!("bounds")
@@ -6488,6 +6519,10 @@ mod live_parity_tests {
             "taskbar:settings-saved",
             "launch_task_manager()",
             "TaskbarContextCommand::ToggleLockTaskbar",
+            "TaskbarContextCommand::ReturnToDefaultExplorer",
+            "shutdown_trusted_explorer_shell()",
+            "recover_explorer_shell()",
+            "explorer-return:verified",
             "taskbar:lock-toggled",
             "set_owned_taskbar_resizable",
             "attach_resize_observer",

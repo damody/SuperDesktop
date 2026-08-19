@@ -18,6 +18,11 @@ const WTD_CACHE_ONLY_URL_RETRIEVAL: u32 = 0x1000;
 
 type RawHandle = isize;
 const PROCESS_QUERY_LIMITED_INFORMATION: u32 = 0x1000;
+const PROCESS_TERMINATE: u32 = 0x0001;
+const SYNCHRONIZE: u32 = 0x0010_0000;
+const WAIT_OBJECT_0: u32 = 0;
+const WAIT_TIMEOUT: u32 = 258;
+const WM_CLOSE: u32 = 0x0010;
 const SW_SHOW: i32 = 5;
 
 #[repr(C)]
@@ -63,6 +68,8 @@ unsafe extern "system" {
     ) -> i32;
     fn ProcessIdToSessionId(pid: u32, session: *mut u32) -> i32;
     fn GetCurrentProcessId() -> u32;
+    fn WaitForSingleObject(handle: RawHandle, milliseconds: u32) -> u32;
+    fn TerminateProcess(handle: RawHandle, exit_code: u32) -> i32;
 }
 #[link(name = "wintrust")]
 unsafe extern "system" {
@@ -74,6 +81,7 @@ unsafe extern "system" {
     fn GetWindowThreadProcessId(window: isize, pid: *mut u32) -> u32;
     fn ShowWindow(window: isize, command: i32) -> i32;
     fn IsWindowVisible(window: isize) -> i32;
+    fn PostMessageW(window: isize, message: u32, wparam: usize, lparam: isize) -> i32;
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -155,6 +163,84 @@ impl TrustedExplorer {
 pub enum ShellRecoveryOutcome {
     ShownExisting { process_id: u32 },
     SpawnedVerified { process_id: u32 },
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ShellShutdownOutcome {
+    AlreadyAbsent,
+    ClosedGracefully { process_id: u32 },
+    Terminated { process_id: u32 },
+}
+
+/// Closes only the current-session shell process whose executable matches the verified inbox
+/// Explorer. A normal WM_CLOSE is attempted first; exact-process termination is the bounded
+/// fallback requested for shell takeover.
+pub fn shutdown_trusted_explorer_shell() -> Result<ShellShutdownOutcome, &'static str> {
+    let trusted = TrustedExplorer::resolve()?;
+    let mut current_session = 0;
+    // SAFETY: current process id is read-only and session output is writable.
+    if unsafe { ProcessIdToSessionId(GetCurrentProcessId(), &mut current_session) } == 0 {
+        return Err("explorer-shutdown-current-session");
+    }
+    for class in ["Shell_TrayWnd", "Progman"] {
+        let class = OsStr::new(class)
+            .encode_wide()
+            .chain(Some(0))
+            .collect::<Vec<_>>();
+        // SAFETY: class is terminated; null title matches any window.
+        let window = unsafe { FindWindowW(class.as_ptr(), std::ptr::null()) };
+        if window == 0 {
+            continue;
+        }
+        let mut pid = 0;
+        if unsafe { GetWindowThreadProcessId(window, &mut pid) } == 0 {
+            continue;
+        }
+        let mut session = 0;
+        if unsafe { ProcessIdToSessionId(pid, &mut session) } == 0 || session != current_session {
+            continue;
+        }
+        // SAFETY: handle is query/synchronize/terminate only and closed on every exit path below.
+        let process = unsafe {
+            OpenProcess(
+                PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_TERMINATE | SYNCHRONIZE,
+                0,
+                pid,
+            )
+        };
+        if process == 0 {
+            continue;
+        }
+        let mut path = vec![0u16; 32_768];
+        let mut length = path.len() as u32;
+        let queried =
+            unsafe { QueryFullProcessImageNameW(process, 0, path.as_mut_ptr(), &mut length) } != 0;
+        let matches = queried
+            && PathBuf::from(String::from_utf16_lossy(&path[..length as usize]))
+                .canonicalize()
+                .is_ok_and(|observed| observed == trusted.application);
+        if !matches {
+            let _ = unsafe { CloseHandle(process) };
+            continue;
+        }
+        let _ = unsafe { PostMessageW(window, WM_CLOSE, 0, 0) };
+        let graceful = unsafe { WaitForSingleObject(process, 1_500) };
+        if graceful == WAIT_OBJECT_0 {
+            let _ = unsafe { CloseHandle(process) };
+            return Ok(ShellShutdownOutcome::ClosedGracefully { process_id: pid });
+        }
+        if graceful != WAIT_TIMEOUT || unsafe { TerminateProcess(process, 0) } == 0 {
+            let _ = unsafe { CloseHandle(process) };
+            return Err("explorer-shutdown-failed");
+        }
+        if unsafe { WaitForSingleObject(process, 2_000) } != WAIT_OBJECT_0 {
+            let _ = unsafe { CloseHandle(process) };
+            return Err("explorer-termination-not-observed");
+        }
+        let _ = unsafe { CloseHandle(process) };
+        return Ok(ShellShutdownOutcome::Terminated { process_id: pid });
+    }
+    Ok(ShellShutdownOutcome::AlreadyAbsent)
 }
 
 /// Reports whether the current interactive session still has a live shell window owned by the
@@ -374,5 +460,29 @@ mod tests {
             .parse::<u32>()
             .unwrap();
         assert_eq!(before, after);
+    }
+
+    #[test]
+    fn takeover_source_is_exact_bounded_and_recovery_remains_available() {
+        let source = include_str!("explorer_recovery.rs");
+        let production = source.split("#[cfg(test)]").next().unwrap_or(source);
+        for required in [
+            "shutdown_trusted_explorer_shell",
+            "ProcessIdToSessionId",
+            "QueryFullProcessImageNameW",
+            "observed == trusted.application",
+            "PostMessageW(window, WM_CLOSE",
+            "WaitForSingleObject(process, 1_500)",
+            "TerminateProcess(process, 0)",
+            "recover_explorer_shell",
+        ] {
+            assert!(
+                production.contains(required),
+                "missing takeover guard: {required}"
+            );
+        }
+        for forbidden in ["taskkill", "/im explorer.exe", "TerminateProcessByName"] {
+            assert!(!production.contains(forbidden));
+        }
     }
 }
