@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="SuperDesktop UTIT shell-parity" tests="17" failures="0" skipped="0">
+  <testcase classname="superdesktop.utit" name="UTIT unit and fixture tests" time="2.973"></testcase>
+  <testcase classname="superdesktop.utit" name="Taskbar model and GUI contracts" time="4.335"></testcase>
+  <testcase classname="superdesktop.utit" name="SuperDesktop production composition contracts" time="0.658"></testcase>
+  <testcase classname="superdesktop.utit" name="UTIT strict OpenSpec validation" time="1.013"></testcase>
+  <testcase classname="superdesktop.utit" name="Locked offline workspace tests" time="11.678"></testcase>
+  <testcase classname="superdesktop.utit" name="Workspace Clippy warnings as errors" time="1.814"></testcase>
+  <testcase classname="superdesktop.utit" name="Product workspace release build (running UTIT excluded)" time="7.851"></testcase>
+  <testcase classname="superdesktop.utit" name="Live taskbar rows and labels" time="10.319"></testcase>
+  <testcase classname="superdesktop.utit" name="Owned Start home and all apps" time="15.258"></testcase>
+  <testcase classname="superdesktop.utit" name="Explorer-free hidden notification icons" time="27.178"></testcase>
+  <testcase classname="superdesktop.utit" name="Desktop marquee selection" time="8.108"></testcase>
+  <testcase classname="superdesktop.utit" name="Explorer-free Show desktop cycles" time="5.545"></testcase>
+  <testcase classname="superdesktop.utit" name="Explorer-free notification center" time="6.442"></testcase>
+  <testcase classname="superdesktop.utit" name="Explorer-free system status and IME flyouts" time="22.202"></testcase>
+  <testcase classname="superdesktop.utit" name="Explorer-free taskbar resize and lock" time="22.251"></testcase>
+  <testcase classname="superdesktop.utit" name="Explorer-free taskbar auto-hide" time="16.467"></testcase>
+  <testcase classname="superdesktop.utit" name="Explorer-free taskbar hover previews" time="7.454"></testcase>
+</testsuite>
