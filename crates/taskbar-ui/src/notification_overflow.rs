@@ -138,7 +138,7 @@ impl Render for NotificationOverflowView {
                     .on_click(move |_, _, _| {
                         click_action(&click_key, NotificationEventKind::Activate);
                     })
-                    .on_mouse_down(gpui::MouseButton::Right, move |_, _, _| {
+                    .on_mouse_up(gpui::MouseButton::Right, move |_, _, _| {
                         context_action(&context_key, NotificationEventKind::Context);
                     })
                     .on_key_down(move |event, _, _| {
@@ -173,6 +173,7 @@ mod tests {
             "event.keystroke.key == \"escape\"",
             "NotificationEventKind::Activate",
             "NotificationEventKind::Context",
+            ".on_mouse_up(gpui::MouseButton::Right",
             ".hover(move |style|",
             ".active(move |style|",
             ".focus_visible(move |style|",

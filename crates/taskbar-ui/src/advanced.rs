@@ -60,6 +60,178 @@ pub struct TaskFlyoutView {
     thumbnails: Rc<RefCell<BTreeMap<WindowId, LiveThumbnail>>>,
 }
 
+pub type AltTabDismissAction = Rc<dyn Fn(&mut Window, &mut App)>;
+
+pub struct AltTabView {
+    cards: Vec<PreviewCard>,
+    selected: usize,
+    action: FlyoutWindowAction,
+    dismiss: AltTabDismissAction,
+    destination_hwnd: isize,
+    thumbnails: Rc<RefCell<BTreeMap<WindowId, LiveThumbnail>>>,
+}
+
+fn alt_tab_next_index(current: usize, count: usize, delta: i32) -> usize {
+    if count == 0 {
+        return 0;
+    }
+    (current as i32 + delta).rem_euclid(count as i32) as usize
+}
+
+impl AltTabView {
+    pub fn new(
+        cards: Vec<PreviewCard>,
+        initial_delta: i32,
+        action: FlyoutWindowAction,
+        dismiss: AltTabDismissAction,
+        destination_hwnd: isize,
+    ) -> Self {
+        let selected = alt_tab_next_index(0, cards.len(), initial_delta.signum());
+        Self {
+            cards,
+            selected,
+            action,
+            dismiss,
+            destination_hwnd,
+            thumbnails: Rc::new(RefCell::new(BTreeMap::new())),
+        }
+    }
+
+    pub fn cycle(&mut self, delta: i32, cx: &mut Context<Self>) {
+        if self.cards.is_empty() {
+            return;
+        }
+        self.selected = alt_tab_next_index(self.selected, self.cards.len(), delta);
+        cx.notify();
+    }
+
+    pub fn selected_action(&self) -> Option<FlyoutAction> {
+        self.cards
+            .get(self.selected)
+            .map(|card| FlyoutAction::Activate(card.window_id.clone()))
+    }
+}
+
+impl Render for AltTabView {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let tokens = preview_tokens();
+        let scale_factor = window.scale_factor();
+        div()
+            .id("alt-tab-switcher")
+            .role(gpui::Role::Dialog)
+            .aria_label("Switch windows")
+            .w_full()
+            .h_full()
+            .p_2()
+            .border_1()
+            .border_color(rgb(tokens.border))
+            .rounded_md()
+            .flex()
+            .flex_wrap()
+            .gap_2()
+            .bg(rgb(tokens.panel))
+            .text_color(rgb(tokens.text))
+            .children(self.cards.iter().enumerate().map(|(index, card)| {
+                let action = self.action.clone();
+                let dismiss = self.dismiss.clone();
+                let effect = FlyoutAction::Activate(card.window_id.clone());
+                let preview_source = card.preview_source;
+                let preview_window = card.window_id.clone();
+                let destination_hwnd = self.destination_hwnd;
+                let thumbnails = Rc::clone(&self.thumbnails);
+                div()
+                    .id(format!("alt-tab-card-{index}"))
+                    .role(gpui::Role::Button)
+                    .aria_label(card.title.clone())
+                    .w(px(220.))
+                    .h(px(170.))
+                    .flex_none()
+                    .p_2()
+                    .rounded_md()
+                    .border_2()
+                    .border_color(rgb(if self.selected == index {
+                        tokens.focus
+                    } else {
+                        tokens.border
+                    }))
+                    .flex()
+                    .flex_col()
+                    .gap_2()
+                    .hover(move |style| style.bg(rgb(tokens.hover)))
+                    .on_click(cx.listener(move |_, _, window, cx| {
+                        action(effect.clone());
+                        dismiss(window, cx);
+                    }))
+                    .child(
+                        div()
+                            .h(px(28.))
+                            .flex_none()
+                            .overflow_hidden()
+                            .whitespace_nowrap()
+                            .text_ellipsis()
+                            .child(card.title.clone()),
+                    )
+                    .child(
+                        div()
+                            .flex_1()
+                            .relative()
+                            .rounded_md()
+                            .bg(rgb(tokens.card))
+                            .when_some(preview_source, move |element, source| {
+                                element.child(
+                                    canvas(
+                                        |bounds, _, _| bounds,
+                                        move |bounds, _, _, _| {
+                                            let rect = ThumbnailRect {
+                                                left: (bounds.origin.x.as_f32() * scale_factor)
+                                                    .round()
+                                                    as i32,
+                                                top: (bounds.origin.y.as_f32() * scale_factor)
+                                                    .round()
+                                                    as i32,
+                                                right: ((bounds.origin.x + bounds.size.width)
+                                                    .as_f32()
+                                                    * scale_factor)
+                                                    .round()
+                                                    as i32,
+                                                bottom: ((bounds.origin.y + bounds.size.height)
+                                                    .as_f32()
+                                                    * scale_factor)
+                                                    .round()
+                                                    as i32,
+                                            };
+                                            let mut thumbnails = thumbnails.borrow_mut();
+                                            if !thumbnails.contains_key(&preview_window)
+                                                && let Ok(thumbnail) = LiveThumbnail::register(
+                                                    destination_hwnd,
+                                                    source,
+                                                )
+                                            {
+                                                thumbnails
+                                                    .insert(preview_window.clone(), thumbnail);
+                                            }
+                                            let failed = thumbnails
+                                                .get(&preview_window)
+                                                .is_some_and(|thumbnail| {
+                                                    thumbnail.update_destination(rect).is_err()
+                                                });
+                                            if failed {
+                                                thumbnails.remove(&preview_window);
+                                            }
+                                        },
+                                    )
+                                    .absolute()
+                                    .inset_0(),
+                                )
+                            })
+                            .when(!card.preview_available, |element| {
+                                element.child("Preview unavailable")
+                            }),
+                    )
+            }))
+    }
+}
+
 impl TaskFlyoutView {
     pub fn new(
         cards: Vec<PreviewCard>,
@@ -931,6 +1103,14 @@ mod tests {
         assert!(!controller.can_close(leave));
         assert!(controller.can_open("two", second));
         assert!(!controller.can_open("one", first));
+    }
+
+    #[test]
+    fn alt_tab_selection_wraps_forward_backward_and_handles_empty_snapshots() {
+        assert_eq!(alt_tab_next_index(0, 4, 1), 1);
+        assert_eq!(alt_tab_next_index(3, 4, 1), 0);
+        assert_eq!(alt_tab_next_index(0, 4, -1), 3);
+        assert_eq!(alt_tab_next_index(0, 0, 1), 0);
     }
 
     #[test]

@@ -555,7 +555,7 @@ impl Render for TaskbarView {
                                     callback(&key, NotificationEventKind::Activate);
                                 }
                             })
-                            .on_mouse_down(gpui::MouseButton::Right, move |_, _, _| {
+                            .on_mouse_up(gpui::MouseButton::Right, move |_, _, _| {
                                 if let Some(callback) = &context_callback {
                                     callback(&context_key, NotificationEventKind::Context);
                                 }
@@ -1686,6 +1686,7 @@ mod tests {
         }
         assert!(!production.contains("when(has_overflow"));
         assert!(!control.contains("NotificationPlacement::Overflow"));
+        assert!(production.contains(".on_mouse_up(gpui::MouseButton::Right"));
         assert_eq!(
             control
                 .matches("callback(this.notification_area.accessible_nodes(), cx)")

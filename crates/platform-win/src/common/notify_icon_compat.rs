@@ -24,7 +24,7 @@ use shell_provider_protocol::{
     Validate,
 };
 use windows::Win32::{
-    Foundation::{HINSTANCE, HWND, LPARAM, LRESULT, WPARAM},
+    Foundation::{HINSTANCE, HWND, LPARAM, LRESULT, POINT, WPARAM},
     System::DataExchange::COPYDATASTRUCT,
     UI::{
         Shell::{
@@ -33,11 +33,12 @@ use windows::Win32::{
         },
         WindowsAndMessaging::{
             CREATESTRUCTW, CS_HREDRAW, CS_VREDRAW, CreateWindowExW, DefWindowProcW, DestroyWindow,
-            DispatchMessageW, FindWindowW, GWLP_USERDATA, GetMessageW, GetWindowLongPtrW,
-            GetWindowThreadProcessId, HWND_BROADCAST, IsWindow, MSG, PostMessageW, PostQuitMessage,
-            RegisterClassW, RegisterWindowMessageW, SetWindowLongPtrW, TranslateMessage,
-            UnregisterClassW, WINDOW_EX_STYLE, WINDOW_STYLE, WM_CLOSE, WM_CONTEXTMENU, WM_COPYDATA,
-            WM_DESTROY, WM_LBUTTONUP, WM_MOUSEMOVE, WM_NCCREATE, WNDCLASSW,
+            DispatchMessageW, FindWindowW, GWLP_USERDATA, GetCursorPos, GetMessageW,
+            GetWindowLongPtrW, GetWindowThreadProcessId, HWND_BROADCAST, IsWindow, MSG,
+            PostMessageW, PostQuitMessage, RegisterClassW, RegisterWindowMessageW,
+            SetWindowLongPtrW, TranslateMessage, UnregisterClassW, WINDOW_EX_STYLE, WINDOW_STYLE,
+            WM_CLOSE, WM_CONTEXTMENU, WM_COPYDATA, WM_DESTROY, WM_LBUTTONUP, WM_MOUSEMOVE,
+            WM_NCCREATE, WNDCLASSW,
         },
     },
 };
@@ -774,6 +775,15 @@ pub fn callback_payload(
     icon: &OwnedNotifyIcon,
     kind: NotificationEventKind,
 ) -> NotifyIconCallbackPayload {
+    callback_payload_at(icon, kind, 0, 0)
+}
+
+pub fn callback_payload_at(
+    icon: &OwnedNotifyIcon,
+    kind: NotificationEventKind,
+    cursor_x: i32,
+    cursor_y: i32,
+) -> NotifyIconCallbackPayload {
     let event = match (icon.callback.negotiated_version, kind) {
         (NotifyIconLayoutVersion::V4, NotificationEventKind::Activate) => NIN_SELECT,
         (NotifyIconLayoutVersion::V4, NotificationEventKind::Focus) => NIN_KEYSELECT,
@@ -786,7 +796,7 @@ pub fn callback_payload(
     if icon.callback.negotiated_version == NotifyIconLayoutVersion::V4 {
         NotifyIconCallbackPayload {
             message: icon.callback.message_id,
-            wparam: 0,
+            wparam: usize::from(cursor_x as u16) | (usize::from(cursor_y as u16) << 16),
             lparam: isize::try_from((event & 0xffff) | (numeric_id << 16)).unwrap_or_default(),
         }
     } else {
@@ -807,7 +817,10 @@ pub fn deliver_callback(
         icon.client.process_id,
         icon.client.session_id,
     )?;
-    let payload = callback_payload(icon, kind);
+    let mut cursor = POINT::default();
+    // SAFETY: cursor is local writable storage; failure falls back to the documented zero point.
+    let _ = unsafe { GetCursorPos(&mut cursor) };
+    let payload = callback_payload_at(icon, kind, cursor.x, cursor.y);
     unsafe {
         PostMessageW(
             Some(HWND(icon.client.window_identity as isize as *mut _)),
@@ -1110,6 +1123,10 @@ mod tests {
         assert_eq!(v4.wparam, 0);
         assert_eq!(v4.lparam as u32 & 0xffff, NIN_SELECT);
         assert_eq!(v4.lparam as u32 >> 16, 77);
+        let context = callback_payload_at(&icon, NotificationEventKind::Context, -10, 700);
+        assert_eq!(context.wparam as u32 & 0xffff, (-10_i16) as u16 as u32);
+        assert_eq!(context.wparam as u32 >> 16, 700);
+        assert_eq!(context.lparam as u32 & 0xffff, WM_CONTEXTMENU);
         icon.callback.negotiated_version = NotifyIconLayoutVersion::V2;
         let legacy = callback_payload(&icon, NotificationEventKind::Context);
         assert_eq!(legacy.wparam, 77);

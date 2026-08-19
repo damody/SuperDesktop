@@ -45,16 +45,17 @@ use shell_provider_protocol::{
     TaskbarWindowState, TerminalKind, reduce_group_progress,
 };
 use taskbar_ui::{
-    AccessibleTask, AutoHideEffect, AutoHideInput, AutoHideState, ClockLocale, CoreStatus,
-    FlyoutAction, HOVER_PREVIEW_CLOSE_GRACE_MS, HOVER_PREVIEW_DELAY_MS, HoverPreviewController,
-    JumpListModel, JumpListView, NotificationAreaModel, NotificationCenterAction,
-    NotificationOverflowView, PreviewCard, ProgressState, ProviderState, ShowDesktopObservation,
-    ShowDesktopPlan, ShowDesktopSession, ShowDesktopTarget, StartActions, StartPowerAction,
-    StartSnapshot, StartView, StatusRegion, SystemFlyoutKind, SystemFlyoutPresentation,
-    SystemFlyoutTheme, SystemFlyoutView, SystemStatusAction, TaskAction, TaskFlyoutView,
-    TaskViewEffect, TaskViewModel, TaskViewSurface, TaskbarCallbacks, TaskbarContextCommand,
-    TaskbarContextView, TaskbarLayout, TaskbarSettingId, TaskbarSettingsEffect,
-    TaskbarSettingsView, TaskbarView, TestClock, auto_hide_endpoints, reduce_auto_hide,
+    AccessibleTask, AltTabView, AutoHideEffect, AutoHideInput, AutoHideState, ClockLocale,
+    CoreStatus, FlyoutAction, HOVER_PREVIEW_CLOSE_GRACE_MS, HOVER_PREVIEW_DELAY_MS,
+    HoverPreviewController, JumpListModel, JumpListView, NotificationAreaModel,
+    NotificationCenterAction, NotificationOverflowView, PreviewCard, ProgressState, ProviderState,
+    ShowDesktopObservation, ShowDesktopPlan, ShowDesktopSession, ShowDesktopTarget, StartActions,
+    StartPowerAction, StartSnapshot, StartView, StatusRegion, SystemFlyoutKind,
+    SystemFlyoutPresentation, SystemFlyoutTheme, SystemFlyoutView, SystemStatusAction, TaskAction,
+    TaskFlyoutView, TaskViewEffect, TaskViewModel, TaskViewSurface, TaskbarCallbacks,
+    TaskbarContextCommand, TaskbarContextView, TaskbarLayout, TaskbarSettingId,
+    TaskbarSettingsEffect, TaskbarSettingsView, TaskbarView, TestClock, auto_hide_endpoints,
+    reduce_auto_hide,
 };
 
 use crate::{
@@ -65,6 +66,7 @@ use crate::{
 };
 
 static NEXT_PROVIDER_REQUEST: AtomicU64 = AtomicU64::new(1);
+static EXPLORER_SUPPRESSION_ENABLED: AtomicBool = AtomicBool::new(false);
 const ICON_CACHE_LIMIT: usize = 2_048;
 const HSHELL_WINDOWDESTROYED: u32 = 2;
 const HSHELL_WINDOWACTIVATED: u32 = 4;
@@ -1371,6 +1373,7 @@ fn group_window_ids(stable_id: &str) -> Vec<isize> {
 }
 
 type TaskFlyoutSlot = Rc<RefCell<Option<gpui::WindowHandle<TaskFlyoutView>>>>;
+type AltTabSlot = Rc<RefCell<Option<gpui::WindowHandle<AltTabView>>>>;
 
 fn preview_card_width_for_size(width: i32, height: i32, maximum_width: f32) -> u16 {
     if width <= 0 || height <= 0 || maximum_width <= 0.0 {
@@ -1440,6 +1443,129 @@ fn preview_cards(
             })
         })
         .collect()
+}
+
+fn alt_tab_cards() -> Vec<PreviewCard> {
+    let Ok(windows) = snapshot_task_windows() else {
+        return Vec::new();
+    };
+    let now = unix_time_ms();
+    windows
+        .into_iter()
+        .take(12)
+        .filter_map(|window| {
+            let window_id = shell_core::WindowId::new(window.window_identity).ok()?;
+            let preview_available = matches!(
+                platform_win::common::taskbar_preview::admit_live_preview(
+                    window.hwnd_identity,
+                    false,
+                    now,
+                    unix_time_ms(),
+                ),
+                platform_win::common::taskbar_preview::PreviewAdmission::Available { .. }
+            );
+            Some(PreviewCard {
+                window_id,
+                title: if window.title.is_empty() {
+                    window.application_identity
+                } else {
+                    window.title
+                },
+                minimized: window.minimized,
+                preview_available,
+                preview_source: preview_available.then_some(window.hwnd_identity),
+                preview_width: 220,
+            })
+        })
+        .collect()
+}
+
+fn alt_tab_options(monitor: &MonitorRecord, card_count: usize) -> WindowOptions {
+    let scale = monitor.dpi_x as f32 / 96.0;
+    let work_left = monitor.work_area.left as f32 / scale;
+    let work_top = monitor.work_area.top as f32 / scale;
+    let work_width = (monitor.work_area.right - monitor.work_area.left) as f32 / scale;
+    let work_height = (monitor.work_area.bottom - monitor.work_area.top) as f32 / scale;
+    let columns = card_count.clamp(1, 4);
+    let rows = card_count.max(1).div_ceil(columns).min(3);
+    let width = (columns as f32 * 228.0 + 16.0).min((work_width - 16.0).max(1.0));
+    let height = (rows as f32 * 178.0 + 16.0).min((work_height - 16.0).max(1.0));
+    WindowOptions {
+        window_bounds: Some(WindowBounds::Windowed(Bounds {
+            origin: point(
+                px(work_left + (work_width - width) / 2.0),
+                px(work_top + (work_height - height) / 2.0),
+            ),
+            size: size(px(width), px(height)),
+        })),
+        titlebar: None,
+        focus: false,
+        show: true,
+        kind: WindowKind::PopUp,
+        is_movable: false,
+        is_resizable: false,
+        is_minimizable: false,
+        window_background: WindowBackgroundAppearance::Opaque,
+        ..Default::default()
+    }
+}
+
+fn open_or_cycle_alt_tab(app: &mut App, slot: &AltTabSlot, monitor: &MonitorRecord, delta: i32) {
+    if let Some(handle) = *slot.borrow()
+        && handle
+            .update(app, |view, _, cx| view.cycle(delta, cx))
+            .is_ok()
+    {
+        return;
+    }
+    slot.borrow_mut().take();
+    let cards = alt_tab_cards();
+    if cards.is_empty() {
+        return;
+    }
+    let dismiss_slot = Rc::clone(slot);
+    let opened = app.open_window(alt_tab_options(monitor, cards.len()), move |window, cx| {
+        let destination_hwnd = hwnd(window).unwrap_or_default();
+        if promote_owned_popup_topmost(destination_hwnd).is_err() {
+            window.remove_window();
+        }
+        cx.new(|_| {
+            AltTabView::new(
+                cards,
+                delta,
+                Rc::new(apply_flyout_action),
+                Rc::new(move |window, _| {
+                    window.remove_window();
+                    *dismiss_slot.borrow_mut() = None;
+                }),
+                destination_hwnd,
+            )
+        })
+    });
+    if let Ok(handle) = opened {
+        *slot.borrow_mut() = Some(handle);
+        trace_action("alt-tab:opened");
+    }
+}
+
+fn close_alt_tab(app: &mut App, slot: &AltTabSlot, commit: bool) {
+    let Some(handle) = slot.borrow_mut().take() else {
+        return;
+    };
+    let action = handle
+        .update(app, |view, window, _| {
+            let action = commit.then(|| view.selected_action()).flatten();
+            window.remove_window();
+            action
+        })
+        .ok()
+        .flatten();
+    if let Some(action) = action {
+        apply_flyout_action(action);
+        trace_action("alt-tab:committed");
+    } else {
+        trace_action("alt-tab:cancelled");
+    }
 }
 
 fn schedule_preview_close(
@@ -2979,9 +3105,42 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
     let terminal = Rc::new(RefCell::new(None::<Result<(), &'static str>>));
     let terminal_for_app = Rc::clone(&terminal);
     let platform = gpui_windows::WindowsPlatform::new(false).map_err(|_| "gpui-platform")?;
+    EXPLORER_SUPPRESSION_ENABLED.store(shell, Ordering::Release);
+    let explorer_suppression_worker = if shell {
+        match std::thread::Builder::new()
+            .name("superdesktop-explorer-suppression".into())
+            .spawn(|| {
+                while EXPLORER_SUPPRESSION_ENABLED.load(Ordering::Acquire) {
+                    std::thread::sleep(Duration::from_secs(1));
+                    if !EXPLORER_SUPPRESSION_ENABLED.load(Ordering::Acquire) {
+                        break;
+                    }
+                    if let Err(error) =
+                        platform_win::common::explorer_recovery::shutdown_trusted_explorer_shell()
+                    {
+                        eprintln!("SuperDesktop error [explorer-suppression]: {error}");
+                    }
+                }
+            }) {
+            Ok(worker) => Some(worker),
+            Err(_) => {
+                EXPLORER_SUPPRESSION_ENABLED.store(false, Ordering::Release);
+                return Err("explorer-suppression-thread");
+            }
+        }
+    } else {
+        None
+    };
     gpui::Application::with_platform(Rc::new(platform))
         .with_quit_mode(gpui::QuitMode::Explicit)
         .run(move |cx: &mut App| {
+            let alt_tab_window = Rc::new(RefCell::new(None::<gpui::WindowHandle<AltTabView>>));
+            let alt_tab_monitor = snapshot
+                .monitors
+                .iter()
+                .find(|monitor| monitor.primary)
+                .or_else(|| snapshot.monitors.first())
+                .cloned();
             let provider_refresh_batch = Arc::new(Mutex::new(ProviderRefreshBatch::default()));
             let provider_refresh_stop = Arc::new(AtomicBool::new(false));
             let provider_batch_for_worker = Arc::clone(&provider_refresh_batch);
@@ -4086,6 +4245,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                                         }
                                                     }
                                                     TaskbarContextCommand::ReturnToDefaultExplorer => {
+                                                        EXPLORER_SUPPRESSION_ENABLED.store(false, Ordering::Release);
                                                         match platform_win::common::explorer_recovery::recover_explorer_shell() {
                                                             Ok(_) => {
                                                                 trace_action("explorer-return:verified");
@@ -4568,6 +4728,8 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                 let refresh_auto_hide_context = Rc::clone(&taskbar_context_window);
                 let refresh_auto_hide_settings_window = Rc::clone(&taskbar_settings_window);
                 let refresh_auto_hide_leases = Rc::clone(&leases);
+                let refresh_alt_tab_window = Rc::clone(&alt_tab_window);
+                let refresh_alt_tab_monitor = alt_tab_monitor.clone();
                 refresh_foreground
                     .spawn(async move {
                         let auto_hide_epoch = Instant::now();
@@ -4854,6 +5016,29 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                                 callback(kind, app);
                                                 trace_action("shell-hotkey:system-flyout");
                                             }
+                                        }
+                                        ShellHotkeyAction::AltTabForward
+                                        | ShellHotkeyAction::AltTabBackward => {
+                                            if let Some(monitor) = &refresh_alt_tab_monitor {
+                                                open_or_cycle_alt_tab(
+                                                    app,
+                                                    &refresh_alt_tab_window,
+                                                    monitor,
+                                                    if action == ShellHotkeyAction::AltTabForward {
+                                                        1
+                                                    } else {
+                                                        -1
+                                                    },
+                                                );
+                                            }
+                                        }
+                                        ShellHotkeyAction::AltTabCommit
+                                        | ShellHotkeyAction::AltTabCancel => {
+                                            close_alt_tab(
+                                                app,
+                                                &refresh_alt_tab_window,
+                                                action == ShellHotkeyAction::AltTabCommit,
+                                            );
                                         }
                                     }
                                 }
@@ -5324,7 +5509,14 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                     .detach();
             }
         });
-    terminal.borrow_mut().take().unwrap_or(Ok(()))
+    let result = terminal.borrow_mut().take().unwrap_or(Ok(()));
+    EXPLORER_SUPPRESSION_ENABLED.store(false, Ordering::Release);
+    if let Some(worker) = explorer_suppression_worker
+        && worker.join().is_err()
+    {
+        eprintln!("SuperDesktop error [explorer-suppression]: worker panicked");
+    }
+    result
 }
 
 #[cfg(test)]
@@ -6632,6 +6824,26 @@ mod live_parity_tests {
         let view = include_str!("../../taskbar-ui/src/advanced.rs");
         assert!(view.contains("if self.keyboard_focus"));
         assert!(view.contains("window.focus(&self.focus, cx)"));
+    }
+
+    #[test]
+    fn alt_tab_uses_owned_snapshot_dwm_previews_and_exact_foreground_action() {
+        let source = include_str!("surface_runtime.rs");
+        let production = source.split("#[cfg(test)]").next().unwrap_or(source);
+        for required in [
+            "fn alt_tab_cards()",
+            "snapshot_task_windows()",
+            "AltTabView::new(",
+            "ShellHotkeyAction::AltTabForward",
+            "ShellHotkeyAction::AltTabCommit",
+            "apply_flyout_action(action)",
+            "promote_owned_popup_topmost(destination_hwnd)",
+        ] {
+            assert!(
+                production.contains(required),
+                "missing Alt+Tab route: {required}"
+            );
+        }
     }
 
     #[test]

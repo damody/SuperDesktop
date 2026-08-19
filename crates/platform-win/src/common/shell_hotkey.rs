@@ -3,7 +3,7 @@
 use std::{
     panic::{AssertUnwindSafe, catch_unwind},
     sync::{
-        atomic::{AtomicU8, AtomicU32, Ordering},
+        atomic::{AtomicBool, AtomicI32, AtomicU32, Ordering},
         mpsc,
     },
     thread::JoinHandle,
@@ -33,36 +33,60 @@ const VK_SPACE: u32 = 0x20;
 const VK_TAB: u32 = 0x09;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-#[repr(u8)]
+#[repr(u32)]
 pub enum ShellHotkeyAction {
-    OpenExplorer = 1,
-    ShowDesktop = 2,
-    CycleInput = 3,
-    OpenSearch = 4,
-    OpenTaskView = 5,
-    OpenNetworkPower = 6,
-    OpenNotifications = 7,
-    CycleInputPrevious = 8,
+    OpenExplorer = 1 << 0,
+    ShowDesktop = 1 << 1,
+    CycleInput = 1 << 2,
+    OpenSearch = 1 << 3,
+    OpenTaskView = 1 << 4,
+    OpenNetworkPower = 1 << 5,
+    OpenNotifications = 1 << 6,
+    CycleInputPrevious = 1 << 7,
+    AltTabForward = 1 << 8,
+    AltTabBackward = 1 << 9,
+    AltTabCommit = 1 << 10,
+    AltTabCancel = 1 << 11,
 }
 
 impl ShellHotkeyAction {
-    fn from_code(code: u8) -> Option<Self> {
+    fn from_code(code: u32) -> Option<Self> {
         match code {
             1 => Some(Self::OpenExplorer),
             2 => Some(Self::ShowDesktop),
-            3 => Some(Self::CycleInput),
-            4 => Some(Self::OpenSearch),
-            5 => Some(Self::OpenTaskView),
-            6 => Some(Self::OpenNetworkPower),
-            7 => Some(Self::OpenNotifications),
-            8 => Some(Self::CycleInputPrevious),
+            4 => Some(Self::CycleInput),
+            8 => Some(Self::OpenSearch),
+            16 => Some(Self::OpenTaskView),
+            32 => Some(Self::OpenNetworkPower),
+            64 => Some(Self::OpenNotifications),
+            128 => Some(Self::CycleInputPrevious),
+            256 => Some(Self::AltTabForward),
+            512 => Some(Self::AltTabBackward),
+            1024 => Some(Self::AltTabCommit),
+            2048 => Some(Self::AltTabCancel),
             _ => None,
         }
     }
 }
 
 static ACTIVE_KEY: AtomicU32 = AtomicU32::new(0);
-static REQUESTED: AtomicU8 = AtomicU8::new(0);
+static REQUESTED: AtomicU32 = AtomicU32::new(0);
+static ALT_TAB_ACTIVE: AtomicBool = AtomicBool::new(false);
+static ALT_TAB_DELTA: AtomicI32 = AtomicI32::new(0);
+
+fn request(action: ShellHotkeyAction) {
+    match action {
+        ShellHotkeyAction::AltTabForward => {
+            ALT_TAB_DELTA.fetch_add(1, Ordering::AcqRel);
+        }
+        ShellHotkeyAction::AltTabBackward => {
+            ALT_TAB_DELTA.fetch_sub(1, Ordering::AcqRel);
+        }
+        _ => {
+            REQUESTED.fetch_or(action as u32, Ordering::AcqRel);
+        }
+    }
+}
 
 fn action_for_key(
     vk_code: u32,
@@ -124,6 +148,29 @@ unsafe extern "system" fn keyboard_hook(code: i32, wparam: WPARAM, lparam: LPARA
         let alt = unsafe { GetAsyncKeyState(i32::from(VK_MENU.0)) } < 0;
         let shift = unsafe { GetAsyncKeyState(i32::from(VK_SHIFT.0)) } < 0;
         let active_key = ACTIVE_KEY.load(Ordering::Acquire);
+        let alt_tab_active = ALT_TAB_ACTIVE.load(Ordering::Acquire);
+        if (alt_tab_active || (key_down && alt && !windows_down && !control))
+            && event.vkCode == VK_TAB
+        {
+            ALT_TAB_ACTIVE.store(true, Ordering::Release);
+            if key_down {
+                request(if shift {
+                    ShellHotkeyAction::AltTabBackward
+                } else {
+                    ShellHotkeyAction::AltTabForward
+                });
+            }
+            return LRESULT(1);
+        }
+        if alt_tab_active && key_down && event.vkCode == 0x1b {
+            ALT_TAB_ACTIVE.store(false, Ordering::Release);
+            request(ShellHotkeyAction::AltTabCancel);
+            return LRESULT(1);
+        }
+        if alt_tab_active && key_up && matches!(event.vkCode, 0x12 | 0xa4 | 0xa5) {
+            ALT_TAB_ACTIVE.store(false, Ordering::Release);
+            request(ShellHotkeyAction::AltTabCommit);
+        }
         let (consume, request, next_key) = reduce_shell_hotkey(
             event.vkCode,
             key_down,
@@ -136,8 +183,7 @@ unsafe extern "system" fn keyboard_hook(code: i32, wparam: WPARAM, lparam: LPARA
         );
         ACTIVE_KEY.store(next_key, Ordering::Release);
         if let Some(request) = request {
-            let _ =
-                REQUESTED.compare_exchange(0, request as u8, Ordering::AcqRel, Ordering::Acquire);
+            self::request(request);
         }
         if consume {
             return LRESULT(1);
@@ -156,6 +202,8 @@ impl ShellHotkeys {
     pub fn start() -> Result<Self, String> {
         REQUESTED.store(0, Ordering::Release);
         ACTIVE_KEY.store(0, Ordering::Release);
+        ALT_TAB_ACTIVE.store(false, Ordering::Release);
+        ALT_TAB_DELTA.store(0, Ordering::Release);
         let (ready_tx, ready_rx) = mpsc::sync_channel(1);
         let worker = std::thread::Builder::new()
             .name("superdesktop-win-e".into())
@@ -187,6 +235,8 @@ impl ShellHotkeys {
                 }
                 let _ = unsafe { UnhookWindowsHookEx(hook) };
                 ACTIVE_KEY.store(0, Ordering::Release);
+                ALT_TAB_ACTIVE.store(false, Ordering::Release);
+                ALT_TAB_DELTA.store(0, Ordering::Release);
             })
             .map_err(|error| format!("Shell hotkey hook thread failed: {error}"))?;
         let thread_id = ready_rx
@@ -199,7 +249,43 @@ impl ShellHotkeys {
     }
 
     pub fn take_requested(&self) -> Option<ShellHotkeyAction> {
-        ShellHotkeyAction::from_code(REQUESTED.swap(0, Ordering::AcqRel))
+        loop {
+            let delta = ALT_TAB_DELTA.load(Ordering::Acquire);
+            if delta != 0 {
+                if ALT_TAB_DELTA
+                    .compare_exchange(
+                        delta,
+                        delta - delta.signum(),
+                        Ordering::AcqRel,
+                        Ordering::Acquire,
+                    )
+                    .is_ok()
+                {
+                    return Some(if delta > 0 {
+                        ShellHotkeyAction::AltTabForward
+                    } else {
+                        ShellHotkeyAction::AltTabBackward
+                    });
+                }
+                continue;
+            }
+            let pending = REQUESTED.load(Ordering::Acquire);
+            if pending == 0 {
+                return None;
+            }
+            let code = 1_u32 << pending.trailing_zeros();
+            if REQUESTED
+                .compare_exchange(
+                    pending,
+                    pending & !code,
+                    Ordering::AcqRel,
+                    Ordering::Acquire,
+                )
+                .is_ok()
+            {
+                return ShellHotkeyAction::from_code(code);
+            }
+        }
     }
 }
 
@@ -269,7 +355,9 @@ mod tests {
             "PostThreadMessageW(self.thread_id, WM_QUIT",
             "UnhookWindowsHookEx",
             "catch_unwind(AssertUnwindSafe",
-            "REQUESTED.swap(0",
+            "pending & !code",
+            "ALT_TAB_DELTA",
+            "ShellHotkeyAction::AltTabCommit",
         ] {
             assert!(
                 production.contains(required),
@@ -277,5 +365,20 @@ mod tests {
             );
         }
         assert!(!production.contains("RegisterHotKey"));
+    }
+
+    #[test]
+    fn alt_tab_queue_preserves_repeated_cycles_before_commit() {
+        REQUESTED.store(0, Ordering::Release);
+        ALT_TAB_DELTA.store(0, Ordering::Release);
+        request(ShellHotkeyAction::AltTabForward);
+        request(ShellHotkeyAction::AltTabForward);
+        request(ShellHotkeyAction::AltTabCommit);
+        assert_eq!(ALT_TAB_DELTA.swap(0, Ordering::AcqRel), 2);
+        assert_ne!(
+            REQUESTED.load(Ordering::Acquire) & ShellHotkeyAction::AltTabCommit as u32,
+            0
+        );
+        REQUESTED.store(0, Ordering::Release);
     }
 }

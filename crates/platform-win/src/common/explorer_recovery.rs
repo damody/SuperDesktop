@@ -21,9 +21,41 @@ const PROCESS_QUERY_LIMITED_INFORMATION: u32 = 0x1000;
 const PROCESS_TERMINATE: u32 = 0x0001;
 const SYNCHRONIZE: u32 = 0x0010_0000;
 const WAIT_OBJECT_0: u32 = 0;
-const WAIT_TIMEOUT: u32 = 258;
-const WM_CLOSE: u32 = 0x0010;
 const SW_SHOW: i32 = 5;
+const TH32CS_SNAPPROCESS: u32 = 0x0000_0002;
+const INVALID_HANDLE_VALUE: RawHandle = -1;
+const MAX_PATH: usize = 260;
+
+#[repr(C)]
+struct ProcessEntry32W {
+    size: u32,
+    usage: u32,
+    process_id: u32,
+    default_heap_id: usize,
+    module_id: u32,
+    threads: u32,
+    parent_process_id: u32,
+    priority_class_base: i32,
+    flags: u32,
+    executable: [u16; MAX_PATH],
+}
+
+impl Default for ProcessEntry32W {
+    fn default() -> Self {
+        Self {
+            size: std::mem::size_of::<Self>() as u32,
+            usage: 0,
+            process_id: 0,
+            default_heap_id: 0,
+            module_id: 0,
+            threads: 0,
+            parent_process_id: 0,
+            priority_class_base: 0,
+            flags: 0,
+            executable: [0; MAX_PATH],
+        }
+    }
+}
 
 #[repr(C)]
 struct Guid {
@@ -70,6 +102,9 @@ unsafe extern "system" {
     fn GetCurrentProcessId() -> u32;
     fn WaitForSingleObject(handle: RawHandle, milliseconds: u32) -> u32;
     fn TerminateProcess(handle: RawHandle, exit_code: u32) -> i32;
+    fn CreateToolhelp32Snapshot(flags: u32, process_id: u32) -> RawHandle;
+    fn Process32FirstW(snapshot: RawHandle, entry: *mut ProcessEntry32W) -> i32;
+    fn Process32NextW(snapshot: RawHandle, entry: *mut ProcessEntry32W) -> i32;
 }
 #[link(name = "wintrust")]
 unsafe extern "system" {
@@ -81,7 +116,6 @@ unsafe extern "system" {
     fn GetWindowThreadProcessId(window: isize, pid: *mut u32) -> u32;
     fn ShowWindow(window: isize, command: i32) -> i32;
     fn IsWindowVisible(window: isize) -> i32;
-    fn PostMessageW(window: isize, message: u32, wparam: usize, lparam: isize) -> i32;
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -173,8 +207,8 @@ pub enum ShellShutdownOutcome {
 }
 
 /// Closes only the current-session shell process whose executable matches the verified inbox
-/// Explorer. A normal WM_CLOSE is attempted first; exact-process termination is the bounded
-/// fallback requested for shell takeover.
+/// Explorer. Every matching process is terminated by exact PID and its exit is observed before
+/// shell takeover continues.
 pub fn shutdown_trusted_explorer_shell() -> Result<ShellShutdownOutcome, &'static str> {
     let trusted = TrustedExplorer::resolve()?;
     let mut current_session = 0;
@@ -182,20 +216,30 @@ pub fn shutdown_trusted_explorer_shell() -> Result<ShellShutdownOutcome, &'stati
     if unsafe { ProcessIdToSessionId(GetCurrentProcessId(), &mut current_session) } == 0 {
         return Err("explorer-shutdown-current-session");
     }
-    for class in ["Shell_TrayWnd", "Progman"] {
-        let class = OsStr::new(class)
-            .encode_wide()
-            .chain(Some(0))
-            .collect::<Vec<_>>();
-        // SAFETY: class is terminated; null title matches any window.
-        let window = unsafe { FindWindowW(class.as_ptr(), std::ptr::null()) };
-        if window == 0 {
-            continue;
+    // Explorer can own no Shell_TrayWnd yet still remain alive or can be restarted by Winlogon
+    // between window probes. Enumerate the current session and validate each candidate by its
+    // canonical executable before terminating the exact processes.
+    let snapshot = unsafe { CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) };
+    if snapshot == INVALID_HANDLE_VALUE {
+        return Err("explorer-process-snapshot");
+    }
+    let mut entry = ProcessEntry32W::default();
+    let mut has_entry = unsafe { Process32FirstW(snapshot, &mut entry) } != 0;
+    let mut matched = Vec::new();
+    while has_entry {
+        let end = entry
+            .executable
+            .iter()
+            .position(|value| *value == 0)
+            .unwrap_or(entry.executable.len());
+        if String::from_utf16_lossy(&entry.executable[..end]).eq_ignore_ascii_case("explorer.exe") {
+            matched.push(entry.process_id);
         }
-        let mut pid = 0;
-        if unsafe { GetWindowThreadProcessId(window, &mut pid) } == 0 {
-            continue;
-        }
+        has_entry = unsafe { Process32NextW(snapshot, &mut entry) } != 0;
+    }
+    let _ = unsafe { CloseHandle(snapshot) };
+    let mut terminated = None;
+    for pid in matched {
         let mut session = 0;
         if unsafe { ProcessIdToSessionId(pid, &mut session) } == 0 || session != current_session {
             continue;
@@ -223,13 +267,7 @@ pub fn shutdown_trusted_explorer_shell() -> Result<ShellShutdownOutcome, &'stati
             let _ = unsafe { CloseHandle(process) };
             continue;
         }
-        let _ = unsafe { PostMessageW(window, WM_CLOSE, 0, 0) };
-        let graceful = unsafe { WaitForSingleObject(process, 1_500) };
-        if graceful == WAIT_OBJECT_0 {
-            let _ = unsafe { CloseHandle(process) };
-            return Ok(ShellShutdownOutcome::ClosedGracefully { process_id: pid });
-        }
-        if graceful != WAIT_TIMEOUT || unsafe { TerminateProcess(process, 0) } == 0 {
+        if unsafe { TerminateProcess(process, 0) } == 0 {
             let _ = unsafe { CloseHandle(process) };
             return Err("explorer-shutdown-failed");
         }
@@ -238,9 +276,13 @@ pub fn shutdown_trusted_explorer_shell() -> Result<ShellShutdownOutcome, &'stati
             return Err("explorer-termination-not-observed");
         }
         let _ = unsafe { CloseHandle(process) };
-        return Ok(ShellShutdownOutcome::Terminated { process_id: pid });
+        terminated = Some(pid);
     }
-    Ok(ShellShutdownOutcome::AlreadyAbsent)
+    Ok(
+        terminated.map_or(ShellShutdownOutcome::AlreadyAbsent, |process_id| {
+            ShellShutdownOutcome::Terminated { process_id }
+        }),
+    )
 }
 
 /// Reports whether the current interactive session still has a live shell window owned by the
@@ -469,11 +511,11 @@ mod tests {
         for required in [
             "shutdown_trusted_explorer_shell",
             "ProcessIdToSessionId",
+            "CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS",
             "QueryFullProcessImageNameW",
             "observed == trusted.application",
-            "PostMessageW(window, WM_CLOSE",
-            "WaitForSingleObject(process, 1_500)",
             "TerminateProcess(process, 0)",
+            "WaitForSingleObject(process, 2_000)",
             "recover_explorer_shell",
         ] {
             assert!(

@@ -21,10 +21,10 @@ mod tracker;
 mod view;
 
 pub use advanced::{
-    AdvancedTaskbarPreferences, FlyoutAction, FlyoutHoverAction, FlyoutModel,
-    HOVER_PREVIEW_CLOSE_GRACE_MS, HOVER_PREVIEW_DELAY_MS, HoverPreviewController, JumpListGroup,
-    JumpListModel, JumpListView, PreviewCard, ProgressState, TaskFlyoutView, TaskOverlay,
-    TaskVisualState,
+    AdvancedTaskbarPreferences, AltTabDismissAction, AltTabView, FlyoutAction, FlyoutHoverAction,
+    FlyoutModel, HOVER_PREVIEW_CLOSE_GRACE_MS, HOVER_PREVIEW_DELAY_MS, HoverPreviewController,
+    JumpListGroup, JumpListModel, JumpListView, PreviewCard, ProgressState, TaskFlyoutView,
+    TaskOverlay, TaskVisualState,
 };
 pub use auto_hide::{
     AUTO_HIDE_DELAY_MS, AUTO_HIDE_REVEAL_PIXELS, AutoHideEffect, AutoHideEndpoints, AutoHideInput,
