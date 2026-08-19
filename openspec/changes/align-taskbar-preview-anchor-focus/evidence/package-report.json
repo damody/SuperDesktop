@@ -1,0 +1,28 @@
+{
+  "schema": "taskbar-preview-anchor-focus-package/v1",
+  "result": "passed",
+  "implementation_commit": "43a17400bc66d77f0c404d6be09748fd083b1373",
+  "evidence_base_commit": "52ed374ca77fea7653787cb2b062d3b14a1b5fe6",
+  "parent_gitlink_commit": "8317bab2a6d059e4f4c6d0c8338b8a8125d5072d",
+  "binaries": {
+    "superdesktop_app_sha256": "d125caec86c24def11a60448e66a2a6fb64cf64ae4074f8a73d30e669aa8d53f",
+    "superdesktop_utit_sha256": "3278241ba4b3d3a96a5b234ad02238a108e4e0e0f6a6a4b764187330172db3d3"
+  },
+  "installers": [
+    {
+      "path": "D:/SuperExplorer/dist/SuperDesktop-Test-Setup-1.2026.8.19-x64-no-launch.exe",
+      "bytes": 5877433,
+      "sha256": "05fc23852129fa87d0dc1e591696f2c152c268ca70b187e03c2ec0e1b0956cbe",
+      "launched": false,
+      "publication": "validated NSIS no-launch temporary copied to a non-conflicting final name because the standard-name installer was locked by an earlier welcome window"
+    },
+    {
+      "path": "D:/SuperExplorer/dist/SuperExplorer-Setup-1.2026.8.19-x64.exe",
+      "bytes": 13651097,
+      "sha256": "3c042af5f38a98ed212f06da4d9e23b6ea336986e3733ba01ce5fdcd92b8f20d",
+      "launched": false
+    }
+  ],
+  "install_completed_during_packaging": false,
+  "change_archived": false
+}
