@@ -716,8 +716,6 @@ impl StartView {
         let input_entity = cx.entity();
         let input_focus = self.focus.clone();
         let account_activate = self.activate.clone();
-        let settings_activate = self.activate.clone();
-        let settings_dismiss = self.dismiss.clone();
         let power_open = self.model.power_open;
         let sign_out = self.power.clone();
         let restart = self.power.clone();
@@ -1141,36 +1139,6 @@ impl StartView {
                             .role(gpui::Role::Group)
                             .aria_label(strings.footer_actions)
                             .flex()
-                            .gap_2()
-                            .child(
-                                div()
-                                    .id("start-settings")
-                                    .role(gpui::Role::Button)
-                                    .aria_label(strings.settings)
-                                    .tab_index(0)
-                                    .w(px(40.))
-                                    .h(px(40.))
-                                    .rounded_md()
-                                    .bg(rgb(tokens.subtle_surface))
-                                    .flex()
-                                    .items_center()
-                                    .justify_center()
-                                    .cursor_pointer()
-                                    .hover(move |style| style.bg(rgb(tokens.hover)))
-                                    .active(move |style| style.bg(rgb(tokens.pressed)))
-                                    .focus_visible(move |style| {
-                                        style.border_2().border_color(rgb(tokens.focus))
-                                    })
-                                    .on_click(cx.listener(move |this, _, window, cx| {
-                                        settings_activate(&settings_command(
-                                            "ms-settings:",
-                                            strings.settings,
-                                        ));
-                                        this.model.close();
-                                        settings_dismiss(window, cx);
-                                    }))
-                                    .child("⚙"),
-                            )
                             .child(
                                 div()
                                     .id("start-power")
@@ -1623,7 +1591,6 @@ mod tests {
             "start-all-apps-page",
             "start-search-results",
             "start-account",
-            "start-settings",
             "start-power",
             "start-power-menu",
             "render_icons_for",
@@ -1639,6 +1606,14 @@ mod tests {
                 "missing Start contract: {required}"
             );
         }
+        let footer_start = source.find(".id(\"start-footer\")").unwrap();
+        let footer_end = source[footer_start..].find(".when(power_open").unwrap() + footer_start;
+        let footer = &source[footer_start..footer_end];
+        assert!(!footer.contains("start-settings"));
+        assert_eq!(footer.matches(".id(\"start-power\")").count(), 1);
+        assert!(footer.contains(".w(px(40.))"));
+        assert!(footer.contains(".h(px(40.))"));
+        assert!(footer.contains(".h(px(52.))"));
         assert!(source.contains("return self.render_windows11(window, cx)"));
         let model = StartModel::default();
         assert!(!model.power_open);

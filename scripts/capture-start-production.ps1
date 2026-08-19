@@ -64,9 +64,9 @@ $priorLocale=$env:SUPERDESKTOP_LOCALE
 $zhTw=$Locale -eq 'zh-TW'
 function Utf8-Base64([string]$Value) { [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($Value)) }
 $labels=if($zhTw){@{
-    Pinned=(Utf8-Base64 '5bey6YeY6YG4');Recommended=(Utf8-Base64 '5bu66K2w');AllApps=(Utf8-Base64 '5omA5pyJ5oeJ55So56iL5byP');Settings=(Utf8-Base64 '6Kit5a6a');Power=(Utf8-Base64 '6Zu75rqQ');Back=(Utf8-Base64 '6L+U5Zue5bey6YeY6YG4');SignOut=(Utf8-Base64 '55m75Ye6');Restart=(Utf8-Base64 '6YeN5paw5ZWf5YuV');ShutDown=(Utf8-Base64 '6Zec5qmf')
+    Pinned=(Utf8-Base64 '5bey6YeY6YG4');Recommended=(Utf8-Base64 '5bu66K2w');AllApps=(Utf8-Base64 '5omA5pyJ5oeJ55So56iL5byP');Settings=(Utf8-Base64 '6Kit5a6a');Power=(Utf8-Base64 '6Zu75rqQ');FooterActions=(Utf8-Base64 '6ZaL5aeL5Yqf6IO96KGo5YuV5L2c');Back=(Utf8-Base64 '6L+U5Zue5bey6YeY6YG4');SignOut=(Utf8-Base64 '55m75Ye6');Restart=(Utf8-Base64 '6YeN5paw5ZWf5YuV');ShutDown=(Utf8-Base64 '6Zec5qmf')
 }}else{@{
-    Pinned='Pinned';Recommended='Recommended';AllApps='All apps';Settings='Settings';Power='Power';Back='Back to pinned';SignOut='Sign out';Restart='Restart';ShutDown='Shut down'
+    Pinned='Pinned';Recommended='Recommended';AllApps='All apps';Settings='Settings';Power='Power';FooterActions='Start footer actions';Back='Back to pinned';SignOut='Sign out';Restart='Restart';ShutDown='Shut down'
 }}
 $startLabel=if($zhTw){Utf8-Base64 '6ZaL5aeL'}else{'Start'}
 $env:SUPERDESKTOP_VERIFICATION_SURFACE='taskbar'
@@ -112,7 +112,16 @@ try {
     $systemStartAfter=@(Get-SystemStartProcessIds)
     $root=[System.Windows.Automation.AutomationElement]::FromHandle($startHandle)
     Start-Sleep -Milliseconds 700
-    foreach($name in @($labels.Pinned,$labels.Recommended,$labels.AllApps,$labels.Settings,$labels.Power)){if($null -eq (Find-Named $root $name)){throw "Start home is missing $name."}}
+    foreach($name in @($labels.Pinned,$labels.Recommended,$labels.AllApps,$labels.Power)){if($null -eq (Find-Named $root $name)){throw "Start home is missing $name."}}
+    $footerActions=Find-Named $root $labels.FooterActions
+    if($null-eq$footerActions){throw 'Start footer action group is missing.'}
+    $buttonCondition=[System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::ControlTypeProperty,[System.Windows.Automation.ControlType]::Button)
+    $footerButtons=$footerActions.FindAll([System.Windows.Automation.TreeScope]::Descendants,$buttonCondition)
+    if($footerButtons.Count-ne1){throw "Start footer exposes $($footerButtons.Count) actions instead of one."}
+    if($null-ne(Find-Named $footerActions $labels.Settings)){throw 'Start footer still exposes Settings.'}
+    $powerButton=Find-Named $footerActions $labels.Power
+    if($null-eq$powerButton){throw 'Start footer Power button is missing.'}
+    $powerBounds=$powerButton.Current.BoundingRectangle
     if($null -ne (Find-Named $root $labels.SignOut)){throw 'Power action is exposed while Power is collapsed.'}
     $homeBounds=Save-Window $root $HomeScreenshotPath
     $taskbarBounds=$taskbar.Current.BoundingRectangle
@@ -123,6 +132,9 @@ try {
     $heightDip=[double]$homeBounds.Height/$scale
     $gapDip=([double]$taskbarBounds.Top-[double]$homeBounds.Bottom)/$scale
     $overlap=[double]$homeBounds.Bottom-[double]$taskbarBounds.Top
+    $powerWidthDip=[double]$powerBounds.Width/$scale
+    $powerHeightDip=[double]$powerBounds.Height/$scale
+    $powerRightInsetDip=([double]$homeBounds.Right-[double]$powerBounds.Right)/$scale
     $center=[Drawing.Point]::new([int]($homeBounds.Left+$homeBounds.Width/2),[int]($homeBounds.Top+$homeBounds.Height/2))
     $monitor=[Windows.Forms.Screen]::FromPoint($center).Bounds
     $contained=$homeBounds.Left-ge$monitor.Left-and$homeBounds.Top-ge$monitor.Top-and$homeBounds.Right-le$monitor.Right-and$homeBounds.Bottom-le$monitor.Bottom
@@ -130,6 +142,8 @@ try {
     if($gapDip-lt4.0-or$gapDip-gt20.0){throw "Owned Start taskbar gap=$gapDip DIP is outside 4..20 DIP."}
     if($overlap-gt0){throw "Owned Start overlaps taskbar by $overlap physical pixels."}
     if(-not$contained){throw 'Owned Start is outside its source monitor.'}
+    if($powerWidthDip-lt38-or$powerWidthDip-gt42-or$powerHeightDip-lt38-or$powerHeightDip-gt42){throw "Start Power target=${powerWidthDip}x${powerHeightDip} DIP."}
+    if($powerRightInsetDip-lt20-or$powerRightInsetDip-gt36){throw "Start Power right inset=$powerRightInsetDip DIP."}
     $all=Find-Named $root $labels.AllApps
     $all.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
     Start-Sleep -Milliseconds 500
@@ -162,7 +176,8 @@ try {
         schema='windows11-owned-start-production/v3';result='passed';app_sha256=(Get-FileHash -Algorithm SHA256 $appPath).Hash
         owned_start_pid=$ownedStartPid;taskbar_pid=$process.Id;system_start_process_ids_before=$systemStartBefore;system_start_process_ids_after=$systemStartAfter
         new_system_start_process_ids=$newSystemStart;explorer_absent_during_capture=$explorerAbsentDuringCapture;explorer_recovered=$true
-        locale=if($Locale){$Locale}else{'system'};home_sections=@($labels.Pinned,$labels.Recommended,$labels.Settings,$labels.Power);power_collapsed=$true;all_apps_count=$allItems.Count
+        locale=if($Locale){$Locale}else{'system'};home_sections=@($labels.Pinned,$labels.Recommended,$labels.Power);power_collapsed=$true;all_apps_count=$allItems.Count
+        footer=[ordered]@{action_count=$footerButtons.Count;settings_absent=$true;power_bounds=[ordered]@{left=[int]$powerBounds.Left;top=[int]$powerBounds.Top;width=[int]$powerBounds.Width;height=[int]$powerBounds.Height};power_width_dip=$powerWidthDip;power_height_dip=$powerHeightDip;power_right_inset_dip=$powerRightInsetDip}
         centered_home_bounds=[ordered]@{left=[int]$homeBounds.Left;top=[int]$homeBounds.Top;width=[int]$homeBounds.Width;height=[int]$homeBounds.Height}
         taskbar_bounds=[ordered]@{left=[int]$taskbarBounds.Left;top=[int]$taskbarBounds.Top;right=[int]$taskbarBounds.Right;bottom=[int]$taskbarBounds.Bottom}
         monitor_bounds=[ordered]@{left=$monitor.Left;top=$monitor.Top;right=$monitor.Right;bottom=$monitor.Bottom}
