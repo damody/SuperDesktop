@@ -1,7 +1,8 @@
 param(
     [string]$Workspace = (Split-Path -Parent $PSScriptRoot),
     [Parameter(Mandatory = $true)][string]$OutputPath,
-    [Parameter(Mandatory = $true)][string]$ScreenshotPath
+    [Parameter(Mandatory = $true)][string]$ScreenshotPath,
+    [Parameter(Mandatory = $true)][string]$JumpListScreenshotPath
 )
 
 $ErrorActionPreference = 'Stop'
@@ -20,9 +21,15 @@ using System.Runtime.InteropServices;
 public static class LiveTaskbarDpi {
     [DllImport("user32.dll")]
     public static extern bool SetProcessDpiAwarenessContext(IntPtr value);
+    [DllImport("user32.dll")] public static extern uint GetDpiForWindow(IntPtr hwnd);
+    [DllImport("user32.dll")] public static extern bool SetCursorPos(int x,int y);
+    [DllImport("user32.dll")] public static extern void mouse_event(uint f,uint x,uint y,uint d,UIntPtr e);
+    public static void RightClick(int x,int y){SetCursorPos(x,y);mouse_event(8,0,0,0,UIntPtr.Zero);mouse_event(16,0,0,0,UIntPtr.Zero);}
 }
 '@
 [LiveTaskbarDpi]::SetProcessDpiAwarenessContext([IntPtr](-4)) | Out-Null
+
+function Find-Named($Root,[string]$Name){$condition=[System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::NameProperty,$Name);$Root.FindFirst([System.Windows.Automation.TreeScope]::Descendants,$condition)}
 
 $priorSurface = $env:SUPERDESKTOP_VERIFICATION_SURFACE
 $priorMatrix = $env:SUPERDESKTOP_VERIFICATION_STATE_MATRIX
@@ -33,7 +40,7 @@ $env:SUPERDESKTOP_ACTION_TRACE = $tracePath
 Remove-Item -LiteralPath $tracePath -ErrorAction SilentlyContinue
 
 try {
-    $process = Start-Process -FilePath $appPath -ArgumentList '--verification-capture-ms','5000' -PassThru
+    $process = Start-Process -FilePath $appPath -ArgumentList '--verification-capture-ms','9000' -PassThru
     $deadline = [DateTime]::UtcNow.AddSeconds(4)
     do {
         Start-Sleep -Milliseconds 50
@@ -51,6 +58,7 @@ try {
     $taskBounds = @()
     $singleCharacterLabels = 0
     $fixedFound = $false
+    $taskButton = $null
     for ($index = 0; $index -lt $buttons.Count; $index++) {
         $button = $buttons.Item($index)
         $name = [string]$button.Current.Name
@@ -61,12 +69,38 @@ try {
             $singleCharacterLabels++
         }
         $bounds = $button.Current.BoundingRectangle
+        if($null-eq$taskButton){$taskButton=$button}
         $taskBounds += [ordered]@{ left=[int]$bounds.Left;top=[int]$bounds.Top;width=[int]$bounds.Width;height=[int]$bounds.Height }
     }
     $rows = @($taskBounds.top | Sort-Object -Unique)
     if (-not $fixedFound -or $taskBounds.Count -lt 2 -or $singleCharacterLabels -ne 0 -or $rows.Count -lt 2) {
         throw "Production taskbar parity failed: fixed=$fixedFound tasks=$($taskBounds.Count) single=$singleCharacterLabels rows=$($rows.Count)"
     }
+
+    $sourceBounds=$taskButton.Current.BoundingRectangle
+    [LiveTaskbarDpi]::RightClick([int]($sourceBounds.Left+$sourceBounds.Width/2),[int]($sourceBounds.Top+$sourceBounds.Height/2))
+    $jumpWindow=$null
+    $deadline=[DateTime]::UtcNow.AddSeconds(4)
+    do{
+        Start-Sleep -Milliseconds 100
+        $windows=[System.Windows.Automation.AutomationElement]::RootElement.FindAll([System.Windows.Automation.TreeScope]::Children,[System.Windows.Automation.Condition]::TrueCondition)
+        for($wi=0;$wi-lt$windows.Count;$wi++){
+            $candidate=$windows.Item($wi)
+            if($candidate.Current.ProcessId-ne$process.Id-or$candidate.Current.NativeWindowHandle-eq$process.MainWindowHandle){continue}
+            if($null-ne(Find-Named $candidate 'Jump List')){$jumpWindow=$candidate;break}
+        }
+    }while($null-eq$jumpWindow-and[DateTime]::UtcNow-lt$deadline)
+    if($null-eq$jumpWindow){throw 'Owned Jump List did not appear.'}
+    $jumpBounds=$jumpWindow.Current.BoundingRectangle
+    $jumpHwnd=[IntPtr][int]$jumpWindow.Current.NativeWindowHandle
+    $dpi=[LiveTaskbarDpi]::GetDpiForWindow($jumpHwnd);$scale=[double]$dpi/96.0
+    $widthDip=[double]$jumpBounds.Width/$scale;$heightDip=[double]$jumpBounds.Height/$scale
+    $gapDip=([double]$root.Current.BoundingRectangle.Top-[double]$jumpBounds.Bottom)/$scale
+    $anchorDelta=[Math]::Abs(($jumpBounds.Left+$jumpBounds.Width/2)-($sourceBounds.Left+$sourceBounds.Width/2))/$scale
+    $menuItemCondition=[System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::ControlTypeProperty,[System.Windows.Automation.ControlType]::MenuItem)
+    $menuItems=$jumpWindow.FindAll([System.Windows.Automation.TreeScope]::Descendants,$menuItemCondition)
+    if([Math]::Abs($widthDip-360)-gt16-or$heightDip-gt496-or$gapDip-lt2-or$gapDip-gt16-or$anchorDelta-gt24-or$menuItems.Count-lt2){throw "Jump List geometry rejected width=$widthDip height=$heightDip gap=$gapDip anchor=$anchorDelta items=$($menuItems.Count)"}
+    $jumpBitmap=[Drawing.Bitmap]::new([int]$jumpBounds.Width,[int]$jumpBounds.Height);$jumpGraphics=[Drawing.Graphics]::FromImage($jumpBitmap);$jumpGraphics.CopyFromScreen([int]$jumpBounds.Left,[int]$jumpBounds.Top,0,0,$jumpBitmap.Size);New-Item -ItemType Directory -Force (Split-Path -Parent $JumpListScreenshotPath)|Out-Null;$jumpBitmap.Save($JumpListScreenshotPath,[Drawing.Imaging.ImageFormat]::Png);$jumpGraphics.Dispose();$jumpBitmap.Dispose()
 
     $bounds = $root.Current.BoundingRectangle
     $bitmap = [Drawing.Bitmap]::new([int]$bounds.Width, [int]$bounds.Height)
@@ -91,6 +125,7 @@ try {
         screenshot_sha256=(Get-FileHash -Algorithm SHA256 -LiteralPath $ScreenshotPath).Hash
         raw_titles_persisted=$false
         frame_visible=$true
+        jump_list=[ordered]@{width_dip=$widthDip;height_dip=$heightDip;taskbar_gap_dip=$gapDip;source_anchor_delta_dip=$anchorDelta;menu_item_count=$menuItems.Count;screenshot=(Split-Path -Leaf $JumpListScreenshotPath);screenshot_sha256=(Get-FileHash -Algorithm SHA256 $JumpListScreenshotPath).Hash}
     }
     [IO.File]::WriteAllText($OutputPath,(($report|ConvertTo-Json -Depth 8)+"`n"),[Text.UTF8Encoding]::new($false))
     $report | ConvertTo-Json -Depth 8

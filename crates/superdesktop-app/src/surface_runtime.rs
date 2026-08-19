@@ -2170,19 +2170,74 @@ fn notification_overflow_options(
     }
 }
 
-fn jump_list_options(monitor: &MonitorRecord) -> WindowOptions {
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct JumpListGeometry {
+    left: f32,
+    top: f32,
+    width: f32,
+    height: f32,
+}
+
+fn jump_list_geometry(
+    monitor: &MonitorRecord,
+    shell: bool,
+    taskbar_rows: u8,
+    anchor_physical_x: Option<i32>,
+    entry_count: usize,
+    group_count: usize,
+) -> JumpListGeometry {
     let scale = monitor.dpi_x as f32 / 96.0;
-    let width = 360.0;
-    let height = 480.0_f32.min((monitor.work_area.bottom - monitor.work_area.top) as f32 / scale);
-    let monitor_width = (monitor.work_area.right - monitor.work_area.left) as f32 / scale;
-    let left = monitor.work_area.left as f32 / scale + (monitor_width - width).max(0.0) / 2.0;
+    let work_left = monitor.work_area.left as f32 / scale;
+    let work_right = monitor.work_area.right as f32 / scale;
+    let work_top = monitor.work_area.top as f32 / scale;
+    let taskbar_bottom = if shell {
+        monitor.bounds.bottom as f32 / scale
+    } else {
+        monitor.work_area.bottom as f32 / scale
+    };
+    let popup_bottom = taskbar_bottom - 40.0 * f32::from(taskbar_rows.clamp(1, 3)) - 8.0;
+    let width = 360.0_f32.min((work_right - work_left - 16.0).max(1.0));
+    let entries = entry_count.max(1) as f32;
+    let gaps = entry_count.saturating_sub(1) as f32 * 2.0;
+    let separators = group_count.saturating_sub(1) as f32;
+    let preferred_height = (8.0 + entries * 32.0 + gaps + separators).min(480.0);
+    let height = preferred_height.min((popup_bottom - work_top).max(1.0));
+    let fallback_anchor = work_left + (work_right - work_left) / 2.0;
+    let anchor = anchor_physical_x
+        .map(|x| x as f32 / scale)
+        .unwrap_or(fallback_anchor);
+    let left = (anchor - width / 2.0).clamp(
+        work_left + 8.0,
+        (work_right - 8.0 - width).max(work_left + 8.0),
+    );
+    JumpListGeometry {
+        left,
+        top: (popup_bottom - height).max(work_top),
+        width,
+        height,
+    }
+}
+
+fn jump_list_options(
+    monitor: &MonitorRecord,
+    shell: bool,
+    taskbar_rows: u8,
+    anchor_physical_x: Option<i32>,
+    entry_count: usize,
+    group_count: usize,
+) -> WindowOptions {
+    let geometry = jump_list_geometry(
+        monitor,
+        shell,
+        taskbar_rows,
+        anchor_physical_x,
+        entry_count,
+        group_count,
+    );
     WindowOptions {
         window_bounds: Some(WindowBounds::Windowed(Bounds {
-            origin: point(
-                px(left),
-                px(monitor.work_area.bottom as f32 / scale - height),
-            ),
-            size: size(px(width), px(height)),
+            origin: point(px(geometry.left), px(geometry.top)),
+            size: size(px(geometry.width), px(geometry.height)),
         })),
         titlebar: None,
         focus: true,
@@ -3187,6 +3242,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                         let previews_enabled_for_hover =
                             production_taskbar_settings.previews_enabled;
                         let start_taskbar_rows = production_taskbar_settings.rows;
+                        let jump_list_taskbar_rows = production_taskbar_settings.rows;
                         let taskbar_hwnd_for_click = Rc::clone(&taskbar_hwnd_identity);
                         let taskbar_hwnd_for_hover = Rc::clone(&taskbar_hwnd_identity);
                         let active_preview_for_click = Rc::clone(&active_preview_hwnd);
@@ -3462,13 +3518,27 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                     },
                                 ];
                                 let model = query_jump_list(&jump_list_provider, &application_id, local);
+                                let jump_entry_count = model.entries().len();
+                                let jump_group_count = model
+                                    .groups()
+                                    .values()
+                                    .filter(|entries| !entries.is_empty())
+                                    .count();
+                                let jump_anchor_x = physical_cursor_position().ok().map(|(x, _)| x);
                                 let dismiss_slot = Rc::clone(&jump_list_window_for_taskbar);
                                 let invoke_store = Rc::clone(&jump_settings_store);
                                 let invoke_target = Rc::clone(&jump_settings_target);
                                 let invoke_settings = Rc::clone(&jump_persisted_settings);
                                 let invoke_application = application_id.clone();
                                 let opened = app.open_window(
-                                    jump_list_options(&jump_list_monitor),
+                                    jump_list_options(
+                                        &jump_list_monitor,
+                                        shell,
+                                        jump_list_taskbar_rows,
+                                        jump_anchor_x,
+                                        jump_entry_count,
+                                        jump_group_count,
+                                    ),
                                     move |window, cx| {
                                         window.activate_window();
                                         let dismiss_slot = Rc::clone(&dismiss_slot);
@@ -5322,6 +5392,70 @@ mod live_parity_tests {
                         assert!(geometry.left >= -3840.0 / scale);
                         assert!(geometry.left + geometry.width <= -8.0 + 0.01);
                         assert!(geometry.top >= -300.0 / scale);
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn jump_list_geometry_is_source_anchored_content_sized_and_mode_aware() {
+        let monitor = MonitorRecord {
+            device_name: "fixture".into(),
+            primary: false,
+            bounds: ScreenRect {
+                left: -3840,
+                top: 0,
+                right: 0,
+                bottom: 2160,
+            },
+            work_area: ScreenRect {
+                left: -3840,
+                top: 0,
+                right: 0,
+                bottom: 2020,
+            },
+            dpi_x: 168,
+            dpi_y: 168,
+        };
+        let scale = 1.75;
+        let preview = super::jump_list_geometry(&monitor, false, 2, Some(-1920), 2, 1);
+        let shell = super::jump_list_geometry(&monitor, true, 2, Some(-1920), 2, 1);
+        assert_eq!((preview.width, preview.height), (360.0, 74.0));
+        assert!((preview.left + preview.width / 2.0 - (-1920.0 / scale)).abs() < 0.01);
+        assert!((shell.top - preview.top - 80.0).abs() < 0.01);
+
+        for dpi in [96, 144, 168, 216] {
+            let scaled = MonitorRecord {
+                dpi_x: dpi,
+                dpi_y: dpi,
+                ..monitor.clone()
+            };
+            for shell in [false, true] {
+                for rows in 1..=3 {
+                    for (entries, groups) in [(0, 0), (2, 1), (8, 3), (100, 4)] {
+                        let left = super::jump_list_geometry(
+                            &scaled,
+                            shell,
+                            rows,
+                            Some(-3839),
+                            entries,
+                            groups,
+                        );
+                        let right = super::jump_list_geometry(
+                            &scaled,
+                            shell,
+                            rows,
+                            Some(-1),
+                            entries,
+                            groups,
+                        );
+                        let fallback =
+                            super::jump_list_geometry(&scaled, shell, rows, None, entries, groups);
+                        assert!(left.left >= scaled.work_area.left as f32 / (dpi as f32 / 96.0));
+                        assert!(right.left + right.width <= 0.01);
+                        assert!(fallback.height <= 480.0 && fallback.height >= 1.0);
+                        assert!(fallback.top >= 0.0);
                     }
                 }
             }
