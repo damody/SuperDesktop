@@ -1,0 +1,36 @@
+{
+    "schema":  "owned-notification-center-headful/v1",
+    "result":  "passed",
+    "theme":  "light",
+    "dpi":  168,
+    "dpi_percent":  175,
+    "explorer_absent_during_capture":  true,
+    "forbidden_processes_started":  [
+
+                                    ],
+    "initial_notification_count":  9,
+    "after_dismiss_count":  8,
+    "empty_visible_after_clear":  true,
+    "uia_dismiss":  true,
+    "uia_clear_all":  true,
+    "escape_sent":  true,
+    "app_sha256":  "7fbedf8f0fec2d4453938c8e7facb96f6f0fe46fa45cbc6542645949ef58de73",
+    "fixture_sha256":  "4befff17f308bb673aaad9964990110b08fc8eff835e5329423fda794f2a3ec0",
+    "screenshots":  [
+                        {
+                            "sha256":  "14c46baea951d810235d78505be0fa47cc34d676e51c1e7f9e12e713e2bb0dbd",
+                            "name":  "light-dismissed.png",
+                            "bytes":  708745
+                        },
+                        {
+                            "sha256":  "ba36d701286a55f9dc8c00174636c2ec45f356638ad8ab572acf7f9515049d30",
+                            "name":  "light-empty.png",
+                            "bytes":  668527
+                        },
+                        {
+                            "sha256":  "e3cc5fbf3cf84a42aaf9bc63624e666f32143b5828563f55c085fcb3e4c29dc7",
+                            "name":  "light-populated.png",
+                            "bytes":  708521
+                        }
+                    ]
+}

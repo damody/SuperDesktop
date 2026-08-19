@@ -8,13 +8,14 @@ use platform_win::common::notify_icon_compat::NotifyIconIngress;
 use shell_provider_protocol::{
     IconKey, NotificationEvent, NotificationEventKind, NotificationHostHealth,
     NotificationHostResponse, NotificationIcon, NotificationMutation, NotificationSnapshot,
-    NotifyIconCompatibilityTerminal, NotifyIconIdentity, NotifyIconTerminalKind, RegisteredIcon,
-    Validate,
+    NotifyIconCompatibilityTerminal, NotifyIconIdentity, NotifyIconTerminalKind, OwnedNotification,
+    OwnedNotificationContent, RegisteredIcon, Validate,
 };
 
 pub const MAX_CLIENTS: usize = 64;
 pub const MAX_ICONS: usize = 256;
 pub const MAX_EVENTS: usize = 512;
+pub const MAX_NOTIFICATION_HISTORY: usize = 100;
 pub const MAX_COMPLETED_CALLBACKS: usize = 512;
 pub const MAX_CALLBACK_AGE_MS: u64 = 5_000;
 
@@ -195,20 +196,20 @@ impl NativeCompatibilityRegistry {
                         .apply(NotificationMutation::Add { icon: registered });
                     let terminal = terminal_kind(response);
                     if terminal == NotifyIconTerminalKind::Applied {
-                        self.native.insert(key, icon);
+                        self.native.insert(key.clone(), icon.clone());
+                        self.admit_native_notification(&key, &icon, generation);
                     }
                     terminal
                 } else {
                     let response = self.registry.apply(NotificationMutation::Modify {
                         icon: registered_icon(&key, &icon),
                     });
-                    if matches!(
-                        response,
-                        NotificationHostResponse::Accepted { changed: true, .. }
-                    ) {
-                        self.native.insert(key, icon);
+                    let terminal = terminal_kind(response);
+                    if terminal == NotifyIconTerminalKind::Applied {
+                        self.native.insert(key.clone(), icon.clone());
+                        self.admit_native_notification(&key, &icon, generation);
                     }
-                    terminal_kind(response)
+                    terminal
                 }
             }
             2 => {
@@ -241,6 +242,19 @@ impl NativeCompatibilityRegistry {
             _ => NotifyIconTerminalKind::InvalidRequest,
         };
         self.terminal(ingress, terminal, Some(generation), "")
+    }
+
+    fn admit_native_notification(
+        &mut self,
+        key: &IconKey,
+        icon: &shell_provider_protocol::OwnedNotifyIcon,
+        generation: u64,
+    ) {
+        let Some(content) = icon.notification.as_ref() else {
+            return;
+        };
+        let notification = owned_notification(key, icon, content, generation);
+        let _ = self.registry.admit_notification(notification);
     }
 
     fn terminal(
@@ -335,6 +349,7 @@ pub struct NotificationRegistry {
     icons: BTreeMap<IconKey, RegisteredIcon>,
     pub(crate) generation: u64,
     events: NotificationEventQueue,
+    notifications: VecDeque<OwnedNotification>,
 }
 
 impl NotificationRegistry {
@@ -419,6 +434,28 @@ impl NotificationRegistry {
                 }
                 NotificationHostResponse::Events(self.events.drain_client(&client_id))
             }
+            NotificationMutation::DismissNotification {
+                notification_id,
+                expected_generation,
+            } => {
+                if expected_generation != self.generation {
+                    return self.accepted(false);
+                }
+                let before = self.notifications.len();
+                self.notifications
+                    .retain(|notification| notification.notification_id != notification_id);
+                self.accepted(before != self.notifications.len())
+            }
+            NotificationMutation::ClearNotifications {
+                expected_generation,
+            } => {
+                if expected_generation != self.generation {
+                    return self.accepted(false);
+                }
+                let changed = !self.notifications.is_empty();
+                self.notifications.clear();
+                self.accepted(changed)
+            }
             NotificationMutation::Snapshot => NotificationHostResponse::Snapshot(self.snapshot()),
             NotificationMutation::Health => {
                 NotificationHostResponse::Health(NotificationHostHealth {
@@ -435,7 +472,31 @@ impl NotificationRegistry {
         NotificationSnapshot {
             generation: self.generation,
             icons: self.icons.values().cloned().collect(),
+            notifications: self.notifications.iter().cloned().collect(),
         }
+    }
+
+    pub fn admit_notification(
+        &mut self,
+        notification: OwnedNotification,
+    ) -> NotificationHostResponse {
+        if notification.validate().is_err() {
+            return NotificationHostResponse::Rejected("notification-invalid".into());
+        }
+        let duplicate = self.notifications.iter().any(|current| {
+            current.key == notification.key
+                && current.generation == notification.generation
+                && current.title == notification.title
+                && current.body == notification.body
+        });
+        if duplicate {
+            return self.accepted(false);
+        }
+        if self.notifications.len() >= MAX_NOTIFICATION_HISTORY {
+            self.notifications.pop_back();
+        }
+        self.notifications.push_front(notification);
+        self.accepted(true)
     }
 
     fn accepted(&mut self, changed: bool) -> NotificationHostResponse {
@@ -446,6 +507,37 @@ impl NotificationRegistry {
             changed,
             generation: self.generation,
         }
+    }
+}
+
+fn owned_notification(
+    key: &IconKey,
+    icon: &shell_provider_protocol::OwnedNotifyIcon,
+    content: &OwnedNotificationContent,
+    generation: u64,
+) -> OwnedNotification {
+    let admitted_unix_ms = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(1, |value| value.as_millis().max(1) as u64);
+    let mut hash = 0xcbf29ce484222325u64;
+    for byte in content.title.bytes().chain(content.body.bytes()) {
+        hash ^= u64::from(byte);
+        hash = hash.wrapping_mul(0x100000001b3);
+    }
+    OwnedNotification {
+        notification_id: format!("notification:{generation}:{}:{hash:016x}", key.icon_id),
+        key: key.clone(),
+        application_label: if icon.tooltip.trim().is_empty() {
+            "Application".into()
+        } else {
+            icon.tooltip.clone()
+        },
+        title: content.title.clone(),
+        body: content.body.clone(),
+        severity: content.severity,
+        admitted_unix_ms,
+        generation,
+        icon: icon.pixels.clone(),
     }
 }
 
@@ -534,7 +626,7 @@ mod tests {
     use platform_win::common::notify_icon_compat::{
         NotifyIconCopyInput, NotifyIconIngress, NotifyIconLayoutMatrix,
     };
-    use shell_provider_protocol::NotificationIcon;
+    use shell_provider_protocol::{NotificationIcon, NotificationSeverity};
 
     fn icon(generation: u64) -> RegisteredIcon {
         RegisteredIcon {
@@ -551,6 +643,23 @@ mod tests {
                 icon: None,
             },
             always_visible: false,
+        }
+    }
+
+    fn notification(index: u64) -> OwnedNotification {
+        OwnedNotification {
+            notification_id: format!("notification-{index}"),
+            key: IconKey {
+                client_id: "client".into(),
+                icon_id: 1,
+            },
+            application_label: "Fixture".into(),
+            title: format!("Title {index}"),
+            body: format!("Body {index}"),
+            severity: NotificationSeverity::Information,
+            admitted_unix_ms: index + 1,
+            generation: index + 1,
+            icon: None,
         }
     }
 
@@ -609,6 +718,70 @@ mod tests {
     }
 
     #[test]
+    fn history_capacity_dedup_disconnect_dismiss_and_clear_are_authoritative() {
+        let mut registry = NotificationRegistry::default();
+        registry.apply(NotificationMutation::RegisterClient {
+            client_id: "client".into(),
+        });
+        registry.apply(NotificationMutation::Add { icon: icon(1) });
+        let first = notification(0);
+        assert!(matches!(
+            registry.admit_notification(first.clone()),
+            NotificationHostResponse::Accepted { changed: true, .. }
+        ));
+        assert!(matches!(
+            registry.admit_notification(first),
+            NotificationHostResponse::Accepted { changed: false, .. }
+        ));
+        for index in 1..=MAX_NOTIFICATION_HISTORY as u64 {
+            registry.admit_notification(notification(index));
+        }
+        let snapshot = registry.snapshot();
+        assert_eq!(snapshot.notifications.len(), MAX_NOTIFICATION_HISTORY);
+        assert_eq!(
+            snapshot.notifications[0].notification_id,
+            "notification-100"
+        );
+        assert_eq!(
+            snapshot.notifications.last().unwrap().notification_id,
+            "notification-1"
+        );
+
+        registry.apply(NotificationMutation::Disconnect {
+            client_id: "client".into(),
+        });
+        assert!(registry.snapshot().icons.is_empty());
+        assert_eq!(
+            registry.snapshot().notifications.len(),
+            MAX_NOTIFICATION_HISTORY
+        );
+
+        let generation = registry.generation;
+        assert!(matches!(
+            registry.apply(NotificationMutation::DismissNotification {
+                notification_id: "notification-100".into(),
+                expected_generation: generation,
+            }),
+            NotificationHostResponse::Accepted { changed: true, .. }
+        ));
+        assert_eq!(registry.snapshot().notifications.len(), 99);
+        assert!(matches!(
+            registry.apply(NotificationMutation::ClearNotifications {
+                expected_generation: generation,
+            }),
+            NotificationHostResponse::Accepted { changed: false, .. }
+        ));
+        let current = registry.generation;
+        assert!(matches!(
+            registry.apply(NotificationMutation::ClearNotifications {
+                expected_generation: current,
+            }),
+            NotificationHostResponse::Accepted { changed: true, .. }
+        ));
+        assert!(registry.snapshot().notifications.is_empty());
+    }
+
+    #[test]
     fn compatibility_identity_is_explicitly_shell_only() {
         assert!(!CompatibilityAdmission::Preview.owns_shell_identity());
         assert!(CompatibilityAdmission::CommittedShell.owns_shell_identity());
@@ -631,7 +804,7 @@ mod tests {
         };
         let input = NotifyIconCopyInput {
             cb_size: NotifyIconLayoutMatrix::current().v4_size,
-            flags: 1 | 4,
+            flags: 1 | 4 | 16,
             process_id,
             session_id,
             window_identity,
@@ -640,6 +813,11 @@ mod tests {
             callback_message: 0x501,
             requested_version: Some(shell_provider_protocol::NotifyIconLayoutVersion::V4),
             tooltip_utf16: "Native fixture".encode_utf16().collect(),
+            info_utf16: "Native notification body".encode_utf16().collect(),
+            info_title_utf16: "Native notification".encode_utf16().collect(),
+            info_flags: 1,
+            info_timeout_ms: 5_000,
+            realtime: true,
             visible: true,
             borrowed_hicon: 0,
         };
@@ -654,6 +832,11 @@ mod tests {
             NotifyIconTerminalKind::Applied
         );
         assert_eq!(compatibility.registry.snapshot().icons.len(), 1);
+        assert_eq!(compatibility.registry.snapshot().notifications.len(), 1);
+        assert_eq!(
+            compatibility.registry.snapshot().notifications[0].title,
+            "Native notification"
+        );
         let mut modified = input.clone();
         modified.tooltip_utf16 = "Modified fixture".encode_utf16().collect();
         assert_eq!(
@@ -697,6 +880,7 @@ mod tests {
             NotifyIconTerminalKind::Applied
         );
         assert!(compatibility.registry.snapshot().icons.is_empty());
+        assert!(!compatibility.registry.snapshot().notifications.is_empty());
         assert_eq!(
             compatibility
                 .apply_ingress(NotifyIconIngress { message: 2, input })
@@ -723,6 +907,11 @@ mod tests {
             callback_message: 0x5a1,
             requested_version: Some(shell_provider_protocol::NotifyIconLayoutVersion::V4),
             tooltip_utf16: "Callback fixture".encode_utf16().collect(),
+            info_utf16: Vec::new(),
+            info_title_utf16: Vec::new(),
+            info_flags: 0,
+            info_timeout_ms: 0,
+            realtime: false,
             visible: true,
             borrowed_hicon: 0,
         };

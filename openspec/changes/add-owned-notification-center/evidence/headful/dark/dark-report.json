@@ -1,0 +1,26 @@
+{
+    "schema":  "owned-notification-center-headful/v1",
+    "result":  "passed",
+    "theme":  "dark",
+    "dpi":  168,
+    "dpi_percent":  175,
+    "explorer_absent_during_capture":  true,
+    "forbidden_processes_started":  [
+
+                                    ],
+    "initial_notification_count":  9,
+    "after_dismiss_count":  9,
+    "empty_visible_after_clear":  false,
+    "uia_dismiss":  false,
+    "uia_clear_all":  false,
+    "escape_sent":  false,
+    "app_sha256":  "7fbedf8f0fec2d4453938c8e7facb96f6f0fe46fa45cbc6542645949ef58de73",
+    "fixture_sha256":  "4befff17f308bb673aaad9964990110b08fc8eff835e5329423fda794f2a3ec0",
+    "screenshots":  [
+                        {
+                            "sha256":  "966681fd809cd7cc3023dfba192a1b080f51e8a6036031fc8e28a07e131e776b",
+                            "name":  "dark-populated.png",
+                            "bytes":  711977
+                        }
+                    ]
+}

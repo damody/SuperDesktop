@@ -6,7 +6,9 @@ use std::{
     time::Duration,
 };
 
-use shell_provider_protocol::{NotificationHostResponse, NotificationMutation};
+use shell_provider_protocol::{
+    NotificationHostResponse, NotificationMutation, NotificationSnapshot,
+};
 
 const MAX_CONSECUTIVE_RESTARTS: u8 = 3;
 
@@ -74,6 +76,51 @@ impl NotificationClient {
             self.consecutive_failures = 0;
         }
         result
+    }
+
+    pub fn dismiss_notification(
+        &mut self,
+        notification_id: String,
+        expected_generation: u64,
+        timeout: Duration,
+    ) -> Result<NotificationSnapshot, &'static str> {
+        self.mutate_and_snapshot(
+            NotificationMutation::DismissNotification {
+                notification_id,
+                expected_generation,
+            },
+            timeout,
+        )
+    }
+
+    pub fn clear_notifications(
+        &mut self,
+        expected_generation: u64,
+        timeout: Duration,
+    ) -> Result<NotificationSnapshot, &'static str> {
+        self.mutate_and_snapshot(
+            NotificationMutation::ClearNotifications {
+                expected_generation,
+            },
+            timeout,
+        )
+    }
+
+    fn mutate_and_snapshot(
+        &mut self,
+        mutation: NotificationMutation,
+        timeout: Duration,
+    ) -> Result<NotificationSnapshot, &'static str> {
+        match self.request(&mutation, timeout)? {
+            NotificationHostResponse::Accepted { .. } => {}
+            NotificationHostResponse::Rejected(_) => return Err("notification-mutation-rejected"),
+            _ => return Err("notification-mutation-terminal"),
+        }
+        match self.request(&NotificationMutation::Snapshot, timeout)? {
+            NotificationHostResponse::Snapshot(snapshot) => Ok(snapshot),
+            NotificationHostResponse::Rejected(_) => Err("notification-snapshot-rejected"),
+            _ => Err("notification-snapshot-terminal"),
+        }
     }
 
     fn start(&mut self) -> Result<(), &'static str> {
@@ -148,6 +195,9 @@ mod tests {
         assert!(client.contains("MAX_CONSECUTIVE_RESTARTS"));
         assert!(client.contains("notification-restart-capacity"));
         assert!(composition.contains("notification-compatibility-handshake"));
+        assert!(client.contains("NotificationMutation::DismissNotification"));
+        assert!(client.contains("NotificationMutation::ClearNotifications"));
+        assert!(client.contains("mutate_and_snapshot"));
         assert!(
             composition.contains("Ok(NotificationHostResponse::Health(health)) if health.healthy")
         );

@@ -43,13 +43,14 @@ use shell_provider_protocol::{
 };
 use taskbar_ui::{
     AccessibleTask, AutoHideEffect, AutoHideInput, AutoHideState, ClockLocale, CoreStatus,
-    FlyoutAction, JumpListModel, JumpListView, NotificationAreaModel, NotificationOverflowView,
-    PreviewCard, ProgressState, ProviderState, StartActions, StartPowerAction, StartSnapshot,
-    StartView, StatusRegion, SystemFlyoutKind, SystemFlyoutPresentation, SystemFlyoutTheme,
-    SystemFlyoutView, SystemStatusAction, TaskAction, TaskFlyoutView, TaskViewEffect,
-    TaskViewModel, TaskViewSurface, TaskbarCallbacks, TaskbarContextCommand, TaskbarContextView,
-    TaskbarLayout, TaskbarSettingId, TaskbarSettingsEffect, TaskbarSettingsView, TaskbarView,
-    TestClock, auto_hide_endpoints, reduce_auto_hide,
+    FlyoutAction, JumpListModel, JumpListView, NotificationAreaModel, NotificationCenterAction,
+    NotificationOverflowView, PreviewCard, ProgressState, ProviderState, StartActions,
+    StartPowerAction, StartSnapshot, StartView, StatusRegion, SystemFlyoutKind,
+    SystemFlyoutPresentation, SystemFlyoutTheme, SystemFlyoutView, SystemStatusAction, TaskAction,
+    TaskFlyoutView, TaskViewEffect, TaskViewModel, TaskViewSurface, TaskbarCallbacks,
+    TaskbarContextCommand, TaskbarContextView, TaskbarLayout, TaskbarSettingId,
+    TaskbarSettingsEffect, TaskbarSettingsView, TaskbarView, TestClock, auto_hide_endpoints,
+    reduce_auto_hide,
 };
 
 use crate::{
@@ -1664,6 +1665,7 @@ fn system_flyout_geometry(
     monitor: &MonitorRecord,
     kind: SystemFlyoutKind,
     input_profile_count: usize,
+    notification_count: usize,
     taskbar_rows: u8,
 ) -> SystemFlyoutGeometry {
     let scale = monitor.dpi_x as f32 / 96.0;
@@ -1675,7 +1677,14 @@ fn system_flyout_geometry(
         SystemFlyoutKind::Input => (360.0, 154.0 + input_profile_count.clamp(1, 6) as f32 * 72.0),
         SystemFlyoutKind::Volume => (360.0, 184.0),
         SystemFlyoutKind::NetworkPower => (360.0, 228.0),
-        SystemFlyoutKind::Calendar => (376.0, 408.0),
+        SystemFlyoutKind::Calendar => (
+            380.0,
+            if notification_count == 0 {
+                520.0
+            } else {
+                720.0
+            },
+        ),
     };
     let gap = 8.0;
     let taskbar_height = 40.0 * f32::from(taskbar_rows.clamp(1, 3));
@@ -1696,9 +1705,16 @@ fn system_flyout_options(
     monitor: &MonitorRecord,
     kind: SystemFlyoutKind,
     input_profile_count: usize,
+    notification_count: usize,
     taskbar_rows: u8,
 ) -> WindowOptions {
-    let geometry = system_flyout_geometry(monitor, kind, input_profile_count, taskbar_rows);
+    let geometry = system_flyout_geometry(
+        monitor,
+        kind,
+        input_profile_count,
+        notification_count,
+        taskbar_rows,
+    );
     WindowOptions {
         window_bounds: Some(WindowBounds::Windowed(Bounds {
             origin: point(px(geometry.left), px(geometry.top)),
@@ -2176,7 +2192,14 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
     {
         return Err("notification-compatibility-handshake");
     }
+    let initial_notification_snapshot = match initial_notification_client
+        .request(&NotificationMutation::Snapshot, Duration::from_millis(750))
+    {
+        Ok(NotificationHostResponse::Snapshot(snapshot)) => Some(snapshot),
+        _ => None,
+    };
     let notification_client = Rc::new(RefCell::new(initial_notification_client));
+    let notification_snapshot = Rc::new(RefCell::new(initial_notification_snapshot));
     let status_client = Rc::new(RefCell::new(SystemStatusClient::adjacent()?));
     let taskbar_state_reconciler = Rc::new(RefCell::new(TaskbarStateReconciler::default()));
     let status_reconciler = Rc::new(RefCell::new(StatusReconciler::default()));
@@ -2203,7 +2226,6 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                 std::thread::Builder::new()
                     .name("superdesktop-provider-refresh".into())
                     .spawn(move || {
-                    let mut notification = NotificationClient::adjacent(shell).ok();
                     let mut status = SystemStatusClient::adjacent().ok();
                     let mut taskbar = TaskbarStateClient::adjacent(shell).ok();
                     if let Some(taskbar) = taskbar.as_mut() {
@@ -2212,19 +2234,6 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                     let mut tick = 0u8;
                     while !provider_stop_for_worker.load(Ordering::Acquire) {
                         tick = tick.wrapping_add(1);
-                        let notification_result = tick.is_multiple_of(10).then(|| {
-                            notification
-                                .as_mut()
-                                .ok_or_else(|| "notification-refresh-unavailable".into())
-                                .and_then(|client| {
-                                    client
-                                        .request(
-                                            &NotificationMutation::Snapshot,
-                                            Duration::from_millis(100),
-                                        )
-                                        .map_err(ToOwned::to_owned)
-                                })
-                        });
                         let status_result = tick.is_multiple_of(10).then(|| {
                             status
                                 .as_mut()
@@ -2249,9 +2258,6 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                 })
                         });
                         if let Ok(mut batch) = provider_batch_for_worker.lock() {
-                            if let Some(result) = notification_result {
-                                batch.notification = Some(result);
-                            }
                             if let Some(result) = status_result {
                                 batch.status = Some(result);
                             }
@@ -2577,6 +2583,8 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                 let task_view_monitor = taskbar_monitor.clone();
                 let notification_client_for_taskbar = Rc::clone(&notification_client);
                 let notification_client_for_overflow = Rc::clone(&notification_client);
+                let notification_client_for_center = Rc::clone(&notification_client);
+                let notification_snapshot_for_center = Rc::clone(&notification_snapshot);
                 let notification_overflow_window = Rc::new(RefCell::new(None::<
                     gpui::WindowHandle<NotificationOverflowView>,
                 >));
@@ -3443,6 +3451,8 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                     }
                                 }
                                 let snapshot = system_flyout_status.borrow().snapshot().cloned();
+                                let notifications =
+                                    notification_snapshot_for_center.borrow().clone();
                                 let flyout_status = status(snapshot.as_ref());
                                 let input_profile_count = snapshot
                                     .as_ref()
@@ -3456,6 +3466,8 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                 let action_client = Rc::clone(&system_flyout_client);
                                 let action_status = Rc::clone(&system_flyout_status);
                                 let action_start = Rc::clone(&system_flyout_start);
+                                let center_client = Rc::clone(&notification_client_for_center);
+                                let center_snapshot = Rc::clone(&notification_snapshot_for_center);
                                 let dismiss_slot =
                                     Rc::clone(&system_flyout_window_for_taskbar);
                                 let presentation = system_flyout_presentation();
@@ -3466,6 +3478,9 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                         &system_flyout_monitor,
                                         kind,
                                         input_profile_count,
+                                        notifications
+                                            .as_ref()
+                                            .map_or(0, |snapshot| snapshot.notifications.len()),
                                         taskbar_rows,
                                     ),
                                     move |window, cx| {
@@ -3476,6 +3491,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                                 kind,
                                                 snapshot,
                                                 flyout_status,
+                                                notifications,
                                                 presentation,
                                                 Rc::new(move |action, app| {
                                                     apply_system_status_action(
@@ -3485,6 +3501,41 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                                         &action_status,
                                                         &action_start,
                                                     );
+                                                }),
+                                                Rc::new(move |action, _| {
+                                                    let result = match action {
+                                                        NotificationCenterAction::Dismiss {
+                                                            notification_id,
+                                                            expected_generation,
+                                                        } => center_client
+                                                            .borrow_mut()
+                                                            .dismiss_notification(
+                                                                notification_id,
+                                                                expected_generation,
+                                                                Duration::from_millis(750),
+                                                            ),
+                                                        NotificationCenterAction::ClearAll {
+                                                            expected_generation,
+                                                        } => center_client
+                                                            .borrow_mut()
+                                                            .clear_notifications(
+                                                                expected_generation,
+                                                                Duration::from_millis(750),
+                                                            ),
+                                                    }
+                                                    .map_err(ToOwned::to_owned);
+                                                    if let Ok(snapshot) = &result {
+                                                        *center_snapshot.borrow_mut() =
+                                                            Some(snapshot.clone());
+                                                        trace_action(
+                                                            "notification:center-reconciled",
+                                                        );
+                                                    } else {
+                                                        trace_action(
+                                                            "notification:center-action-rejected",
+                                                        );
+                                                    }
+                                                    result
                                                 }),
                                                 Rc::new(move |window, _| {
                                                     window.remove_window();
@@ -3663,6 +3714,8 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                 let refresh_taskbar_state_reconciler = Rc::clone(&taskbar_state_reconciler);
                 let refresh_provider_batch = Arc::clone(&provider_refresh_batch);
                 let refresh_system_flyouts = system_flyout_windows.clone();
+                let refresh_notification_snapshot = Rc::clone(&notification_snapshot);
+                let refresh_notification_client = Rc::clone(&notification_client);
                 let refresh_settings = Rc::clone(&persisted_settings);
                 let refresh_task_icons = Rc::clone(&task_icon_cache);
                 let refresh_attention = Rc::clone(&attention_runtime);
@@ -3672,8 +3725,20 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                 refresh_foreground
                     .spawn(async move {
                         let auto_hide_epoch = Instant::now();
+                        let mut notification_tick = 0u8;
                         loop {
                             refresh_background.timer(Duration::from_millis(50)).await;
+                            notification_tick = notification_tick.wrapping_add(1);
+                            let direct_notification_result =
+                                notification_tick.is_multiple_of(10).then(|| {
+                                    refresh_notification_client
+                                        .borrow_mut()
+                                        .request(
+                                            &NotificationMutation::Snapshot,
+                                            Duration::from_millis(100),
+                                        )
+                                        .map_err(ToOwned::to_owned)
+                                });
                             let now = Instant::now();
                             {
                                 let mut attention = refresh_attention.borrow_mut();
@@ -3692,7 +3757,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                             ) else {
                                 continue;
                             };
-                            let (notification_result, status_result, taskbar_result) =
+                            let (_, status_result, taskbar_result) =
                                 refresh_provider_batch.lock().map_or(
                                     (None, None, None),
                                     |mut batch| {
@@ -3703,6 +3768,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                         )
                                     },
                                 );
+                            let notification_result = direct_notification_result;
                             let notification_update = notification_result.map(|result| match result {
                                 Ok(NotificationHostResponse::Snapshot(snapshot)) => Some(snapshot),
                                 Ok(_) => None,
@@ -3711,6 +3777,10 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                     None
                                 }
                             });
+                            if let Some(Some(snapshot)) = notification_update.as_ref() {
+                                *refresh_notification_snapshot.borrow_mut() =
+                                    Some(snapshot.clone());
+                            }
                             if let Some(result) = status_result {
                                 match result {
                                     Ok(response @ SystemStatusHostResponse::Snapshot(_)) => {
@@ -4088,11 +4158,15 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                         .map(|(_, handle)| *handle);
                                     if let Some(handle) = handle {
                                         let updated = handle.update(app, |view, _, cx| {
+                                            let current_notifications =
+                                                refresh_notification_snapshot.borrow().clone();
                                             if view.snapshot != current_system_snapshot
                                                 || view.status != current_status
+                                                || view.notifications != current_notifications
                                             {
                                                 view.snapshot = current_system_snapshot.clone();
                                                 view.status = current_status.clone();
+                                                view.notifications = current_notifications;
                                                 cx.notify();
                                             }
                                         });
@@ -4704,10 +4778,11 @@ mod live_parity_tests {
             dpi_y: 168,
         };
         let geometry =
-            super::system_flyout_geometry(&reference, super::SystemFlyoutKind::Calendar, 1, 2);
+            super::system_flyout_geometry(&reference, super::SystemFlyoutKind::Calendar, 1, 10, 2);
         let logical_right = 1920.0 / 1.75;
         let logical_bottom = 1080.0 / 1.75;
-        assert_eq!((geometry.width, geometry.height), (376.0, 408.0));
+        assert_eq!(geometry.width, 380.0);
+        assert!((geometry.height - (logical_bottom - 88.0)).abs() < 0.01);
         assert!((geometry.left + geometry.width - (logical_right - 8.0)).abs() < 0.01);
         assert!((geometry.top + geometry.height - (logical_bottom - 88.0)).abs() < 0.01);
 
@@ -4729,7 +4804,7 @@ mod live_parity_tests {
             ..reference.clone()
         };
         let geometry =
-            super::system_flyout_geometry(&negative, super::SystemFlyoutKind::Input, 64, 3);
+            super::system_flyout_geometry(&negative, super::SystemFlyoutKind::Input, 64, 0, 3);
         assert!(geometry.left >= -1920.0 / 1.75);
         assert!(geometry.top >= -200.0 / 1.75);
         assert!(geometry.left + geometry.width <= -8.0);
@@ -4753,12 +4828,52 @@ mod live_parity_tests {
             dpi_y: 480,
             ..reference
         };
-        let geometry =
-            super::system_flyout_geometry(&constrained, super::SystemFlyoutKind::Calendar, 1, 3);
+        let geometry = super::system_flyout_geometry(
+            &constrained,
+            super::SystemFlyoutKind::Calendar,
+            1,
+            100,
+            3,
+        );
         assert!(geometry.width >= 1.0 && geometry.height >= 1.0);
         assert!(geometry.left >= -20.0 && geometry.top >= 0.0);
         assert!(geometry.left + geometry.width <= 60.0);
         assert!(geometry.top + geometry.height <= 44.0);
+
+        for dpi in [96, 120, 144, 168, 192, 216] {
+            let monitor = MonitorRecord {
+                device_name: format!("dpi-{dpi}"),
+                primary: true,
+                bounds: ScreenRect {
+                    left: 0,
+                    top: 0,
+                    right: 3840,
+                    bottom: 2160,
+                },
+                work_area: ScreenRect {
+                    left: 0,
+                    top: 0,
+                    right: 3840,
+                    bottom: 2160,
+                },
+                dpi_x: dpi,
+                dpi_y: dpi,
+            };
+            let scale = dpi as f32 / 96.0;
+            for rows in 1..=3 {
+                let geometry = super::system_flyout_geometry(
+                    &monitor,
+                    super::SystemFlyoutKind::Calendar,
+                    1,
+                    100,
+                    rows,
+                );
+                assert!(geometry.left >= 0.0 && geometry.top >= 0.0);
+                assert!(geometry.left + geometry.width <= 3840.0 / scale);
+                assert!(geometry.top + geometry.height <= 2160.0 / scale);
+                assert!(geometry.height <= 720.0);
+            }
+        }
     }
 
     #[test]
@@ -4775,6 +4890,10 @@ mod live_parity_tests {
             "status:flyout-dismissed",
             "status:flyout-open-failed",
             "apply_system_status_action(",
+            "NotificationCenterAction::Dismiss",
+            "NotificationCenterAction::ClearAll",
+            "dismiss_notification(",
+            "clear_notifications(",
         ] {
             assert!(production.contains(required), "missing {required}");
         }
@@ -4784,6 +4903,8 @@ mod live_parity_tests {
             "StartMenuExperienceHost",
             "ShellExperienceHost",
             "QuickSettings",
+            "SystemSettings",
+            "ms-settings:",
             "ms-settings:",
         ] {
             assert!(!production.contains(forbidden), "delegated {forbidden}");

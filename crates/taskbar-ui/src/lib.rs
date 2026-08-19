@@ -51,8 +51,8 @@ pub use surface::{
     AppBarEffect, AppBarMode, AppBarRegistry, MonitorBar, MonitorGeometry, SurfaceChange,
 };
 pub use system_flyout::{
-    SystemFlyoutAction, SystemFlyoutDismiss, SystemFlyoutPresentation, SystemFlyoutTheme,
-    SystemFlyoutView,
+    NotificationCenterAction, NotificationCenterActionHandler, SystemFlyoutAction,
+    SystemFlyoutDismiss, SystemFlyoutPresentation, SystemFlyoutTheme, SystemFlyoutView,
 };
 pub use task_view::{
     DesktopCard, TaskViewAccessibleNode, TaskViewEffect, TaskViewModel, TaskViewSurface,

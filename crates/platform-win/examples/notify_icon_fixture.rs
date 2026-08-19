@@ -11,8 +11,9 @@ use windows::{
         Foundation::{HINSTANCE, HWND, LPARAM, LRESULT, WPARAM},
         UI::{
             Shell::{
-                NIF_ICON, NIF_MESSAGE, NIF_SHOWTIP, NIF_TIP, NIM_ADD, NIM_DELETE, NIM_MODIFY,
-                NIM_SETFOCUS, NIM_SETVERSION, NOTIFYICONDATAW, Shell_NotifyIconW,
+                NIF_ICON, NIF_INFO, NIF_MESSAGE, NIF_REALTIME, NIF_SHOWTIP, NIF_TIP, NIIF_INFO,
+                NIM_ADD, NIM_DELETE, NIM_MODIFY, NIM_SETFOCUS, NIM_SETVERSION, NOTIFYICONDATAW,
+                Shell_NotifyIconW,
             },
             WindowsAndMessaging::{
                 CreateWindowExW, DefWindowProcW, DestroyWindow, DispatchMessageW, IDI_INFORMATION,
@@ -61,6 +62,19 @@ fn set_tip(data: &mut NOTIFYICONDATAW, value: &str) {
     }
 }
 
+fn set_info(data: &mut NOTIFYICONDATAW, title: &str, body: &str) {
+    data.szInfoTitle.fill(0);
+    data.szInfo.fill(0);
+    for (destination, source) in data.szInfoTitle.iter_mut().zip(title.encode_utf16()) {
+        *destination = source;
+    }
+    for (destination, source) in data.szInfo.iter_mut().zip(body.encode_utf16()) {
+        *destination = source;
+    }
+    data.dwInfoFlags = NIIF_INFO;
+    data.Anonymous.uTimeout = 5_000;
+}
+
 fn main() {
     let hold_ms = std::env::args()
         .skip_while(|arg| arg != "--hold-ms")
@@ -68,6 +82,12 @@ fn main() {
         .and_then(|value| value.parse::<u64>().ok())
         .unwrap_or(12_000)
         .clamp(1_000, 30_000);
+    let notification_count = std::env::args()
+        .skip_while(|arg| arg != "--notification-count")
+        .nth(1)
+        .and_then(|value| value.parse::<u32>().ok())
+        .unwrap_or(2)
+        .clamp(1, 20);
     let instance = HINSTANCE::default();
     TASKBAR_CREATED_MESSAGE.store(
         unsafe { RegisterWindowMessageW(w!("TaskbarCreated")) },
@@ -106,12 +126,17 @@ fn main() {
         cbSize: size_of::<NOTIFYICONDATAW>() as u32,
         hWnd: hwnd,
         uID: 7001,
-        uFlags: NIF_MESSAGE | NIF_ICON | NIF_TIP | NIF_SHOWTIP,
+        uFlags: NIF_MESSAGE | NIF_ICON | NIF_TIP | NIF_SHOWTIP | NIF_INFO | NIF_REALTIME,
         uCallbackMessage: CALLBACK_MESSAGE,
         hIcon: unsafe { LoadIconW(None, IDI_INFORMATION) }.expect("load fixture icon"),
         ..NOTIFYICONDATAW::default()
     };
     set_tip(&mut data, "SuperDesktop compatibility fixture");
+    set_info(
+        &mut data,
+        "SuperDesktop notification 1",
+        "Owned notification center is receiving documented NotifyIcon balloon content.",
+    );
     assert!(
         unsafe { Shell_NotifyIconW(NIM_ADD, &raw const data) }.as_bool(),
         "NIM_ADD"
@@ -121,11 +146,33 @@ fn main() {
         unsafe { Shell_NotifyIconW(NIM_SETVERSION, &raw const data) }.as_bool(),
         "NIM_SETVERSION"
     );
+    for index in 2..=notification_count {
+        data.uID = 7_000 + index;
+        set_tip(
+            &mut data,
+            &format!("SuperDesktop compatibility fixture {index}"),
+        );
+        set_info(
+            &mut data,
+            &format!("SuperDesktop notification {index}"),
+            &format!("Controlled owned notification {index} of {notification_count}."),
+        );
+        assert!(
+            unsafe { Shell_NotifyIconW(NIM_ADD, &raw const data) }.as_bool(),
+            "NIM_ADD additional"
+        );
+        data.Anonymous.uVersion = 4;
+        assert!(unsafe { Shell_NotifyIconW(NIM_SETVERSION, &raw const data) }.as_bool());
+        thread::sleep(Duration::from_millis(80));
+    }
+    data.uID = 7001;
     set_tip(&mut data, "SuperDesktop compatibility fixture modified");
-    assert!(
-        unsafe { Shell_NotifyIconW(NIM_MODIFY, &raw const data) }.as_bool(),
-        "NIM_MODIFY"
+    set_info(
+        &mut data,
+        "SuperDesktop notification updated",
+        "The primary controlled notification was updated through NIM_MODIFY.",
     );
+    assert!(unsafe { Shell_NotifyIconW(NIM_MODIFY, &raw const data) }.as_bool());
     println!(
         "fixture-ready pid={} hwnd={} icon_id={}",
         std::process::id(),
@@ -142,19 +189,24 @@ fn main() {
             }
         }
         if REREGISTER.swap(false, Ordering::AcqRel) {
-            assert!(unsafe { Shell_NotifyIconW(NIM_ADD, &raw const data) }.as_bool());
-            data.Anonymous.uVersion = 4;
-            assert!(unsafe { Shell_NotifyIconW(NIM_SETVERSION, &raw const data) }.as_bool());
-            assert!(unsafe { Shell_NotifyIconW(NIM_MODIFY, &raw const data) }.as_bool());
+            for index in 1..=notification_count {
+                data.uID = 7_000 + index;
+                assert!(unsafe { Shell_NotifyIconW(NIM_ADD, &raw const data) }.as_bool());
+                data.Anonymous.uVersion = 4;
+                assert!(unsafe { Shell_NotifyIconW(NIM_SETVERSION, &raw const data) }.as_bool());
+            }
             println!("fixture-reregistered");
         }
         thread::sleep(Duration::from_millis(10));
     }
     let _ = unsafe { Shell_NotifyIconW(NIM_SETFOCUS, &raw const data) };
-    assert!(
-        unsafe { Shell_NotifyIconW(NIM_DELETE, &raw const data) }.as_bool(),
-        "NIM_DELETE"
-    );
+    for index in 1..=notification_count {
+        data.uID = 7_000 + index;
+        assert!(
+            unsafe { Shell_NotifyIconW(NIM_DELETE, &raw const data) }.as_bool(),
+            "NIM_DELETE"
+        );
+    }
     let _ = unsafe { DestroyWindow(hwnd) };
     let _ = unsafe { UnregisterClassW(class_name, Some(instance)) };
     println!("fixture-complete");

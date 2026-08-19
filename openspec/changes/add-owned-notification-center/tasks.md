@@ -12,9 +12,9 @@
 **Gate／Evidence：** `G-NOTIFICATION-PROTOCOL`; automated protocol report.
 **完成門檻：** Old and new payloads round-trip; every invalid bound fails before mutation.
 
-- [ ] 1.1.1 Add owned notification identity, severity, content, time, and generation DTOs.
-- [ ] 1.1.2 Add defaulted icon/snapshot notification fields and dismiss/clear mutations.
-- [ ] 1.1.3 Add old-payload, new-payload, oversized-text, invalid-identity, and frame-bound tests.
+- [x] 1.1.1 Add owned notification identity, severity, content, time, and generation DTOs.
+- [x] 1.1.2 Add defaulted icon/snapshot notification fields and dismiss/clear mutations.
+- [x] 1.1.3 Add old-payload, new-payload, oversized-text, invalid-identity, and frame-bound tests.
 
 ### 1.2 Copy documented NotifyIcon balloon data
 
@@ -26,9 +26,9 @@
 **Gate／Evidence：** `G-NOTIFICATION-PROTOCOL`, `G-SHELL-NONINTERFERENCE`; native ingress report.
 **完成門檻：** Supported layouts copy exact fields; truncated/foreign/stale inputs are zero-effect.
 
-- [ ] 1.2.1 Copy bounded info title, body, flags, timeout/version, and realtime fields by `cbSize`.
-- [ ] 1.2.2 Translate non-empty balloon data into an owned record while preserving icon mutation.
-- [ ] 1.2.3 Add layout, malformed UTF-16, empty info, truncation, dead-window, and cross-session tests.
+- [x] 1.2.1 Copy bounded info title, body, flags, timeout/version, and realtime fields by `cbSize`.
+- [x] 1.2.2 Translate non-empty balloon data into an owned record while preserving icon mutation.
+- [x] 1.2.3 Add layout, malformed UTF-16, empty info, truncation, dead-window, and cross-session tests.
 
 ## 2. Authoritative bounded host history
 
@@ -42,9 +42,9 @@
 **Gate／Evidence：** `G-NOTIFICATION-HISTORY`; host unit/integration report.
 **完成門檻：** At most 100 newest unique records remain under storms and disconnects.
 
-- [ ] 2.1.1 Add notification history storage and atomic icon-plus-notification admission.
-- [ ] 2.1.2 Add deterministic duplicate suppression, oldest-first eviction, and disconnect retention.
-- [ ] 2.1.3 Add capacity, storm, deduplication, ordering, disconnect, and snapshot tests.
+- [x] 2.1.1 Add notification history storage and atomic icon-plus-notification admission.
+- [x] 2.1.2 Add deterministic duplicate suppression, oldest-first eviction, and disconnect retention.
+- [x] 2.1.3 Add capacity, storm, deduplication, ordering, disconnect, and snapshot tests.
 
 ### 2.2 Implement typed history actions
 
@@ -56,9 +56,9 @@
 **Gate／Evidence：** `G-NOTIFICATION-HISTORY`; action report.
 **完成門檻：** Current actions reconcile; stale/unknown actions preserve rows and icons.
 
-- [ ] 2.2.1 Add generation-aware single-dismiss and clear-all host mutations.
-- [ ] 2.2.2 Add SuperDesktop client helpers and authoritative snapshot reconciliation.
-- [ ] 2.2.3 Add current, stale, unknown, repeated, clear-empty, and icon-preservation tests.
+- [x] 2.2.1 Add generation-aware single-dismiss and clear-all host mutations.
+- [x] 2.2.2 Add SuperDesktop client helpers and authoritative snapshot reconciliation.
+- [x] 2.2.3 Add current, stale, unknown, repeated, clear-empty, and icon-preservation tests.
 
 ## 3. Windows 11 owned notification-center UI
 
@@ -72,9 +72,9 @@
 **Gate／Evidence：** `G-NOTIFICATION-CENTER-UI`; model/geometry report.
 **完成門檻：** Empty through overflow states fit all reference DPI/taskbar-row cases.
 
-- [ ] 3.1.1 Add localized notification view rows, empty state, and provider-unavailable state.
-- [ ] 3.1.2 Add Windows 11 light/dark/high-contrast card, focus, dismiss, and header tokens.
-- [ ] 3.1.3 Add 100–225% DPI, negative-origin, compact-work-area, overflow, and calendar-reachability tests.
+- [x] 3.1.1 Add localized notification view rows, empty state, and provider-unavailable state.
+- [x] 3.1.2 Add Windows 11 light/dark/high-contrast card, focus, dismiss, and header tokens.
+- [x] 3.1.3 Add 100–225% DPI, negative-origin, compact-work-area, overflow, and calendar-reachability tests.
 
 ### 3.2 Render and wire accessible typed interactions
 
@@ -86,9 +86,9 @@
 **Gate／Evidence：** `G-NOTIFICATION-CENTER-UI`, `G-NOTIFICATION-A11Y`, `G-SHELL-NONINTERFERENCE`; headful/UIA report.
 **完成門檻：** Dismiss/clear/Escape work equivalently and never delegate to system UI.
 
-- [ ] 3.2.1 Render header, cards, real icons, bounded text, times, empty state, and calendar below.
-- [ ] 3.2.2 Wire dismiss, Delete, clear-all, Enter/Space, Escape, and clock-focus restoration.
-- [ ] 3.2.3 Add UIA role/name/value, long-text, disabled-provider, localization, and no-delegation tests.
+- [x] 3.2.1 Render header, cards, real icons, bounded text, times, empty state, and calendar below.
+- [x] 3.2.2 Wire dismiss, Delete, clear-all, Enter/Space, Escape, and clock-focus restoration.
+- [x] 3.2.3 Add UIA role/name/value, long-text, disabled-provider, localization, and no-delegation tests.
 
 ## 4. Headful admission, traceability, and packaging
 
@@ -102,9 +102,9 @@
 **Gate／Evidence：** `G-NOTIFICATION-CENTER-UI`, `G-NOTIFICATION-A11Y`, `G-SHELL-NONINTERFERENCE`; `evidence/headful/*`.
 **完成門檻：** Every surface/action passes with Explorer absent and is restored safely after the gate.
 
-- [ ] 4.1.1 Add a controlled NotifyIcon balloon fixture and production headful capture harness.
-- [ ] 4.1.2 Capture light, dark, high contrast, empty, populated, overflow, dismiss, clear, and 175% bounds.
-- [ ] 4.1.3 Prove UIA/keyboard parity, focus return, zero forbidden processes, and authoritative reconciliation.
+- [x] 4.1.1 Add a controlled NotifyIcon balloon fixture and production headful capture harness.
+- [x] 4.1.2 Capture light, dark, high contrast, empty, populated, overflow, dismiss, clear, and 175% bounds.
+- [x] 4.1.3 Prove UIA/keyboard parity, focus return, zero forbidden processes, and authoritative reconciliation.
 
 ### 4.2 Run full gates and admit packages
 
@@ -116,6 +116,6 @@
 **Gate／Evidence：** `G-TRACE`, `G-PACKAGE`; evidence index and packaging report.
 **完成門檻：** 24/24 unique passed leaves, strict/detailed validation, both installers, unarchived change.
 
-- [ ] 4.2.1 Run fmt, locked/offline workspace tests, Clippy warnings-as-errors, and release build.
+- [x] 4.2.1 Run fmt, locked/offline workspace tests, Clippy warnings-as-errors, and release build.
 - [ ] 4.2.2 Commit implementation and build standalone plus combined NSIS installers without launch.
 - [ ] 4.2.3 Record revision/binary/package hashes, create 24 unique evidence records, and pass detailed/strict validation.

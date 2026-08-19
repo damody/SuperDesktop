@@ -70,6 +70,8 @@ pub struct OwnedNotifyIcon {
     pub tooltip: String,
     pub visible: bool,
     pub pixels: Option<IconData>,
+    #[serde(default)]
+    pub notification: Option<OwnedNotificationContent>,
     pub generation: u64,
 }
 
@@ -86,6 +88,45 @@ impl Validate for OwnedNotifyIcon {
         }
         if let Some(pixels) = &self.pixels {
             pixels.validate()?;
+        }
+        if let Some(notification) = &self.notification {
+            notification.validate()?;
+        }
+        Ok(())
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum NotificationSeverity {
+    #[default]
+    Information,
+    Warning,
+    Error,
+    User,
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
+pub struct OwnedNotificationContent {
+    pub title: String,
+    pub body: String,
+    pub severity: NotificationSeverity,
+    pub realtime: bool,
+    pub timeout_ms: u32,
+}
+
+impl Validate for OwnedNotificationContent {
+    fn validate(&self) -> Result<(), ValidationError> {
+        for (field, value) in [
+            ("notification.title", &self.title),
+            ("notification.body", &self.body),
+        ] {
+            if value.len() > MAX_TEXT_BYTES {
+                return Err(ValidationError::TextTooLong(field));
+            }
+        }
+        if self.title.is_empty() && self.body.is_empty() {
+            return Err(ValidationError::Empty("notification.content"));
         }
         Ok(())
     }
@@ -232,6 +273,50 @@ pub struct RegisteredIcon {
     pub always_visible: bool,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct OwnedNotification {
+    pub notification_id: String,
+    pub key: IconKey,
+    pub application_label: String,
+    pub title: String,
+    pub body: String,
+    pub severity: NotificationSeverity,
+    pub admitted_unix_ms: u64,
+    pub generation: u64,
+    pub icon: Option<IconData>,
+}
+
+impl Validate for OwnedNotification {
+    fn validate(&self) -> Result<(), ValidationError> {
+        self.key.validate()?;
+        if self.notification_id.trim().is_empty() {
+            return Err(ValidationError::Empty("notification.notification_id"));
+        }
+        for (field, value) in [
+            ("notification.notification_id", &self.notification_id),
+            ("notification.application_label", &self.application_label),
+            ("notification.title", &self.title),
+            ("notification.body", &self.body),
+        ] {
+            if value.len() > MAX_TEXT_BYTES {
+                return Err(ValidationError::TextTooLong(field));
+            }
+        }
+        if self.title.is_empty() && self.body.is_empty() {
+            return Err(ValidationError::Empty("notification.content"));
+        }
+        if self.admitted_unix_ms == 0 || self.generation == 0 {
+            return Err(ValidationError::OutOfRange(
+                "notification.time_or_generation",
+            ));
+        }
+        if let Some(icon) = &self.icon {
+            icon.validate()?;
+        }
+        Ok(())
+    }
+}
+
 impl Validate for RegisteredIcon {
     fn validate(&self) -> Result<(), ValidationError> {
         self.key.validate()?;
@@ -245,15 +330,42 @@ impl Validate for RegisteredIcon {
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum NotificationMutation {
-    RegisterClient { client_id: String },
-    Add { icon: RegisteredIcon },
-    Modify { icon: RegisteredIcon },
-    Delete { key: IconKey, generation: u64 },
-    Focus { key: IconKey, generation: u64 },
-    Disconnect { client_id: String },
-    Event { event: NotificationEvent },
-    CancelEvent { correlation_id: String },
-    DrainEvents { client_id: String },
+    RegisterClient {
+        client_id: String,
+    },
+    Add {
+        icon: RegisteredIcon,
+    },
+    Modify {
+        icon: RegisteredIcon,
+    },
+    Delete {
+        key: IconKey,
+        generation: u64,
+    },
+    Focus {
+        key: IconKey,
+        generation: u64,
+    },
+    Disconnect {
+        client_id: String,
+    },
+    Event {
+        event: NotificationEvent,
+    },
+    CancelEvent {
+        correlation_id: String,
+    },
+    DrainEvents {
+        client_id: String,
+    },
+    DismissNotification {
+        notification_id: String,
+        expected_generation: u64,
+    },
+    ClearNotifications {
+        expected_generation: u64,
+    },
     Snapshot,
     Health,
 }
@@ -276,6 +388,33 @@ impl Validate for NotificationMutation {
                     Err(ValidationError::Empty("notification.correlation_id"))
                 } else if correlation_id.len() > crate::MAX_TEXT_BYTES {
                     Err(ValidationError::TextTooLong("notification.correlation_id"))
+                } else {
+                    Ok(())
+                }
+            }
+            Self::DismissNotification {
+                notification_id,
+                expected_generation,
+            } => {
+                if notification_id.trim().is_empty() {
+                    Err(ValidationError::Empty("notification.notification_id"))
+                } else if notification_id.len() > MAX_TEXT_BYTES {
+                    Err(ValidationError::TextTooLong("notification.notification_id"))
+                } else if *expected_generation == 0 {
+                    Err(ValidationError::OutOfRange(
+                        "notification.expected_generation",
+                    ))
+                } else {
+                    Ok(())
+                }
+            }
+            Self::ClearNotifications {
+                expected_generation,
+            } => {
+                if *expected_generation == 0 {
+                    Err(ValidationError::OutOfRange(
+                        "notification.expected_generation",
+                    ))
                 } else {
                     Ok(())
                 }
@@ -315,6 +454,8 @@ impl Validate for NotificationEvent {
 pub struct NotificationSnapshot {
     pub generation: u64,
     pub icons: Vec<RegisteredIcon>,
+    #[serde(default)]
+    pub notifications: Vec<OwnedNotification>,
 }
 
 impl Validate for NotificationSnapshot {
@@ -324,6 +465,14 @@ impl Validate for NotificationSnapshot {
         }
         for icon in &self.icons {
             icon.validate()?;
+        }
+        if self.notifications.len() > MAX_COLLECTION_ITEMS {
+            return Err(ValidationError::CollectionTooLarge(
+                "notification.notifications",
+            ));
+        }
+        for notification in &self.notifications {
+            notification.validate()?;
         }
         Ok(())
     }
@@ -400,6 +549,7 @@ mod tests {
                 height: 1,
                 rgba: vec![1, 2, 3, 255],
             }),
+            notification: None,
             generation: 1,
         }
     }
@@ -444,5 +594,45 @@ mod tests {
             },
         };
         assert!(request.validate().is_err());
+    }
+
+    #[test]
+    fn notification_fields_are_additive_bounded_and_frame_safe() {
+        let legacy_icon = serde_json::json!({
+            "client": {"process_id":42,"session_id":1,"window_identity":100},
+            "identity": {"numeric_id":7,"guid":null},
+            "callback": {"message_id":1280,"negotiated_version":"v4"},
+            "tooltip":"Legacy icon","visible":true,"pixels":null,"generation":1
+        });
+        let decoded: OwnedNotifyIcon = serde_json::from_value(legacy_icon).unwrap();
+        assert_eq!(decoded.notification, None);
+        let legacy_snapshot = serde_json::json!({"generation":1,"icons":[]});
+        let decoded: NotificationSnapshot = serde_json::from_value(legacy_snapshot).unwrap();
+        assert!(decoded.notifications.is_empty());
+
+        let mut icon = compatibility_icon();
+        icon.notification = Some(OwnedNotificationContent {
+            title: "Build complete".into(),
+            body: "SuperDesktop is ready".into(),
+            severity: NotificationSeverity::Information,
+            realtime: true,
+            timeout_ms: 5_000,
+        });
+        icon.validate().unwrap();
+        assert!(serde_json::to_vec(&icon).unwrap().len() <= crate::MAX_FRAME_BYTES);
+        icon.notification.as_mut().unwrap().body = "x".repeat(MAX_TEXT_BYTES + 1);
+        assert!(icon.validate().is_err());
+
+        let empty = OwnedNotificationContent::default();
+        assert!(empty.validate().is_err());
+        let invalid = NotificationMutation::DismissNotification {
+            notification_id: String::new(),
+            expected_generation: 0,
+        };
+        assert!(invalid.validate().is_err());
+        let invalid = NotificationMutation::ClearNotifications {
+            expected_generation: 0,
+        };
+        assert!(invalid.validate().is_err());
     }
 }

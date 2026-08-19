@@ -227,7 +227,8 @@ mod tests {
         assert!(model.apply_snapshot(
             NotificationSnapshot {
                 generation: 1,
-                icons: vec![icon("a", 1, true), icon("b", 2, false)]
+                icons: vec![icon("a", 1, true), icon("b", 2, false)],
+                notifications: Vec::new(),
             },
             1
         ));

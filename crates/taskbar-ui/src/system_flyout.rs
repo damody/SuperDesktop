@@ -1,16 +1,29 @@
 use std::rc::Rc;
 
 use gpui::{
-    Context, FocusHandle, InteractiveElement, IntoElement, ParentElement, Render,
-    StatefulInteractiveElement, Styled, Subscription, Window, div, prelude::FluentBuilder as _, px,
-    rgb, svg,
+    Context, FocusHandle, InteractiveElement, IntoElement, ObjectFit, ParentElement, Render,
+    StatefulInteractiveElement, Styled, StyledImage, Subscription, Window, div, img,
+    prelude::FluentBuilder as _, px, rgb, svg,
 };
-use shell_provider_protocol::{StatusAvailability, SystemStatusSnapshot};
+use shell_provider_protocol::{NotificationSnapshot, StatusAvailability, SystemStatusSnapshot};
 
-use crate::{StatusRegion, SystemFlyoutKind, SystemStatusAction};
+use crate::{StatusRegion, SystemFlyoutKind, SystemStatusAction, view::icon_render_image};
 
 pub type SystemFlyoutAction = Rc<dyn Fn(SystemStatusAction, &mut gpui::App)>;
+pub type NotificationCenterActionHandler =
+    Rc<dyn Fn(NotificationCenterAction, &mut gpui::App) -> Result<NotificationSnapshot, String>>;
 pub type SystemFlyoutDismiss = Rc<dyn Fn(&mut Window, &mut gpui::App)>;
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum NotificationCenterAction {
+    Dismiss {
+        notification_id: String,
+        expected_generation: u64,
+    },
+    ClearAll {
+        expected_generation: u64,
+    },
+}
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum SystemFlyoutTheme {
@@ -103,9 +116,12 @@ pub struct SystemFlyoutView {
     pub kind: SystemFlyoutKind,
     pub snapshot: Option<SystemStatusSnapshot>,
     pub status: StatusRegion,
+    pub notifications: Option<NotificationSnapshot>,
     presentation: SystemFlyoutPresentation,
     keyboard_settings_open: bool,
     action: SystemFlyoutAction,
+    notification_action: NotificationCenterActionHandler,
+    notification_error: Option<String>,
     dismiss: SystemFlyoutDismiss,
     focus: FocusHandle,
     _activation_subscription: Subscription,
@@ -116,8 +132,10 @@ impl SystemFlyoutView {
         kind: SystemFlyoutKind,
         snapshot: Option<SystemStatusSnapshot>,
         status: StatusRegion,
+        notifications: Option<NotificationSnapshot>,
         presentation: SystemFlyoutPresentation,
         action: SystemFlyoutAction,
+        notification_action: NotificationCenterActionHandler,
         dismiss: SystemFlyoutDismiss,
         window: &mut Window,
         cx: &mut Context<Self>,
@@ -132,18 +150,41 @@ impl SystemFlyoutView {
             kind,
             snapshot,
             status,
+            notifications,
             presentation,
             keyboard_settings_open: false,
             action,
+            notification_action,
+            notification_error: None,
             dismiss,
             focus: cx.focus_handle(),
             _activation_subscription: activation_subscription,
         }
     }
+
+    fn apply_notification_action(
+        &mut self,
+        action: NotificationCenterAction,
+        cx: &mut Context<Self>,
+    ) {
+        match (self.notification_action)(action, cx) {
+            Ok(snapshot) => {
+                self.notifications = Some(snapshot);
+                self.notification_error = None;
+            }
+            Err(error) => self.notification_error = Some(error),
+        }
+        cx.notify();
+    }
 }
 
 fn activates_button(key: &str) -> bool {
     matches!(key, "enter" | "space")
+}
+
+fn notification_time_label(admitted_unix_ms: u64) -> String {
+    let minutes = admitted_unix_ms / 60_000;
+    format!("{:02}:{:02}", (minutes / 60) % 24, minutes % 60)
 }
 
 fn localized<'a>(presentation: SystemFlyoutPresentation, zh_tw: &'a str, en: &'a str) -> &'a str {
@@ -413,6 +454,8 @@ impl Render for SystemFlyoutView {
         let kind = self.kind;
         let snapshot = self.snapshot.clone();
         let action = self.action.clone();
+        let notification_snapshot = self.notifications.clone();
+        let notification_error = self.notification_error.clone();
         let presentation = self.presentation;
         let keyboard_settings_open = self.keyboard_settings_open;
         let tokens = SystemFlyoutChromeTokens::new(presentation.theme);
@@ -1072,7 +1115,254 @@ impl Render for SystemFlyoutView {
                     );
                 };
                 let selected_day = calendar.selected_day;
+                let notification_generation = notification_snapshot
+                    .as_ref()
+                    .map_or(0, |snapshot| snapshot.generation);
+                let notification_count = notification_snapshot
+                    .as_ref()
+                    .map_or(0, |snapshot| snapshot.notifications.len());
                 root.child(
+                    div()
+                        .id("owned-notification-center-heading")
+                        .h(px(40.))
+                        .flex()
+                        .items_center()
+                        .child(
+                            div()
+                                .id("owned-notification-center-title")
+                                .role(gpui::Role::Heading)
+                                .flex_1()
+                                .text_size(px(18.))
+                                .child(localized(presentation, "通知", "Notifications")),
+                        )
+                        .when(notification_count > 0, |heading| {
+                            heading.child(
+                                div()
+                                    .id("owned-notification-clear-all")
+                                    .role(gpui::Role::Button)
+                                    .aria_label(localized(
+                                        presentation,
+                                        "全部清除通知",
+                                        "Clear all notifications",
+                                    ))
+                                    .tab_index(0)
+                                    .px_2()
+                                    .h(px(32.))
+                                    .rounded(px(6.))
+                                    .cursor_pointer()
+                                    .hover(move |style| style.bg(rgb(tokens.hover)))
+                                    .active(move |style| style.bg(rgb(tokens.pressed)))
+                                    .focus_visible(move |style| {
+                                        style.border_2().border_color(rgb(tokens.focus))
+                                    })
+                                    .on_click(cx.listener(move |this, _, _, cx| {
+                                        this.apply_notification_action(
+                                            NotificationCenterAction::ClearAll {
+                                                expected_generation: notification_generation,
+                                            },
+                                            cx,
+                                        );
+                                    }))
+                                    .on_key_down(cx.listener(
+                                        move |this, event: &gpui::KeyDownEvent, _, cx| {
+                                            if activates_button(&event.keystroke.key) {
+                                                this.apply_notification_action(
+                                                    NotificationCenterAction::ClearAll {
+                                                        expected_generation:
+                                                            notification_generation,
+                                                    },
+                                                    cx,
+                                                );
+                                            }
+                                        },
+                                    ))
+                                    .child(localized(presentation, "全部清除", "Clear all")),
+                            )
+                        }),
+                )
+                .when_some(notification_error, |root, error| {
+                    root.child(
+                        div()
+                            .id("owned-notification-action-error")
+                            .role(gpui::Role::Alert)
+                            .text_size(px(12.))
+                            .text_color(rgb(tokens.unavailable))
+                            .child(error),
+                    )
+                })
+                .child(match notification_snapshot.clone() {
+                    None => div()
+                        .id("owned-notification-provider-unavailable")
+                        .role(gpui::Role::Status)
+                        .h(px(72.))
+                        .p_3()
+                        .rounded(px(8.))
+                        .border_1()
+                        .border_color(rgb(tokens.border))
+                        .text_color(rgb(tokens.unavailable))
+                        .child(localized(
+                            presentation,
+                            "通知提供者目前無法使用",
+                            "Notification provider unavailable",
+                        )),
+                    Some(snapshot) if snapshot.notifications.is_empty() => div()
+                        .id("owned-notification-empty")
+                        .role(gpui::Role::Status)
+                        .h(px(72.))
+                        .p_3()
+                        .rounded(px(8.))
+                        .border_1()
+                        .border_color(rgb(tokens.border))
+                        .flex()
+                        .items_center()
+                        .justify_center()
+                        .text_color(rgb(tokens.secondary))
+                        .child(localized(
+                            presentation,
+                            "沒有新的通知",
+                            "No new notifications",
+                        )),
+                    Some(snapshot) => div()
+                        .id("owned-notification-list")
+                        .role(gpui::Role::List)
+                        .aria_label(localized(presentation, "通知", "Notifications"))
+                        .max_h(px(264.))
+                        .overflow_y_scroll()
+                        .flex()
+                        .flex_col()
+                        .gap_2()
+                        .children(snapshot.notifications.into_iter().map(|notification| {
+                            let notification_id = notification.notification_id.clone();
+                            let dismiss_id = notification.notification_id.clone();
+                            let expected_generation = snapshot.generation;
+                            let key_expected_generation = snapshot.generation;
+                            let icon = notification.icon.as_ref().and_then(icon_render_image);
+                            let accessible_name = format!(
+                                "{}. {}. {}. {}",
+                                notification.application_label,
+                                notification.title,
+                                notification.body,
+                                notification_time_label(notification.admitted_unix_ms)
+                            );
+                            div()
+                                .id(format!("owned-notification-{notification_id}"))
+                                .role(gpui::Role::ListItem)
+                                .aria_label(accessible_name)
+                                .tab_index(0)
+                                .min_h(px(92.))
+                                .p_3()
+                                .rounded(px(8.))
+                                .border_1()
+                                .border_color(rgb(tokens.border))
+                                .bg(rgb(tokens.card))
+                                .flex()
+                                .gap_2()
+                                .focus_visible(move |style| {
+                                    style.border_2().border_color(rgb(tokens.focus))
+                                })
+                                .on_key_down(cx.listener(
+                                    move |this, event: &gpui::KeyDownEvent, _, cx| {
+                                        if event.keystroke.key == "delete" {
+                                            this.apply_notification_action(
+                                                NotificationCenterAction::Dismiss {
+                                                    notification_id: notification_id.clone(),
+                                                    expected_generation: key_expected_generation,
+                                                },
+                                                cx,
+                                            );
+                                        }
+                                    },
+                                ))
+                                .when_some(icon, |row, icon| {
+                                    row.child(
+                                        img(icon)
+                                            .w(px(32.))
+                                            .h(px(32.))
+                                            .flex_none()
+                                            .object_fit(ObjectFit::Contain),
+                                    )
+                                })
+                                .child(
+                                    div()
+                                        .flex_1()
+                                        .min_w_0()
+                                        .flex()
+                                        .flex_col()
+                                        .gap_1()
+                                        .child(
+                                            div()
+                                                .flex()
+                                                .child(
+                                                    div()
+                                                        .flex_1()
+                                                        .min_w_0()
+                                                        .text_size(px(12.))
+                                                        .text_ellipsis()
+                                                        .child(notification.application_label),
+                                                )
+                                                .child(
+                                                    div()
+                                                        .text_size(px(11.))
+                                                        .text_color(rgb(tokens.secondary))
+                                                        .child(notification_time_label(
+                                                            notification.admitted_unix_ms,
+                                                        )),
+                                                ),
+                                        )
+                                        .child(
+                                            div()
+                                                .min_w_0()
+                                                .text_ellipsis()
+                                                .child(notification.title),
+                                        )
+                                        .child(
+                                            div()
+                                                .min_w_0()
+                                                .text_size(px(12.))
+                                                .text_color(rgb(tokens.secondary))
+                                                .text_ellipsis()
+                                                .line_clamp(3)
+                                                .child(notification.body),
+                                        ),
+                                )
+                                .child(
+                                    div()
+                                        .id(format!("owned-notification-dismiss-{dismiss_id}"))
+                                        .role(gpui::Role::Button)
+                                        .aria_label(localized(
+                                            presentation,
+                                            "關閉通知",
+                                            "Dismiss notification",
+                                        ))
+                                        .tab_index(0)
+                                        .w(px(32.))
+                                        .h(px(32.))
+                                        .flex_none()
+                                        .rounded(px(6.))
+                                        .flex()
+                                        .items_center()
+                                        .justify_center()
+                                        .cursor_pointer()
+                                        .hover(move |style| style.bg(rgb(tokens.hover)))
+                                        .active(move |style| style.bg(rgb(tokens.pressed)))
+                                        .focus_visible(move |style| {
+                                            style.border_2().border_color(rgb(tokens.focus))
+                                        })
+                                        .on_click(cx.listener(move |this, _, _, cx| {
+                                            this.apply_notification_action(
+                                                NotificationCenterAction::Dismiss {
+                                                    notification_id: dismiss_id.clone(),
+                                                    expected_generation,
+                                                },
+                                                cx,
+                                            );
+                                        }))
+                                        .child("×"),
+                                )
+                        })),
+                })
+                .child(div().h(px(1.)).w_full().bg(rgb(tokens.border)))
+                .child(
                     div()
                         .id("owned-calendar-heading")
                         .role(gpui::Role::Heading)
@@ -1197,6 +1487,11 @@ mod tests {
             "繁體中文（台灣）"
         );
         assert_eq!(super::input_profile_subtitle("zh-CN", zh), "微軟拼音");
+        assert_eq!(super::notification_time_label(0), "00:00");
+        assert_eq!(
+            super::notification_time_label(23 * 60 * 60 * 1_000),
+            "23:00"
+        );
     }
 
     fn status_snapshot(power: StatusAvailability<PowerStatus>) -> SystemStatusSnapshot {
@@ -1267,6 +1562,15 @@ mod tests {
             "owned-volume-unavailable",
             "owned-network-card",
             "owned-calendar-grid",
+            "owned-notification-center-heading",
+            "owned-notification-clear-all",
+            "owned-notification-list",
+            "owned-notification-empty",
+            "owned-notification-provider-unavailable",
+            "NotificationCenterAction::Dismiss",
+            "NotificationCenterAction::ClearAll",
+            "event.keystroke.key == \"delete\"",
+            ".line_clamp(3)",
             "SystemFlyoutChromeTokens",
             ".hover(move |style|",
             ".active(move |style|",

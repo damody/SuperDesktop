@@ -19,8 +19,9 @@ use std::{
 };
 
 use shell_provider_protocol::{
-    NotificationEventKind, NotifyIconCallbackRoute, NotifyIconClientIdentity, NotifyIconIdentity,
-    NotifyIconLayoutVersion, OwnedNotifyIcon, Validate,
+    NotificationEventKind, NotificationSeverity, NotifyIconCallbackRoute, NotifyIconClientIdentity,
+    NotifyIconIdentity, NotifyIconLayoutVersion, OwnedNotificationContent, OwnedNotifyIcon,
+    Validate,
 };
 use windows::Win32::{
     Foundation::{HINSTANCE, HWND, LPARAM, LRESULT, WPARAM},
@@ -428,6 +429,28 @@ unsafe fn decode_copydata(
         } else {
             0
         };
+        let read_utf16 = |start: usize, units: usize| -> Result<Vec<u16>, &'static str> {
+            (start..start + units * 2)
+                .step_by(2)
+                .map(|offset| {
+                    bytes
+                        .get(offset..offset + 2)
+                        .ok_or("notify-icon-copydata-truncated")
+                        .map(|value| u16::from_ne_bytes(value.try_into().unwrap()))
+                })
+                .collect()
+        };
+        let (info_utf16, info_title_utf16, info_flags, info_timeout_ms) =
+            if flags & NIF_INFO.0 != 0 && cb_size >= PACKED_V2_SIZE {
+                (
+                    read_utf16(296, 256)?,
+                    read_utf16(812, 64)?,
+                    read_u32(940)?,
+                    read_u32(808)?,
+                )
+            } else {
+                (Vec::new(), Vec::new(), 0, 0)
+            };
         let guid = if flags & NIF_GUID.0 != 0 && cb_size >= PACKED_V3_SIZE {
             Some(
                 bytes
@@ -459,6 +482,11 @@ unsafe fn decode_copydata(
                 callback_message,
                 requested_version,
                 tooltip_utf16,
+                info_utf16,
+                info_title_utf16,
+                info_flags,
+                info_timeout_ms,
+                realtime: flags & NIF_REALTIME.0 != 0,
                 visible: state & 1 == 0,
                 borrowed_hicon,
             },
@@ -501,6 +529,27 @@ unsafe fn decode_copydata(
             callback_message: native.uCallbackMessage,
             requested_version,
             tooltip_utf16: native.szTip.to_vec(),
+            info_utf16: if native.uFlags.0 & NIF_INFO.0 != 0 {
+                native.szInfo.to_vec()
+            } else {
+                Vec::new()
+            },
+            info_title_utf16: if native.uFlags.0 & NIF_INFO.0 != 0 {
+                native.szInfoTitle.to_vec()
+            } else {
+                Vec::new()
+            },
+            info_flags: if native.uFlags.0 & NIF_INFO.0 != 0 {
+                native.dwInfoFlags.0
+            } else {
+                0
+            },
+            info_timeout_ms: if native.uFlags.0 & NIF_INFO.0 != 0 {
+                unsafe { native.Anonymous.uTimeout }
+            } else {
+                0
+            },
+            realtime: native.uFlags.0 & NIF_REALTIME.0 != 0,
             visible: native.dwState.0 & 1 == 0,
             borrowed_hicon: native.hIcon.0 as isize,
         },
@@ -577,6 +626,11 @@ pub struct NotifyIconCopyInput {
     pub callback_message: u32,
     pub requested_version: Option<NotifyIconLayoutVersion>,
     pub tooltip_utf16: Vec<u16>,
+    pub info_utf16: Vec<u16>,
+    pub info_title_utf16: Vec<u16>,
+    pub info_flags: u32,
+    pub info_timeout_ms: u32,
+    pub realtime: bool,
     pub visible: bool,
     pub borrowed_hicon: isize,
 }
@@ -595,6 +649,9 @@ pub fn copy_notify_icon(
     if input.tooltip_utf16.len() > 128 {
         return Err("notify-icon-tooltip-capacity");
     }
+    if input.info_utf16.len() > 256 || input.info_title_utf16.len() > 64 {
+        return Err("notify-icon-info-capacity");
+    }
     if input.tooltip_utf16.contains(&0) && input.tooltip_utf16.last().copied() != Some(0) {
         return Err("notify-icon-tooltip-interior-nul");
     }
@@ -608,6 +665,31 @@ pub fn copy_notify_icon(
         .unwrap_or(input.tooltip_utf16.len());
     let tooltip = String::from_utf16(&input.tooltip_utf16[..tooltip_length])
         .map_err(|_| "notify-icon-tooltip-utf16")?;
+    let decode_info = |units: &[u16]| -> Result<String, &'static str> {
+        let length = units
+            .iter()
+            .position(|unit| *unit == 0)
+            .unwrap_or(units.len());
+        String::from_utf16(&units[..length]).map_err(|_| "notify-icon-info-utf16")
+    };
+    let notification = if input.flags & NIF_INFO.0 != 0 {
+        let body = decode_info(&input.info_utf16)?;
+        let title = decode_info(&input.info_title_utf16)?;
+        (!title.is_empty() || !body.is_empty()).then_some(OwnedNotificationContent {
+            title,
+            body,
+            severity: match input.info_flags & 0xf {
+                2 => NotificationSeverity::Warning,
+                3 => NotificationSeverity::Error,
+                4 => NotificationSeverity::User,
+                _ => NotificationSeverity::Information,
+            },
+            realtime: input.realtime,
+            timeout_ms: input.info_timeout_ms,
+        })
+    } else {
+        None
+    };
     let pixels = if input.flags & NIF_ICON.0 != 0 {
         Some(
             super::icon::borrowed_hicon_rgba(input.borrowed_hicon, ICON_EDGE)
@@ -635,6 +717,7 @@ pub fn copy_notify_icon(
         tooltip,
         visible: input.visible,
         pixels,
+        notification,
         generation,
     };
     icon.validate().map_err(|_| "notify-icon-owned-invalid")?;
@@ -773,6 +856,11 @@ mod tests {
             callback_message: 0x500,
             requested_version: Some(NotifyIconLayoutVersion::V4),
             tooltip_utf16: "Owned tooltip".encode_utf16().collect(),
+            info_utf16: Vec::new(),
+            info_title_utf16: Vec::new(),
+            info_flags: 0,
+            info_timeout_ms: 0,
+            realtime: false,
             visible: true,
             borrowed_hicon: 0,
         }
@@ -844,6 +932,20 @@ mod tests {
             copy_notify_icon(&input, 1, false),
             Err("notify-icon-copy-failed")
         );
+        let mut input = fixture();
+        input.flags |= NIF_INFO.0;
+        input.info_utf16 = vec![0xd800];
+        assert_eq!(
+            copy_notify_icon(&input, 1, false),
+            Err("notify-icon-info-utf16")
+        );
+        let mut input = fixture();
+        input.flags |= NIF_INFO.0;
+        input.info_utf16 = vec![b'x' as u16; 257];
+        assert_eq!(
+            copy_notify_icon(&input, 1, false),
+            Err("notify-icon-info-capacity")
+        );
     }
 
     #[test]
@@ -888,13 +990,29 @@ mod tests {
             cbSize: NotifyIconLayoutMatrix::current().v4_size,
             hWnd: HWND(100usize as *mut _),
             uID: 77,
-            uFlags: windows::Win32::UI::Shell::NIF_MESSAGE | NIF_TIP,
+            uFlags: windows::Win32::UI::Shell::NIF_MESSAGE | NIF_TIP | NIF_INFO | NIF_REALTIME,
             uCallbackMessage: 0x501,
             ..NOTIFYICONDATAW::default()
         };
         for (destination, source) in native.szTip.iter_mut().zip("Transport tip".encode_utf16()) {
             *destination = source;
         }
+        for (destination, source) in native
+            .szInfoTitle
+            .iter_mut()
+            .zip("Build warning".encode_utf16())
+        {
+            *destination = source;
+        }
+        for (destination, source) in native
+            .szInfo
+            .iter_mut()
+            .zip("Attention required".encode_utf16())
+        {
+            *destination = source;
+        }
+        native.dwInfoFlags = windows::Win32::UI::Shell::NIIF_WARNING;
+        native.Anonymous.uTimeout = 7_000;
         let mut payload = vec![0u8; 8 + size_of::<NOTIFYICONDATAW>()];
         payload[..4].copy_from_slice(&1u32.to_ne_bytes());
         payload[4..8].copy_from_slice(&0u32.to_ne_bytes());
@@ -910,11 +1028,24 @@ mod tests {
             cbData: payload.len() as u32,
             lpData: payload.as_mut_ptr().cast(),
         };
-        let ingress = unsafe { decode_copydata(&copy, 100) }.unwrap();
+        let mut ingress = unsafe { decode_copydata(&copy, 100) }.unwrap();
         assert_eq!(ingress.message, 0);
         assert_eq!(ingress.input.numeric_id, 77);
         assert_eq!(ingress.input.callback_message, 0x501);
         assert_eq!(ingress.input.tooltip_utf16[0], b'T' as u16);
+        assert_eq!(ingress.input.info_title_utf16[0], b'B' as u16);
+        assert_eq!(ingress.input.info_utf16[0], b'A' as u16);
+        assert_eq!(ingress.input.info_flags & 0xf, 2);
+        assert_eq!(ingress.input.info_timeout_ms, 7_000);
+        assert!(ingress.input.realtime);
+        ingress.input.process_id = 42;
+        ingress.input.session_id = 1;
+        ingress.input.window_identity = 100;
+        let icon = copy_notify_icon(&ingress.input, 9, false).unwrap();
+        let notification = icon.notification.unwrap();
+        assert_eq!(notification.title, "Build warning");
+        assert_eq!(notification.body, "Attention required");
+        assert_eq!(notification.severity, NotificationSeverity::Warning);
     }
 
     #[test]
