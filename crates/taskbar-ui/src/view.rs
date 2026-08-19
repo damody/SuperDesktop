@@ -114,6 +114,20 @@ fn task_display_label(
     }
 }
 
+fn adaptive_labeled_task_width(
+    window_width: f32,
+    left_reserved: f32,
+    right_reserved: f32,
+    task_count: usize,
+    rows: u8,
+) -> f32 {
+    if task_count == 0 {
+        return 160.0;
+    }
+    let columns = task_count.div_ceil(usize::from(rows.clamp(1, 3))).max(1) as f32;
+    ((window_width - left_reserved - right_reserved).max(0.0) / columns).clamp(44.0, 160.0)
+}
+
 fn toggled_system_flyout(
     current: Option<SystemFlyoutKind>,
     requested: SystemFlyoutKind,
@@ -390,6 +404,20 @@ impl Render for TaskbarView {
         let search_label = taskbar_search_label(locale.as_deref());
         let zh_tw = search_label == "搜尋";
         let reduced_motion = std::env::var("SUPERDESKTOP_REDUCED_MOTION").as_deref() == Ok("1");
+        let search_width = match search_mode {
+            TaskbarSearchMode::Hidden => 0.0,
+            TaskbarSearchMode::Icon => 44.0,
+            TaskbarSearchMode::Box => 168.0,
+        };
+        let left_reserved = 44.0 + search_width + if show_task_view { 44.0 } else { 0.0 } + 160.0;
+        let right_reserved = 210.0 + notification_area_reserved_width + SHOW_DESKTOP_CORNER_WIDTH;
+        let adaptive_task_width = adaptive_labeled_task_width(
+            window.bounds().size.width.as_f32(),
+            left_reserved,
+            right_reserved,
+            self.tasks.len(),
+            self.layout.rows.get(),
+        );
         let start_color = if high_contrast {
             rgb(0xffff00)
         } else {
@@ -862,7 +890,7 @@ impl Render for TaskbarView {
                             icon.is_some(),
                         );
                         let labeled_button = show_labels || icon.is_none();
-                        let task_width = if labeled_button { 160.0 } else { 44.0 };
+                        let task_width = if labeled_button { adaptive_task_width } else { 44.0 };
                         let indicator_width =
                             visual.indicator_width_for(labeled_button, task_width);
                         div()
@@ -1389,9 +1417,10 @@ impl Render for TaskbarView {
 #[cfg(test)]
 mod tests {
     use super::{
-        SHOW_DESKTOP_CORNER_WIDTH, TaskbarChromeTokens, activates_button, bc7_render_image,
-        compact_input_language, icon_render_image, task_display_label,
-        taskbar_rows_for_logical_height, taskbar_search_label, toggled_system_flyout,
+        SHOW_DESKTOP_CORNER_WIDTH, TaskbarChromeTokens, activates_button,
+        adaptive_labeled_task_width, bc7_render_image, compact_input_language, icon_render_image,
+        task_display_label, taskbar_rows_for_logical_height, taskbar_search_label,
+        toggled_system_flyout,
     };
     use crate::SystemFlyoutKind;
     use shell_provider_protocol::IconData;
@@ -1631,5 +1660,32 @@ mod tests {
         assert!(source.contains(
             ".h(bar_height)\n                    .flex_1()\n                    .min_w_0()\n                    .flex()\n                    .flex_col()\n                    .flex_wrap()"
         ));
+    }
+
+    #[test]
+    fn adaptive_task_width_shrinks_before_overflow_and_respects_rows() {
+        assert_eq!(
+            adaptive_labeled_task_width(2400.0, 204.0, 300.0, 4, 1),
+            160.0
+        );
+        let crowded = adaptive_labeled_task_width(1920.0, 204.0, 510.0, 10, 1);
+        assert!((crowded - 120.6).abs() < 0.01);
+        assert_eq!(
+            adaptive_labeled_task_width(800.0, 204.0, 510.0, 10, 1),
+            44.0
+        );
+        assert_eq!(
+            adaptive_labeled_task_width(1920.0, 204.0, 510.0, 10, 2),
+            160.0
+        );
+        let source = include_str!("view.rs");
+        for required in [
+            "adaptive_labeled_task_width(",
+            "left_reserved",
+            "right_reserved",
+            "let task_width = if labeled_button { adaptive_task_width } else { 44.0 }",
+        ] {
+            assert!(source.contains(required), "missing {required}");
+        }
     }
 }

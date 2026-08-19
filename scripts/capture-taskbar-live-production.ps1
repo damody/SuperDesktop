@@ -34,6 +34,10 @@ function Find-Named($Root,[string]$Name){$condition=[System.Windows.Automation.P
 $priorSurface = $env:SUPERDESKTOP_VERIFICATION_SURFACE
 $priorMatrix = $env:SUPERDESKTOP_VERIFICATION_STATE_MATRIX
 $priorTrace = $env:SUPERDESKTOP_ACTION_TRACE
+$priorLocal = $env:LOCALAPPDATA
+$profileRoot=Join-Path $env:TEMP "superdesktop-taskbar-live-$PID";$settingsRoot=Join-Path $profileRoot 'SuperDesktop';New-Item -ItemType Directory -Force $settingsRoot|Out-Null
+[IO.File]::WriteAllText((Join-Path $settingsRoot 'settings.json'),'{"schema_version":1,"revision":0,"taskbar":{"rows":1,"locked":true,"combine_groups":true,"previews_enabled":true,"show_labels":true,"pins":[]}}',[Text.UTF8Encoding]::new($false))
+$env:LOCALAPPDATA=$profileRoot
 $env:SUPERDESKTOP_VERIFICATION_SURFACE = 'taskbar'
 Remove-Item Env:SUPERDESKTOP_VERIFICATION_STATE_MATRIX -ErrorAction SilentlyContinue
 $env:SUPERDESKTOP_ACTION_TRACE = $tracePath
@@ -73,7 +77,7 @@ try {
         $taskBounds += [ordered]@{ left=[int]$bounds.Left;top=[int]$bounds.Top;width=[int]$bounds.Width;height=[int]$bounds.Height }
     }
     $rows = @($taskBounds.top | Sort-Object -Unique)
-    if (-not $fixedFound -or $taskBounds.Count -lt 2 -or $singleCharacterLabels -ne 0 -or $rows.Count -lt 2) {
+    if (-not $fixedFound -or $taskBounds.Count -lt 2 -or $singleCharacterLabels -ne 0 -or $rows.Count -ne 1) {
         throw "Production taskbar parity failed: fixed=$fixedFound tasks=$($taskBounds.Count) single=$singleCharacterLabels rows=$($rows.Count)"
     }
     $rootBounds=$root.Current.BoundingRectangle
@@ -85,6 +89,9 @@ try {
         $rightControlLeft=[Math]::Min($rightControlLeft,$controlBounds.Left)
     }
     $maxTaskRight=@($taskBounds|ForEach-Object{$_.left+$_.width}|Measure-Object -Maximum).Maximum
+    $taskbarDpi=[LiveTaskbarDpi]::GetDpiForWindow($process.MainWindowHandle);$taskbarScale=[double]$taskbarDpi/96.0
+    $logicalTaskWidths=@($taskBounds|ForEach-Object{$_.width/$taskbarScale})
+    if(@($logicalTaskWidths|Where-Object{$_ -lt 43 -or $_ -gt 161}).Count -ne 0 -or @($logicalTaskWidths|Where-Object{$_ -lt 159}).Count -eq 0){throw "Adaptive task widths rejected: $($logicalTaskWidths-join',')"}
     if([double]::IsPositiveInfinity($rightControlLeft)-or$maxTaskRight-gt$rightControlLeft){throw "One-row task overlap: maxTaskRight=$maxTaskRight reservedLeft=$rightControlLeft"}
 
     $sourceBounds=$taskButton.Current.BoundingRectangle
@@ -135,6 +142,8 @@ try {
         maximum_task_right=$maxTaskRight
         reserved_right_controls_left=$rightControlLeft
         right_control_overlap=$false
+        logical_task_widths=$logicalTaskWidths
+        adaptive_shrink_observed=$true
         screenshot=(Split-Path -Leaf $ScreenshotPath)
         screenshot_sha256=(Get-FileHash -Algorithm SHA256 -LiteralPath $ScreenshotPath).Hash
         raw_titles_persisted=$false
@@ -147,4 +156,5 @@ try {
     if ($null -eq $priorSurface) { Remove-Item Env:SUPERDESKTOP_VERIFICATION_SURFACE -ErrorAction SilentlyContinue } else { $env:SUPERDESKTOP_VERIFICATION_SURFACE=$priorSurface }
     if ($null -eq $priorMatrix) { Remove-Item Env:SUPERDESKTOP_VERIFICATION_STATE_MATRIX -ErrorAction SilentlyContinue } else { $env:SUPERDESKTOP_VERIFICATION_STATE_MATRIX=$priorMatrix }
     if ($null -eq $priorTrace) { Remove-Item Env:SUPERDESKTOP_ACTION_TRACE -ErrorAction SilentlyContinue } else { $env:SUPERDESKTOP_ACTION_TRACE=$priorTrace }
+    if($null-eq$priorLocal){Remove-Item Env:LOCALAPPDATA -ErrorAction SilentlyContinue}else{$env:LOCALAPPDATA=$priorLocal};Remove-Item $profileRoot -Recurse -Force -ErrorAction SilentlyContinue
 }

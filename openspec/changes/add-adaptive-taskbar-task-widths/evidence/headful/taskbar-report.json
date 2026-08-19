@@ -1,0 +1,45 @@
+{
+    "schema":  "taskbar-live-production/v1",
+    "result":  "passed",
+    "app_sha256":  "D1D831AE98BCC84E08592A05865AE491C3B272EF4A20EC7BB6B0BA33C4852E44",
+    "task_count":  12,
+    "distinct_task_rows":  1,
+    "single_character_labels":  0,
+    "fixed_superexplorer":  true,
+    "maximum_task_right":  3458,
+    "reserved_right_controls_left":  3480,
+    "right_control_overlap":  false,
+    "logical_task_widths":  [
+                                144,
+                                144,
+                                144,
+                                144,
+                                144,
+                                144,
+                                144,
+                                144,
+                                144,
+                                144,
+                                144,
+                                144
+                            ],
+    "adaptive_shrink_observed":  true,
+    "screenshot":  "taskbar.png",
+    "screenshot_sha256":  "451C8D2DFD810D6E5D86820A450B3E1DDF33BC634DE5A77287C0A0864F862C06",
+    "raw_titles_persisted":  false,
+    "frame_visible":  true,
+    "jump_list":  {
+                      "width_dip":  373.71428571428572,
+                      "height_dip":  486.85714285714283,
+                      "taskbar_gap_dip":  4.5714285714285712,
+                      "source_anchor_delta_dip":  0,
+                      "menu_item_count":  23,
+                      "headings":  [
+                                       "Recent",
+                                       "Tasks",
+                                       "Actions"
+                                   ],
+                      "screenshot":  "jump-list.png",
+                      "screenshot_sha256":  "433C443B1B773F8942DD5BB72EA8C2475AA4831F4FA1C1D0E92E9CB5D6355229"
+                  }
+}
