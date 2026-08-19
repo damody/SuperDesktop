@@ -10,11 +10,11 @@
   },
   "installers": [
     {
-      "path": "D:/SuperExplorer/dist/SuperDesktop-Test-Setup-1.2026.8.19-x64-no-launch.exe",
+      "path": "D:/SuperExplorer/dist/SuperDesktop-Test-Setup-1.2026.8.19-x64.exe",
       "bytes": 5877433,
       "sha256": "05fc23852129fa87d0dc1e591696f2c152c268ca70b187e03c2ec0e1b0956cbe",
       "launched": false,
-      "publication": "validated NSIS no-launch temporary copied to a non-conflicting final name because the standard-name installer was locked by an earlier welcome window"
+      "publication": "standard-name NSIS output built and published with --no-launch"
     },
     {
       "path": "D:/SuperExplorer/dist/SuperExplorer-Setup-1.2026.8.19-x64.exe",
