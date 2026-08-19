@@ -27,11 +27,12 @@ use windows::Win32::{
             GetCursorPos, GetForegroundWindow, GetWindow, GetWindowLongPtrW, GetWindowRect,
             GetWindowTextLengthW, GetWindowTextW, GetWindowThreadProcessId, HTCLIENT, HTTOP,
             HWND_TOPMOST, IsIconic, IsWindow, IsWindowVisible, PostMessageW,
-            RegisterWindowMessageW, SW_MINIMIZE, SW_RESTORE, SWP_FRAMECHANGED, SWP_NOACTIVATE,
-            SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER, SWP_SHOWWINDOW, SetForegroundWindow,
-            SetWindowLongPtrW, SetWindowPos, ShowWindow, WM_CLOSE, WM_ENTERSIZEMOVE,
-            WM_EXITSIZEMOVE, WM_NCDESTROY, WM_NCHITTEST, WM_SIZING, WMSZ_TOP, WMSZ_TOPLEFT,
-            WMSZ_TOPRIGHT, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_THICKFRAME, WindowFromPoint,
+            RegisterWindowMessageW, SW_MAXIMIZE, SW_MINIMIZE, SW_RESTORE, SWP_FRAMECHANGED,
+            SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER, SWP_SHOWWINDOW,
+            SetForegroundWindow, SetWindowLongPtrW, SetWindowPos, ShowWindow, WM_CLOSE,
+            WM_ENTERSIZEMOVE, WM_EXITSIZEMOVE, WM_NCDESTROY, WM_NCHITTEST, WM_SIZING, WMSZ_TOP,
+            WMSZ_TOPLEFT, WMSZ_TOPRIGHT, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_THICKFRAME,
+            WindowFromPoint,
         },
     },
 };
@@ -468,6 +469,7 @@ fn process_image(process_id: u32) -> Option<String> {
 pub enum WindowAction {
     Activate,
     Minimize,
+    Maximize,
     Restore,
     RestoreAndActivate,
     Close,
@@ -657,6 +659,10 @@ pub fn apply_window_action(hwnd_identity: isize, action: WindowAction) -> Result
     match action {
         WindowAction::Minimize => {
             let _ = unsafe { ShowWindow(hwnd, SW_MINIMIZE) };
+            Ok(())
+        }
+        WindowAction::Maximize => {
+            let _ = unsafe { ShowWindow(hwnd, SW_MAXIMIZE) };
             Ok(())
         }
         WindowAction::Activate => unsafe { SetForegroundWindow(hwnd) }

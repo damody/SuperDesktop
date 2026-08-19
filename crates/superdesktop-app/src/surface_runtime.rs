@@ -3958,12 +3958,39 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                     .filter(|window| window.application_identity == application_id)
                                     .map(|window| window.hwnd_identity)
                                     .collect::<Vec<_>>();
+                                let target_window = windows
+                                    .iter()
+                                    .find(|window| selected_ids.contains(&window.hwnd_identity))
+                                    .cloned();
                                 let pinned = jump_persisted_settings
                                     .borrow()
                                     .taskbar
                                     .pins
                                     .contains(&application_id);
                                 let local = vec![
+                                    CommandDescriptor {
+                                        id: CommandId("local:taskbar-minimize".into()),
+                                        label: "Minimize".into(),
+                                        enabled: target_window
+                                            .as_ref()
+                                            .is_some_and(|window| !window.minimized),
+                                        risk: CommandRisk::Normal,
+                                        children: Vec::new(),
+                                    },
+                                    CommandDescriptor {
+                                        id: CommandId("local:taskbar-maximize".into()),
+                                        label: "Maximize".into(),
+                                        enabled: target_window.is_some(),
+                                        risk: CommandRisk::Normal,
+                                        children: Vec::new(),
+                                    },
+                                    CommandDescriptor {
+                                        id: CommandId("local:taskbar-close-window".into()),
+                                        label: "Close window".into(),
+                                        enabled: target_window.is_some(),
+                                        risk: CommandRisk::Destructive,
+                                        children: Vec::new(),
+                                    },
                                     CommandDescriptor {
                                         id: CommandId("local:taskbar-pin".into()),
                                         label: if pinned { "Unpin from taskbar" } else { "Pin to taskbar" }.into(),
@@ -4008,7 +4035,27 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                             JumpListView::new(
                                                 model,
                                                 Rc::new(move |command| {
+                                                    let apply_target = |action| {
+                                                        target_window.as_ref().is_some_and(|target| {
+                                                            platform_win::common::taskbar::apply_window_action_to_owned_identity(
+                                                                target.hwnd_identity,
+                                                                target.process_id,
+                                                                &target.window_identity,
+                                                                action,
+                                                            )
+                                                            .is_ok()
+                                                        })
+                                                    };
                                                     let completed = match command.id.0.as_str() {
+                                                        "local:taskbar-minimize" => apply_target(
+                                                            platform_win::common::taskbar::WindowAction::Minimize,
+                                                        ),
+                                                        "local:taskbar-maximize" => apply_target(
+                                                            platform_win::common::taskbar::WindowAction::Maximize,
+                                                        ),
+                                                        "local:taskbar-close-window" => apply_target(
+                                                            platform_win::common::taskbar::WindowAction::Close,
+                                                        ),
                                                         "local:taskbar-pin" => {
                                                             let mut settings = invoke_settings.borrow().clone();
                                                             if pinned {

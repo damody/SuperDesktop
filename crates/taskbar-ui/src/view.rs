@@ -949,7 +949,7 @@ impl Render for TaskbarView {
                                             callback(&key_stable_id, cx);
                                         }
                                     })
-                                    .on_mouse_up(gpui::MouseButton::Right, move |_, _, cx| {
+                                    .on_mouse_down(gpui::MouseButton::Right, move |_, _, cx| {
                                         if let Some(callback) = &context_callback {
                                             callback(&context_stable_id, cx);
                                         }

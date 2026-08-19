@@ -164,6 +164,20 @@ pub fn catalog() -> Vec<TestCase> {
             45,
         ),
         headful_case(
+            "gui-taskbar-window-actions",
+            "Taskbar right-click minimize maximize and close",
+            "capture-taskbar-window-actions.ps1",
+            &[
+                "-Workspace",
+                "{workspace}",
+                "-EvidenceDirectory",
+                "{out}/window-actions",
+            ],
+            &["window-actions/report.json"],
+            false,
+            45,
+        ),
+        headful_case(
             "gui-start",
             "Owned Start home and all apps",
             "capture-start-production.ps1",
