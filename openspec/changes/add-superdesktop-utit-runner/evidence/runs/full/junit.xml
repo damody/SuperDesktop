@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="SuperDesktop UTIT full" tests="18" failures="0" skipped="3">
+  <testcase classname="superdesktop.utit" name="UTIT unit and fixture tests" time="3.677"></testcase>
+  <testcase classname="superdesktop.utit" name="Taskbar model and GUI contracts" time="4.986"></testcase>
+  <testcase classname="superdesktop.utit" name="SuperDesktop production composition contracts" time="1.262"></testcase>
+  <testcase classname="superdesktop.utit" name="UTIT strict OpenSpec validation" time="1.063"></testcase>
+  <testcase classname="superdesktop.utit" name="Locked offline workspace tests" time="13.340"></testcase>
+  <testcase classname="superdesktop.utit" name="Workspace Clippy warnings as errors" time="0.607"></testcase>
+  <testcase classname="superdesktop.utit" name="Product workspace release build (running UTIT excluded)" time="0.556"></testcase>
+  <testcase classname="superdesktop.utit" name="Live taskbar rows and labels" time="6.793"></testcase>
+  <testcase classname="superdesktop.utit" name="Owned Start home and all apps" time="9.615"></testcase>
+  <testcase classname="superdesktop.utit" name="Desktop marquee selection" time="7.954"></testcase>
+  <testcase classname="superdesktop.utit" name="Explorer-free Show desktop cycles" time="9.115"></testcase>
+  <testcase classname="superdesktop.utit" name="Explorer-free notification center" time="6.947"></testcase>
+  <testcase classname="superdesktop.utit" name="Explorer-free system status and IME flyouts" time="24.693"></testcase>
+  <testcase classname="superdesktop.utit" name="Explorer-free taskbar resize and lock" time="24.742"></testcase>
+  <testcase classname="superdesktop.utit" name="Explorer-free taskbar auto-hide" time="18.769"></testcase>
+  <testcase classname="superdesktop.utit" name="Physical mixed-DPI topology" time="0.000"><skipped message="physical-mixed-dpi-requires-two-displays:observed=1" /></testcase>
+  <testcase classname="superdesktop.utit" name="Installer mutation, reboot, and exact rollback" time="0.000"><skipped message="controlled-reboot-authority-not-admitted" /></testcase>
+  <testcase classname="superdesktop.utit" name="Independent release review" time="0.000"><skipped message="independent-review-not-attached" /></testcase>
+</testsuite>

@@ -1,0 +1,229 @@
+{
+  "schema": "superdesktop-utit-run/v1",
+  "run_id": "smoke",
+  "suite": "smoke",
+  "partial": false,
+  "started_unix_ms": 1787102169769,
+  "finished_unix_ms": 1787102195154,
+  "workspace": "\\\\?\\D:\\SuperExplorer\\SuperDesktop",
+  "host": {
+    "windows_build": 26200,
+    "architecture": "AMD64",
+    "interactive": true,
+    "monitor_count": 1,
+    "explorer_running": true,
+    "workspace_revision": "45cae4a1225540b7b60b622175cb48d9d9de306a",
+    "tools": [
+      "cargo",
+      "certutil",
+      "git",
+      "openspec",
+      "powershell"
+    ]
+  },
+  "counts": {
+    "selected": 7,
+    "passed": 7,
+    "failed": 0,
+    "blocked": 0,
+    "skipped": 0,
+    "not_applicable": 0
+  },
+  "decision": "passed",
+  "cases": [
+    {
+      "id": "unit-utit",
+      "title": "UTIT unit and fixture tests",
+      "state": "passed",
+      "reason": "passed",
+      "duration_ms": 3724,
+      "exit_code": 0,
+      "timed_out": false,
+      "argv": [
+        "cargo.exe",
+        "test",
+        "-p",
+        "superdesktop-utit",
+        "--locked",
+        "--offline"
+      ],
+      "stdout": {
+        "path": "cases/unit-utit/stdout.log",
+        "bytes": 1372,
+        "sha256": "66414f30210cdaa7631f56803c7978b8df85b8c28eac72f27f63a8b108d26ce2"
+      },
+      "stderr": {
+        "path": "cases/unit-utit/stderr.log",
+        "bytes": 291,
+        "sha256": "80f42be20373b8d8b81172d534ffddb940ded312abc42bdbf8951f68e31dd63e"
+      },
+      "artifacts": [],
+      "recovery_verified": true
+    },
+    {
+      "id": "unit-taskbar-ui",
+      "title": "Taskbar model and GUI contracts",
+      "state": "passed",
+      "reason": "passed",
+      "duration_ms": 4328,
+      "exit_code": 0,
+      "timed_out": false,
+      "argv": [
+        "cargo.exe",
+        "test",
+        "-p",
+        "taskbar-ui",
+        "--locked",
+        "--offline"
+      ],
+      "stdout": {
+        "path": "cases/unit-taskbar-ui/stdout.log",
+        "bytes": 6021,
+        "sha256": "0c0548f70e7d9676f385fc49712e9b3aeba4c2754e9ed7851479ad10f18d6753"
+      },
+      "stderr": {
+        "path": "cases/unit-taskbar-ui/stderr.log",
+        "bytes": 264,
+        "sha256": "83e9a276c455186d9a8a56dfd00dd3bb10ab5d4a90facc249ab8ba35ca8790b5"
+      },
+      "artifacts": [],
+      "recovery_verified": true
+    },
+    {
+      "id": "unit-superdesktop-app",
+      "title": "SuperDesktop production composition contracts",
+      "state": "passed",
+      "reason": "passed",
+      "duration_ms": 1261,
+      "exit_code": 0,
+      "timed_out": false,
+      "argv": [
+        "cargo.exe",
+        "test",
+        "-p",
+        "superdesktop-app",
+        "--locked",
+        "--offline"
+      ],
+      "stdout": {
+        "path": "cases/unit-superdesktop-app/stdout.log",
+        "bytes": 3931,
+        "sha256": "c525809284830454d0e9de3b7c97e761b3c73d2ccca7075d80c762e1e7c86564"
+      },
+      "stderr": {
+        "path": "cases/unit-superdesktop-app/stderr.log",
+        "bytes": 381,
+        "sha256": "1570a4004ec1ac90685423b0dc1ed4a32cdb6fef368fa8730e89d15bdbee01cb"
+      },
+      "artifacts": [],
+      "recovery_verified": true
+    },
+    {
+      "id": "openspec-strict",
+      "title": "UTIT strict OpenSpec validation",
+      "state": "passed",
+      "reason": "passed",
+      "duration_ms": 1262,
+      "exit_code": 0,
+      "timed_out": false,
+      "argv": [
+        "openspec.cmd",
+        "validate",
+        "add-superdesktop-utit-runner",
+        "--strict",
+        "--json"
+      ],
+      "stdout": {
+        "path": "cases/openspec-strict/stdout.log",
+        "bytes": 391,
+        "sha256": "ffea8b017e3adbd326b9594fb07e854f5c5cef04dd8787bd7e22d9dcdbd90d30"
+      },
+      "stderr": null,
+      "artifacts": [],
+      "recovery_verified": true
+    },
+    {
+      "id": "workspace-tests",
+      "title": "Locked offline workspace tests",
+      "state": "passed",
+      "reason": "passed",
+      "duration_ms": 13332,
+      "exit_code": 0,
+      "timed_out": false,
+      "argv": [
+        "cargo.exe",
+        "test",
+        "--workspace",
+        "--locked",
+        "--offline"
+      ],
+      "stdout": {
+        "path": "cases/workspace-tests/stdout.log",
+        "bytes": 34902,
+        "sha256": "bdee88ab3379fdf77deb6d3c3f4051fae73dd50be2742d8cc429bfb64695d27c"
+      },
+      "stderr": {
+        "path": "cases/workspace-tests/stderr.log",
+        "bytes": 3699,
+        "sha256": "238db54319a73988aab67a66d659e5169c3760242267c319a31af08853db44cb"
+      },
+      "artifacts": [],
+      "recovery_verified": true
+    },
+    {
+      "id": "workspace-clippy",
+      "title": "Workspace Clippy warnings as errors",
+      "state": "passed",
+      "reason": "passed",
+      "duration_ms": 605,
+      "exit_code": 0,
+      "timed_out": false,
+      "argv": [
+        "cargo.exe",
+        "clippy",
+        "--workspace",
+        "--all-targets",
+        "--locked",
+        "--offline",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "stdout": null,
+      "stderr": {
+        "path": "cases/workspace-clippy/stderr.log",
+        "bytes": 72,
+        "sha256": "92bec25ad54c650450560360480d5f94d3d8ad203f81a2c724e0c641b330bbfb"
+      },
+      "artifacts": [],
+      "recovery_verified": true
+    },
+    {
+      "id": "workspace-release",
+      "title": "Product workspace release build (running UTIT excluded)",
+      "state": "passed",
+      "reason": "passed",
+      "duration_ms": 557,
+      "exit_code": 0,
+      "timed_out": false,
+      "argv": [
+        "cargo.exe",
+        "build",
+        "--workspace",
+        "--release",
+        "--exclude",
+        "superdesktop-utit",
+        "--locked",
+        "--offline"
+      ],
+      "stdout": null,
+      "stderr": {
+        "path": "cases/workspace-release/stderr.log",
+        "bytes": 62,
+        "sha256": "b1bfdc52d1cea2d4e4c6812dd29fa654959a50500fdd854457dc805c093d389b"
+      },
+      "artifacts": [],
+      "recovery_verified": true
+    }
+  ]
+}
