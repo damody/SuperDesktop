@@ -1,0 +1,16 @@
+{
+  "schema": "superdesktop-utit-package/v1",
+  "result": "passed",
+  "implementation_commit": "45cae4a1225540b7b60b622175cb48d9d9de306a",
+  "evidence_commit": "7a6cf7b2ac438aed274e40fd658a55163af84ee8",
+  "binaries": {
+    "superdesktop_utit": {"bytes": 676352, "sha256": "fbc41bfab86cdb8e984ea6300d440f59ad4368c8f613cabbd56e493803d0d2e6"},
+    "superdesktop_app": {"sha256": "ac0d28f689b58b3303bd86504ed12bd70c003c0f01616f18d24f1ce9f06f329d"}
+  },
+  "installers": [
+    {"path": "D:/SuperExplorer/dist/SuperDesktop-Test-Setup-1.2026.8.19-x64.exe", "bytes": 5859992, "sha256": "7c68b3e78202c063df67269d4756f55748603c9e449fee7a6f74247adee287a6", "launched": false},
+    {"path": "D:/SuperExplorer/dist/SuperExplorer-Setup-1.2026.8.19-x64.exe", "bytes": 13627148, "sha256": "a504be8ec23408de98c7423f18db4b7088897399d73cd02c13b072ea2a471c60", "launched": false}
+  ],
+  "utit_shipped_in_end_user_installer": false,
+  "change_archived": false
+}

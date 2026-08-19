@@ -117,5 +117,5 @@
 **完成門檻：** 24/24 leaves pass, full suite truthfully reports external blockers, strict/detailed validation passes, and the change remains unarchived.
 
 - [x] 4.2.1 Run fmt, locked/offline workspace tests, Clippy warnings-as-errors, and release build.
-- [ ] 4.2.2 Commit implementation and build standalone plus combined NSIS installers without launch.
-- [ ] 4.2.3 Record revisions/binary/package hashes, create 24 unique evidence records, and pass detailed/strict validation.
+- [x] 4.2.2 Commit implementation and build standalone plus combined NSIS installers without launch.
+- [x] 4.2.3 Record revisions/binary/package hashes, create 24 unique evidence records, and pass detailed/strict validation.
