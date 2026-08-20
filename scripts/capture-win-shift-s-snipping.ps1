@@ -9,6 +9,10 @@ if ([string]::IsNullOrWhiteSpace($Workspace)) {
 }
 $appPath = Join-Path $Workspace 'target/release/superdesktop-app.exe'
 if (-not (Test-Path -LiteralPath $appPath -PathType Leaf)) { throw "Missing app: $appPath" }
+$superExplorerSource = Join-Path (Split-Path -Parent $Workspace) 'target/release/SuperExplorer.exe'
+if (-not (Test-Path -LiteralPath $superExplorerSource -PathType Leaf)) { throw "Missing SuperExplorer release companion: $superExplorerSource" }
+$superExplorerAdjacent = Join-Path (Split-Path -Parent $appPath) 'SuperExplorer.exe'
+Copy-Item -LiteralPath $superExplorerSource -Destination $superExplorerAdjacent -Force
 New-Item -ItemType Directory -Force -Path $EvidenceDirectory | Out-Null
 $tracePath = Join-Path $EvidenceDirectory 'screen-snip.log'
 $stdoutPath = Join-Path $EvidenceDirectory 'app-stdout.log'
@@ -86,6 +90,7 @@ function Get-Sha256([string]$Path) {
 $priorSurface = $env:SUPERDESKTOP_VERIFICATION_SURFACE
 $priorTrace = $env:SUPERDESKTOP_ACTION_TRACE
 $priorLocal = $env:LOCALAPPDATA
+$priorSuperExplorer = $env:SUPEREXPLORER_PATH
 $app = $null
 $watchdog = $null
 $suppressor = $null
@@ -100,6 +105,7 @@ try {
     $env:SUPERDESKTOP_VERIFICATION_SURFACE = 'taskbar'
     $env:SUPERDESKTOP_ACTION_TRACE = $tracePath
     $env:LOCALAPPDATA = $profileRoot
+    $env:SUPEREXPLORER_PATH = $superExplorerAdjacent
     Remove-Item -LiteralPath $tracePath -Force -ErrorAction SilentlyContinue
     $app = Start-Process -FilePath $appPath -ArgumentList '--verification-capture-ms', '22000', '--shell' -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath -PassThru
     Wait-Until { $app.Refresh(); $app.MainWindowHandle -ne [IntPtr]::Zero } 7000 'SuperDesktop taskbar did not appear' | Out-Null
@@ -174,5 +180,6 @@ finally {
     if ($null -eq $priorSurface) { Remove-Item Env:SUPERDESKTOP_VERIFICATION_SURFACE -ErrorAction SilentlyContinue } else { $env:SUPERDESKTOP_VERIFICATION_SURFACE = $priorSurface }
     if ($null -eq $priorTrace) { Remove-Item Env:SUPERDESKTOP_ACTION_TRACE -ErrorAction SilentlyContinue } else { $env:SUPERDESKTOP_ACTION_TRACE = $priorTrace }
     if ($null -eq $priorLocal) { Remove-Item Env:LOCALAPPDATA -ErrorAction SilentlyContinue } else { $env:LOCALAPPDATA = $priorLocal }
+    if ($null -eq $priorSuperExplorer) { Remove-Item Env:SUPEREXPLORER_PATH -ErrorAction SilentlyContinue } else { $env:SUPEREXPLORER_PATH = $priorSuperExplorer }
     Remove-Item -LiteralPath $profileRoot -Recurse -Force -ErrorAction SilentlyContinue
 }
