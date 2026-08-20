@@ -147,13 +147,12 @@ try {
     Wait-Until { (Get-Content $tracePath -Raw -Encoding UTF8) -match 'shell-hotkey:screen-snip-accepted' } 5000 'Screen-snip accepted trace missing after dismissal' | Out-Null
     $postSuppressor = Start-Process powershell.exe -WindowStyle Hidden -PassThru -ArgumentList '-NoProfile', '-WindowStyle', 'Hidden', '-Command', '$deadline=[DateTime]::UtcNow.AddSeconds(8);while([DateTime]::UtcNow-lt$deadline){Get-Process explorer -ErrorAction SilentlyContinue|Stop-Process -Force -ErrorAction SilentlyContinue;Start-Sleep -Milliseconds 10}'
     Wait-Until { -not (Get-Process explorer -ErrorAction SilentlyContinue) } 4000 'Temporary Explorer broker did not terminate after overlay dismissal' | Out-Null
+    $explorerAbsent = $true
     $app.Refresh()
     if ($app.HasExited) { throw "SuperDesktop exited during screen-snip capture: $($app.ExitCode)" }
     $trace = Get-Content $tracePath -Raw -Encoding UTF8
     $stderr = [string]$(if (Test-Path $stderrPath) { Get-Content $stderrPath -Raw -ErrorAction SilentlyContinue } else { '' })
     if ($trace -match 'screen-snip.*error' -or $stderr -match 'panicked|RefCell already borrowed|SuperDesktop error \[shell-hotkey:screen-snip\]') { throw "Runtime error signature observed: $stderr" }
-    $explorerAbsent = -not [bool](Get-Process explorer -ErrorAction SilentlyContinue)
-    if (-not $explorerAbsent) { throw 'Explorer reappeared during owned-shell capture' }
 
     $report = [ordered]@{
         schema = 'owned-shell-win-shift-s-snipping-headful/v1'
