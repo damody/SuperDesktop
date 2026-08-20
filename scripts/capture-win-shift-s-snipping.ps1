@@ -88,7 +88,13 @@ function Wait-Until([scriptblock]$Condition, [int]$Milliseconds, [string]$Failur
     throw $Failure
 }
 function Get-Sha256([string]$Path) {
-    (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant()
+    $stream = [IO.File]::OpenRead($Path)
+    try {
+        $hash = [Security.Cryptography.SHA256]::Create()
+        try { ([BitConverter]::ToString($hash.ComputeHash($stream))).Replace('-', '').ToLowerInvariant() }
+        finally { $hash.Dispose() }
+    }
+    finally { $stream.Dispose() }
 }
 
 $priorSurface = $env:SUPERDESKTOP_VERIFICATION_SURFACE
