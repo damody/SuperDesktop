@@ -1,0 +1,32 @@
+{
+  "timestamp": "2026-08-21T04:05:56+08:00",
+  "nested_implementation_commit": "08a2cd25fe3de692e1429b692075e8a551a9c0d1",
+  "parent_integration_commit": "8d1bdae",
+  "build": {
+    "command": "build_install.bat --no-launch",
+    "component_mode": "all",
+    "exit_status": 0,
+    "installer": "dist/SuperExplorer-Setup-1.2026.8.21-x64.exe",
+    "installer_bytes": 14218094,
+    "installer_sha256": "174AE90F836E818FFB488EBDE2704AC2B3D8C92B4755650FB006248DC4E2E3AC"
+  },
+  "superdesktop": {
+    "candidate_sha256": "78B67A0D4461E7ED1B860FA032E3D5DDF33A6D50E2ACF3F054785CCC56956F38",
+    "embedded_sha256": "78B67A0D4461E7ED1B860FA032E3D5DDF33A6D50E2ACF3F054785CCC56956F38",
+    "extraction": "7-Zip 26.01 NSIS extraction",
+    "embedded_matches_candidate": true,
+    "final_gui_runs": ["gui-run-8", "gui-run-9"],
+    "gui_candidate_matches_embedded": true
+  },
+  "fixture": {
+    "sha256": "0FE7993089A7038C45DB738D77BE447B1A1B54DD27D8608CA1C4052BBC6E945A",
+    "matches_final_gui_runs": true
+  },
+  "preservation": {
+    "align_start_menu_evidence_restored": true,
+    "context_resize_evidence_restored": true,
+    "extraction_temp_removed": true,
+    "tracked_parent_clean_after_build": true,
+    "tracked_nested_clean_after_build": true
+  }
+}

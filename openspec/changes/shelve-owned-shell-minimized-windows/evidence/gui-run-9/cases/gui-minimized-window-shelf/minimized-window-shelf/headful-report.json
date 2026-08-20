@@ -1,0 +1,85 @@
+{
+    "schema":  "owned-minimized-window-shelf-headful/v1",
+    "result":  "passed",
+    "app_path":  "D:\\SuperExplorer\\SuperDesktop\\target\\release\\superdesktop-app.exe",
+    "app_sha256":  "78B67A0D4461E7ED1B860FA032E3D5DDF33A6D50E2ACF3F054785CCC56956F38",
+    "fixture_path":  "D:\\SuperExplorer\\SuperDesktop\\target\\release\\taskbar-progress-fixture.exe",
+    "fixture_sha256":  "0FE7993089A7038C45DB738D77BE447B1A1B54DD27D8608CA1C4052BBC6E945A",
+    "observed":  {
+                     "fixture_pid":  21072,
+                     "fixture_hwnd":  6424060,
+                     "normal_rect":  [
+                                         350,
+                                         350,
+                                         1190,
+                                         770
+                                     ],
+                     "normal_placement":  [
+                                              350,
+                                              350,
+                                              1190,
+                                              770
+                                          ],
+                     "taskbar_minimized_iconic":  true,
+                     "taskbar_minimized_hidden":  true,
+                     "taskbar_minimized_rect":  [
+                                                    0,
+                                                    3453,
+                                                    483,
+                                                    3532
+                                                ],
+                     "taskbar_min_position":  [
+                                                  0,
+                                                  3453
+                                              ],
+                     "taskbar_entry_retained":  true,
+                     "taskbar_restore_rect":  [
+                                                  350,
+                                                  350,
+                                                  1190,
+                                                  770
+                                              ],
+                     "taskbar_restore_exact":  true,
+                     "application_minimized_iconic":  true,
+                     "application_minimized_hidden":  true,
+                     "application_minimized_rect":  [
+                                                        0,
+                                                        3453,
+                                                        483,
+                                                        3532
+                                                    ],
+                     "application_min_position":  [
+                                                      0,
+                                                      3453
+                                                  ],
+                     "application_taskbar_entry_retained":  true,
+                     "application_restore_rect":  [
+                                                      350,
+                                                      350,
+                                                      1190,
+                                                      770
+                                                  ],
+                     "application_restore_exact":  true,
+                     "shelf_trace_count":  2,
+                     "superdesktop_survived":  true,
+                     "fixture_survived":  true,
+                     "explorer_absent_during_capture":  true,
+                     "runtime_error_signature_absent":  true
+                 },
+    "screenshot":  "minimized-desktop.png",
+    "screenshot_sha256":  "7F07B413D1E7C45FF18A67E55049BCA4652D78A67EB06E835DA8A8BA1CFD9E0B",
+    "trace":  "minimized-window-shelf.log",
+    "trace_sha256":  "8F9AD04EC9E14A13C7ECAA49A7F0AB69BED846B8B386B9E373A65994FBF300E8",
+    "shell_before":  {
+                         "present":  true,
+                         "value":  "explorer.exe"
+                     },
+    "shell_after":  {
+                        "present":  true,
+                        "value":  "explorer.exe"
+                    },
+    "shell_restored":  true,
+    "explorer_present_before":  true,
+    "explorer_restored":  true,
+    "failure":  null
+}

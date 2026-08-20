@@ -102,9 +102,9 @@
 **Gate／Evidence：** REL-01; tasks 4.2.1–4.2.3.
 **完成門檻：** Installer build passes, embedded hash equals the GUI candidate, and unrelated paths are restored unchanged.
 
-- [ ] 4.2.1 Commit intended nested changes and synchronize only the SuperDesktop gitlink in the parent.
-- [ ] 4.2.2 Build the all-component installer without launch and record its hash.
-- [ ] 4.2.3 Extract the packaged SuperDesktop binary and prove candidate, GUI, and embedded hashes are identical.
+- [x] 4.2.1 Commit intended nested changes and synchronize only the SuperDesktop gitlink in the parent.
+- [x] 4.2.2 Build the all-component installer without launch and record its hash.
+- [x] 4.2.3 Extract the packaged SuperDesktop binary and prove candidate, GUI, and embedded hashes are identical.
 
 ## 5. Final traceability and integration
 
@@ -118,7 +118,7 @@
 **Gate／Evidence：** REVIEW-01; tasks 5.1.1–5.1.4.
 **完成門檻：** Every leaf has unique passed evidence, all scenarios map to gates, OpenSpec validates strictly, zero P0/P1 remains, and tracked repositories are clean.
 
-- [ ] 5.1.1 Map every proposal outcome, decision, requirement, scenario, task, gate, command, and artifact.
-- [ ] 5.1.2 Review identity safety, placement preservation, cache bounds, console behavior, preview isolation, GUI cleanup, and unrelated diffs.
-- [ ] 5.1.3 Run strict OpenSpec, detailed-task, evidence-schema, formatting, and final repository validation.
-- [ ] 5.1.4 Commit completed nested evidence and synchronize the final parent gitlink.
+- [x] 5.1.1 Map every proposal outcome, decision, requirement, scenario, task, gate, command, and artifact.
+- [x] 5.1.2 Review identity safety, placement preservation, cache bounds, console behavior, preview isolation, GUI cleanup, and unrelated diffs.
+- [x] 5.1.3 Run strict OpenSpec, detailed-task, evidence-schema, formatting, and final repository validation.
+- [x] 5.1.4 Commit completed nested evidence and synchronize the final parent gitlink.
