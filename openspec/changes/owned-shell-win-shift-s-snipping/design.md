@@ -37,7 +37,7 @@ ShellExecute, hard-coded Store-app paths, `SnippingTool.exe` switches, Explorer 
 
 ### 3. Dispatch on GPUI's existing foreground refresh
 
-The refresh loop handles the action outside the hook. Success writes requested/accepted trace events. Failure calls `report_error("shell-hotkey:screen-snip", error)` and leaves SuperDesktop alive. The action does not require a taskbar handle or foreground activation.
+The refresh loop handles the action outside the hook and starts one named activation worker per fenced physical press. The worker owns COM initialization and can wait for the packaged app without blocking GPUI. Success writes requested/accepted trace events. Failure calls `report_error("shell-hotkey:screen-snip", error)` and leaves SuperDesktop alive. The action does not require a taskbar handle or foreground activation.
 
 ### 4. Preserve the mode boundary
 

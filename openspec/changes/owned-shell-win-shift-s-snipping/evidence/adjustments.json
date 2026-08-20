@@ -30,5 +30,13 @@
     "correction": "Add a verification-only entry that retains session/owner admission and real hook/surface code while skipping registry, guardian, and UAC mutation. The harness remains responsible for Explorer suppression and recovery.",
     "production_behavior_unchanged": true,
     "gates_unchanged": true
+  },
+  "activation_thread_refinement": {
+    "adjustment_id": "A-004-nonblocking-com-worker",
+    "classification": "A",
+    "reason": "Explorer-free trace proved ActivateForProtocol can wait while the packaged overlay consumes activation arguments.",
+    "correction": "Run one named COM worker per fenced physical press; observe and dismiss the overlay before requiring the accepted trace.",
+    "behavior_unchanged": true,
+    "gates_unchanged": true
   }
 }

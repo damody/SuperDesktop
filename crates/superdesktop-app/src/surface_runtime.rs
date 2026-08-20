@@ -5385,12 +5385,16 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                         }
                                         ShellHotkeyAction::OpenScreenSnip => {
                                             trace_action("shell-hotkey:screen-snip-requested");
-                                            match platform_win::common::shell_hotkey::open_screen_snipping_overlay() {
-                                                Ok(()) => trace_action("shell-hotkey:screen-snip-accepted"),
-                                                Err(error) => report_error(
-                                                    "shell-hotkey:screen-snip",
-                                                    error,
-                                                ),
+                                            if let Err(error) = std::thread::Builder::new()
+                                                .name("superdesktop-screen-snip".into())
+                                                .spawn(|| {
+                                                    match platform_win::common::shell_hotkey::open_screen_snipping_overlay() {
+                                                        Ok(()) => trace_action("shell-hotkey:screen-snip-accepted"),
+                                                        Err(error) => report_error("shell-hotkey:screen-snip", error),
+                                                    }
+                                                })
+                                            {
+                                                report_error("shell-hotkey:screen-snip-worker", error);
                                             }
                                         }
                                         ShellHotkeyAction::OpenTaskView => {
@@ -6055,6 +6059,7 @@ mod live_parity_tests {
             "open_screen_snipping_overlay()",
             "shell-hotkey:screen-snip-requested",
             "shell-hotkey:screen-snip-accepted",
+            "superdesktop-screen-snip",
             "adjacent_input_profile_id",
         ] {
             assert!(

@@ -114,7 +114,6 @@ try {
     $triggeredAt = [DateTime]::UtcNow
     Send-ScreenSnipChord
     Wait-Until { (Get-Content $tracePath -Raw -Encoding UTF8) -match 'shell-hotkey:screen-snip-requested' } 4000 'Screen-snip request trace missing' | Out-Null
-    Wait-Until { (Get-Content $tracePath -Raw -Encoding UTF8) -match 'shell-hotkey:screen-snip-accepted' } 4000 'Screen-snip accepted trace missing' | Out-Null
     $overlayRecord = Wait-Until { @([SuperDesktopScreenSnipNative]::OverlayWindows()) | Select-Object -First 1 } 5000 'Built-in Snipping Tool overlay was not observed'
     $parts = $overlayRecord -split '\|', 4
     if ($parts.Count -ne 4) { throw "Malformed overlay identity: $overlayRecord" }
@@ -131,6 +130,7 @@ try {
 
     Send-Escape
     Wait-Until { @([SuperDesktopScreenSnipNative]::OverlayWindows()).Count -eq 0 } 4000 'Snipping Tool overlay did not dismiss after Escape' | Out-Null
+    Wait-Until { (Get-Content $tracePath -Raw -Encoding UTF8) -match 'shell-hotkey:screen-snip-accepted' } 5000 'Screen-snip accepted trace missing after dismissal' | Out-Null
     $app.Refresh()
     if ($app.HasExited) { throw "SuperDesktop exited during screen-snip capture: $($app.ExitCode)" }
     $trace = Get-Content $tracePath -Raw -Encoding UTF8
