@@ -1,0 +1,17 @@
+{
+  "schema": "owned-shell-win-shift-s-snipping-validation/v1",
+  "pre_integration_checked_tasks": 27,
+  "evidence_records": 27,
+  "duplicate_task_ids": 0,
+  "invalid_hashes": 0,
+  "checked_tasks_missing_evidence": 0,
+  "openspec_strict": "passed",
+  "detailed_tasks": "passed: L1=5 L2=9 L3=29",
+  "cargo_fmt_check": "passed",
+  "git_diff_check": "passed",
+  "workspace_tests": "passed",
+  "clippy_denied_warnings": "passed",
+  "physical_runs": 2,
+  "unresolved_p0": 0,
+  "unresolved_p1": 0
+}

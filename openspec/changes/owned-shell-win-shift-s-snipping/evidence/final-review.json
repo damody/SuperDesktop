@@ -1,0 +1,47 @@
+{
+  "schema": "owned-shell-win-shift-s-snipping-review/v1",
+  "traceability": [
+    {
+      "requirement": "Native Win+Shift+S routing",
+      "scenarios": ["Initial owned-shell chord", "Held key repeat and release", "Search chord remains distinct", "Unsupported modifier combination"],
+      "tasks": ["2.1.1", "2.1.2", "2.1.3", "2.1.4"],
+      "gates": ["HOTKEY-01"]
+    },
+    {
+      "requirement": "Built-in Snipping Tool overlay activation",
+      "scenarios": ["Protocol activation accepted", "Protocol activation rejected"],
+      "tasks": ["2.2.1", "2.2.2", "2.2.3", "2.3.1", "2.3.2"],
+      "gates": ["NATIVE-01", "RUNTIME-01"]
+    },
+    {
+      "requirement": "Bounded verified Explorer broker",
+      "scenarios": ["Owned shell starts without Explorer", "Overlay finishes or is cancelled", "Explorer pre-existed the request"],
+      "tasks": ["2.2.1", "2.2.3", "3.1.2", "3.2.1", "3.2.2"],
+      "gates": ["NATIVE-01", "GUI-01", "GUI-02"]
+    },
+    {
+      "requirement": "Explorer-compatible delegation",
+      "scenarios": ["Explorer remains the shell"],
+      "tasks": ["2.3.3", "4.1.2"],
+      "gates": ["RUNTIME-01", "SRC-01"]
+    },
+    {
+      "requirement": "Physical shortcut release evidence",
+      "scenarios": ["Two clean headful runs"],
+      "tasks": ["3.1.1", "3.1.2", "3.1.3", "3.1.4", "3.2.1", "3.2.2", "4.2.1", "4.2.2", "4.2.3"],
+      "gates": ["GUI-01", "GUI-02", "REL-01"]
+    }
+  ],
+  "review": {
+    "hook_bounds": "The low-level hook only reduces and queues a fenced action; Explorer and Shell work runs on a named worker.",
+    "broker_security": "Explorer launch and shutdown reuse signed canonical inbox resolution, current-session validation, and exact process identity checks.",
+    "ownership": "Only a broker started because Explorer was absent is cleaned up; a pre-existing Explorer shell is never request-owned.",
+    "activation": "A ready verified Shell_TrayWnd precedes the exact fixed native hotkey URI; no Snipping Tool path is discovered in production.",
+    "errors": "Every launch, readiness, activation, overlay, timeout, and cleanup failure becomes a scoped console error without panic.",
+    "privacy": "Both physical reports contain zero screen-content artifacts.",
+    "regressions": "Full workspace tests, Clippy -D warnings, two physical runs, release, and installer provenance passed.",
+    "unrelated_changes": "Pre-existing untracked evidence was preserved and restored; parent staged only SuperDesktop.",
+    "p0_findings": [],
+    "p1_findings": []
+  }
+}

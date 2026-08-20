@@ -1,0 +1,24 @@
+{
+  "schema": "owned-shell-win-shift-s-snipping-package/v1",
+  "version": "1.2026.8.21",
+  "nested_revision": "d06f7f4233cdd4ee7c2222f7c1b802f7e46c015f",
+  "installer": {
+    "path": "D:/SuperExplorer/dist/SuperExplorer-Setup-1.2026.8.21-x64.exe",
+    "bytes": 14188813,
+    "sha256": "4CA0C03C6C132729C3A600C020FA507D7166DFFA5CF522644AFDCFF079A26942"
+  },
+  "candidate": {
+    "path": "D:/SuperExplorer/SuperDesktop/target/release/superdesktop-app.exe",
+    "bytes": 21957120,
+    "sha256": "FA805C1B4B77274BE401A53E7A6971B0EEB3AED6C6D40642838CEB145A5A0945"
+  },
+  "embedded_candidate": {
+    "path": "D:/SuperExplorer/build/logs/owned-shell-win-shift-s-snipping/installer-provenance/superdesktop-app.exe",
+    "sha256": "FA805C1B4B77274BE401A53E7A6971B0EEB3AED6C6D40642838CEB145A5A0945",
+    "matches_candidate": true
+  },
+  "build_command": "build_install.bat --no-launch",
+  "build_exit_status": 0,
+  "parent_staged_paths": ["SuperDesktop"],
+  "preserved_preexisting_evidence_restored": true
+}

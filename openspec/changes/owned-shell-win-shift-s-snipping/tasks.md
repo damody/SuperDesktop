@@ -116,8 +116,8 @@
 **完成門檻：** Release and installer builds pass, embedded binary hash equals candidate hash, and unrelated files remain unstaged.
 
 - [x] 4.2.1 Build the SuperDesktop release candidate and record its hash.
-- [ ] 4.2.2 Build the all-component SuperExplorer installer without launching it and record its hash.
-- [ ] 4.2.3 Extract the packaged SuperDesktop binary and prove hash/provenance equality.
+- [x] 4.2.2 Build the all-component SuperExplorer installer without launching it and record its hash.
+- [x] 4.2.3 Extract the packaged SuperDesktop binary and prove hash/provenance equality.
 
 ## 5. Final review and integration
 
@@ -131,7 +131,7 @@
 **Gate／Evidence：** REVIEW-01; tasks 5.1.1–5.1.4.
 **完成門檻：** Every leaf has one valid evidence record, zero P0/P1 remains, OpenSpec validates strictly, and only intended tracked paths are committed.
 
-- [ ] 5.1.1 Map every requirement/scenario to tasks, gates, and immutable evidence.
-- [ ] 5.1.2 Review hook bounds, protocol security, error paths, privacy, regressions, and unrelated changes.
-- [ ] 5.1.3 Run strict OpenSpec, detailed-task, evidence, formatting, and diff validation.
+- [x] 5.1.1 Map every requirement/scenario to tasks, gates, and immutable evidence.
+- [x] 5.1.2 Review hook bounds, protocol security, error paths, privacy, regressions, and unrelated changes.
+- [x] 5.1.3 Run strict OpenSpec, detailed-task, evidence, formatting, and diff validation.
 - [ ] 5.1.4 Commit nested results and synchronize only the SuperDesktop gitlink in the parent repository.
