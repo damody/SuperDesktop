@@ -1,0 +1,14 @@
+{
+  "schema": "taskbar-icon-fidelity-preview-clearance-validation/v1",
+  "checked_tasks_before_repository_integration": 28,
+  "evidence_records": 28,
+  "duplicate_task_ids": 0,
+  "invalid_hashes": 0,
+  "checked_tasks_missing_evidence": 0,
+  "openspec_strict": "passed",
+  "detailed_task_validator": "passed: L1=5 L2=9 L3=30",
+  "cargo_fmt_check": "passed",
+  "git_diff_check": "passed",
+  "unresolved_p0": 0,
+  "unresolved_p1": 0
+}

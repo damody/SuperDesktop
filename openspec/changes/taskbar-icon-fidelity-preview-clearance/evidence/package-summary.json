@@ -1,0 +1,26 @@
+{
+  "schema": "taskbar-icon-fidelity-preview-clearance-package/v1",
+  "component_mode": "all",
+  "version": "1.2026.8.21",
+  "nested_revision": "4eaa72fc8c85948dc7c2870c8ec1d964d53c0e02",
+  "parent_gitlink_staged": true,
+  "installer": {
+    "path": "D:/SuperExplorer/dist/SuperExplorer-Setup-1.2026.8.21-x64.exe",
+    "bytes": 14188674,
+    "sha256": "17C526D07E62ACAB86BE28F75A3868073A4FF198BE2782D400D48870E0A6DDA2"
+  },
+  "candidate": {
+    "path": "D:/SuperExplorer/SuperDesktop/target/release/superdesktop-app.exe",
+    "bytes": 21925376,
+    "sha256": "00069C04976EF213DC3E9883EEAD142061783E9D750A904C162AEE1C6D0B5CBF"
+  },
+  "embedded_candidate": {
+    "extracted_path": "D:/SuperExplorer/build/logs/taskbar-icon-fidelity-preview-clearance/installer-provenance/superdesktop-app.exe",
+    "sha256": "00069C04976EF213DC3E9883EEAD142061783E9D750A904C162AEE1C6D0B5CBF",
+    "matches_candidate": true
+  },
+  "build_command": "build_install.bat --no-launch",
+  "build_exit_status": 0,
+  "unrelated_staged_paths": [],
+  "preserved_preexisting_evidence_restored": true
+}

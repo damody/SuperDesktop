@@ -1,0 +1,56 @@
+{
+  "schema": "taskbar-icon-fidelity-preview-clearance-review/v1",
+  "requirements": [
+    {
+      "capability": "taskbar-icon-fidelity",
+      "requirement": "DPI-appropriate task icon source",
+      "scenarios": ["Standard DPI", "High DPI", "Invalid DPI"],
+      "tasks": ["2.1.1", "2.1.2", "4.1.1"],
+      "gates": ["ICON-01", "SRC-01"]
+    },
+    {
+      "capability": "taskbar-icon-fidelity",
+      "requirement": "Highest-quality Windows icon fallback order",
+      "scenarios": ["Size-matched executable resource exists", "Executable extraction fails"],
+      "tasks": ["2.1.3", "2.1.4", "4.1.1"],
+      "gates": ["ICON-02", "SRC-01"]
+    },
+    {
+      "capability": "taskbar-icon-fidelity",
+      "requirement": "Lossless small task icon upload",
+      "scenarios": ["Detailed small icon", "Invalid icon payload"],
+      "tasks": ["2.2.1", "2.2.2", "2.2.3", "4.1.1"],
+      "gates": ["ICON-03", "SRC-01"]
+    },
+    {
+      "capability": "task-preview-taskbar-clearance",
+      "requirement": "Task preview clears the visible SuperDesktop taskbar",
+      "scenarios": ["Explorer-compatible preview mode", "Owned-shell mode"],
+      "tasks": ["3.1.1", "3.1.2", "3.1.3", "4.2.2", "4.2.3"],
+      "gates": ["GEO-01", "GEO-02", "GUI-01"]
+    },
+    {
+      "capability": "task-preview-taskbar-clearance",
+      "requirement": "Preview clearance follows taskbar layout",
+      "scenarios": ["Multi-row taskbar", "Mixed-DPI negative-origin monitor", "Delayed hover"],
+      "tasks": ["3.1.4", "3.2.1", "3.2.2", "3.2.3", "4.2.2", "4.2.3"],
+      "gates": ["GEO-02", "GEO-03", "GUI-01"]
+    },
+    {
+      "capability": "task-preview-taskbar-clearance",
+      "requirement": "Recoverable preview geometry",
+      "scenarios": ["Invalid layout metrics"],
+      "tasks": ["3.1.3", "3.1.4", "4.1.2", "4.1.3"],
+      "gates": ["GEO-02", "SRC-01"]
+    }
+  ],
+  "review": {
+    "handle_ownership": "PrivateExtractIconsW and existing extraction paths destroy only caller-owned HICON values; WM_GETICON and class handles remain borrowed.",
+    "panic_paths": "No unwrap or panic path was added to production acquisition, upload, refresh, or preview geometry code; failures preserve Option/Result fallbacks.",
+    "geometry_consistency": "Immediate and delayed preview paths both pass the effective shell mode and configured rows; unit and headful rectangles agree.",
+    "regressions": "Workspace tests, Clippy -D warnings, two headful Explorer-compatible runs, release build, and package provenance passed.",
+    "unrelated_changes": "Pre-existing untracked evidence and parent modifications were excluded; only intended nested paths and the parent SuperDesktop gitlink are staged.",
+    "p0_findings": [],
+    "p1_findings": []
+  }
+}

@@ -119,8 +119,8 @@
 **完成門檻：** Release and installer commands return exit 0 and hashes trace to committed nested/parent revisions.
 
 - [x] 5.1.1 Build the SuperDesktop Windows release candidate and record its hash.
-- [ ] 5.1.2 Build the SuperExplorer installer containing the verified candidate and record its hash.
-- [ ] 5.1.3 Verify package provenance, expected launch payload, and absence of unrelated staged files.
+- [x] 5.1.2 Build the SuperExplorer installer containing the verified candidate and record its hash.
+- [x] 5.1.3 Verify package provenance, expected launch payload, and absence of unrelated staged files.
 
 ### 5.2 Close traceability and repository integration
 
@@ -132,7 +132,7 @@
 **Gate／Evidence：** REVIEW-01; task IDs 5.2.1–5.2.4.
 **完成門檻：** Every leaf has unique passing evidence, OpenSpec validates strictly, no P0/P1 review issue remains, and only intended tracked paths are committed.
 
-- [ ] 5.2.1 Map proposal, design, requirements, scenarios, gates, and all task IDs in the final evidence index.
-- [ ] 5.2.2 Review the implementation for handle ownership, panic paths, geometry consistency, regressions, and unrelated changes.
-- [ ] 5.2.3 Run strict OpenSpec/task validation and mark every evidence-backed leaf complete.
+- [x] 5.2.1 Map proposal, design, requirements, scenarios, gates, and all task IDs in the final evidence index.
+- [x] 5.2.2 Review the implementation for handle ownership, panic paths, geometry consistency, regressions, and unrelated changes.
+- [x] 5.2.3 Run strict OpenSpec/task validation and mark every evidence-backed leaf complete.
 - [ ] 5.2.4 Commit the nested change and synchronize only the SuperDesktop gitlink in the parent repository.
