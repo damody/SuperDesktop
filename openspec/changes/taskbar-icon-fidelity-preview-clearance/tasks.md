@@ -103,8 +103,8 @@
 **完成門檻：** Both runs assert `preview_bottom <= superdesktop_taskbar_top`, open the intended preview, and record no panic/error signature.
 
 - [x] 4.2.1 Extend the focused hover-preview UTIT report with preview/taskbar rectangle and binary identity fields.
-- [ ] 4.2.2 Run the Explorer-compatible focused hover-preview case once and index its evidence.
-- [ ] 4.2.3 Repeat the same focused case from a clean launch and index the second passing result.
+- [x] 4.2.2 Run the Explorer-compatible focused hover-preview case once and index its evidence.
+- [x] 4.2.3 Repeat the same focused case from a clean launch and index the second passing result.
 
 ## 5. Release integration and review
 
@@ -118,7 +118,7 @@
 **Gate／Evidence：** REL-01; task IDs 5.1.1–5.1.3.
 **完成門檻：** Release and installer commands return exit 0 and hashes trace to committed nested/parent revisions.
 
-- [ ] 5.1.1 Build the SuperDesktop Windows release candidate and record its hash.
+- [x] 5.1.1 Build the SuperDesktop Windows release candidate and record its hash.
 - [ ] 5.1.2 Build the SuperExplorer installer containing the verified candidate and record its hash.
 - [ ] 5.1.3 Verify package provenance, expected launch payload, and absence of unrelated staged files.
 

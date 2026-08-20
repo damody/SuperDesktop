@@ -1,0 +1,35 @@
+{
+  "schema": "taskbar-icon-fidelity-preview-clearance-headful/v1",
+  "candidate": {
+    "path": "target/release/superdesktop-app.exe",
+    "sha256": "00069C04976EF213DC3E9883EEAD142061783E9D750A904C162AEE1C6D0B5CBF",
+    "revision": "7e0ad732"
+  },
+  "raw_evidence_root": "D:/SuperExplorer/build/logs/taskbar-icon-fidelity-preview-clearance",
+  "runs": [
+    {
+      "id": "run1",
+      "result": "passed",
+      "explorer_present": true,
+      "preview_bottom": 1940,
+      "superdesktop_taskbar_top": 1948,
+      "clearance_px": 8,
+      "runtime_error_signature_absent": true,
+      "report_sha256": "2F5B126F5143366A44B75EF703D58CB0F88916DB7B6EF9FDC475A81EC7E6D4A1",
+      "screenshot_sha256": "A1C107345C54AEE7BC0AC199482EA60595DB6D1A813E38E7366B539E3EDB2421"
+    },
+    {
+      "id": "run2",
+      "result": "passed",
+      "explorer_present": true,
+      "preview_bottom": 1940,
+      "superdesktop_taskbar_top": 1948,
+      "clearance_px": 8,
+      "runtime_error_signature_absent": true,
+      "report_sha256": "F3B07C1A34EDB5543E23162FC61C0D322E549A683E3999A6104E42C168AF5705",
+      "screenshot_sha256": "07315D0ED4367CFF70DAFE573431C7C72C805F542B876634F143AE426CDC5815"
+    }
+  ],
+  "gate": "preview_bottom <= superdesktop_taskbar_top",
+  "gate_result": "passed_twice"
+}
