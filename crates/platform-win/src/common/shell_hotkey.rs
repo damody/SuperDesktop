@@ -131,15 +131,16 @@ pub fn open_screen_snipping_overlay() -> Result<(), String> {
             .map_err(|error| format!("screen-snipping Explorer broker launch failed: {error}"))?;
         let deadline = Instant::now() + Duration::from_secs(5);
         while Instant::now() < deadline {
-            if super::explorer_recovery::trusted_explorer_shell_present().unwrap_or(false) {
+            if temporary_explorer_broker_ready() {
                 break;
             }
             std::thread::sleep(Duration::from_millis(50));
         }
-        if !super::explorer_recovery::trusted_explorer_shell_present().unwrap_or(false) {
+        if !temporary_explorer_broker_ready() {
             let _ = super::explorer_recovery::shutdown_trusted_explorer_shell();
             return Err("screen-snipping Explorer broker did not become ready".to_owned());
         }
+        std::thread::sleep(Duration::from_millis(250));
     }
     let cleanup_broker = || {
         if !explorer_preexisting {
@@ -217,6 +218,11 @@ pub fn open_screen_snipping_overlay() -> Result<(), String> {
 
 fn screen_snipping_overlay_visible() -> bool {
     unsafe { FindWindowW(w!("SnipOverlayRootWindow"), None) }.is_ok()
+}
+
+fn temporary_explorer_broker_ready() -> bool {
+    unsafe { FindWindowW(w!("Shell_TrayWnd"), None) }.is_ok()
+        && super::explorer_recovery::trusted_explorer_shell_present().unwrap_or(false)
 }
 
 fn reduce_shell_hotkey(
@@ -541,6 +547,7 @@ mod tests {
             "recover_explorer_shell",
             "shutdown_trusted_explorer_shell",
             "SnipOverlayRootWindow",
+            "Shell_TrayWnd",
         ] {
             assert!(
                 helper.contains(required),
