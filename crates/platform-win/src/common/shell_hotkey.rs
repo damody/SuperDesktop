@@ -1,6 +1,7 @@
 //! Shell-owned Windows-key routing with bounded thread and hook lifetime.
 
 use std::{
+    mem::size_of,
     panic::{AssertUnwindSafe, catch_unwind},
     sync::{
         atomic::{AtomicBool, AtomicI32, AtomicU32, Ordering},
@@ -11,27 +12,22 @@ use std::{
 };
 
 use windows::Win32::{
-    Foundation::{LPARAM, LRESULT, RPC_E_CHANGED_MODE, WPARAM},
-    System::{
-        Com::{
-            CLSCTX_LOCAL_SERVER, COINIT_APARTMENTTHREADED, CoCreateInstance, CoInitializeEx,
-            CoUninitialize,
-        },
-        Threading::GetCurrentThreadId,
-    },
+    Foundation::{LPARAM, LRESULT, WPARAM},
+    System::Threading::GetCurrentThreadId,
     UI::{
         Input::KeyboardAndMouse::{
             GetAsyncKeyState, VK_CONTROL, VK_LWIN, VK_MENU, VK_RWIN, VK_SHIFT,
         },
-        Shell::{AO_NONE, ApplicationActivationManager, IApplicationActivationManager},
+        Shell::{SEE_MASK_FLAG_NO_UI, SHELLEXECUTEINFOW, ShellExecuteExW},
         WindowsAndMessaging::{
             CallNextHookEx, FindWindowW, GetMessageW, HC_ACTION, KBDLLHOOKSTRUCT, MSG, PM_NOREMOVE,
-            PeekMessageW, PostThreadMessageW, SetWindowsHookExW, UnhookWindowsHookEx,
-            WH_KEYBOARD_LL, WM_KEYDOWN, WM_KEYUP, WM_QUIT, WM_SYSKEYDOWN, WM_SYSKEYUP,
+            PeekMessageW, PostThreadMessageW, SW_SHOWNORMAL, SetWindowsHookExW,
+            UnhookWindowsHookEx, WH_KEYBOARD_LL, WM_KEYDOWN, WM_KEYUP, WM_QUIT, WM_SYSKEYDOWN,
+            WM_SYSKEYUP,
         },
     },
 };
-use windows::core::{Error as WindowsError, w};
+use windows::core::w;
 
 const VK_A: u32 = 0x41;
 const VK_D: u32 = 0x44;
@@ -151,40 +147,17 @@ pub fn open_screen_snipping_overlay() -> Result<(), String> {
             Ok(())
         }
     };
-    let initialize = unsafe { CoInitializeEx(None, COINIT_APARTMENTTHREADED) };
-    let initialized = match initialize {
-        result if result.is_ok() => true,
-        RPC_E_CHANGED_MODE => false,
-        error => {
-            let _ = cleanup_broker();
-            return Err(format!(
-                "screen-snipping COM initialization failed: {}",
-                WindowsError::from_hresult(error)
-            ));
-        }
+    let mut execute = SHELLEXECUTEINFOW {
+        cbSize: size_of::<SHELLEXECUTEINFOW>() as u32,
+        fMask: SEE_MASK_FLAG_NO_UI,
+        lpFile: w!("ms-screenclip:///?source=HotKey"),
+        nShow: SW_SHOWNORMAL.0,
+        ..Default::default()
     };
-    let result = (|| {
-        // SAFETY: the AUMID and launch arguments are compile-time fixed, and
-        // the local-server activation manager owns the activation arguments
-        // for the returned packaged-app process.
-        let activation: IApplicationActivationManager =
-            unsafe { CoCreateInstance(&ApplicationActivationManager, None, CLSCTX_LOCAL_SERVER) }
-                .map_err(|error| format!("screen-snipping activation manager failed: {error}"))?;
-        let process_id = unsafe {
-            activation.ActivateApplication(
-                w!("Microsoft.ScreenSketch_8wekyb3d8bbwe!App"),
-                w!("ms-screenclip:///?source=HotKey"),
-                AO_NONE,
-            )
-        }
-        .map_err(|error| format!("screen-snipping protocol activation failed: {error}"))?;
-        (process_id != 0)
-            .then_some(())
-            .ok_or_else(|| "screen-snipping activation returned no process".to_owned())
-    })();
-    if initialized {
-        unsafe { CoUninitialize() };
-    }
+    // SAFETY: the URI is compile-time fixed and remains live for the
+    // synchronous Shell admission; no process handle is requested or retained.
+    let result = unsafe { ShellExecuteExW(&mut execute) }
+        .map_err(|error| format!("screen-snipping Shell activation failed: {error}"));
     if let Err(error) = result {
         return match cleanup_broker() {
             Ok(()) => Err(error),
@@ -538,12 +511,9 @@ mod tests {
             .and_then(|tail| tail.split("unsafe extern").next())
             .expect("screen snip helper");
         for required in [
-            "IApplicationActivationManager",
-            "ActivateApplication",
-            "w!(\"Microsoft.ScreenSketch_8wekyb3d8bbwe!App\")",
+            "ShellExecuteExW",
             "w!(\"ms-screenclip:///?source=HotKey\")",
-            "CLSCTX_LOCAL_SERVER",
-            "AO_NONE",
+            "SEE_MASK_FLAG_NO_UI",
             "recover_explorer_shell",
             "shutdown_trusted_explorer_shell",
             "SnipOverlayRootWindow",
@@ -557,7 +527,8 @@ mod tests {
         for forbidden in [
             "explorer.exe",
             "SnippingTool.exe",
-            "ShellExecuteExW",
+            "IApplicationActivationManager",
+            "ActivateApplication",
             "ActivateForProtocol",
             "CreateProcess",
             "keybd_event",

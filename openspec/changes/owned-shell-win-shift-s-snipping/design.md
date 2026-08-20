@@ -29,13 +29,13 @@ Launching inside the hook was rejected because a global low-level callback must 
 
 ### 2. Use a fixed Windows protocol
 
-`platform-win::common::shell_hotkey` exposes a narrow `open_screen_snipping_overlay()` helper. A live observation of Explorer's real chord on the target Windows 11 build produced Snipping Tool AUMID `Microsoft.ScreenSketch_8wekyb3d8bbwe!App` with command argument `ms-screenclip:///?source=HotKey`. Explorer-free evidence showed ShellExecute accepted without presenting the overlay and `ActivateForProtocol` returned `0x80270254` because the package does not declare this as a Windows.Protocol extension. The helper therefore uses documented local-server `IApplicationActivationManager::ActivateApplication` with the fixed observed AUMID, fixed argument, and `AO_NONE`. No caller data crosses this boundary.
+`platform-win::common::shell_hotkey` exposes a narrow `open_screen_snipping_overlay()` helper. A live observation of Explorer's real chord on the target Windows 11 build produced command argument `ms-screenclip:///?source=HotKey`. Explorer-free evidence showed the overlay requires the Shell broker, while a controlled verified-Explorer probe proved `ShellExecuteExW` with that exact URI creates `SnipOverlayRootWindow`. The helper therefore waits for the request-owned verified broker's `Shell_TrayWnd`, then executes only the fixed observed URI. No caller data crosses this boundary.
 
 The newer `ms-screenclip://capture/...` integration API is deliberately excluded because Microsoft requires a packaged caller and registered redirect URI, while the owned shell needs native hotkey behavior and must not receive captured media.
 
 Windows 11 build 26200 evidence showed that ShellExecute, direct `/clip`, and packaged-app activation all create no overlay while Explorer is entirely absent. When no Explorer shell pre-exists, the activation worker therefore starts the existing security-validated inbox Explorer as a bounded broker, waits for its shell window, activates Snipping Tool, keeps the broker until `SnipOverlayRootWindow` disappears, and then uses the existing session/canonical-path-validated shutdown. A pre-existing Explorer shell is never closed by this broker cleanup.
 
-ShellExecute, `ActivateForProtocol`, hard-coded Store-app paths, `SnippingTool.exe` discovery, key re-injection, and a custom capture surface were rejected as contract-incompatible, version-sensitive, recursion-prone, or contrary to the requested built-in tool behavior.
+ShellExecute without a ready verified broker, `ActivateForProtocol`, `ActivateApplication`, hard-coded Store-app paths, `SnippingTool.exe` discovery, key re-injection, and a custom capture surface were rejected as ineffective, contract-incompatible, version-sensitive, recursion-prone, or contrary to the requested built-in tool behavior.
 
 ### 3. Dispatch on GPUI's existing foreground refresh
 

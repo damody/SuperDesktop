@@ -20,7 +20,7 @@ SuperDesktop SHALL consume `Win+Shift+S` in owned-shell mode and enqueue exactly
 - **THEN** SuperDesktop does not enqueue or consume the chord through its shell reducer
 
 ### Requirement: Built-in Snipping Tool overlay activation
-SuperDesktop SHALL activate the Windows-registered built-in image-snipping overlay through `IApplicationActivationManager::ActivateApplication` using only the fixed built-in AUMID `Microsoft.ScreenSketch_8wekyb3d8bbwe!App`, observed native-hotkey argument `ms-screenclip:///?source=HotKey`, and `AO_NONE`; it SHALL NOT use ShellExecute, `ActivateForProtocol`, discover a Snipping Tool executable path, register a capture callback, or launch a third-party capture program.
+SuperDesktop SHALL activate the Windows-registered built-in image-snipping overlay through `ShellExecuteExW` only after a verified Explorer broker is ready, using only the observed native-hotkey URI `ms-screenclip:///?source=HotKey`; it SHALL NOT use `ActivateForProtocol`, `ActivateApplication`, discover a Snipping Tool executable path, register a capture callback, or launch a third-party capture program.
 
 #### Scenario: Protocol activation accepted
 - **WHEN** the queued screen-snipping action is dispatched and Windows accepts the registered protocol

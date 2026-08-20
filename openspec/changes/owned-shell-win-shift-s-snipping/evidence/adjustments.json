@@ -55,5 +55,13 @@
     "correction": "Start only signed canonical inbox Explorer when absent, retain it only while SnipOverlayRootWindow exists, then terminate through current-session/canonical-path validation. Never close a pre-existing Explorer as request-owned.",
     "built_in_snipping_tool_requirement_preserved": true,
     "privacy_gate_unchanged": true
+  },
+  "final_activation_route": {
+    "adjustment_id": "B-004-broker-ready-shell-hotkey-route",
+    "classification": "B",
+    "reason": "Only the controlled verified-Explorer probe followed by ShellExecute of the exact native hotkey URI produced SnipOverlayRootWindow.",
+    "correction": "After verified Shell_TrayWnd readiness, call fixed ms-screenclip:///?source=HotKey through ShellExecuteExW; keep the broker until overlay dismissal and then clean it up.",
+    "scope_unchanged": true,
+    "gates_unchanged": true
   }
 }

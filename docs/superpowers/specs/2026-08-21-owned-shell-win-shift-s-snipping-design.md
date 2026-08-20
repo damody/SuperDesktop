@@ -14,7 +14,7 @@ The active-key fence consumes repeats and the matching key-up exactly as for the
 
 ## Native activation
 
-The GPUI foreground refresh path receives `OpenScreenSnip` and invokes a platform-owned helper. A live Windows 11 observation of the real Explorer-handled chord showed Snipping Tool launched with AUMID `Microsoft.ScreenSketch_8wekyb3d8bbwe!App` and argument `ms-screenclip:///?source=HotKey`. Explorer-free testing proved that ShellExecute did not create the overlay and `ActivateForProtocol` was rejected because the package does not expose that URI as a Windows.Protocol extension. The helper therefore uses Windows' documented `IApplicationActivationManager::ActivateApplication` with the observed fixed AUMID, fixed argument, and `AO_NONE`. `CLSCTX_LOCAL_SERVER` owns activation-argument lifetime without Explorer or a retained process handle.
+The GPUI foreground refresh path receives `OpenScreenSnip` and invokes a platform-owned helper. A live Windows 11 observation of the real Explorer-handled chord showed Snipping Tool launched with argument `ms-screenclip:///?source=HotKey`. Explorer-free testing proved the overlay requires a ready Explorer shell broker; after that verified broker reaches `Shell_TrayWnd`, the helper uses `ShellExecuteExW` with the exact fixed hotkey URI and no retained process handle.
 
 Microsoft's newer `ms-screenclip://capture/...` app-integration protocol is not used: it requires a packaged caller plus a registered redirect URI and is intended to return captured media to an app. SuperDesktop is matching the OS hotkey and does not request captured content.
 
