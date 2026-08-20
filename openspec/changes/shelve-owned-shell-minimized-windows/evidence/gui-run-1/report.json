@@ -1,0 +1,79 @@
+{
+  "schema": "superdesktop-utit-run/v1",
+  "run_id": "gui-run-1",
+  "suite": "shell-parity",
+  "partial": true,
+  "started_unix_ms": 1787254914267,
+  "finished_unix_ms": 1787254922252,
+  "workspace": "\\\\?\\D:\\SuperExplorer\\SuperDesktop",
+  "host": {
+    "windows_build": 26200,
+    "architecture": "AMD64",
+    "interactive": true,
+    "monitor_count": 1,
+    "explorer_running": true,
+    "workspace_revision": "f0ef5815af612fb79949d308677273afb84c6ec3",
+    "tools": [
+      "cargo",
+      "certutil",
+      "git",
+      "openspec",
+      "powershell"
+    ]
+  },
+  "counts": {
+    "selected": 1,
+    "passed": 0,
+    "failed": 1,
+    "blocked": 0,
+    "skipped": 0,
+    "not_applicable": 0
+  },
+  "decision": "failed",
+  "cases": [
+    {
+      "id": "gui-minimized-window-shelf",
+      "title": "Owned-shell minimized windows stay taskbar-only and restore exactly",
+      "state": "failed",
+      "reason": "nonzero-exit;missing-artifact:minimized-window-shelf/minimized-desktop.png",
+      "duration_ms": 7858,
+      "exit_code": 1,
+      "timed_out": false,
+      "argv": [
+        "powershell.exe",
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "D:\\SuperExplorer\\SuperDesktop\\scripts\\capture-minimized-window-shelf.ps1",
+        "-Workspace",
+        "D:\\SuperExplorer\\SuperDesktop",
+        "-EvidenceDirectory",
+        "D:\\SuperExplorer\\SuperDesktop\\openspec\\changes\\shelve-owned-shell-minimized-windows\\evidence\\gui-run-1\\cases\\gui-minimized-window-shelf/minimized-window-shelf"
+      ],
+      "stdout": {
+        "path": "cases/gui-minimized-window-shelf/stdout.log",
+        "bytes": 1154,
+        "sha256": "22b21cac67c6f4dfcc4a24744ece9ee19db67da099558a0e9af8e09173f2230f"
+      },
+      "stderr": {
+        "path": "cases/gui-minimized-window-shelf/stderr.log",
+        "bytes": 369,
+        "sha256": "d6fedc4ab3390f5e2f94eaa5994ada8146980a8cb27727b429fe1fe95a7b435c"
+      },
+      "artifacts": [
+        {
+          "path": "cases/gui-minimized-window-shelf/minimized-window-shelf/headful-report.json",
+          "bytes": 1154,
+          "sha256": "22b21cac67c6f4dfcc4a24744ece9ee19db67da099558a0e9af8e09173f2230f"
+        },
+        {
+          "path": "cases/gui-minimized-window-shelf/minimized-window-shelf/minimized-window-shelf.log",
+          "bytes": 2112,
+          "sha256": "e6f7ab7a56e86e42c94d2da9dffa78ef3ee656121469d04d2f41d39e2a9a64d6"
+        }
+      ],
+      "recovery_verified": true
+    }
+  ]
+}

@@ -435,6 +435,24 @@ pub fn catalog() -> Vec<TestCase> {
             false,
             75,
         ),
+        headful_case(
+            "gui-minimized-window-shelf",
+            "Owned-shell minimized windows stay taskbar-only and restore exactly",
+            "capture-minimized-window-shelf.ps1",
+            &[
+                "-Workspace",
+                "{workspace}",
+                "-EvidenceDirectory",
+                "{out}/minimized-window-shelf",
+            ],
+            &[
+                "minimized-window-shelf/headful-report.json",
+                "minimized-window-shelf/minimized-desktop.png",
+                "minimized-window-shelf/minimized-window-shelf.log",
+            ],
+            false,
+            90,
+        ),
     ];
     for case in &mut cases {
         if matches!(
@@ -451,13 +469,17 @@ pub fn catalog() -> Vec<TestCase> {
                 | "gui-taskbar-hover-preview"
                 | "gui-win-shift-s-snipping"
                 | "gui-win-key-start-toggle"
+                | "gui-minimized-window-shelf"
                 | "unit-taskbar-ui"
         ) {
             case.tags.push("gui-parity".into());
         }
         if matches!(
             case.id.as_str(),
-            "gui-taskbar-window-actions" | "gui-notification-overflow" | "gui-system-status"
+            "gui-taskbar-window-actions"
+                | "gui-notification-overflow"
+                | "gui-system-status"
+                | "gui-minimized-window-shelf"
         ) {
             case.tags.push("pointer".into());
         }
@@ -688,6 +710,57 @@ mod tests {
     }
 
     #[test]
+    fn minimized_window_shelf_case_is_mandatory_exact_and_recovery_bounded() {
+        let case = catalog()
+            .into_iter()
+            .find(|case| case.id == "gui-minimized-window-shelf")
+            .expect("minimized window shelf case");
+        assert!(case.mandatory && !case.explorer_free);
+        assert!(matches!(case.recovery, Recovery::None));
+        for suffix in [
+            "headful-report.json",
+            "minimized-desktop.png",
+            "minimized-window-shelf.log",
+        ] {
+            assert!(
+                case.artifacts
+                    .iter()
+                    .any(|artifact| artifact.path.ends_with(suffix)),
+                "missing minimized shelf artifact: {suffix}"
+            );
+        }
+        let script = include_str!("../../../scripts/capture-minimized-window-shelf.ps1");
+        for required in [
+            "IsIconic",
+            "GetWindowPlacement",
+            "IsWindowVisible",
+            "Wait-TaskButton",
+            "Assert-RectNear",
+            "task:minimized-shelved",
+            "shell_restored",
+            "explorer_restored",
+            "finally",
+        ] {
+            assert!(
+                script.contains(required),
+                "missing shelf contract: {required}"
+            );
+        }
+        let fixture = include_str!("../../taskbar-state-host/src/bin/taskbar_progress_fixture.rs");
+        for required in [
+            "WM_FIXTURE_MINIMIZE",
+            "WM_FIXTURE_RESTORE",
+            "SW_MINIMIZE",
+            "SW_RESTORE",
+        ] {
+            assert!(
+                fixture.contains(required),
+                "missing fixture control: {required}"
+            );
+        }
+    }
+
+    #[test]
     fn duplicate_zero_timeout_escape_and_missing_watchdog_fail() {
         let workspace = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
         let mut cases = catalog();
@@ -736,6 +809,7 @@ mod tests {
                 "gui-notification-overflow",
                 "gui-system-status",
                 "gui-taskbar-window-actions",
+                "gui-minimized-window-shelf",
             ])
         );
         assert!(pointer.cases.iter().all(|case| case.mandatory));

@@ -15,14 +15,16 @@ use windows::{
         },
         UI::WindowsAndMessaging::{
             CreateWindowExW, DefWindowProcW, DestroyWindow, DispatchMessageW, IsWindow, MSG,
-            PM_REMOVE, PeekMessageW, RegisterClassW, SW_SHOW, ShowWindow, TranslateMessage,
-            WINDOW_EX_STYLE, WNDCLASSW, WS_OVERLAPPEDWINDOW, WS_VISIBLE,
+            PM_REMOVE, PeekMessageW, RegisterClassW, SW_MINIMIZE, SW_RESTORE, SW_SHOW, ShowWindow,
+            TranslateMessage, WINDOW_EX_STYLE, WM_APP, WNDCLASSW, WS_OVERLAPPEDWINDOW, WS_VISIBLE,
         },
     },
     core::{GUID, PCWSTR, Result},
 };
 
 const CLSID_TASKBAR_LIST: GUID = GUID::from_u128(0x56fdf344_fd6d_11d0_958a_006097c9a090);
+const WM_FIXTURE_MINIMIZE: u32 = WM_APP + 41;
+const WM_FIXTURE_RESTORE: u32 = WM_APP + 42;
 const FIXTURE_CLASS: &[u16] = &[
     b'S' as u16,
     b'u' as u16,
@@ -80,6 +82,17 @@ unsafe extern "system" fn fixture_window_proc(
     wparam: WPARAM,
     lparam: LPARAM,
 ) -> LRESULT {
+    match message {
+        WM_FIXTURE_MINIMIZE => {
+            let _ = unsafe { ShowWindow(hwnd, SW_MINIMIZE) };
+            return LRESULT(0);
+        }
+        WM_FIXTURE_RESTORE => {
+            let _ = unsafe { ShowWindow(hwnd, SW_RESTORE) };
+            return LRESULT(0);
+        }
+        _ => {}
+    }
     unsafe { DefWindowProcW(hwnd, message, wparam, lparam) }
 }
 
@@ -161,8 +174,8 @@ fn run() -> Result<()> {
         }
     }
     println!(
-        "state={} percent={percent} hwnd={:X}",
-        state.0, hwnd.0 as usize
+        "state={} percent={percent} hwnd={:X} minimize_message={WM_FIXTURE_MINIMIZE} restore_message={WM_FIXTURE_RESTORE}",
+        state.0, hwnd.0 as usize,
     );
     let deadline = std::time::Instant::now() + Duration::from_millis(hold_ms);
     let mut message = MSG::default();

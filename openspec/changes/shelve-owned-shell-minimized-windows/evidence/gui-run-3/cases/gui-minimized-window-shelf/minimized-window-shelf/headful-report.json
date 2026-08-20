@@ -1,0 +1,27 @@
+{
+    "schema":  "owned-minimized-window-shelf-headful/v1",
+    "result":  "failed",
+    "app_path":  "D:\\SuperExplorer\\SuperDesktop\\target\\release\\superdesktop-app.exe",
+    "app_sha256":  "F236C630EA7724D265BE65235F1BCB66B48DE9C3CBBA542A12239E520367CF2F",
+    "fixture_path":  "D:\\SuperExplorer\\SuperDesktop\\target\\release\\taskbar-progress-fixture.exe",
+    "fixture_sha256":  "64B5836E4F4402CF5F62D61735FB991D6B951855DE4F5F27C46D496C3731F67D",
+    "observed":  {
+
+                 },
+    "screenshot":  null,
+    "screenshot_sha256":  null,
+    "trace":  "minimized-window-shelf.log",
+    "trace_sha256":  "698AB330143FA7D3DAC06449F0398164EC7B53FD5390277FEF7E3C1AD9EDC66E",
+    "shell_before":  {
+                         "present":  true,
+                         "value":  "explorer.exe"
+                     },
+    "shell_after":  {
+                        "present":  true,
+                        "value":  "explorer.exe"
+                    },
+    "shell_restored":  true,
+    "explorer_present_before":  true,
+    "explorer_restored":  true,
+    "failure":  "Taskbar shelf geometry failed: rect=-2,-2,481,77 min=-2,-2 show=2"
+}

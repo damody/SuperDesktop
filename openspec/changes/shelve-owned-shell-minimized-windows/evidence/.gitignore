@@ -1,0 +1,7 @@
+gui-run-*/cases/*/minimized-window-shelf/profile/
+gui-run-*/cases/*/stderr.log
+gui-run-*/cases/*/stdout.log
+gui-run-*/cases/*/minimized-window-shelf/app-stderr.log
+gui-run-*/cases/*/minimized-window-shelf/app-stdout.log
+gui-run-*/cases/*/minimized-window-shelf/fixture-stderr.log
+gui-run-*/cases/*/minimized-window-shelf/fixture-stdout.log

@@ -1,0 +1,28 @@
+{
+  "timestamp": "2026-08-21T04:01:39+08:00",
+  "focused": {
+    "cargo_fmt_check": 0,
+    "powershell_parser": 0,
+    "platform_minimized_shelf": { "exit_status": 0, "passed": 5 },
+    "runtime_composition": { "exit_status": 0, "passed": 1 },
+    "utit_catalog": { "exit_status": 0, "passed": 1 },
+    "utit_gui_manifest": { "exit_status": 0, "passed": 3 }
+  },
+  "workspace": {
+    "command": "cargo test --workspace --locked --offline",
+    "exit_status": 0
+  },
+  "clippy": {
+    "command": "cargo clippy --workspace --all-targets --locked --offline -- -D warnings",
+    "exit_status": 0,
+    "warnings_denied": true
+  },
+  "release": {
+    "app_command": "cargo build --release -p superdesktop-app",
+    "fixture_command": "cargo build --release -p taskbar-state-host --bin taskbar-progress-fixture",
+    "exit_status": 0,
+    "app_sha256": "F0DD80C87EA897610FF36D20E3D29A925880959899A4A08595831B1C9E011994",
+    "fixture_sha256": "64B5836E4F4402CF5F62D61735FB991D6B951855DE4F5F27C46D496C3731F67D",
+    "matches_gui_runs_6_and_7": true
+  }
+}

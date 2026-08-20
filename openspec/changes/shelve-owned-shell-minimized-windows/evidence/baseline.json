@@ -1,0 +1,37 @@
+{
+  "timestamp": "2026-08-21T03:30:33+08:00",
+  "parent_revision": "08cf988c7518b0a5d0857160b955837efbd59478",
+  "nested_revision": "f0ef5815af612fb79949d308677273afb84c6ec3",
+  "tracked_worktrees_clean_before_change": true,
+  "preserved_untracked_roots": [
+    "openspec/changes/align-start-footer-windows11-parity/evidence/",
+    "openspec/changes/align-start-menu-with-taskbar-setting/",
+    "openspec/changes/owned-context-popup-topmost/evidence/resize-1/",
+    "utit-results/",
+    "all pre-existing parent build, evidence, fixture dist, and temporary outputs"
+  ],
+  "current_paths": {
+    "snapshot": "platform-win::taskbar::snapshot_task_windows and snapshot_one",
+    "task_grouping": "superdesktop-app::surface_runtime::visible_tasks",
+    "taskbar_minimize": "activate_task -> apply_window_action(WindowAction::Minimize)",
+    "context_minimize": "apply_window_action_to_owned_identity(WindowAction::Minimize)",
+    "show_desktop": "run_show_desktop_cycle -> apply_window_action_to_owned_identity",
+    "restore": "ShowWindow(SW_RESTORE) plus SetForegroundWindow where requested",
+    "owned_shell_boundary": "run(shell) and the 50 ms refresh loop"
+  },
+  "baseline_behavior": {
+    "minimize": "ShowWindow(SW_MINIMIZE) only",
+    "placement_reconciliation": "absent",
+    "minimized_task_retention": "visible iconic windows remain in task grouping",
+    "legacy_iconic_tile": "can remain visible at lower-left when Explorer is absent"
+  },
+  "native_contract": {
+    "minimized_position": "WINDOWPLACEMENT.ptMinPosition",
+    "normal_restore_position": "WINDOWPLACEMENT.rcNormalPosition",
+    "initial_assumption": "SetWindowPlacement with WPF_SETMINPOSITION",
+    "physical_correction": "Windows 11 build 26200 clamps ptMinPosition=(-32000,-32000) to workspace edge (-2,-2)",
+    "second_physical_correction": "cross-process SetWindowPos converted a DPI-unaware normal rectangle from logical to physical coordinates",
+    "corrected_route": "ShowWindowAsync(SW_HIDE) on the already-iconic HWND plus an exact-identity bounded taskbar cache",
+    "placement_mutation": "forbidden"
+  }
+}

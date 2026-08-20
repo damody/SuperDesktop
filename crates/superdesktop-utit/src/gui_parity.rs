@@ -344,6 +344,33 @@ pub fn gui_parity_manifest() -> Vec<GuiSurfaceSpec> {
             mandatory: true,
         },
         GuiSurfaceSpec {
+            id: "minimized-window-shelf",
+            owner: "platform-win",
+            reference_family: "windows-11-native-taskbar",
+            case_ids: &["gui-minimized-window-shelf"],
+            variants: &[GuiVariant {
+                mode: "shell",
+                theme: "system",
+                locale: "system",
+                dpi: 96,
+                rows: 1,
+            }],
+            rules: &[GeometryRule::NonOverlap {
+                left: "minimized-window",
+                right: "monitor",
+            }],
+            required_controls: &["taskbar-button", "ordinary-window"],
+            required_actions: &[
+                "taskbar-minimize",
+                "taskbar-restore",
+                "application-minimize",
+                "application-restore",
+            ],
+            artifacts: HEADFUL_ARTIFACTS,
+            explorer_policy: ManifestExplorerPolicy::RecoveryOnly,
+            mandatory: true,
+        },
+        GuiSurfaceSpec {
             id: "task-view-alt-tab",
             owner: "taskbar-ui",
             reference_family: "windows-11-26200",

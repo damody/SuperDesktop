@@ -28,9 +28,10 @@ use platform_win::common::{
     monitor_dpi_start::{MonitorRecord, enable_per_monitor_v2, snapshot_real_monitors},
     shell_hotkey::ShellHotkeyAction,
     taskbar::{
-        configure_and_show_taskbar_window, move_owned_taskbar_client, owned_taskbar_resize_active,
-        physical_cursor_position, post_owned_taskbar_reveal, promote_owned_popup_topmost,
-        set_owned_taskbar_auto_hide_clip, snapshot_task_windows,
+        MinimizedWindowShelf, OwnedTaskWindow, configure_and_show_taskbar_window,
+        move_owned_taskbar_client, owned_taskbar_resize_active, physical_cursor_position,
+        post_owned_taskbar_reveal, promote_owned_popup_topmost, set_owned_taskbar_auto_hide_clip,
+        snapshot_task_windows,
     },
 };
 use raw_window_handle::{HasWindowHandle, RawWindowHandle};
@@ -1277,7 +1278,35 @@ fn show_desktop_item_properties(runtime: &Rc<RefCell<DesktopNamespaceRuntime>>, 
     }
 }
 
-fn activate_task(stable_id: &str, observed_foreground: bool, observed_minimized: bool) {
+fn reconcile_minimized_window_shelf(
+    shelf: &Rc<RefCell<MinimizedWindowShelf>>,
+    windows: &[OwnedTaskWindow],
+) {
+    let report = shelf.borrow_mut().reconcile(windows);
+    for window_identity in report.newly_shelved {
+        trace_action(&format!("task:minimized-shelved:{window_identity}"));
+    }
+    for (window_identity, error) in report.failures {
+        report_error(
+            "task:minimized-shelf",
+            format!("{window_identity}: {error}"),
+        );
+    }
+}
+
+fn reconcile_minimized_window_shelf_snapshot(shelf: &Rc<RefCell<MinimizedWindowShelf>>) {
+    match snapshot_task_windows() {
+        Ok(windows) => reconcile_minimized_window_shelf(shelf, &windows),
+        Err(error) => report_error("task:minimized-shelf-snapshot", error),
+    }
+}
+
+fn activate_task(
+    stable_id: &str,
+    observed_foreground: bool,
+    observed_minimized: bool,
+    minimized_window_shelf: &Rc<RefCell<MinimizedWindowShelf>>,
+) {
     trace_action("task");
     trace_action(&format!("task:identity:{stable_id}"));
     let Some(hex) = stable_id.rsplit(':').next() else {
@@ -1309,7 +1338,17 @@ fn activate_task(stable_id: &str, observed_foreground: bool, observed_minimized:
         platform_win::common::taskbar::WindowAction::Activate => "task:left-activated",
         _ => "task:left-action",
     };
-    if platform_win::common::taskbar::apply_window_action(window.hwnd_identity, action).is_ok() {
+    if platform_win::common::taskbar::apply_window_action_to_owned_identity(
+        window.hwnd_identity,
+        window.process_id,
+        &window.window_identity,
+        action,
+    )
+    .is_ok()
+    {
+        if action == platform_win::common::taskbar::WindowAction::Minimize {
+            reconcile_minimized_window_shelf_snapshot(minimized_window_shelf);
+        }
         trace_action(trace);
     } else {
         trace_action("task:left-action-rejected");
@@ -1333,7 +1372,10 @@ fn show_desktop_observation(
     }
 }
 
-fn run_show_desktop_cycle(session: &Rc<RefCell<ShowDesktopSession>>) {
+fn run_show_desktop_cycle(
+    session: &Rc<RefCell<ShowDesktopSession>>,
+    minimized_window_shelf: &Rc<RefCell<MinimizedWindowShelf>>,
+) {
     let Ok(windows) = snapshot_task_windows() else {
         trace_action("show-desktop:snapshot-rejected");
         return;
@@ -1358,6 +1400,9 @@ fn run_show_desktop_cycle(session: &Rc<RefCell<ShowDesktopSession>>) {
                 })
                 .collect::<Vec<_>>();
             let active = !succeeded.is_empty();
+            if active {
+                reconcile_minimized_window_shelf_snapshot(minimized_window_shelf);
+            }
             session.borrow_mut().complete_minimize(succeeded);
             trace_action(if active {
                 "show-desktop:minimized"
@@ -1935,10 +1980,17 @@ fn visible_tasks(
     icon_edge: u32,
     icon_cache: &mut BTreeMap<String, Option<IconData>>,
     attention_windows: &BTreeSet<(isize, u32)>,
+    minimized_window_shelf: Option<&Rc<RefCell<MinimizedWindowShelf>>>,
 ) -> Result<Vec<AccessibleTask>, &'static str> {
     snapshot_task_windows()
         .map_err(|_| "task-window-snapshot")
         .map(|windows| {
+            let windows = if let Some(shelf) = minimized_window_shelf {
+                reconcile_minimized_window_shelf(shelf, &windows);
+                shelf.borrow().task_windows(windows)
+            } else {
+                windows
+            };
             let mut grouped = BTreeMap::<String, Vec<_>>::new();
             for window in windows.into_iter().filter(|window| {
                 window.visible && !window.tool_window && !window.cloaked && !window.owned_transient
@@ -3376,6 +3428,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
         task_icon_edge.get()
     ));
     let task_icon_cache = Rc::new(RefCell::new(BTreeMap::new()));
+    let minimized_window_shelf = Rc::new(RefCell::new(MinimizedWindowShelf::default()));
     let initial_tasks = if state_matrix {
         verification_state_tasks()
     } else {
@@ -3385,6 +3438,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
             task_icon_edge.get(),
             &mut task_icon_cache.borrow_mut(),
             &BTreeSet::new(),
+            shell.then_some(&minimized_window_shelf),
         )?
     };
     let wallpaper = std::env::var_os("SUPERDESKTOP_WALLPAPER_PATH")
@@ -3794,6 +3848,10 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                 shell_show_desktop_sessions.push(Rc::clone(&show_desktop_session));
                 let show_desktop_session_for_taskbar = Rc::clone(&show_desktop_session);
                 let show_desktop_session_for_context = Rc::clone(&show_desktop_session);
+                let minimized_shelf_for_taskbar = Rc::clone(&minimized_window_shelf);
+                let minimized_shelf_for_task = Rc::clone(&minimized_window_shelf);
+                let minimized_shelf_for_context = Rc::clone(&minimized_window_shelf);
+                let minimized_shelf_for_jump_list = Rc::clone(&minimized_window_shelf);
                 let start_provider_for_taskbar = Rc::clone(&provider_client);
                 let start_settings_store = Rc::clone(&settings_store);
                 let start_settings_target = Rc::clone(&settings_target);
@@ -4226,7 +4284,10 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                 });
                             }),
                             show_desktop: Rc::new(move |_| {
-                                run_show_desktop_cycle(&show_desktop_session_for_taskbar)
+                                run_show_desktop_cycle(
+                                    &show_desktop_session_for_taskbar,
+                                    &minimized_shelf_for_taskbar,
+                                )
                             }),
                             task_view: Rc::new(move |app| {
                                 let existing_task_view = *task_view_window_for_taskbar.borrow();
@@ -4270,7 +4331,12 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                             task: Rc::new(move |stable_id, observed_active, observed_minimized, app| {
                                 let group_ids = group_window_ids(stable_id);
                                 if group_ids.len() <= 1 {
-                                    activate_task(stable_id, observed_active, observed_minimized);
+                                    activate_task(
+                                        stable_id,
+                                        observed_active,
+                                        observed_minimized,
+                                        &minimized_shelf_for_task,
+                                    );
                                     return;
                                 }
                                 open_task_preview(
@@ -4342,6 +4408,8 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                     }
                                     *jump_list_window_for_taskbar.borrow_mut() = None;
                                 }
+                                let invoke_minimized_shelf =
+                                    Rc::clone(&minimized_shelf_for_jump_list);
                                 let Ok(windows) = snapshot_task_windows() else {
                                     return;
                                 };
@@ -4393,7 +4461,9 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                     .filter(|entries| !entries.is_empty())
                                     .count();
                                 let jump_anchor_x = physical_cursor_position().ok().map(|(x, _)| x);
-                                let dismiss_slot = Rc::clone(&jump_list_window_for_taskbar);
+                                        let dismiss_slot = Rc::clone(&jump_list_window_for_taskbar);
+                                        let minimized_shelf_for_action =
+                                            Rc::clone(&invoke_minimized_shelf);
                                 let invoke_store = Rc::clone(&jump_settings_store);
                                 let invoke_target = Rc::clone(&jump_settings_target);
                                 let invoke_settings = Rc::clone(&jump_persisted_settings);
@@ -4420,6 +4490,8 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                             JumpListView::new(
                                                 model,
                                                 Rc::new(move |command| {
+                                                    let minimizing = command.id.0
+                                                        == "local:taskbar-minimize";
                                                     let apply_target = |action| {
                                                         target_window.as_ref().is_some_and(|target| {
                                                             platform_win::common::taskbar::apply_window_action_to_owned_identity(
@@ -4467,6 +4539,11 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                                         }),
                                                         _ => activate_jump_command(command),
                                                     };
+                                                    if minimizing && completed {
+                                                        reconcile_minimized_window_shelf_snapshot(
+                                                            &minimized_shelf_for_action,
+                                                        );
+                                                    }
                                                     trace_action(if completed {
                                                         "taskbar:jump-list-action-succeeded"
                                                     } else {
@@ -4507,6 +4584,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                 let settings_target = Rc::clone(&context_settings_target);
                                 let live_settings = Rc::clone(&context_persisted_settings);
                                 let context_show_desktop = Rc::clone(&show_desktop_session_for_context);
+                                let context_minimized_shelf = Rc::clone(&minimized_shelf_for_context);
                                 let context_rows = live_settings.borrow().taskbar.rows;
                                 let context_topmost = Rc::new(Cell::new(false));
                                 let context_topmost_for_open = Rc::clone(&context_topmost);
@@ -4530,6 +4608,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                         let target_for_action = Rc::clone(&settings_target);
                                         let live_for_action = Rc::clone(&live_settings);
                                         let context_show_desktop_for_action = Rc::clone(&context_show_desktop);
+                                        let context_minimized_shelf_for_action = Rc::clone(&context_minimized_shelf);
                                         let context_settings = live_for_action.borrow().taskbar.clone();
                                         cx.new(move |cx| {
                                             TaskbarContextView::new(
@@ -4568,6 +4647,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                                     TaskbarContextCommand::ShowDesktop => {
                                                         run_show_desktop_cycle(
                                                             &context_show_desktop_for_action,
+                                                            &context_minimized_shelf_for_action,
                                                         );
                                                         trace_action("taskbar:context-show-desktop");
                                                     }
@@ -5253,6 +5333,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                 let refresh_settings = Rc::clone(&persisted_settings);
                 let refresh_task_icons = Rc::clone(&task_icon_cache);
                 let refresh_task_icon_edge = Rc::clone(&task_icon_edge);
+                let refresh_minimized_window_shelf = Rc::clone(&minimized_window_shelf);
                 let refresh_attention = Rc::clone(&attention_runtime);
                 let refresh_shell_hotkeys = Rc::clone(&shell_hotkeys);
                 let refresh_auto_hide_context = Rc::clone(&taskbar_context_window);
@@ -5394,6 +5475,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                 refresh_task_icon_edge.get(),
                                 &mut refresh_task_icons.borrow_mut(),
                                 &attention_windows,
+                                shell.then_some(&refresh_minimized_window_shelf),
                             ) else {
                                 continue;
                             };
@@ -5466,7 +5548,10 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                             if let Some(session) =
                                                 refresh_show_desktop_sessions.first()
                                             {
-                                                run_show_desktop_cycle(session);
+                                                run_show_desktop_cycle(
+                                                    session,
+                                                    &refresh_minimized_window_shelf,
+                                                );
                                                 trace_action("shell-hotkey:show-desktop");
                                             }
                                         }
@@ -6564,6 +6649,39 @@ mod live_parity_tests {
                 "forbidden show desktop delegation: {forbidden}"
             );
         }
+    }
+
+    #[test]
+    fn owned_shell_shelves_minimized_windows_before_grouping_and_retains_task_models() {
+        let source = include_str!("surface_runtime.rs");
+        let production = source.split("#[cfg(test)]").next().unwrap_or(source);
+        let visible = production
+            .split("fn visible_tasks(")
+            .nth(1)
+            .and_then(|tail| tail.split("fn verification_state_tasks").next())
+            .expect("visible task composition");
+        let reconcile = visible
+            .find("reconcile_minimized_window_shelf(shelf, &windows)")
+            .expect("shelf reconciliation");
+        let grouping = visible.find("let mut grouped").expect("task grouping");
+        assert!(reconcile < grouping);
+        for required in [
+            "window.visible && !window.tool_window && !window.cloaked && !window.owned_transient",
+            "minimized: windows.iter().all(|window| window.minimized)",
+            "shell.then_some(&minimized_window_shelf)",
+            "shell.then_some(&refresh_minimized_window_shelf)",
+            "task:minimized-shelved",
+            "report_error(\n            \"task:minimized-shelf\"",
+            "action == platform_win::common::taskbar::WindowAction::Minimize",
+            "reconcile_minimized_window_shelf_snapshot(minimized_window_shelf)",
+            "shelf.borrow().task_windows(windows)",
+        ] {
+            assert!(
+                production.contains(required),
+                "missing shelf route: {required}"
+            );
+        }
+        assert!(!visible.contains("SW_HIDE"));
     }
 
     #[test]

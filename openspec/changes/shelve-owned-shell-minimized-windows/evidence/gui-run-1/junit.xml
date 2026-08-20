@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="SuperDesktop UTIT shell-parity" tests="1" failures="1" skipped="0">
+  <testcase classname="superdesktop.utit" name="Owned-shell minimized windows stay taskbar-only and restore exactly" time="7.858"><failure message="nonzero-exit;missing-artifact:minimized-window-shelf/minimized-desktop.png" /></testcase>
+</testsuite>

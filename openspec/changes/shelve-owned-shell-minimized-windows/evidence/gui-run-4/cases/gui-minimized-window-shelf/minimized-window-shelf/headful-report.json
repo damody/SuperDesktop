@@ -1,0 +1,27 @@
+{
+    "schema":  "owned-minimized-window-shelf-headful/v1",
+    "result":  "failed",
+    "app_path":  "D:\\SuperExplorer\\SuperDesktop\\target\\release\\superdesktop-app.exe",
+    "app_sha256":  "00C3078869514DABD3CA4001C3C8F9B3B0BB044DBD2D9ED46DA1EB907BB0AAB2",
+    "fixture_path":  "D:\\SuperExplorer\\SuperDesktop\\target\\release\\taskbar-progress-fixture.exe",
+    "fixture_sha256":  "64B5836E4F4402CF5F62D61735FB991D6B951855DE4F5F27C46D496C3731F67D",
+    "observed":  {
+
+                 },
+    "screenshot":  "minimized-desktop.png",
+    "screenshot_sha256":  "E29F74DFCFDFD0B1F2D7684122EB8142C4083D33C7EACF1EB22F0DFE7AB902D4",
+    "trace":  "minimized-window-shelf.log",
+    "trace_sha256":  "3E006E362DB9F9B13EAEE559DBD0F0323C4BE5D6DB1B6EEE3C32A6DE99797CCD",
+    "shell_before":  {
+                         "present":  true,
+                         "value":  "explorer.exe"
+                     },
+    "shell_after":  {
+                        "present":  true,
+                        "value":  "explorer.exe"
+                    },
+    "shell_restored":  true,
+    "explorer_present_before":  true,
+    "explorer_restored":  true,
+    "failure":  "Taskbar restore bounds changed: actual=350,350,1190,770 expected=200,200,680,440"
+}

@@ -2,7 +2,7 @@
 
 use std::{
     cell::RefCell,
-    collections::BTreeSet,
+    collections::{BTreeMap, BTreeSet},
     ffi::c_void,
     mem::size_of,
     os::windows::fs::MetadataExt,
@@ -27,12 +27,12 @@ use windows::Win32::{
             GetCursorPos, GetForegroundWindow, GetWindow, GetWindowLongPtrW, GetWindowRect,
             GetWindowTextLengthW, GetWindowTextW, GetWindowThreadProcessId, HTCLIENT, HTTOP,
             HWND_TOPMOST, IsIconic, IsWindow, IsWindowVisible, PostMessageW,
-            RegisterWindowMessageW, SW_MAXIMIZE, SW_MINIMIZE, SW_RESTORE, SWP_FRAMECHANGED,
-            SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER, SWP_SHOWWINDOW,
-            SetForegroundWindow, SetWindowLongPtrW, SetWindowPos, ShowWindow, WM_CLOSE,
-            WM_ENTERSIZEMOVE, WM_EXITSIZEMOVE, WM_NCDESTROY, WM_NCHITTEST, WM_SIZING, WMSZ_TOP,
-            WMSZ_TOPLEFT, WMSZ_TOPRIGHT, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_THICKFRAME,
-            WindowFromPoint,
+            RegisterWindowMessageW, SW_HIDE, SW_MAXIMIZE, SW_MINIMIZE, SW_RESTORE,
+            SWP_FRAMECHANGED, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER, SWP_SHOWWINDOW,
+            SetForegroundWindow, SetWindowLongPtrW, SetWindowPos, ShowWindow, ShowWindowAsync,
+            WM_CLOSE, WM_ENTERSIZEMOVE, WM_EXITSIZEMOVE, WM_NCDESTROY, WM_NCHITTEST, WM_SIZING,
+            WMSZ_TOP, WMSZ_TOPLEFT, WMSZ_TOPRIGHT, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW,
+            WS_THICKFRAME, WindowFromPoint,
         },
     },
 };
@@ -405,6 +405,142 @@ pub struct OwnedTaskWindow {
     pub owned_transient: bool,
     pub minimized: bool,
     pub foreground: bool,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum MinimizedShelfOutcome {
+    Shelved,
+    AlreadyShelved,
+    NoLongerEligible,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+enum MinimizedShelfEpisode {
+    Shelved(OwnedTaskWindow),
+    Failed,
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct MinimizedShelfReport {
+    pub newly_shelved: Vec<String>,
+    pub failures: Vec<(String, String)>,
+}
+
+#[derive(Debug, Default)]
+pub struct MinimizedWindowShelf {
+    episodes: BTreeMap<String, MinimizedShelfEpisode>,
+}
+
+fn minimized_shelf_eligible(window: &OwnedTaskWindow) -> bool {
+    window.visible
+        && window.minimized
+        && !window.tool_window
+        && !window.cloaked
+        && !window.owned_transient
+}
+
+pub fn shelve_minimized_window_to_owned_identity(
+    hwnd_identity: isize,
+    process_id: u32,
+    window_identity: &str,
+) -> Result<MinimizedShelfOutcome, String> {
+    let hwnd = HWND(hwnd_identity as *mut c_void);
+    let Some(observed) = snapshot_one(hwnd) else {
+        return Ok(MinimizedShelfOutcome::NoLongerEligible);
+    };
+    if observed.process_id != process_id
+        || observed.window_identity != window_identity
+        || !minimized_shelf_eligible(&observed)
+    {
+        return Ok(MinimizedShelfOutcome::NoLongerEligible);
+    }
+    // SAFETY: the window was revalidated as a visible iconic task window. The
+    // asynchronous command changes only WS_VISIBLE; WS_MINIMIZE and the complete
+    // restore placement remain owned by the application and Windows.
+    if !unsafe { ShowWindowAsync(hwnd, SW_HIDE) }.as_bool() {
+        return Ok(MinimizedShelfOutcome::NoLongerEligible);
+    }
+    Ok(MinimizedShelfOutcome::Shelved)
+}
+
+impl MinimizedWindowShelf {
+    pub fn reconcile(&mut self, windows: &[OwnedTaskWindow]) -> MinimizedShelfReport {
+        self.reconcile_with(windows, |window| {
+            shelve_minimized_window_to_owned_identity(
+                window.hwnd_identity,
+                window.process_id,
+                &window.window_identity,
+            )
+        })
+    }
+
+    fn reconcile_with(
+        &mut self,
+        windows: &[OwnedTaskWindow],
+        mut shelve: impl FnMut(&OwnedTaskWindow) -> Result<MinimizedShelfOutcome, String>,
+    ) -> MinimizedShelfReport {
+        self.episodes.retain(|window_identity, episode| {
+            windows
+                .iter()
+                .find(|window| window.window_identity == *window_identity)
+                .is_some_and(|window| match episode {
+                    MinimizedShelfEpisode::Shelved(_) => window.minimized && !window.visible,
+                    MinimizedShelfEpisode::Failed => minimized_shelf_eligible(window),
+                })
+        });
+        let mut report = MinimizedShelfReport::default();
+        for window in windows
+            .iter()
+            .filter(|window| minimized_shelf_eligible(window))
+        {
+            if self.episodes.contains_key(&window.window_identity) {
+                continue;
+            }
+            match shelve(window) {
+                Ok(MinimizedShelfOutcome::Shelved | MinimizedShelfOutcome::AlreadyShelved) => {
+                    self.episodes.insert(
+                        window.window_identity.clone(),
+                        MinimizedShelfEpisode::Shelved(window.clone()),
+                    );
+                    report.newly_shelved.push(window.window_identity.clone());
+                }
+                Ok(MinimizedShelfOutcome::NoLongerEligible) => {}
+                Err(error) => {
+                    self.episodes.insert(
+                        window.window_identity.clone(),
+                        MinimizedShelfEpisode::Failed,
+                    );
+                    report
+                        .failures
+                        .push((window.window_identity.clone(), error));
+                }
+            }
+        }
+        report
+    }
+
+    pub fn task_windows(&self, windows: Vec<OwnedTaskWindow>) -> Vec<OwnedTaskWindow> {
+        let mut task_windows = windows
+            .into_iter()
+            .map(|window| (window.window_identity.clone(), window))
+            .collect::<BTreeMap<_, _>>();
+        for (window_identity, episode) in &self.episodes {
+            let MinimizedShelfEpisode::Shelved(cached) = episode else {
+                continue;
+            };
+            if task_windows
+                .get(window_identity)
+                .is_some_and(|window| window.minimized && !window.visible)
+            {
+                let mut task = cached.clone();
+                task.visible = true;
+                task.minimized = true;
+                task.foreground = false;
+                task_windows.insert(window_identity.clone(), task);
+            }
+        }
+        task_windows.into_values().collect()
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -834,6 +970,150 @@ mod tests {
             apply_window_action_to_owned_identity(1, 99, "win:99:1", WindowAction::Restore)
                 .is_err()
         )
+    }
+
+    fn minimized_fixture(identity: &str) -> OwnedTaskWindow {
+        OwnedTaskWindow {
+            hwnd_identity: 42,
+            process_id: 7,
+            window_identity: identity.to_owned(),
+            application_identity: "fixture.exe".to_owned(),
+            title: "Minimized fixture".to_owned(),
+            visible: true,
+            tool_window: false,
+            cloaked: false,
+            owned_transient: false,
+            minimized: true,
+            foreground: false,
+        }
+    }
+
+    #[test]
+    fn minimized_shelf_hides_only_visible_iconic_task_candidates() {
+        let source = include_str!("taskbar.rs");
+        assert!(source.contains("ShowWindowAsync(hwnd, SW_HIDE)"));
+        assert!(source.contains("window.minimized && !window.visible"));
+    }
+
+    #[test]
+    fn minimized_shelf_eligibility_excludes_every_non_task_state() {
+        assert!(minimized_shelf_eligible(&minimized_fixture("win:7:2A")));
+        for mutate in [
+            |window: &mut OwnedTaskWindow| window.visible = false,
+            |window: &mut OwnedTaskWindow| window.minimized = false,
+            |window: &mut OwnedTaskWindow| window.tool_window = true,
+            |window: &mut OwnedTaskWindow| window.cloaked = true,
+            |window: &mut OwnedTaskWindow| window.owned_transient = true,
+        ] {
+            let mut window = minimized_fixture("win:7:2A");
+            mutate(&mut window);
+            assert!(!minimized_shelf_eligible(&window));
+        }
+    }
+
+    #[test]
+    fn minimized_shelf_reconciler_is_idempotent_prunes_and_retries() {
+        let window = minimized_fixture("win:7:2A");
+        let mut shelf = MinimizedWindowShelf::default();
+        let mut attempts = 0;
+        let first = shelf.reconcile_with(std::slice::from_ref(&window), |_| {
+            attempts += 1;
+            Ok(MinimizedShelfOutcome::Shelved)
+        });
+        assert_eq!(attempts, 1);
+        assert_eq!(first.newly_shelved, ["win:7:2A"]);
+        assert!(first.failures.is_empty());
+        let mut hidden = window.clone();
+        hidden.visible = false;
+        let second = shelf.reconcile_with(std::slice::from_ref(&hidden), |_| {
+            attempts += 1;
+            Ok(MinimizedShelfOutcome::Shelved)
+        });
+        assert_eq!(attempts, 1);
+        assert_eq!(second, MinimizedShelfReport::default());
+
+        let retained = shelf.task_windows(vec![hidden]);
+        assert_eq!(retained.len(), 1);
+        assert!(retained[0].visible && retained[0].minimized);
+
+        let mut restored = window.clone();
+        restored.minimized = false;
+        let _ = shelf.reconcile_with(std::slice::from_ref(&restored), |_| {
+            attempts += 1;
+            Ok(MinimizedShelfOutcome::Shelved)
+        });
+        let third = shelf.reconcile_with(std::slice::from_ref(&window), |_| {
+            attempts += 1;
+            Ok(MinimizedShelfOutcome::AlreadyShelved)
+        });
+        assert_eq!(attempts, 2);
+        assert_eq!(third.newly_shelved, ["win:7:2A"]);
+    }
+
+    #[test]
+    fn minimized_shelf_failure_is_reported_once_per_episode() {
+        let window = minimized_fixture("win:7:2A");
+        let mut shelf = MinimizedWindowShelf::default();
+        let first = shelf.reconcile_with(std::slice::from_ref(&window), |_| {
+            Err("fixture-placement-failed".to_owned())
+        });
+        assert_eq!(
+            first.failures,
+            [("win:7:2A".to_owned(), "fixture-placement-failed".to_owned())]
+        );
+        assert_eq!(
+            shelf.reconcile_with(std::slice::from_ref(&window), |_| {
+                Err("duplicate".to_owned())
+            }),
+            MinimizedShelfReport::default()
+        );
+        assert_eq!(
+            shelf.reconcile_with(&[], |_| Err("retired".to_owned())),
+            MinimizedShelfReport::default()
+        );
+        let retried = shelf.reconcile_with(std::slice::from_ref(&window), |_| {
+            Ok(MinimizedShelfOutcome::Shelved)
+        });
+        assert_eq!(retried.newly_shelved, ["win:7:2A"]);
+    }
+
+    #[test]
+    fn minimized_shelf_native_adapter_rejects_retired_identity_and_has_no_geometry_fallback() {
+        assert_eq!(
+            shelve_minimized_window_to_owned_identity(1, 99, "win:99:1"),
+            Ok(MinimizedShelfOutcome::NoLongerEligible)
+        );
+        let source = include_str!("taskbar.rs");
+        let adapter = source
+            .split("pub fn shelve_minimized_window_to_owned_identity")
+            .nth(1)
+            .and_then(|tail| tail.split("impl MinimizedWindowShelf").next())
+            .expect("minimized shelf adapter source");
+        for required in [
+            "ShowWindowAsync",
+            "SW_HIDE",
+            "minimized_shelf_eligible",
+            "observed.process_id != process_id",
+            "observed.window_identity != window_identity",
+        ] {
+            assert!(
+                adapter.contains(required),
+                "missing shelf token: {required}"
+            );
+        }
+        for forbidden in [
+            "SetWindowLongPtrW",
+            "SetWindowPlacement",
+            "SetWindowPos",
+            "WS_EX_TOOLWINDOW",
+        ] {
+            assert!(
+                !adapter.contains(forbidden),
+                "forbidden shelf fallback: {forbidden}"
+            );
+        }
+        assert!(source.contains("MinimizedShelfEpisode::Shelved(window.clone())"));
+        assert!(source.contains("pub fn task_windows"));
     }
     #[test]
     fn taskbar_resize_style_rejects_invalid_and_foreign_windows() {
