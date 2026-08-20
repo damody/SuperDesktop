@@ -58,7 +58,8 @@ fn uncached_icon_render_image(icon: &IconData) -> Option<Arc<RenderImage>> {
     if !platform_win::common::icon::valid_icon_data(icon) {
         return None;
     }
-    if gpui::compressed_gpu_cache_stats().0.supported == Some(true)
+    if (icon.width > 64 || icon.height > 64)
+        && gpui::compressed_gpu_cache_stats().0.supported == Some(true)
         && let Some(image) = bc7_render_image(icon)
     {
         return Some(image);
@@ -576,8 +577,8 @@ impl Render for TaskbarView {
                             .when_some(icon, |element, image| {
                                 element.child(
                                     img(image)
-                                        .w(px(24.))
-                                        .h(px(24.))
+                                        .w(px(WindowsGuiMetrics::TASK_ICON_EDGE))
+                                        .h(px(WindowsGuiMetrics::TASK_ICON_EDGE))
                                         .object_fit(ObjectFit::Contain),
                                 )
                             })
@@ -667,8 +668,8 @@ impl Render for TaskbarView {
                                         .when_some(icon, |element, image| {
                                             element.child(
                                                 img(image)
-                                                    .w(px(24.))
-                                                    .h(px(24.))
+                                                    .w(px(WindowsGuiMetrics::TASK_ICON_EDGE))
+                                                    .h(px(WindowsGuiMetrics::TASK_ICON_EDGE))
                                                     .object_fit(ObjectFit::Contain),
                                             )
                                         })
@@ -943,8 +944,8 @@ impl Render for TaskbarView {
                             .when_some(icon, |element, icon| {
                                 element.child(
                                     img(icon)
-                                        .w(px(24.))
-                                        .h(px(24.))
+                                        .w(px(WindowsGuiMetrics::TASK_ICON_EDGE))
+                                        .h(px(WindowsGuiMetrics::TASK_ICON_EDGE))
                                         .mr_2()
                                         .flex_none()
                                         .object_fit(ObjectFit::Contain),
@@ -1439,6 +1440,7 @@ mod tests {
         adaptive_labeled_task_width, bc7_render_image, clock_accessible_label,
         compact_input_language, icon_render_image, task_display_label,
         taskbar_rows_for_logical_height, taskbar_search_label, toggled_system_flyout,
+        uncached_icon_render_image,
     };
     use crate::{
         ClockLocale, CoreStatus, ProviderState, StatusRegion, SystemFlyoutKind, TestClock,
@@ -1785,6 +1787,24 @@ mod tests {
     }
 
     #[test]
+    fn small_task_icons_keep_lossless_bgra_pixels_and_alpha() {
+        let mut rgba = vec![0_u8; 64 * 64 * 4];
+        rgba[..8].copy_from_slice(&[1, 2, 3, 4, 250, 128, 64, 32]);
+        let image = uncached_icon_render_image(&IconData {
+            width: 64,
+            height: 64,
+            rgba,
+        })
+        .expect("valid lossless task icon");
+        assert!(image.compressed_raster().is_none());
+        assert_eq!(
+            &image.as_bytes(0).expect("lossless bytes")[..8],
+            &[3, 2, 1, 4, 64, 128, 250, 32]
+        );
+        assert_eq!(crate::WindowsGuiMetrics::TASK_ICON_EDGE, 24.0);
+    }
+
+    #[test]
     fn bc7_task_icon_payload_is_directly_renderable() {
         let icon = IconData {
             width: 4,
@@ -1803,7 +1823,7 @@ mod tests {
         assert!(!source.contains(&forbidden));
         for required in [
             "task.icon.as_ref().and_then(icon_render_image)",
-            ".w(px(24.))",
+            ".w(px(WindowsGuiMetrics::TASK_ICON_EDGE))",
             ".flex_1()",
             ".min_w_0()",
             ".overflow_hidden()",

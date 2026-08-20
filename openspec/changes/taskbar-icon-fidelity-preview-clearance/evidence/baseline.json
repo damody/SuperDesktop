@@ -1,0 +1,29 @@
+{
+  "nested_revision": "1d673ad0b430e24c41ad5b152e6efd04df587592",
+  "parent_revision": "dd6aa0cf14e27406d21c4073004a49c960973a6b",
+  "dirty_path_exclusions": [
+    "openspec/changes/align-start-footer-windows11-parity/evidence/focused/cases/gui-start/*.log",
+    "openspec/changes/owned-context-popup-topmost/evidence/resize-1/",
+    "utit-results/",
+    "all pre-existing parent untracked files and unrelated parent tracked modifications"
+  ],
+  "icon_call_path": [
+    "superdesktop-app::visible_tasks",
+    "platform-win::common::icon::window_icon",
+    "taskbar-ui::icon_render_image",
+    "taskbar-ui::uncached_icon_render_image"
+  ],
+  "preview_call_path": [
+    "TaskbarActions::task_hover or TaskbarActions::task",
+    "schedule_preview_open (hover only)",
+    "open_task_preview",
+    "task_flyout_options",
+    "task_flyout_geometry"
+  ],
+  "baseline_defects": [
+    "visible_tasks requests a fixed 32 px icon",
+    "window_icon queries small icons before large icons",
+    "small task icons take BC7 path when supported",
+    "task_flyout_geometry reserves only MonitorRecord.work_area"
+  ]
+}

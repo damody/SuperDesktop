@@ -1745,6 +1745,8 @@ fn open_task_preview(
     controller: Rc<RefCell<HoverPreviewController>>,
     taskbar_hwnd: isize,
     active_popup: Rc<Cell<isize>>,
+    owned_shell: bool,
+    taskbar_rows: u8,
     source: PreviewOpenSource,
 ) {
     let cards = preview_cards(stable_id, previews_enabled, monitor);
@@ -1763,7 +1765,14 @@ fn open_task_preview(
     let topmost_for_open = Rc::clone(&topmost_established);
     let anchor_physical_x = physical_cursor_position().ok().map(|(x, _)| x);
     let opened = app.open_window(
-        task_flyout_options(monitor, &cards, anchor_physical_x, source),
+        task_flyout_options(
+            monitor,
+            &cards,
+            anchor_physical_x,
+            owned_shell,
+            taskbar_rows,
+            source,
+        ),
         move |window, cx| {
             if source.activates_window() {
                 window.activate_window();
@@ -1844,6 +1853,8 @@ fn schedule_preview_open(
     previews_enabled: bool,
     taskbar_hwnd: isize,
     active_popup: Rc<Cell<isize>>,
+    owned_shell: bool,
+    taskbar_rows: u8,
     token: u64,
 ) {
     let background = app.background_executor().clone();
@@ -1865,6 +1876,8 @@ fn schedule_preview_open(
                         Rc::clone(&controller),
                         taskbar_hwnd,
                         Rc::clone(&active_popup),
+                        owned_shell,
+                        taskbar_rows,
                         PreviewOpenSource::Hover,
                     );
                 }
@@ -1899,9 +1912,25 @@ fn progress_for_task(
     }
 }
 
+fn task_icon_source_edge(monitors: &[MonitorRecord]) -> u32 {
+    let maximum_dpi = monitors
+        .iter()
+        .flat_map(|monitor| [monitor.dpi_x, monitor.dpi_y])
+        .filter(|dpi| *dpi > 0)
+        .max()
+        .unwrap_or(96)
+        .max(96);
+    let logical_edge = WindowsGuiMetrics::TASK_ICON_EDGE.ceil() as u64;
+    let physical_edge = (logical_edge * u64::from(maximum_dpi)).div_ceil(96);
+    u32::try_from(physical_edge)
+        .unwrap_or(u32::MAX)
+        .clamp(32, 64)
+}
+
 fn visible_tasks(
     pin_order: &[String],
     combine_groups: bool,
+    icon_edge: u32,
     icon_cache: &mut BTreeMap<String, Option<IconData>>,
     attention_windows: &BTreeSet<(isize, u32)>,
 ) -> Result<Vec<AccessibleTask>, &'static str> {
@@ -1971,7 +2000,7 @@ fn visible_tasks(
                                 Path::new(&application)
                                     .is_file()
                                     .then(|| Path::new(&application)),
-                                32,
+                                icon_edge,
                             )
                         })
                         .clone();
@@ -2413,15 +2442,24 @@ fn task_flyout_geometry(
     monitor: &MonitorRecord,
     card_widths: &[u16],
     anchor_physical_x: Option<i32>,
+    owned_shell: bool,
+    taskbar_rows: u8,
 ) -> TaskFlyoutGeometry {
     const WINDOW_SHADOW_INSET: f32 = 8.0;
-    let scale = monitor.dpi_x as f32 / 96.0;
-    let work_left = monitor.work_area.left as f32 / scale;
-    let work_right = monitor.work_area.right as f32 / scale;
-    let work_top = monitor.work_area.top as f32 / scale;
-    let work_bottom = monitor.work_area.bottom as f32 / scale;
+    let scale = monitor.dpi_x.max(96) as f32 / 96.0;
+    let work_left = monitor.bounds.left as f32 / scale;
+    let work_right = monitor.bounds.right as f32 / scale;
+    let work_top = monitor.bounds.top as f32 / scale;
+    let taskbar_bottom = if owned_shell {
+        monitor.bounds.bottom
+    } else {
+        monitor.work_area.bottom
+    } as f32
+        / scale;
+    let taskbar_top = taskbar_bottom - WindowsGuiMetrics::taskbar_height(taskbar_rows);
+    let popup_bottom = (taskbar_top - WindowsGuiMetrics::POPUP_GAP).max(work_top + 1.0);
     let available_width = (work_right - work_left).max(1.0);
-    let available_height = (work_bottom - work_top).max(1.0);
+    let available_height = (popup_bottom - work_top).max(1.0);
     let inset_x = WINDOW_SHADOW_INSET.min(((available_width - 1.0) / 2.0).max(0.0));
     let inset_y = WINDOW_SHADOW_INSET.min(((available_height - 1.0) / 2.0).max(0.0));
     let card_count = card_widths.len().clamp(1, 4);
@@ -2433,7 +2471,7 @@ fn task_flyout_geometry(
         + 16.0
         + 8.0 * card_count.saturating_sub(1) as f32;
     let width = requested_width.min((available_width - inset_x * 2.0).max(1.0));
-    let height = 260.0_f32.min((available_height - inset_y * 2.0).max(1.0));
+    let height = 260.0_f32.min((available_height - inset_y).max(1.0));
     let fallback_anchor = work_left + available_width / 2.0;
     let anchor = anchor_physical_x
         .map(|x| x as f32 / scale)
@@ -2444,7 +2482,7 @@ fn task_flyout_geometry(
     );
     TaskFlyoutGeometry {
         left,
-        top: (work_bottom - inset_y - height).max(work_top + inset_y),
+        top: (popup_bottom - height).max(work_top),
         width,
         height,
     }
@@ -2454,13 +2492,21 @@ fn task_flyout_options(
     monitor: &MonitorRecord,
     cards: &[PreviewCard],
     anchor_physical_x: Option<i32>,
+    owned_shell: bool,
+    taskbar_rows: u8,
     source: PreviewOpenSource,
 ) -> WindowOptions {
     let card_widths = cards
         .iter()
         .map(|card| card.preview_width)
         .collect::<Vec<_>>();
-    let geometry = task_flyout_geometry(monitor, &card_widths, anchor_physical_x);
+    let geometry = task_flyout_geometry(
+        monitor,
+        &card_widths,
+        anchor_physical_x,
+        owned_shell,
+        taskbar_rows,
+    );
     WindowOptions {
         window_bounds: Some(WindowBounds::Windowed(Bounds {
             origin: point(px(geometry.left), px(geometry.top)),
@@ -3195,6 +3241,11 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
         persisted_settings.taskbar.rows = rows.clamp(1, 3);
     }
     let state_matrix = std::env::var_os("SUPERDESKTOP_VERIFICATION_STATE_MATRIX").is_some();
+    let task_icon_edge = Rc::new(Cell::new(task_icon_source_edge(&snapshot.monitors)));
+    trace_action(&format!(
+        "taskbar:icon-source-edge:{}",
+        task_icon_edge.get()
+    ));
     let task_icon_cache = Rc::new(RefCell::new(BTreeMap::new()));
     let initial_tasks = if state_matrix {
         verification_state_tasks()
@@ -3202,6 +3253,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
         visible_tasks(
             &persisted_settings.taskbar.pins,
             persisted_settings.taskbar.combine_groups,
+            task_icon_edge.get(),
             &mut task_icon_cache.borrow_mut(),
             &BTreeSet::new(),
         )?
@@ -3902,6 +3954,10 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                             production_taskbar_settings.previews_enabled;
                         let previews_enabled_for_hover =
                             production_taskbar_settings.previews_enabled;
+                        let preview_owned_shell_for_click = shell;
+                        let preview_owned_shell_for_hover = shell;
+                        let preview_taskbar_rows_for_click = production_taskbar_settings.rows;
+                        let preview_taskbar_rows_for_hover = production_taskbar_settings.rows;
                         let start_taskbar_rows = production_taskbar_settings.rows;
                         let jump_list_taskbar_rows = production_taskbar_settings.rows;
                         let taskbar_hwnd_for_click = Rc::clone(&taskbar_hwnd_identity);
@@ -4089,6 +4145,8 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                     Rc::clone(&hover_preview_for_click),
                                     taskbar_hwnd_for_click.get(),
                                     Rc::clone(&active_preview_for_click),
+                                    preview_owned_shell_for_click,
+                                    preview_taskbar_rows_for_click,
                                     PreviewOpenSource::Click,
                                 );
                             }),
@@ -4110,6 +4168,8 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                         true,
                                         taskbar_hwnd_for_hover.get(),
                                         Rc::clone(&active_preview_for_hover),
+                                        preview_owned_shell_for_hover,
+                                        preview_taskbar_rows_for_hover,
                                         token,
                                     );
                                 } else {
@@ -5055,6 +5115,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                 let refresh_notification_client = Rc::clone(&notification_client);
                 let refresh_settings = Rc::clone(&persisted_settings);
                 let refresh_task_icons = Rc::clone(&task_icon_cache);
+                let refresh_task_icon_edge = Rc::clone(&task_icon_edge);
                 let refresh_attention = Rc::clone(&attention_runtime);
                 let refresh_shell_hotkeys = Rc::clone(&shell_hotkeys);
                 let refresh_auto_hide_context = Rc::clone(&taskbar_context_window);
@@ -5119,10 +5180,21 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                     explorer_shell_present,
                                 );
                                 match snapshot_real_monitors() {
-                                    Ok(snapshot) => refresh_monitor_names
-                                        .iter()
-                                        .enumerate()
-                                        .map(|(index, device_name)| {
+                                    Ok(snapshot) => {
+                                        let next_icon_edge =
+                                            task_icon_source_edge(&snapshot.monitors);
+                                        if refresh_task_icon_edge.replace(next_icon_edge)
+                                            != next_icon_edge
+                                        {
+                                            refresh_task_icons.borrow_mut().clear();
+                                            trace_action(&format!(
+                                                "taskbar:icon-source-edge:{next_icon_edge}"
+                                            ));
+                                        }
+                                        refresh_monitor_names
+                                            .iter()
+                                            .enumerate()
+                                            .map(|(index, device_name)| {
                                             let next = snapshot
                                                 .monitors
                                                 .iter()
@@ -5148,8 +5220,9 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                                 }
                                                 next
                                             }
-                                        })
-                                        .collect::<Vec<_>>(),
+                                            })
+                                            .collect::<Vec<_>>()
+                                    }
                                     Err(error) => {
                                         report_error("taskbar:monitor-refresh", error);
                                         vec![None; refresh_handles.len()]
@@ -5181,6 +5254,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                             let Ok(tasks) = visible_tasks(
                                 &taskbar_settings.pins,
                                 taskbar_settings.combine_groups,
+                                refresh_task_icon_edge.get(),
                                 &mut refresh_task_icons.borrow_mut(),
                                 &attention_windows,
                             ) else {
@@ -5876,6 +5950,7 @@ mod live_parity_tests {
     use std::path::Path;
     use std::time::Instant;
     use taskbar_ui::TaskbarContextCommand;
+    use taskbar_ui::WindowsGuiMetrics;
 
     #[test]
     fn shell_attention_flashes_then_holds_until_activation() {
@@ -6220,6 +6295,37 @@ mod live_parity_tests {
         let retained = cache.keys().next().unwrap().clone();
         prune_icon_cache(&mut cache, &std::iter::once(retained.clone()).collect());
         assert_eq!(cache.keys().cloned().collect::<Vec<_>>(), vec![retained]);
+    }
+
+    #[test]
+    fn task_icon_source_edge_covers_maximum_monitor_dpi_and_clamps() {
+        let monitor = |dpi_x, dpi_y| MonitorRecord {
+            device_name: format!("dpi-{dpi_x}-{dpi_y}"),
+            primary: true,
+            bounds: ScreenRect {
+                left: 0,
+                top: 0,
+                right: 1920,
+                bottom: 1080,
+            },
+            work_area: ScreenRect {
+                left: 0,
+                top: 0,
+                right: 1920,
+                bottom: 1040,
+            },
+            dpi_x,
+            dpi_y,
+        };
+        assert_eq!(super::task_icon_source_edge(&[]), 32);
+        assert_eq!(super::task_icon_source_edge(&[monitor(0, 0)]), 32);
+        assert_eq!(super::task_icon_source_edge(&[monitor(96, 96)]), 32);
+        assert_eq!(super::task_icon_source_edge(&[monitor(144, 144)]), 36);
+        assert_eq!(super::task_icon_source_edge(&[monitor(192, 192)]), 48);
+        assert_eq!(
+            super::task_icon_source_edge(&[monitor(96, 96), monitor(288, 240)]),
+            64
+        );
     }
 
     #[test]
@@ -7379,26 +7485,30 @@ mod live_parity_tests {
             let work_left = -2560.0 / scale;
             let work_right = 0.0;
             let work_top = -200.0 / scale;
-            let work_bottom = 1380.0 / scale;
+            let explorer_taskbar_bottom = 1380.0 / scale;
 
             for cards in 1..=4 {
                 let interior_anchor = -1280;
                 let widths = vec![220; cards];
                 let geometry =
-                    super::task_flyout_geometry(&monitor, &widths, Some(interior_anchor));
+                    super::task_flyout_geometry(&monitor, &widths, Some(interior_anchor), false, 1);
                 assert!(geometry.left >= work_left + 8.0);
                 assert!(geometry.left + geometry.width <= work_right - 8.0 + 0.01);
                 assert!(geometry.top >= work_top + 8.0);
-                assert!(geometry.top + geometry.height <= work_bottom - 8.0 + 0.01);
+                let superdesktop_taskbar_top = explorer_taskbar_bottom - 40.0;
+                assert!(
+                    geometry.top + geometry.height
+                        <= superdesktop_taskbar_top - WindowsGuiMetrics::POPUP_GAP + 0.01
+                );
                 let anchor_logical = interior_anchor as f32 / scale;
                 assert!((geometry.left + geometry.width / 2.0 - anchor_logical).abs() < 0.01);
 
-                let left = super::task_flyout_geometry(&monitor, &widths, Some(-2559));
+                let left = super::task_flyout_geometry(&monitor, &widths, Some(-2559), false, 1);
                 assert!((left.left - (work_left + 8.0)).abs() < 0.01);
-                let right = super::task_flyout_geometry(&monitor, &widths, Some(-1));
+                let right = super::task_flyout_geometry(&monitor, &widths, Some(-1), false, 1);
                 assert!((right.left + right.width - (work_right - 8.0)).abs() < 0.01);
 
-                let fallback = super::task_flyout_geometry(&monitor, &widths, None);
+                let fallback = super::task_flyout_geometry(&monitor, &widths, None, false, 1);
                 assert!((fallback.left + fallback.width / 2.0 - (work_left / 2.0)).abs() < 0.01);
             }
         }
@@ -7421,11 +7531,59 @@ mod live_parity_tests {
             dpi_x: 96,
             dpi_y: 96,
         };
-        let geometry = super::task_flyout_geometry(&compact, &[220; 4], Some(100));
+        let geometry = super::task_flyout_geometry(&compact, &[220; 4], Some(100), false, 1);
         assert_eq!(
             (geometry.left, geometry.top, geometry.width, geometry.height),
-            (8.0, 8.0, 184.0, 104.0)
+            (8.0, 8.0, 184.0, 64.0)
         );
+    }
+
+    #[test]
+    fn task_preview_clearance_reserves_owned_and_preview_mode_rows() {
+        let monitor = MonitorRecord {
+            device_name: "negative-mixed-dpi".into(),
+            primary: false,
+            bounds: ScreenRect {
+                left: -3840,
+                top: -160,
+                right: 0,
+                bottom: 2000,
+            },
+            work_area: ScreenRect {
+                left: -3840,
+                top: -160,
+                right: 0,
+                bottom: 1920,
+            },
+            dpi_x: 144,
+            dpi_y: 144,
+        };
+        let scale = 1.5;
+        for owned_shell in [false, true] {
+            for rows in 1..=3 {
+                let geometry = super::task_flyout_geometry(
+                    &monitor,
+                    &[320, 280],
+                    Some(-1200),
+                    owned_shell,
+                    rows,
+                );
+                let taskbar_bottom = if owned_shell {
+                    monitor.bounds.bottom
+                } else {
+                    monitor.work_area.bottom
+                } as f32
+                    / scale;
+                let taskbar_top = taskbar_bottom - WindowsGuiMetrics::taskbar_height(rows);
+                assert!(
+                    geometry.top + geometry.height
+                        <= taskbar_top - WindowsGuiMetrics::POPUP_GAP + 0.01,
+                    "mode={owned_shell} rows={rows} geometry={geometry:?} taskbar_top={taskbar_top}"
+                );
+                assert!(geometry.left >= monitor.bounds.left as f32 / scale);
+                assert!(geometry.left + geometry.width <= monitor.bounds.right as f32 / scale);
+            }
+        }
     }
 
     #[test]

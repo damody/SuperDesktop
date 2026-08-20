@@ -10,9 +10,9 @@
 **Gate／Evidence：** BASE-01; `evidence/index.jsonl` task IDs 1.1.1–1.1.3.
 **完成門檻：** Source paths, existing tests, and immutable evidence record format are recorded without modifying unrelated work.
 
-- [ ] 1.1.1 Record the current nested and parent revisions plus relevant dirty-path exclusions.
-- [ ] 1.1.2 Record icon acquisition/upload and preview geometry call paths in the baseline evidence.
-- [ ] 1.1.3 Create and validate the append-only evidence index record format used by every resolved leaf.
+- [x] 1.1.1 Record the current nested and parent revisions plus relevant dirty-path exclusions.
+- [x] 1.1.2 Record icon acquisition/upload and preview geometry call paths in the baseline evidence.
+- [x] 1.1.3 Create and validate the append-only evidence index record format used by every resolved leaf.
 
 ## 2. DPI-aware icon fidelity
 
@@ -26,10 +26,10 @@
 **Gate／Evidence：** ICON-01, ICON-02; task IDs 2.1.1–2.1.4.
 **完成門檻：** 96–192 DPI and failure paths pass focused tests with no leaked owned icon handles or panic paths.
 
-- [ ] 2.1.1 Implement the 24 DIP maximum-monitor source-edge calculation with 32–64 px clamping.
-- [ ] 2.1.2 Thread the selected source edge through initial and refreshed task enumeration.
-- [ ] 2.1.3 Implement size-matched owned executable-resource extraction with safe path bounds and handle cleanup.
-- [ ] 2.1.4 Reorder borrowed window/class icon fallback to prefer large sources while preserving recoverable shell fallbacks.
+- [x] 2.1.1 Implement the 24 DIP maximum-monitor source-edge calculation with 32–64 px clamping.
+- [x] 2.1.2 Thread the selected source edge through initial and refreshed task enumeration.
+- [x] 2.1.3 Implement size-matched owned executable-resource extraction with safe path bounds and handle cleanup.
+- [x] 2.1.4 Reorder borrowed window/class icon fallback to prefer large sources while preserving recoverable shell fallbacks.
 
 ### 2.2 Preserve small-icon pixels through rendering
 
@@ -41,9 +41,9 @@
 **Gate／Evidence：** ICON-03; task IDs 2.2.1–2.2.3.
 **完成門檻：** Icons at most 64 px use byte-preserving BGRA images, invalid payloads remain recoverable, and larger-image policy is unchanged.
 
-- [ ] 2.2.1 Route task icons at most 64 px per dimension to uncompressed BGRA render images.
-- [ ] 2.2.2 Preserve the existing BC7 path for valid larger raster inputs.
-- [ ] 2.2.3 Add focused tests for byte preservation, dimensions, alpha detail, invalid payloads, and the 24 DIP display contract.
+- [x] 2.2.1 Route task icons at most 64 px per dimension to uncompressed BGRA render images.
+- [x] 2.2.2 Preserve the existing BC7 path for valid larger raster inputs.
+- [x] 2.2.3 Add focused tests for byte preservation, dimensions, alpha detail, invalid payloads, and the 24 DIP display contract.
 
 ## 3. Preview/taskbar clearance
 
@@ -57,10 +57,10 @@
 **Gate／Evidence：** GEO-01, GEO-02; task IDs 3.1.1–3.1.4.
 **完成門檻：** Geometry matrices prove no intersection in owned-shell and Explorer-compatible modes for 1–3 rows, mixed DPI, and negative origins.
 
-- [ ] 3.1.1 Add effective shell mode and supported taskbar row count to preview geometry inputs.
-- [ ] 3.1.2 Calculate the DPI-aware visible taskbar top for owned-shell and Explorer-compatible modes.
-- [ ] 3.1.3 Clamp preview outer bounds above the taskbar top and within the selected monitor.
-- [ ] 3.1.4 Add focused geometry tests for row, DPI, narrow-monitor, fallback, and negative-origin boundaries.
+- [x] 3.1.1 Add effective shell mode and supported taskbar row count to preview geometry inputs.
+- [x] 3.1.2 Calculate the DPI-aware visible taskbar top for owned-shell and Explorer-compatible modes.
+- [x] 3.1.3 Clamp preview outer bounds above the taskbar top and within the selected monitor.
+- [x] 3.1.4 Add focused geometry tests for row, DPI, narrow-monitor, fallback, and negative-origin boundaries.
 
 ### 3.2 Keep immediate and delayed preview paths consistent
 
@@ -72,9 +72,9 @@
 **Gate／Evidence：** GEO-03; task IDs 3.2.1–3.2.3.
 **完成門檻：** All production call sites pass explicit mode/rows, stale targets recover safely, and no default path can reintroduce overlap.
 
-- [ ] 3.2.1 Thread effective shell mode and rows through immediate preview opening.
-- [ ] 3.2.2 Capture effective shell mode and rows in delayed hover scheduling.
-- [ ] 3.2.3 Audit all production preview geometry call sites for explicit layout inputs and recoverable errors.
+- [x] 3.2.1 Thread effective shell mode and rows through immediate preview opening.
+- [x] 3.2.2 Capture effective shell mode and rows in delayed hover scheduling.
+- [x] 3.2.3 Audit all production preview geometry call sites for explicit layout inputs and recoverable errors.
 
 ## 4. Automated behavior evidence
 
@@ -88,9 +88,9 @@
 **Gate／Evidence：** SRC-01; task IDs 4.1.1–4.1.3.
 **完成門檻：** Format check, focused tests, workspace tests, and Clippy with denied warnings all return exit 0.
 
-- [ ] 4.1.1 Run Rust formatting check and focused icon/geometry tests.
-- [ ] 4.1.2 Run the complete workspace test suite.
-- [ ] 4.1.3 Run workspace Clippy for all targets with warnings denied.
+- [x] 4.1.1 Run Rust formatting check and focused icon/geometry tests.
+- [x] 4.1.2 Run the complete workspace test suite.
+- [x] 4.1.3 Run workspace Clippy for all targets with warnings denied.
 
 ### 4.2 Prove real Explorer-compatible geometry
 
@@ -102,7 +102,7 @@
 **Gate／Evidence：** GUI-01; task IDs 4.2.1–4.2.3.
 **完成門檻：** Both runs assert `preview_bottom <= superdesktop_taskbar_top`, open the intended preview, and record no panic/error signature.
 
-- [ ] 4.2.1 Extend the focused hover-preview UTIT report with preview/taskbar rectangle and binary identity fields.
+- [x] 4.2.1 Extend the focused hover-preview UTIT report with preview/taskbar rectangle and binary identity fields.
 - [ ] 4.2.2 Run the Explorer-compatible focused hover-preview case once and index its evidence.
 - [ ] 4.2.3 Repeat the same focused case from a clean launch and index the second passing result.
 

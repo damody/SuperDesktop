@@ -5,6 +5,7 @@ pub struct WindowsGuiMetrics;
 
 impl WindowsGuiMetrics {
     pub const TASKBAR_ROW_HEIGHT: f32 = 40.0;
+    pub const TASK_ICON_EDGE: f32 = 24.0;
     pub const PRIMARY_TARGET_WIDTH: f32 = 44.0;
     pub const STATUS_TARGET_SIZE: f32 = 36.0;
     pub const POPUP_GAP: f32 = 8.0;

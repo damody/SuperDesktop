@@ -18,8 +18,8 @@ use windows::{
             },
             WindowsAndMessaging::{
                 DI_NORMAL, DestroyIcon, DrawIconEx, GCLP_HICON, GCLP_HICONSM, GetClassLongPtrW,
-                HICON, ICON_BIG, ICON_SMALL, ICON_SMALL2, SMTO_ABORTIFHUNG, SendMessageTimeoutW,
-                WM_GETICON,
+                HICON, ICON_BIG, ICON_SMALL, ICON_SMALL2, PrivateExtractIconsW, SMTO_ABORTIFHUNG,
+                SendMessageTimeoutW, WM_GETICON,
             },
         },
     },
@@ -173,6 +173,42 @@ fn executable_resource_icon(path: &Path, wide: &[u16], edge: u32) -> Option<Icon
     pixels
 }
 
+fn size_matched_executable_icon(path: &Path, edge: u32) -> Option<IconData> {
+    if !path
+        .extension()
+        .is_some_and(|extension| extension.eq_ignore_ascii_case("exe"))
+    {
+        return None;
+    }
+    let wide = shell_compatible_path(path);
+    if wide.len() > 260 {
+        return None;
+    }
+    let mut fixed_path = [0_u16; 260];
+    fixed_path[..wide.len()].copy_from_slice(&wide);
+    let mut icons = [HICON::default(); 1];
+    let requested = edge.clamp(1, MAX_ICON_EDGE) as i32;
+    // SAFETY: fixed_path is NUL terminated, the single output slot is valid,
+    // and every successfully returned icon is caller-owned and destroyed below.
+    let extracted = unsafe {
+        PrivateExtractIconsW(
+            &fixed_path,
+            0,
+            requested,
+            requested,
+            Some(&mut icons),
+            None,
+            0,
+        )
+    };
+    if extracted == 0 || extracted == u32::MAX || icons[0].is_invalid() {
+        return None;
+    }
+    let pixels = icon_to_rgba(icons[0], edge);
+    let _ = unsafe { DestroyIcon(icons[0]) };
+    pixels
+}
+
 fn shell_compatible_path(path: &Path) -> Vec<u16> {
     const EXTENDED_PREFIX: &[u16] = &[b'\\' as u16, b'\\' as u16, b'?' as u16, b'\\' as u16];
     const UNC_PREFIX: &[u16] = &[
@@ -203,7 +239,10 @@ fn shell_compatible_path(path: &Path) -> Vec<u16> {
 /// Resolves a task icon from a live HWND and falls back to its executable.
 pub fn window_icon(hwnd_identity: isize, executable: Option<&Path>, edge: u32) -> Option<IconData> {
     let hwnd = HWND(hwnd_identity as *mut c_void);
-    for kind in [ICON_SMALL2, ICON_SMALL, ICON_BIG] {
+    if let Some(pixels) = executable.and_then(|path| size_matched_executable_icon(path, edge)) {
+        return Some(pixels);
+    }
+    for kind in [ICON_BIG, ICON_SMALL2, ICON_SMALL] {
         if let Some(icon) = borrowed_window_icon(hwnd, kind)
             && let Some(pixels) = icon_to_rgba(icon, edge)
         {
@@ -211,7 +250,7 @@ pub fn window_icon(hwnd_identity: isize, executable: Option<&Path>, edge: u32) -
         }
     }
     // Class icons are borrowed from the registered window class.
-    for index in [GCLP_HICONSM, GCLP_HICON] {
+    for index in [GCLP_HICON, GCLP_HICONSM] {
         // SAFETY: observation-only query; a zero result means no class icon.
         let raw = unsafe { GetClassLongPtrW(hwnd, index) };
         if raw != 0
@@ -367,6 +406,34 @@ mod tests {
     }
 
     #[test]
+    fn size_matched_executable_icon_has_requested_visible_pixels() {
+        let _guard = ICON_TEST_LOCK
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        let windows = std::env::var_os("WINDIR").expect("Windows directory");
+        let executable = Path::new(&windows).join("System32/notepad.exe");
+        let icon = size_matched_executable_icon(&executable, 48)
+            .expect("Windows Notepad has an executable icon resource");
+        assert_eq!((icon.width, icon.height), (48, 48));
+        assert!(icon.rgba.chunks_exact(4).any(|pixel| pixel[3] != 0));
+    }
+
+    #[test]
+    fn window_icon_source_prefers_matched_and_large_icons() {
+        let source = include_str!("icon.rs");
+        let body = source
+            .split("pub fn window_icon")
+            .nth(1)
+            .and_then(|tail| tail.split("fn borrowed_window_icon").next())
+            .expect("window icon body");
+        let matched = body.find("size_matched_executable_icon").unwrap();
+        let large = body.find("[ICON_BIG, ICON_SMALL2, ICON_SMALL]").unwrap();
+        let class_large = body.find("[GCLP_HICON, GCLP_HICONSM]").unwrap();
+        let shell = body.find("shell_icon_for_path").unwrap();
+        assert!(matched < large && large < class_large && class_large < shell);
+    }
+
+    #[test]
     fn repeated_shell_extraction_does_not_leak_gdi_objects() {
         let _guard = ICON_TEST_LOCK.lock().unwrap();
         let executable = std::env::current_exe().unwrap();
@@ -387,7 +454,9 @@ mod tests {
 
     #[test]
     fn window_lookup_falls_back_without_panicking() {
-        let _guard = ICON_TEST_LOCK.lock().unwrap();
+        let _guard = ICON_TEST_LOCK
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         // SAFETY: GetConsoleWindow is observation-only and may validly return null.
         let console = unsafe { GetConsoleWindow() };
         let executable = std::env::current_exe().unwrap();
