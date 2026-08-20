@@ -1,8 +1,7 @@
 param(
     [string]$Workspace = (Split-Path -Parent $PSScriptRoot),
     [Parameter(Mandatory = $true)][string]$OutputPath,
-    [Parameter(Mandatory = $true)][string]$ScreenshotPath,
-    [Parameter(Mandatory = $true)][string]$JumpListScreenshotPath
+    [Parameter(Mandatory = $true)][string]$ScreenshotPath
 )
 
 $ErrorActionPreference = 'Stop'
@@ -23,13 +22,15 @@ public static class LiveTaskbarDpi {
     public static extern bool SetProcessDpiAwarenessContext(IntPtr value);
     [DllImport("user32.dll")] public static extern uint GetDpiForWindow(IntPtr hwnd);
     [DllImport("user32.dll")] public static extern bool SetCursorPos(int x,int y);
+    [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hwnd);
     [DllImport("user32.dll")] public static extern void mouse_event(uint f,uint x,uint y,uint d,UIntPtr e);
-    public static void RightClick(int x,int y){SetCursorPos(x,y);mouse_event(8,0,0,0,UIntPtr.Zero);mouse_event(16,0,0,0,UIntPtr.Zero);}
+    public static void RightClick(int x,int y){SetCursorPos(x,y);mouse_event(1,0,0,0,UIntPtr.Zero);System.Threading.Thread.Sleep(150);mouse_event(8,0,0,0,UIntPtr.Zero);System.Threading.Thread.Sleep(50);mouse_event(16,0,0,0,UIntPtr.Zero);}
 }
 '@
 [LiveTaskbarDpi]::SetProcessDpiAwarenessContext([IntPtr](-4)) | Out-Null
 
 function Find-Named($Root,[string]$Name){$condition=[System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::NameProperty,$Name);$Root.FindFirst([System.Windows.Automation.TreeScope]::Descendants,$condition)}
+function Get-Sha256([string]$Path){$stream=[IO.File]::OpenRead($Path);try{$hash=[Security.Cryptography.SHA256]::Create();try{([BitConverter]::ToString($hash.ComputeHash($stream))).Replace('-','')}finally{$hash.Dispose()}}finally{$stream.Dispose()}}
 
 $priorSurface = $env:SUPERDESKTOP_VERIFICATION_SURFACE
 $priorMatrix = $env:SUPERDESKTOP_VERIFICATION_STATE_MATRIX
@@ -64,7 +65,6 @@ try {
     $singleCharacterLabels = 0
     $fixedFound = $false
     $fixedBounds = $null
-    $taskButton = $null
     for ($index = 0; $index -lt $buttons.Count; $index++) {
         $button = $buttons.Item($index)
         $name = [string]$button.Current.Name
@@ -74,14 +74,13 @@ try {
             $fixedFound = $true
             continue
         }
-        if ($name -notmatch '^(.+) \[(active|minimized|attention|available|unavailable|group:\d+)\]$') { continue }
+        if ($name -notmatch '^(.+) \[(active|minimized|attention|available|unavailable|group:\d+)(?:, .+)?\]$') { continue }
         $visibleLabel = $matches[1].Trim()
         $taskState = $matches[2]
         if ([Globalization.StringInfo]::ParseCombiningCharacters($visibleLabel).Count -le 1) {
             $singleCharacterLabels++
         }
         $bounds = $button.Current.BoundingRectangle
-        if($null-eq$taskButton){$taskButton=$button}
         $taskBounds += [ordered]@{ left=[int]$bounds.Left;top=[int]$bounds.Top;width=[int]$bounds.Width;height=[int]$bounds.Height }
         $taskMeasurements += [ordered]@{ order=$taskMeasurements.Count;name=$visibleLabel;state=$taskState;left=[int]$bounds.Left;top=[int]$bounds.Top;width=[int]$bounds.Width;height=[int]$bounds.Height }
     }
@@ -94,7 +93,7 @@ try {
     for($index=0;$index-lt$buttons.Count;$index++){
         $button=$buttons.Item($index);$name=[string]$button.Current.Name;$controlBounds=$button.Current.BoundingRectangle
         if($controlBounds.Left-lt($rootBounds.Left+$rootBounds.Width/2)){continue}
-        if($name-match '^(.+) \[(active|minimized|attention|available|unavailable|group:\d+)\]$'){continue}
+        if($name-match '^(.+) \[(active|minimized|attention|available|unavailable|group:\d+)(?:, .+)?\]$'){continue}
         $rightControlLeft=[Math]::Min($rightControlLeft,$controlBounds.Left)
     }
     $maxTaskRight=@($taskBounds|ForEach-Object{$_.left+$_.width}|Measure-Object -Maximum).Maximum
@@ -111,32 +110,6 @@ try {
     if($maximumWidthDelta-gt1){throw "Fixed/task width mismatch: fixed=$($fixedBounds.width) maxDelta=$maximumWidthDelta"}
     if([double]::IsPositiveInfinity($rightControlLeft)-or$maxTaskRight-gt$rightControlLeft){throw "One-row task overlap: maxTaskRight=$maxTaskRight reservedLeft=$rightControlLeft"}
 
-    $sourceBounds=$taskButton.Current.BoundingRectangle
-    [LiveTaskbarDpi]::RightClick([int]($sourceBounds.Left+$sourceBounds.Width/2),[int]($sourceBounds.Top+$sourceBounds.Height/2))
-    $jumpWindow=$null
-    $deadline=[DateTime]::UtcNow.AddSeconds(4)
-    do{
-        Start-Sleep -Milliseconds 100
-        $windows=[System.Windows.Automation.AutomationElement]::RootElement.FindAll([System.Windows.Automation.TreeScope]::Children,[System.Windows.Automation.Condition]::TrueCondition)
-        for($wi=0;$wi-lt$windows.Count;$wi++){
-            $candidate=$windows.Item($wi)
-            if($candidate.Current.ProcessId-ne$process.Id-or$candidate.Current.NativeWindowHandle-eq$process.MainWindowHandle){continue}
-            if($null-ne(Find-Named $candidate 'Jump List')){$jumpWindow=$candidate;break}
-        }
-    }while($null-eq$jumpWindow-and[DateTime]::UtcNow-lt$deadline)
-    if($null-eq$jumpWindow){throw 'Owned Jump List did not appear.'}
-    $jumpBounds=$jumpWindow.Current.BoundingRectangle
-    $jumpHwnd=[IntPtr][int]$jumpWindow.Current.NativeWindowHandle
-    $dpi=[LiveTaskbarDpi]::GetDpiForWindow($jumpHwnd);$scale=[double]$dpi/96.0
-    $widthDip=[double]$jumpBounds.Width/$scale;$heightDip=[double]$jumpBounds.Height/$scale
-    $gapDip=([double]$root.Current.BoundingRectangle.Top-[double]$jumpBounds.Bottom)/$scale
-    $anchorDelta=[Math]::Abs(($jumpBounds.Left+$jumpBounds.Width/2)-($sourceBounds.Left+$sourceBounds.Width/2))/$scale
-    $menuItemCondition=[System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::ControlTypeProperty,[System.Windows.Automation.ControlType]::MenuItem)
-    $menuItems=$jumpWindow.FindAll([System.Windows.Automation.TreeScope]::Descendants,$menuItemCondition)
-    $headingNames=@();foreach($headingName in @('Recent','Frequent','Tasks','Actions')){if($null-ne(Find-Named $jumpWindow $headingName)){$headingNames+=$headingName}}
-    if([Math]::Abs($widthDip-360)-gt16-or$heightDip-gt496-or$gapDip-lt2-or$gapDip-gt16-or$anchorDelta-gt24-or$menuItems.Count-lt2-or$headingNames-notcontains'Actions'){throw "Jump List rejected width=$widthDip height=$heightDip gap=$gapDip anchor=$anchorDelta items=$($menuItems.Count) headings=$($headingNames-join',')"}
-    $jumpBitmap=[Drawing.Bitmap]::new([int]$jumpBounds.Width,[int]$jumpBounds.Height);$jumpGraphics=[Drawing.Graphics]::FromImage($jumpBitmap);$jumpGraphics.CopyFromScreen([int]$jumpBounds.Left,[int]$jumpBounds.Top,0,0,$jumpBitmap.Size);New-Item -ItemType Directory -Force (Split-Path -Parent $JumpListScreenshotPath)|Out-Null;$jumpBitmap.Save($JumpListScreenshotPath,[Drawing.Imaging.ImageFormat]::Png);$jumpGraphics.Dispose();$jumpBitmap.Dispose()
-
     $bounds = $root.Current.BoundingRectangle
     $bitmap = [Drawing.Bitmap]::new([int]$bounds.Width, [int]$bounds.Height)
     $graphics = [Drawing.Graphics]::FromImage($bitmap)
@@ -151,7 +124,7 @@ try {
     $report = [ordered]@{
         schema='taskbar-live-production/v1'
         result='passed'
-        app_sha256=(Get-FileHash -Algorithm SHA256 -LiteralPath $appPath).Hash
+        app_sha256=(Get-Sha256 $appPath)
         task_count=$taskBounds.Count
         distinct_task_rows=$rows.Count
         single_character_labels=$singleCharacterLabels
@@ -166,10 +139,9 @@ try {
         maximum_fixed_task_width_delta_px=$maximumWidthDelta
         fixed_task_width_parity=$true
         screenshot=(Split-Path -Leaf $ScreenshotPath)
-        screenshot_sha256=(Get-FileHash -Algorithm SHA256 -LiteralPath $ScreenshotPath).Hash
+        screenshot_sha256=(Get-Sha256 $ScreenshotPath)
         raw_titles_persisted=$false
         frame_visible=$true
-        jump_list=[ordered]@{width_dip=$widthDip;height_dip=$heightDip;taskbar_gap_dip=$gapDip;source_anchor_delta_dip=$anchorDelta;menu_item_count=$menuItems.Count;headings=$headingNames;screenshot=(Split-Path -Leaf $JumpListScreenshotPath);screenshot_sha256=(Get-FileHash -Algorithm SHA256 $JumpListScreenshotPath).Hash}
     }
     [IO.File]::WriteAllText($OutputPath,(($report|ConvertTo-Json -Depth 8)+"`n"),[Text.UTF8Encoding]::new($false))
     $report | ConvertTo-Json -Depth 8

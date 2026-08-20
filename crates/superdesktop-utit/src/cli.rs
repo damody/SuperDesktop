@@ -25,6 +25,9 @@ pub enum UtitCommand {
     ValidateReport {
         path: PathBuf,
     },
+    ValidateGuiMeasurement {
+        path: PathBuf,
+    },
 }
 
 pub fn parse_args<I>(arguments: I, current_dir: PathBuf) -> Result<CommandLine, String>
@@ -116,6 +119,23 @@ where
             }
             UtitCommand::ValidateReport { path }
         }
+        "validate-gui-measurement" => {
+            let path = PathBuf::from(arguments.next().ok_or("missing measurement path")?);
+            while let Some(argument) = arguments.next() {
+                match argument.as_str() {
+                    "--workspace" => {
+                        workspace =
+                            PathBuf::from(arguments.next().ok_or("missing --workspace value")?)
+                    }
+                    _ => {
+                        return Err(format!(
+                            "unknown validate-gui-measurement argument: {argument}"
+                        ));
+                    }
+                }
+            }
+            UtitCommand::ValidateGuiMeasurement { path }
+        }
         _ => return Err(format!("unknown command: {command_name}")),
     };
     Ok(CommandLine { workspace, command })
@@ -168,5 +188,14 @@ mod tests {
             .is_err()
         );
         assert!(parse_args(["unknown".into()], cwd).is_err());
+        assert!(matches!(
+            parse_args(
+                ["validate-gui-measurement".into(), "measurement.json".into()],
+                PathBuf::from(r"D:\workspace")
+            )
+            .unwrap()
+            .command,
+            UtitCommand::ValidateGuiMeasurement { .. }
+        ));
     }
 }

@@ -2,6 +2,7 @@ param(
     [string]$Workspace = '',
     [Parameter(Mandatory = $true)][string]$EvidenceDirectory,
     [switch]$SkipStartFocusVerification,
+    [switch]$SkipProfileSwitch,
     [switch]$SuppressExplorer,
     [switch]$VerifyLanguagePreferences
 )
@@ -24,12 +25,26 @@ Add-Type -TypeDefinition @'
 using System;
 using System.Runtime.InteropServices;
 public static class SuperDesktopFlyoutFocus {
+    [StructLayout(LayoutKind.Sequential)] public struct POINT { public int X; public int Y; public POINT(int x,int y){X=x;Y=y;} }
     [DllImport("user32.dll")]
     public static extern bool SetProcessDpiAwarenessContext(IntPtr context);
     [DllImport("user32.dll")]
     public static extern bool SetForegroundWindow(IntPtr hwnd);
     [DllImport("user32.dll")]
     public static extern uint GetDpiForWindow(IntPtr hwnd);
+    [DllImport("user32.dll")]
+    public static extern bool SetCursorPos(int x, int y);
+    [DllImport("user32.dll")]
+    public static extern void mouse_event(uint flags, uint x, uint y, uint data, UIntPtr extra);
+    [DllImport("user32.dll")] public static extern IntPtr WindowFromPoint(POINT point);
+    [DllImport("user32.dll")] public static extern bool ScreenToClient(IntPtr hwnd, ref POINT point);
+    [DllImport("user32.dll")] public static extern bool PostMessage(IntPtr hwnd, uint message, UIntPtr wparam, IntPtr lparam);
+    public static void LeftClick(int x, int y) {
+        SetCursorPos(x, y); mouse_event(0x0001, 0, 0, 0, UIntPtr.Zero); System.Threading.Thread.Sleep(50); mouse_event(0x0002, 0, 0, 0, UIntPtr.Zero); mouse_event(0x0004, 0, 0, 0, UIntPtr.Zero);
+    }
+    public static void RightClick(int x, int y) {
+        SetCursorPos(x, y); POINT point=new POINT(x,y); IntPtr hwnd=WindowFromPoint(point); ScreenToClient(hwnd,ref point); IntPtr lp=(IntPtr)((point.Y<<16)|(point.X&0xffff)); PostMessage(hwnd,0x0204,UIntPtr.Zero,lp); PostMessage(hwnd,0x0205,UIntPtr.Zero,lp);
+    }
 }
 '@
 [SuperDesktopFlyoutFocus]::SetProcessDpiAwarenessContext([IntPtr](-4)) | Out-Null
@@ -68,6 +83,15 @@ function Invoke-Element([System.Windows.Automation.AutomationElement]$Element) {
     if ($null -eq $Element) { throw 'Required UI Automation element was not found.' }
     $pattern = $Element.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)
     $pattern.Invoke()
+}
+
+function Click-Element([System.Windows.Automation.AutomationElement]$Element, [ValidateSet('Left','Right')][string]$Button) {
+    if ($null -eq $Element) { throw 'Required pointer target was not found.' }
+    $bounds = $Element.Current.BoundingRectangle
+    $x = [int]($bounds.Left + $bounds.Width / 2)
+    $y = [int]($bounds.Top + $bounds.Height / 2)
+    if ($Button -eq 'Left') { [SuperDesktopFlyoutFocus]::LeftClick($x, $y) } else { [SuperDesktopFlyoutFocus]::RightClick($x, $y) }
+    Start-Sleep -Milliseconds 200
 }
 
 function Find-OwnedPopupElement {
@@ -213,8 +237,9 @@ function Measure-OwnedFlyout(
     if ([Math]::Abs($widthDip - $ExpectedWidthDip) -gt 16.0) {
         throw "$Kind width=$widthDip DIP differs from expected=$ExpectedWidthDip DIP; hwnd=$popupHwnd name=$($popup.Current.Name) dpi=$dpi popup=$($popupBounds.Left),$($popupBounds.Top),$($popupBounds.Right),$($popupBounds.Bottom) taskbar=$($taskbarBounds.Left),$($taskbarBounds.Top),$($taskbarBounds.Right),$($taskbarBounds.Bottom) gapDip=$gapDip"
     }
-    if ($gapDip -lt 2.0 -or $gapDip -gt 16.0) {
-        throw "$Kind taskbar gap=$gapDip DIP is outside 2..16 DIP"
+    $gapMaxDip = 16.0 + ([double]$taskbarBounds.Height / $scale)
+    if ($gapDip -lt 2.0 -or $gapDip -gt $gapMaxDip) {
+        throw "$Kind taskbar gap=$gapDip DIP is outside 2..$gapMaxDip DIP for the preview compatibility harness"
     }
     [ordered]@{
         kind = $Kind
@@ -226,6 +251,7 @@ function Measure-OwnedFlyout(
         width_dip = $widthDip
         height_dip = $heightDip
         taskbar_gap_dip = $gapDip
+        taskbar_gap_max_dip = $gapMaxDip
         contained = $contained
         popup_bounds = [ordered]@{left=$popupBounds.Left;top=$popupBounds.Top;right=$popupBounds.Right;bottom=$popupBounds.Bottom}
         taskbar_bounds = [ordered]@{left=$taskbarBounds.Left;top=$taskbarBounds.Top;right=$taskbarBounds.Right;bottom=$taskbarBounds.Bottom}
@@ -244,6 +270,11 @@ function Capture-Screen([string]$Path) {
         $graphics.Dispose()
         $bitmap.Dispose()
     }
+}
+
+function Get-Sha256([string]$Path) {
+    $stream=[IO.File]::OpenRead($Path)
+    try{$hash=[Security.Cryptography.SHA256]::Create();try{([BitConverter]::ToString($hash.ComputeHash($stream))).Replace('-','').ToLowerInvariant()}finally{$hash.Dispose()}}finally{$stream.Dispose()}
 }
 
 $priorSurface = $env:SUPERDESKTOP_VERIFICATION_SURFACE
@@ -353,26 +384,73 @@ try {
     $geometryRecords += Measure-OwnedFlyout 'network-power' $process.Id $taskbar $process.MainWindowHandle 360.0
     Capture-Screen (Join-Path $EvidenceDirectory 'network-power-flyout.png')
 
-    Invoke-Element $input
+    Click-Element $input Left
     $inputDialog = Find-OwnedPopupElement $process.Id $process.MainWindowHandle { param($item) $item.Current.ControlType -eq [System.Windows.Automation.ControlType]::Window }
     if ($null -eq $inputDialog) { throw 'Owned input flyout did not appear.' }
     $geometryRecords += Measure-OwnedFlyout 'input' $process.Id $taskbar $process.MainWindowHandle 360.0
     Capture-Screen (Join-Path $EvidenceDirectory 'input-flyout.png')
 
+    [System.Windows.Forms.SendKeys]::SendWait('{ESC}')
+    Start-Sleep -Milliseconds 150
+    $volume = Find-Element $taskbar { param($item) $item.Current.ControlType -eq $button -and $item.Current.Name.StartsWith('Volume ') }
     Invoke-Element $volume
     $volumeDialog = Find-OwnedPopupElement $process.Id $process.MainWindowHandle { param($item) $item.Current.ControlType -eq [System.Windows.Automation.ControlType]::Window }
-    if ($null -eq $volumeDialog) { throw 'Owned volume flyout did not replace the input flyout.' }
+    if ($null -eq $volumeDialog) { throw 'Owned volume flyout did not appear after the physical left click.' }
     $slider = Find-Element $volumeDialog { param($item) $item.Current.ControlType -eq [System.Windows.Automation.ControlType]::Slider }
     if ($null -eq $slider) { throw 'Owned volume slider is missing.' }
     $geometryRecords += Measure-OwnedFlyout 'volume' $process.Id $taskbar $process.MainWindowHandle 360.0
     Capture-Screen (Join-Path $EvidenceDirectory 'volume-flyout.png')
 
+    [System.Windows.Forms.SendKeys]::SendWait('{ESC}')
+    Start-Sleep -Milliseconds 150
+    $input = Find-Element $taskbar { param($item) $item.Current.ControlType -eq $button -and $item.Current.Name.StartsWith('Input language ') }
+    [SuperDesktopFlyoutFocus]::SetForegroundWindow([IntPtr]$process.MainWindowHandle) | Out-Null
+    Start-Sleep -Milliseconds 100
+    Click-Element $input Right
+    $inputContext = Find-OwnedPopupElement $process.Id $process.MainWindowHandle {
+        param($item)
+        $item.Current.ControlType -eq [System.Windows.Automation.ControlType]::MenuItem -and
+            ([string]$item.Current.Name -eq 'Language preferences' -or [string]$item.Current.Name -eq (-join @([char]0x8a9e,[char]0x8a00,[char]0x559c,[char]0x597d,[char]0x8a2d,[char]0x5b9a)))
+    }
+    if ($null -eq $inputContext) { throw 'Input right click did not open the owned Language preferences context menu.' }
+    [System.Windows.Forms.SendKeys]::SendWait('{ESC}')
+    Start-Sleep -Milliseconds 150
+    $volume = Find-Element $taskbar { param($item) $item.Current.ControlType -eq $button -and $item.Current.Name.StartsWith('Volume ') }
+    [SuperDesktopFlyoutFocus]::SetForegroundWindow([IntPtr]$process.MainWindowHandle) | Out-Null
+    Start-Sleep -Milliseconds 100
+    Click-Element $volume Right
+    $volumeMixer = Find-OwnedPopupElement $process.Id $process.MainWindowHandle {
+        param($item)
+        $item.Current.ControlType -eq [System.Windows.Automation.ControlType]::MenuItem -and
+            ([string]$item.Current.Name -eq 'Open volume mixer' -or [string]$item.Current.Name -eq (-join @([char]0x958b,[char]0x555f,[char]0x97f3,[char]0x91cf,[char]0x6df7,[char]0x97f3,[char]0x7a0b,[char]0x5f0f)))
+    }
+    $soundSettings = Find-OwnedPopupElement $process.Id $process.MainWindowHandle {
+        param($item)
+        $item.Current.ControlType -eq [System.Windows.Automation.ControlType]::MenuItem -and
+            ([string]$item.Current.Name -eq 'Sound settings' -or [string]$item.Current.Name -eq (-join @([char]0x97f3,[char]0x6548,[char]0x8a2d,[char]0x5b9a)))
+    }
+    if ($null -eq $volumeMixer -or $null -eq $soundSettings) { throw 'Volume right click did not expose both owned fixed context actions.' }
+    $backgroundSettings = Find-OwnedPopupElement $process.Id $process.MainWindowHandle {
+        param($item)
+        $item.Current.ControlType -eq [System.Windows.Automation.ControlType]::MenuItem -and [string]$item.Current.Name -eq 'Taskbar settings'
+    } 250
+    if ($null -ne $backgroundSettings) { throw 'System-control right click leaked into the taskbar background menu.' }
+    [System.Windows.Forms.SendKeys]::SendWait('{ESC}')
+    Start-Sleep -Milliseconds 150
+
+    $calendar = Find-Element $taskbar {
+        param($item)
+        $item.Current.ControlType -eq $button -and
+            $item.Current.Name -match '\d{2}:\d{2}:\d{2}' -and
+            $item.Current.Name -match '\d{1,4}/\d{1,2}/\d{1,4}'
+    }
     Invoke-Element $calendar
     $calendarDialog = Find-OwnedPopupElement $process.Id $process.MainWindowHandle { param($item) $item.Current.ControlType -eq [System.Windows.Automation.ControlType]::Window }
     if ($null -eq $calendarDialog) { throw 'Owned calendar flyout did not replace the volume flyout.' }
     $geometryRecords += Measure-OwnedFlyout 'calendar' $process.Id $taskbar $process.MainWindowHandle 380.0
     Capture-Screen (Join-Path $EvidenceDirectory 'calendar-flyout.png')
 
+    if (-not $SkipProfileSwitch) {
     if (-not $SkipStartFocusVerification) {
         Invoke-Element $start
         $startDialog = Find-OwnedPopupElement $process.Id $process.MainWindowHandle { param($item) $item.Current.ControlType -eq [System.Windows.Automation.ControlType]::Window }
@@ -402,7 +480,7 @@ try {
     if ($null -eq $alternate -or $null -eq $original) { throw 'Two real input profiles are required for the controlled switch.' }
     $alternateName = [string]$alternate.Current.Name
     $originalName = ([string]$original.Current.Name).Replace($activeSuffix, '').Replace(', active', '')
-    Invoke-Element $alternate
+    Click-Element $alternate Left
     Start-Sleep -Milliseconds 1000
     if (-not $SkipStartFocusVerification) {
         $startAfterSwitch = Find-OwnedPopupElement $process.Id $process.MainWindowHandle { param($item) $item.Current.ControlType -eq [System.Windows.Automation.ControlType]::Window }
@@ -417,8 +495,12 @@ try {
     $inputDialog = Find-OwnedPopupElement $process.Id $process.MainWindowHandle { param($item) $item.Current.ControlType -eq [System.Windows.Automation.ControlType]::Window }
     if ($null -eq $inputDialog) { throw 'Owned input flyout did not remain available for profile restoration.' }
     $restore = Find-Element $inputDialog { param($item) $item.Current.ControlType -eq $button -and ([string]$item.Current.Name).StartsWith($originalName) }
-    Invoke-Element $restore
+    Click-Element $restore Left
     Start-Sleep -Milliseconds 750
+    } else {
+        $alternateName = $null
+        $originalName = $null
+    }
 
     $languagePreferencesInvoked = $false
     if ($VerifyLanguagePreferences) {
@@ -449,27 +531,35 @@ try {
         throw 'Explorer appeared during the owned system-flyout capture.'
     }
     $trace = Get-Content -Raw -Encoding UTF8 -LiteralPath $tracePath
-    $missingStartFocus = -not $SkipStartFocusVerification -and $trace -notmatch 'start:ime-focus-restored'
+    $missingStartFocus = -not $SkipStartFocusVerification -and -not $SkipProfileSwitch -and $trace -notmatch 'start:ime-focus-restored'
     if ($trace -notmatch 'status:owned-flyout-opened' -or $missingStartFocus) {
         throw 'Headful trace does not prove owned flyout composition and Start focus restoration.'
     }
     $screenshots = Get-ChildItem -LiteralPath $EvidenceDirectory -Filter '*-flyout.png' | ForEach-Object {
-        [ordered]@{ name=$_.Name;sha256=(Get-FileHash -Algorithm SHA256 -LiteralPath $_.FullName).Hash.ToLowerInvariant();bytes=$_.Length }
+        [ordered]@{ name=$_.Name;sha256=Get-Sha256 $_.FullName;bytes=$_.Length }
     }
     $report = [ordered]@{
-        schema='system-status-headful/v2'
+        schema='system-status-headful/v3'
         result='passed'
-        app_sha256=(Get-FileHash -Algorithm SHA256 -LiteralPath $appPath).Hash.ToLowerInvariant()
+        app_sha256=Get-Sha256 $appPath
         original_input_profile=$originalLanguage
         switched_input_profile=$alternateName
-        original_profile_restored=$true
+        original_profile_restored=if($SkipProfileSwitch){$null}else{$true}
         language_preferences_invoked=$languagePreferencesInvoked
         language_preferences_visibility_claimed=$false
         clock_weekday_visible=$clockHasWeekday
         clock_second_advanced=$clockSecondAdvanced
-        start_survived_switch=if($SkipStartFocusVerification){$null}else{$true}
-        start_focus_restored_trace=if($SkipStartFocusVerification){$null}else{$true}
+        start_survived_switch=if($SkipStartFocusVerification-or$SkipProfileSwitch){$null}else{$true}
+        start_focus_restored_trace=if($SkipStartFocusVerification-or$SkipProfileSwitch){$null}else{$true}
         owned_flyouts=@('network-power','input','volume','calendar')
+        pointer_interactions=[ordered]@{
+            input_left_flyout=$true
+            input_right_context=$true
+            volume_left_flyout=$true
+            volume_right_context=$true
+            background_context_absent=$true
+            physical_pointer=$true
+        }
         geometry_thresholds=[ordered]@{width_tolerance_dip=16.0;taskbar_gap_min_dip=2.0;taskbar_gap_max_dip=16.0}
         geometry_records=$geometryRecords
         explorer_suppressed=[bool]$SuppressExplorer

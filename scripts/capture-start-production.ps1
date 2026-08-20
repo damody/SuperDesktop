@@ -42,6 +42,7 @@ function Find-Named($Root,[string]$Name) {
     $condition = New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::NameProperty,$Name)
     $Root.FindFirst([System.Windows.Automation.TreeScope]::Descendants,$condition)
 }
+function Get-Sha256([string]$Path){$stream=[IO.File]::OpenRead($Path);try{$hash=[Security.Cryptography.SHA256]::Create();try{([BitConverter]::ToString($hash.ComputeHash($stream))).Replace('-','')}finally{$hash.Dispose()}}finally{$stream.Dispose()}}
 function Save-Window($Root,[string]$Path) {
     $bounds=$Root.Current.BoundingRectangle
     $bitmap=[Drawing.Bitmap]::new([int]$bounds.Width,[int]$bounds.Height)
@@ -139,7 +140,7 @@ try {
     $monitor=[Windows.Forms.Screen]::FromPoint($center).Bounds
     $contained=$homeBounds.Left-ge$monitor.Left-and$homeBounds.Top-ge$monitor.Top-and$homeBounds.Right-le$monitor.Right-and$homeBounds.Bottom-le$monitor.Bottom
     if([Math]::Abs($widthDip-640.0)-gt16.0){throw "Owned Start width=$widthDip DIP differs from 640 DIP."}
-    if($gapDip-lt4.0-or$gapDip-gt20.0){throw "Owned Start taskbar gap=$gapDip DIP is outside 4..20 DIP."}
+    if($gapDip-lt4.0-or$gapDip-gt20.0){throw "Owned Start taskbar gap=$gapDip DIP is outside 4..20 DIP; taskbar=$($taskbarBounds | ConvertTo-Json -Compress) start=$($homeBounds | ConvertTo-Json -Compress) dpi=$dpi."}
     if($overlap-gt0){throw "Owned Start overlaps taskbar by $overlap physical pixels."}
     if(-not$contained){throw 'Owned Start is outside its source monitor.'}
     if($powerWidthDip-lt38-or$powerWidthDip-gt42-or$powerHeightDip-lt38-or$powerHeightDip-gt42){throw "Start Power target=${powerWidthDip}x${powerHeightDip} DIP."}
@@ -163,7 +164,7 @@ try {
         $root=[System.Windows.Automation.AutomationElement]::FromHandle($startHandle)
         foreach($name in @($labels.SignOut,$labels.Restart,$labels.ShutDown)){if($null -eq (Find-Named $root $name)){throw "Power menu is missing $name."}}
         $null=Save-Window $root $PowerScreenshotPath
-        $powerHash=(Get-FileHash -Algorithm SHA256 $PowerScreenshotPath).Hash
+        $powerHash=(Get-Sha256 $PowerScreenshotPath)
     }
     $process.WaitForExit()
     $explorerAbsentDuringCapture=-not[bool](Get-Process explorer -ErrorAction SilentlyContinue)
@@ -173,7 +174,7 @@ try {
     $newSystemStart=@($systemStartAfter|Where-Object{$_-notin$systemStartBefore})
     if($newSystemStart.Count-ne0){throw "Owned Start launched system Start/Search hosts: $($newSystemStart-join',')"}
     $report=[ordered]@{
-        schema='windows11-owned-start-production/v3';result='passed';app_sha256=(Get-FileHash -Algorithm SHA256 $appPath).Hash
+        schema='windows11-owned-start-production/v3';result='passed';app_sha256=(Get-Sha256 $appPath)
         owned_start_pid=$ownedStartPid;taskbar_pid=$process.Id;system_start_process_ids_before=$systemStartBefore;system_start_process_ids_after=$systemStartAfter
         new_system_start_process_ids=$newSystemStart;explorer_absent_during_capture=$explorerAbsentDuringCapture;explorer_recovered=$true
         locale=if($Locale){$Locale}else{'system'};home_sections=@($labels.Pinned,$labels.Recommended,$labels.Power);power_collapsed=$true;all_apps_count=$allItems.Count
@@ -182,8 +183,8 @@ try {
         taskbar_bounds=[ordered]@{left=[int]$taskbarBounds.Left;top=[int]$taskbarBounds.Top;right=[int]$taskbarBounds.Right;bottom=[int]$taskbarBounds.Bottom}
         monitor_bounds=[ordered]@{left=$monitor.Left;top=$monitor.Top;right=$monitor.Right;bottom=$monitor.Bottom}
         geometry=[ordered]@{dpi=$dpi;scale=$scale;width_dip=$widthDip;height_dip=$heightDip;taskbar_gap_dip=$gapDip;overlap_physical_px=$overlap;contained=$contained}
-        home_screenshot=(Split-Path -Leaf $HomeScreenshotPath);home_sha256=(Get-FileHash -Algorithm SHA256 $HomeScreenshotPath).Hash
-        all_apps_screenshot=(Split-Path -Leaf $AllAppsScreenshotPath);all_apps_sha256=(Get-FileHash -Algorithm SHA256 $AllAppsScreenshotPath).Hash
+        home_screenshot=(Split-Path -Leaf $HomeScreenshotPath);home_sha256=(Get-Sha256 $HomeScreenshotPath)
+        all_apps_screenshot=(Split-Path -Leaf $AllAppsScreenshotPath);all_apps_sha256=(Get-Sha256 $AllAppsScreenshotPath)
         power_screenshot=if($PowerScreenshotPath){Split-Path -Leaf $PowerScreenshotPath}else{$null};power_sha256=$powerHash
     }
     [IO.File]::WriteAllText($OutputPath,(($report|ConvertTo-Json -Depth 8)+"`n"),[Text.UTF8Encoding]::new($false))

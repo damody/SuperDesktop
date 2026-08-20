@@ -48,6 +48,8 @@ function Find-Descendant([System.Windows.Automation.AutomationElement]$Root, [sc
     $null
 }
 
+function Get-Sha256([string]$Path){$stream=[IO.File]::OpenRead($Path);try{$hash=[Security.Cryptography.SHA256]::Create();try{([BitConverter]::ToString($hash.ComputeHash($stream))).Replace('-','').ToLowerInvariant()}finally{$hash.Dispose()}}finally{$stream.Dispose()}}
+
 function Find-OwnedPopup([int]$ProcessId, [IntPtr]$TaskbarHandle) {
     $deadline = [DateTime]::UtcNow.AddSeconds(7)
     do {
@@ -145,6 +147,7 @@ $watchdog = Start-Process powershell.exe -WindowStyle Hidden -PassThru -Argument
 $suppressor = $null
 $shell = $null
 $client = $null
+$priorNotifyCompat = $env:SUPERDESKTOP_VERIFICATION_NOTIFYICON_COMPAT
 try {
     $suppressor = Start-Process powershell.exe -WindowStyle Hidden -PassThru -ArgumentList @(
         '-NoProfile','-WindowStyle','Hidden','-Command',
@@ -154,6 +157,7 @@ try {
     $env:SUPERDESKTOP_THEME = $Theme
     $env:SUPERDESKTOP_LOCALE = 'zh-TW'
     $env:SUPERDESKTOP_VERIFICATION_SURFACE = 'taskbar'
+    $env:SUPERDESKTOP_VERIFICATION_NOTIFYICON_COMPAT = '1'
     $env:SUPERDESKTOP_ACTION_TRACE = $trace
     $shell = Start-Process -FilePath $app -ArgumentList '--verification-capture-ms','28000','--shell' -PassThru
     $deadline = [DateTime]::UtcNow.AddSeconds(8)
@@ -166,7 +170,7 @@ try {
     $clock = Find-Descendant $taskbar {
         param($item)
         $item.Current.ControlType -eq [System.Windows.Automation.ControlType]::Button -and
-            $item.Current.Name -match '^\d{2}:\d{2} '
+            ($item.Current.AutomationId -eq 'clock-calendar-control' -or $item.Current.Name -match '\d{1,2}:\d{2}')
     }
     if ($null -eq $clock) { throw 'Owned clock control was not found.' }
     Start-Sleep -Milliseconds 1800
@@ -226,10 +230,10 @@ try {
         uia_dismiss = [bool]$ExerciseActions
         uia_clear_all = [bool]$ExerciseActions
         escape_sent = [bool]$ExerciseActions
-        app_sha256 = (Get-FileHash $app -Algorithm SHA256).Hash.ToLowerInvariant()
-        fixture_sha256 = (Get-FileHash $fixture -Algorithm SHA256).Hash.ToLowerInvariant()
+        app_sha256 = Get-Sha256 $app
+        fixture_sha256 = Get-Sha256 $fixture
         screenshots = @(Get-ChildItem $EvidenceDirectory -Filter "$Theme-*.png" | ForEach-Object {
-            @{name=$_.Name;sha256=(Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant();bytes=$_.Length}
+            @{name=$_.Name;sha256=(Get-Sha256 $_.FullName);bytes=$_.Length}
         })
     }
     [IO.File]::WriteAllText((Join-Path $EvidenceDirectory "$Theme-report.json"),(($report|ConvertTo-Json -Depth 8)+"`n"),[Text.UTF8Encoding]::new($false))
@@ -244,4 +248,5 @@ try {
     $env:SUPERDESKTOP_LOCALE = $priorLocale
     $env:SUPERDESKTOP_VERIFICATION_SURFACE = $priorSurface
     $env:SUPERDESKTOP_ACTION_TRACE = $priorTrace
+    if ($null -eq $priorNotifyCompat) { Remove-Item Env:SUPERDESKTOP_VERIFICATION_NOTIFYICON_COMPAT -ErrorAction SilentlyContinue } else { $env:SUPERDESKTOP_VERIFICATION_NOTIFYICON_COMPAT = $priorNotifyCompat }
 }

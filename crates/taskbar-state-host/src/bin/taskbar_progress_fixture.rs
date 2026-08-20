@@ -1,3 +1,5 @@
+#![windows_subsystem = "windows"]
+
 use std::time::Duration;
 
 use windows::{
@@ -12,7 +14,8 @@ use windows::{
             TBPF_PAUSED, TBPFLAG,
         },
         UI::WindowsAndMessaging::{
-            CreateWindowExW, DefWindowProcW, DestroyWindow, RegisterClassW, SW_SHOW, ShowWindow,
+            CreateWindowExW, DefWindowProcW, DestroyWindow, DispatchMessageW, IsWindow, MSG,
+            PM_REMOVE, PeekMessageW, RegisterClassW, SW_SHOW, ShowWindow, TranslateMessage,
             WINDOW_EX_STYLE, WNDCLASSW, WS_OVERLAPPEDWINDOW, WS_VISIBLE,
         },
     },
@@ -118,9 +121,16 @@ fn run() -> Result<()> {
     } else {
         CLSCTX_ALL
     };
+    let no_progress = args.iter().any(|arg| arg == "--no-progress");
     // SAFETY: this is the documented ordinary application activation route.
-    let taskbar: ITaskbarList3 = unsafe { CoCreateInstance(&CLSID_TASKBAR_LIST, None, context)? };
-    unsafe { taskbar.HrInit()? };
+    let taskbar = if no_progress {
+        None
+    } else {
+        let taskbar: ITaskbarList3 =
+            unsafe { CoCreateInstance(&CLSID_TASKBAR_LIST, None, context)? };
+        unsafe { taskbar.HrInit()? };
+        Some(taskbar)
+    };
     let hwnd = create_fixture_window()?;
     let state = match args.get(1).map(String::as_str) {
         Some("indeterminate") => TBPF_INDETERMINATE,
@@ -134,20 +144,43 @@ fn run() -> Result<()> {
         .and_then(|value| value.parse::<u64>().ok())
         .unwrap_or(42)
         .min(100);
+    let hold_ms = args
+        .iter()
+        .position(|arg| arg == "--hold-ms")
+        .and_then(|index| args.get(index + 1))
+        .and_then(|value| value.parse::<u64>().ok())
+        .unwrap_or(5_000)
+        .clamp(1_000, 60_000);
     // SAFETY: ordinary documented calls targeting the fixture-owned HWND.
-    unsafe {
-        taskbar.SetProgressState(hwnd, state)?;
-        if determinate(state) {
-            taskbar.SetProgressValue(hwnd, percent, 100)?;
+    if let Some(taskbar) = &taskbar {
+        unsafe {
+            taskbar.SetProgressState(hwnd, state)?;
+            if determinate(state) {
+                taskbar.SetProgressValue(hwnd, percent, 100)?;
+            }
         }
     }
     println!(
         "state={} percent={percent} hwnd={:X}",
         state.0, hwnd.0 as usize
     );
-    std::thread::sleep(Duration::from_secs(5));
-    unsafe { taskbar.SetProgressState(hwnd, TBPF_NOPROGRESS)? };
-    unsafe { DestroyWindow(hwnd)? };
+    let deadline = std::time::Instant::now() + Duration::from_millis(hold_ms);
+    let mut message = MSG::default();
+    while std::time::Instant::now() < deadline && unsafe { IsWindow(Some(hwnd)).as_bool() } {
+        while unsafe { PeekMessageW(&mut message, None, 0, 0, PM_REMOVE).as_bool() } {
+            unsafe {
+                let _ = TranslateMessage(&message);
+                DispatchMessageW(&message);
+            }
+        }
+        std::thread::sleep(Duration::from_millis(10));
+    }
+    if unsafe { IsWindow(Some(hwnd)).as_bool() } {
+        if let Some(taskbar) = &taskbar {
+            unsafe { taskbar.SetProgressState(hwnd, TBPF_NOPROGRESS)? };
+        }
+        unsafe { DestroyWindow(hwnd)? };
+    }
     Ok(())
 }
 

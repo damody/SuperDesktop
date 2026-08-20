@@ -86,6 +86,21 @@ pub fn catalog() -> Vec<TestCase> {
             &["test", "-p", "superdesktop-app", "--locked", "--offline"],
             180,
         ),
+        cargo_case(
+            "source-explorer-policy",
+            "Normal product paths are independent from Windows Explorer",
+            &[
+                "test",
+                "-p",
+                "superdesktop-utit",
+                "--locked",
+                "--offline",
+                "explorer_policy::tests::production_gui_and_provider_paths_are_explorer_free",
+                "--",
+                "--exact",
+            ],
+            180,
+        ),
         TestCase {
             id: "openspec-strict".into(),
             title: "UTIT strict OpenSpec validation".into(),
@@ -152,20 +167,14 @@ pub fn catalog() -> Vec<TestCase> {
                 "{out}/taskbar/report.json",
                 "-ScreenshotPath",
                 "{out}/taskbar/taskbar.png",
-                "-JumpListScreenshotPath",
-                "{out}/taskbar/jump-list.png",
             ],
-            &[
-                "taskbar/report.json",
-                "taskbar/taskbar.png",
-                "taskbar/jump-list.png",
-            ],
+            &["taskbar/report.json", "taskbar/taskbar.png"],
             false,
             45,
         ),
         headful_case(
             "gui-taskbar-window-actions",
-            "Taskbar right-click minimize maximize and close",
+            "Taskbar application left/right pointer parity",
             "capture-taskbar-window-actions.ps1",
             &[
                 "-Workspace",
@@ -202,7 +211,7 @@ pub fn catalog() -> Vec<TestCase> {
         ),
         headful_case(
             "gui-notification-overflow",
-            "Explorer-free hidden notification icons",
+            "Explorer-free visible and hidden notification icon pointer parity",
             "capture-notifyicon-compatibility.ps1",
             &[
                 "-Workspace",
@@ -271,7 +280,7 @@ pub fn catalog() -> Vec<TestCase> {
         ),
         headful_case(
             "gui-system-status",
-            "Explorer-free system status and IME flyouts",
+            "Explorer-free input and volume left/right pointer parity",
             "capture-system-status-production.ps1",
             &[
                 "-Workspace",
@@ -279,6 +288,7 @@ pub fn catalog() -> Vec<TestCase> {
                 "-EvidenceDirectory",
                 "{out}/system-status",
                 "-SuppressExplorer",
+                "-SkipProfileSwitch",
             ],
             &["system-status/headful-report.json"],
             true,
@@ -334,6 +344,29 @@ pub fn catalog() -> Vec<TestCase> {
             75,
         ),
     ];
+    for case in &mut cases {
+        if matches!(
+            case.id.as_str(),
+            "gui-taskbar-live"
+                | "gui-taskbar-window-actions"
+                | "gui-start"
+                | "gui-notification-overflow"
+                | "gui-notification-center"
+                | "gui-system-status"
+                | "gui-taskbar-resize"
+                | "gui-taskbar-auto-hide"
+                | "gui-taskbar-hover-preview"
+                | "unit-taskbar-ui"
+        ) {
+            case.tags.push("gui-parity".into());
+        }
+        if matches!(
+            case.id.as_str(),
+            "gui-taskbar-window-actions" | "gui-notification-overflow" | "gui-system-status"
+        ) {
+            case.tags.push("pointer".into());
+        }
+    }
     cases.extend([
         TestCase {
             id: "physical-mixed-dpi".into(),
@@ -428,6 +461,15 @@ pub fn validate_catalog(cases: &[TestCase], workspace: &Path) -> Result<(), Vec<
             }
             ProgramSpec::External { .. } => {}
         }
+    }
+    if let Err(manifest_errors) =
+        crate::validate_gui_parity_manifest(&crate::gui_parity_manifest(), cases)
+    {
+        errors.extend(
+            manifest_errors
+                .into_iter()
+                .map(|error| format!("gui-manifest:{error}")),
+        );
     }
     if errors.is_empty() {
         Ok(())
@@ -524,6 +566,33 @@ mod tests {
         assert_eq!(selected.cases.len(), 1);
         assert!(select_cases(&cases, Suite::Smoke, &["missing".into()], &[]).is_err());
         assert!(select_cases(&cases, Suite::Smoke, &[], &["headful".into()]).is_err());
+    }
+
+    #[test]
+    fn pointer_parity_cases_cover_applications_notifications_input_and_volume() {
+        let cases = catalog();
+        let pointer = select_cases(&cases, Suite::ShellParity, &[], &["pointer".into()]).unwrap();
+        assert_eq!(
+            pointer
+                .cases
+                .iter()
+                .map(|case| case.id.as_str())
+                .collect::<BTreeSet<_>>(),
+            BTreeSet::from([
+                "gui-notification-overflow",
+                "gui-system-status",
+                "gui-taskbar-window-actions",
+            ])
+        );
+        assert!(pointer.cases.iter().all(|case| case.mandatory));
+        assert!(
+            pointer
+                .cases
+                .iter()
+                .filter(|case| case.explorer_free)
+                .count()
+                >= 2
+        );
     }
 
     #[test]

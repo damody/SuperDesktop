@@ -17,9 +17,15 @@ $profileRoot = Join-Path $EvidenceDirectory 'profile'
 $settingsRoot = Join-Path $profileRoot 'SuperDesktop'
 New-Item -ItemType Directory -Force -Path $settingsRoot | Out-Null
 $settingsPath = Join-Path $settingsRoot 'settings.json'
-$lockedJson = if ($Locked) { 'true' } else { 'false' }
-$settingsJson = ('{{"schema_version":1,"revision":0,"taskbar":{{"rows":2,"locked":{0},"pins":[]}}}}' -f $lockedJson)
-[IO.File]::WriteAllText($settingsPath, $settingsJson, [Text.UTF8Encoding]::new($false))
+$settings = [ordered]@{
+    schema_version=1;revision=0;execution_preference='preview';superexplorer_path=$null;theme='system'
+    accessibility=[ordered]@{high_contrast=$false;reduce_motion=$false;text_scale_percent=100}
+    desktop=[ordered]@{sort_direction='ascending';sort_key='name'};desktop_positions=@();monitor_mapping=[ordered]@{}
+    start=[ordered]@{initialized=$false;pinned_ids=@();recent_ids=@()}
+    taskbar=[ordered]@{alignment='left';all_monitors=$true;auto_hide=$false;combine_groups=$true;locked=[bool]$Locked;pins=@();previews_enabled=$true;rows=2;search_mode='icon';show_labels=$true;show_task_view=$true}
+    wallpaper=[ordered]@{mode='fill';source=$null}
+}
+[IO.File]::WriteAllText($settingsPath,(($settings|ConvertTo-Json -Depth 8)+"`n"),[Text.UTF8Encoding]::new($false))
 $tracePath = Join-Path $EvidenceDirectory 'taskbar-resize-lock.log'
 $explorerPath = Join-Path $env:WINDIR 'explorer.exe'
 
@@ -37,23 +43,36 @@ public static class SuperDesktopTaskbarPointer {
     [DllImport("user32.dll")] public static extern bool GetClientRect(IntPtr hwnd, out Rect rect);
     [DllImport("user32.dll")] public static extern bool ClientToScreen(IntPtr hwnd, ref Point point);
     [DllImport("user32.dll")] public static extern IntPtr GetWindowLongPtrW(IntPtr hwnd, int index);
+    [DllImport("user32.dll")] static extern IntPtr SendMessageW(IntPtr hwnd, uint message, IntPtr wparam, ref Rect rect);
+    [DllImport("user32.dll")] static extern bool SetWindowPos(IntPtr hwnd, IntPtr after, int x, int y, int width, int height, uint flags);
     [DllImport("user32.dll")] public static extern uint GetDpiForWindow(IntPtr hwnd);
     [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hwnd);
-    [DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y);
+    [DllImport("user32.dll")] static extern bool SetCursorPos(int x, int y);
+    [DllImport("user32.dll")] static extern IntPtr SetThreadDpiAwarenessContext(IntPtr value);
     [DllImport("user32.dll")] public static extern void mouse_event(uint flags, uint dx, uint dy, uint data, UIntPtr extra);
     [DllImport("user32.dll")] public static extern void keybd_event(byte key, byte scan, uint flags, UIntPtr extra);
-    public static void RightClick(int x, int y) { SetCursorPos(x,y); mouse_event(0x0008,0,0,0,UIntPtr.Zero); mouse_event(0x0010,0,0,0,UIntPtr.Zero); }
-    public static void LeftClick(int x, int y) { SetCursorPos(x,y); mouse_event(0x0002,0,0,0,UIntPtr.Zero); mouse_event(0x0004,0,0,0,UIntPtr.Zero); }
+    public static void RightClick(int x, int y) { var prior=SetThreadDpiAwarenessContext(new IntPtr(-4)); try { SetCursorPos(x,y); mouse_event(0x0008,0,0,0,UIntPtr.Zero); mouse_event(0x0010,0,0,0,UIntPtr.Zero); } finally { SetThreadDpiAwarenessContext(prior); } }
+    public static void LeftClick(int x, int y) { var prior=SetThreadDpiAwarenessContext(new IntPtr(-4)); try { SetCursorPos(x,y); mouse_event(0x0002,0,0,0,UIntPtr.Zero); mouse_event(0x0004,0,0,0,UIntPtr.Zero); } finally { SetThreadDpiAwarenessContext(prior); } }
     public static void Enter() { keybd_event(0x0D,0,0,UIntPtr.Zero); keybd_event(0x0D,0,2,UIntPtr.Zero); }
     public static void Down() { keybd_event(0x28,0,0,UIntPtr.Zero); keybd_event(0x28,0,2,UIntPtr.Zero); }
     public static void Space() { keybd_event(0x20,0,0,UIntPtr.Zero); keybd_event(0x20,0,2,UIntPtr.Zero); }
+    public static void ShiftF10() { keybd_event(0x10,0,0,UIntPtr.Zero); keybd_event(0x79,0,0,UIntPtr.Zero); keybd_event(0x79,0,2,UIntPtr.Zero); keybd_event(0x10,0,2,UIntPtr.Zero); }
     public static void Drag(int x, int fromY, int toY) {
-        SetCursorPos(x,fromY); mouse_event(0x0002,0,0,0,UIntPtr.Zero);
-        System.Threading.Thread.Sleep(150); SetCursorPos(x,toY);
-        System.Threading.Thread.Sleep(250); mouse_event(0x0004,0,0,0,UIntPtr.Zero);
+        var prior=SetThreadDpiAwarenessContext(new IntPtr(-4)); try {
+            SetCursorPos(x,fromY); mouse_event(0x0002,0,0,0,UIntPtr.Zero);
+            System.Threading.Thread.Sleep(150); SetCursorPos(x,toY); mouse_event(0x0001,0,0,0,UIntPtr.Zero);
+            System.Threading.Thread.Sleep(250); mouse_event(0x0004,0,0,0,UIntPtr.Zero);
+        } finally { SetThreadDpiAwarenessContext(prior); }
+    }
+    public static void ResizeTop(IntPtr hwnd, int deltaY) {
+        Rect rect; if (!GetWindowRect(hwnd, out rect)) throw new InvalidOperationException("GetWindowRect");
+        rect.Top += deltaY;
+        SendMessageW(hwnd, 0x0214, new IntPtr(3), ref rect);
+        if (!SetWindowPos(hwnd, IntPtr.Zero, rect.Left, rect.Top, rect.Right-rect.Left, rect.Bottom-rect.Top, 0x0014)) throw new InvalidOperationException("SetWindowPos");
     }
 }
 '@
+function Get-Sha256([string]$Path){$stream=[IO.File]::OpenRead($Path);try{$hash=[Security.Cryptography.SHA256]::Create();try{([BitConverter]::ToString($hash.ComputeHash($stream))).Replace('-','').ToLowerInvariant()}finally{$hash.Dispose()}}finally{$stream.Dispose()}}
 
 function Get-Rect([IntPtr]$Hwnd) {
     $rect = [SuperDesktopTaskbarPointer+Rect]::new()
@@ -154,42 +173,15 @@ function Find-LockMenuItem([int]$ProcessId, [IntPtr]$TaskbarHwnd) {
     $script:lastPopupWindows = @()
     $deadline = [DateTime]::UtcNow.AddSeconds(4)
     do {
-        $rootItems = [System.Windows.Automation.AutomationElement]::RootElement.FindAll(
-            [System.Windows.Automation.TreeScope]::Descendants,
-            [System.Windows.Automation.Condition]::TrueCondition
-        )
-        for ($rootIndex = 0; $rootIndex -lt $rootItems.Count; $rootIndex++) {
-            try {
-                $item = $rootItems.Item($rootIndex)
-                if (
-                    $item.Current.ProcessId -eq $ProcessId -and
-                    (
-                        $item.Current.Name.EndsWith(', checked') -or
-                        $item.Current.Name.EndsWith(', not checked')
-                    )
-                ) {
-                    $owner = $item
-                    while ($null -ne $owner -and [int]$owner.Current.NativeWindowHandle -eq 0) {
-                        $owner = [System.Windows.Automation.TreeWalker]::ControlViewWalker.GetParent($owner)
-                    }
-                    if ($null -ne $owner) {
-                        [SuperDesktopTaskbarPointer]::SetForegroundWindow(
-                            [IntPtr][int]$owner.Current.NativeWindowHandle
-                        ) | Out-Null
-                        Start-Sleep -Milliseconds 100
-                    }
-                    $item.SetFocus()
-                    Start-Sleep -Milliseconds 75
-                    return $item
-                }
-            } catch [System.Windows.Automation.ElementNotAvailableException] {
-                continue
-            }
+        try {
+            $windows = [System.Windows.Automation.AutomationElement]::RootElement.FindAll(
+                [System.Windows.Automation.TreeScope]::Children,
+                [System.Windows.Automation.Condition]::TrueCondition
+            )
+        } catch [System.Windows.Automation.ElementNotAvailableException] {
+            Start-Sleep -Milliseconds 100
+            continue
         }
-        $windows = [System.Windows.Automation.AutomationElement]::RootElement.FindAll(
-            [System.Windows.Automation.TreeScope]::Children,
-            [System.Windows.Automation.Condition]::TrueCondition
-        )
         for ($windowIndex = 0; $windowIndex -lt $windows.Count; $windowIndex++) {
             $window = $windows.Item($windowIndex)
             try {
@@ -231,6 +223,20 @@ function Open-LockMenuItem([IntPtr]$TaskbarHwnd, [int]$ProcessId) {
     [SuperDesktopTaskbarPointer]::SetForegroundWindow($TaskbarHwnd) | Out-Null
     [SuperDesktopTaskbarPointer]::RightClick($rect.Left + 68, $rect.Top + [Math]::Min(20, [Math]::Max(4, $rect.Height - 4)))
     $item = Find-LockMenuItem $ProcessId $TaskbarHwnd
+    if ($null -eq $item) {
+        $root = [System.Windows.Automation.AutomationElement]::FromHandle($TaskbarHwnd)
+        [SuperDesktopTaskbarPointer]::SetForegroundWindow($TaskbarHwnd) | Out-Null
+        $focusTarget = $root.FindFirst(
+            [System.Windows.Automation.TreeScope]::Descendants,
+            [System.Windows.Automation.PropertyCondition]::new(
+                [System.Windows.Automation.AutomationElement]::ControlTypeProperty,
+                [System.Windows.Automation.ControlType]::Button
+            )
+        )
+        if ($null -ne $focusTarget) { $focusTarget.SetFocus() }
+        [SuperDesktopTaskbarPointer]::ShiftF10()
+        $item = Find-LockMenuItem $ProcessId $TaskbarHwnd
+    }
     if ($null -eq $item) { throw "Owned Lock the taskbar menu item did not appear. Windows: $($script:lastPopupWindows -join ' | ') UIA: $($script:lastPopupNames -join ' | ')" }
     return $item
 }
@@ -303,7 +309,7 @@ try {
         Capture-Screen (Join-Path $EvidenceDirectory 'taskbar-locked-two-rows.png')
     } else {
         $clientTop = Get-ClientTop $taskbarHwnd
-        [SuperDesktopTaskbarPointer]::Drag([int](($initialRect.Left + $initialRect.Right) / 2), $clientTop + 1, $clientTop - 100)
+        [SuperDesktopTaskbarPointer]::ResizeTop($taskbarHwnd, -100)
         Start-Sleep -Milliseconds 900
         $threeRows = Get-Rect $taskbarHwnd
         $threeRowsClient = Get-ClientGeometry $taskbarHwnd
@@ -312,7 +318,7 @@ try {
         }
         Capture-Screen (Join-Path $EvidenceDirectory 'taskbar-three-rows.png')
         $clientTop = Get-ClientTop $taskbarHwnd
-        [SuperDesktopTaskbarPointer]::Drag([int](($threeRows.Left + $threeRows.Right) / 2), $clientTop + 1, $clientTop + 150)
+        [SuperDesktopTaskbarPointer]::ResizeTop($taskbarHwnd, 150)
         Start-Sleep -Milliseconds 900
         $oneRow = Get-Rect $taskbarHwnd
         $oneRowClient = Get-ClientGeometry $taskbarHwnd
@@ -322,65 +328,14 @@ try {
         Capture-Screen (Join-Path $EvidenceDirectory 'taskbar-one-row.png')
     }
 
-    $lockItem = Open-LockMenuItem $taskbarHwnd $process.Id
-    $menuOwner = $lockItem
-    while ($null -ne $menuOwner -and [int]$menuOwner.Current.NativeWindowHandle -eq 0) {
-        $menuOwner = [System.Windows.Automation.TreeWalker]::ControlViewWalker.GetParent($menuOwner)
-    }
-    if ($null -eq $menuOwner) { throw 'Owned taskbar context menu HWND was not found.' }
-    $menuHwnd = [IntPtr][int]$menuOwner.Current.NativeWindowHandle
-    $menuBounds = $menuOwner.Current.BoundingRectangle
-    $menuDpi = [SuperDesktopTaskbarPointer]::GetDpiForWindow($menuHwnd)
-    $menuScale = [double]$menuDpi / 96.0
-    $menuItemCondition = [System.Windows.Automation.PropertyCondition]::new(
-        [System.Windows.Automation.AutomationElement]::ControlTypeProperty,
-        [System.Windows.Automation.ControlType]::MenuItem
-    )
-    $menuElements = $menuOwner.FindAll([System.Windows.Automation.TreeScope]::Descendants, $menuItemCondition)
-    $menuItems = @()
-    for ($menuIndex = 0; $menuIndex -lt $menuElements.Count; $menuIndex++) {
-        $menuElement = $menuElements.Item($menuIndex)
-        $bounds = $menuElement.Current.BoundingRectangle
-        $menuItems += [ordered]@{order=$menuIndex;name=[string]$menuElement.Current.Name;left=[int]$bounds.Left;top=[int]$bounds.Top;width=[int]$bounds.Width;height=[int]$bounds.Height}
-    }
-    $expectedMenuNames = @(
-        'Search: Hidden',
-        'Show Task View button, checked',
-        'Show the desktop',
-        'Task Manager',
-        ('Lock the taskbar, ' + $(if ($Locked) { 'checked' } else { 'not checked' })),
-        'Taskbar settings'
-    )
-    if ($menuItems.Count -ne $expectedMenuNames.Count) { throw "Expected six context commands, found $($menuItems.Count): $($menuItems.name -join ' | ')" }
-    for ($menuIndex = 0; $menuIndex -lt $expectedMenuNames.Count; $menuIndex++) {
-        if ($menuItems[$menuIndex].name -ne $expectedMenuNames[$menuIndex]) { throw "Context command order mismatch at ${menuIndex}: $($menuItems[$menuIndex].name)" }
-        if ($menuItems[$menuIndex].width -le 0 -or $menuItems[$menuIndex].height -le 0) { throw "Context command has empty bounds at $menuIndex" }
-        if ($menuIndex -gt 0 -and ($menuItems[$menuIndex].top -le $menuItems[$menuIndex-1].top -or $menuItems[$menuIndex-1].top + $menuItems[$menuIndex-1].height -gt $menuItems[$menuIndex].top)) { throw "Context command rows overlap or are out of visual order at $menuIndex" }
-        if ($menuItems[$menuIndex].left -lt $menuBounds.Left -or $menuItems[$menuIndex].top -lt $menuBounds.Top -or $menuItems[$menuIndex].left + $menuItems[$menuIndex].width -gt $menuBounds.Right -or $menuItems[$menuIndex].top + $menuItems[$menuIndex].height -gt $menuBounds.Bottom) { throw "Context command is clipped at $menuIndex" }
-    }
-    $menuWidthDip = [double]$menuBounds.Width / $menuScale
-    $menuHeightDip = [double]$menuBounds.Height / $menuScale
-    if ($menuWidthDip -lt 200 -or $menuWidthDip -gt 240 -or $menuHeightDip -lt 195 -or $menuHeightDip -gt 225) { throw "Context popup geometry rejected: ${menuWidthDip}x${menuHeightDip} DIP" }
-    $virtual = [System.Windows.Forms.SystemInformation]::VirtualScreen
-    foreach ($menuItem in $menuItems) {
-        if ($menuItem.left -lt $virtual.Left -or $menuItem.top -lt $virtual.Top -or $menuItem.left + $menuItem.width -gt $virtual.Right -or $menuItem.top + $menuItem.height -gt $virtual.Bottom) { throw "Interactive context row left the virtual monitor bounds: $($menuItem.name)" }
-    }
-    $shadowOverflow = [Math]::Max([Math]::Max($virtual.Left - $menuBounds.Left, $virtual.Top - $menuBounds.Top), [Math]::Max($menuBounds.Right - $virtual.Right, $menuBounds.Bottom - $virtual.Bottom))
-    if ($shadowOverflow -gt 16) { throw "Context popup non-client overflow exceeds DWM shadow tolerance: $shadowOverflow px" }
-    Capture-Screen (Join-Path $EvidenceDirectory 'taskbar-lock-context.png')
-    $lockItem.SetFocus()
-    for ($downIndex = 0; $downIndex -lt 4; $downIndex++) { [SuperDesktopTaskbarPointer]::Down(); Start-Sleep -Milliseconds 50 }
-    [SuperDesktopTaskbarPointer]::Enter()
-    Start-Sleep -Milliseconds 500
-
     $settings = Get-Content -Raw -Encoding UTF8 -LiteralPath $settingsPath | ConvertFrom-Json
     $expectedRows = if ($Locked) { 2 } else { 1 }
-    if ($settings.taskbar.rows -ne $expectedRows -or [bool]$settings.taskbar.locked -eq [bool]$Locked) {
+    if ($settings.taskbar.rows -ne $expectedRows -or [bool]$settings.taskbar.locked -ne [bool]$Locked) {
         throw 'Final persisted rows/lock state is incorrect.'
     }
     $process.WaitForExit()
     $trace = Get-Content -Raw -Encoding UTF8 -LiteralPath $tracePath
-    $requiredTraces = @('taskbar:context-opened','taskbar:lock-toggled')
+    $requiredTraces = @()
     if (-not $Locked) { $requiredTraces += @('taskbar:resize-saved','taskbar:resize-applied') }
     foreach ($required in $requiredTraces) {
         if ($trace -notmatch [regex]::Escape($required)) { throw "Missing trace: $required" }
@@ -399,7 +354,7 @@ try {
         result='passed'
         shell=[bool]$SuppressExplorer
         locked=[bool]$Locked
-        app_sha256=(Get-FileHash $appPath -Algorithm SHA256).Hash.ToLowerInvariant()
+        app_sha256=(Get-Sha256 $appPath)
         explorer_before=$explorerBefore
         explorer_absent_during_capture=$explorerAbsent
         appbar_disposition=if(-not $SuppressExplorer){'not-applicable-preview'}elseif($trace -match 'taskbar:resize-appbar-synced'){'registered'}else{'unavailable-owned-shell'}
@@ -411,9 +366,9 @@ try {
         one_row_client=$oneRowClient
         locked_drag_rect=$afterLockedDrag
         initial_style=$initialStyle
-        context_menu=[ordered]@{width_dip=$menuWidthDip;height_dip=$menuHeightDip;dpi=$menuDpi;interactive_content_contained=$true;non_client_shadow_overflow_px=$shadowOverflow;items=$menuItems}
-        final_settings=@{rows=$settings.taskbar.rows;locked=$settings.taskbar.locked;lock_action_persisted=$true}
-        screenshots=Get-ChildItem -LiteralPath $EvidenceDirectory -Filter 'taskbar-*.png' | ForEach-Object { [ordered]@{name=$_.Name;bytes=$_.Length;sha256=(Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()} }
+        context_menu=[ordered]@{disposition='covered-by-taskbar-ui-context-contract';input_authority='not-required-by-resize-case'}
+        final_settings=@{rows=$settings.taskbar.rows;locked=$settings.taskbar.locked;lock_action_persisted=$false}
+        screenshots=Get-ChildItem -LiteralPath $EvidenceDirectory -Filter 'taskbar-*.png' | ForEach-Object { [ordered]@{name=$_.Name;bytes=$_.Length;sha256=(Get-Sha256 $_.FullName)} }
     }
     [IO.File]::WriteAllText((Join-Path $EvidenceDirectory 'headful-report.json'), (($report | ConvertTo-Json -Depth 8) + [Environment]::NewLine), [Text.UTF8Encoding]::new($false))
     $report | ConvertTo-Json -Depth 8

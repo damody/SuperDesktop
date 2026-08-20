@@ -6,8 +6,9 @@ use std::{
 };
 
 use superdesktop_utit::{
-    CommandLine, ExecutionOptions, RunDecision, UtitCommand, catalog, execute_run, observe_host,
-    parse_args, select_cases, validate_catalog, validate_report, write_report_bundle,
+    CommandLine, ExecutionOptions, GuiMeasurement, RunDecision, UtitCommand, catalog, execute_run,
+    gui_parity_manifest, observe_host, parse_args, select_cases, validate_catalog,
+    validate_gui_measurement, validate_report, write_report_bundle,
 };
 
 fn fail(message: impl AsRef<str>) -> ExitCode {
@@ -71,6 +72,41 @@ fn main() -> ExitCode {
             }
             Err(errors) => fail(errors.join("\n")),
         },
+        UtitCommand::ValidateGuiMeasurement { path } => {
+            let bytes = match fs::read(&path) {
+                Ok(bytes) => bytes,
+                Err(error) => return fail(format!("measurement-read:{error}")),
+            };
+            let measurement: GuiMeasurement = match serde_json::from_slice(&bytes) {
+                Ok(measurement) => measurement,
+                Err(error) => return fail(format!("measurement-json:{error}")),
+            };
+            let manifest = gui_parity_manifest();
+            let Some(spec) = manifest
+                .iter()
+                .find(|spec| spec.id == measurement.surface_id)
+            else {
+                return fail(format!("unknown GUI surface: {}", measurement.surface_id));
+            };
+            match validate_gui_measurement(spec, &measurement) {
+                Ok(()) => {
+                    println!("validated GUI measurement: {}", measurement.surface_id);
+                    ExitCode::SUCCESS
+                }
+                Err(errors) => fail(
+                    errors
+                        .into_iter()
+                        .map(|error| {
+                            format!(
+                                "{}:{} expected={} actual={}",
+                                error.surface_id, error.rule, error.expected, error.actual
+                            )
+                        })
+                        .collect::<Vec<_>>()
+                        .join("\n"),
+                ),
+            }
+        }
         UtitCommand::Run {
             suite,
             cases: filters,
