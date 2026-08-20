@@ -148,12 +148,7 @@ impl NotificationAreaModel {
     }
 
     fn relayout(&mut self, visible_capacity: usize) {
-        let mut keys: Vec<_> = self
-            .icons
-            .values()
-            .filter(|icon| icon.icon.visible)
-            .map(|icon| icon.key.clone())
-            .collect();
+        let mut keys: Vec<_> = self.icons.keys().cloned().collect();
         keys.sort_by(|left, right| {
             let left_always = self.icons.get(left).is_some_and(|icon| icon.always_visible);
             let right_always = self
@@ -173,7 +168,13 @@ impl NotificationAreaModel {
             if visible_set.len() >= visible_capacity {
                 break;
             }
-            visible_set.insert(key.clone());
+            if self
+                .icons
+                .get(key)
+                .is_some_and(|icon| icon.icon.visible || icon.always_visible)
+            {
+                visible_set.insert(key.clone());
+            }
         }
         self.visible = keys
             .iter()
@@ -253,19 +254,26 @@ mod tests {
     #[test]
     fn accessible_nodes_are_a_complete_unique_snapshot_across_placements() {
         let mut model = NotificationAreaModel::default();
+        let mut hidden = icon("hidden", 4, false);
+        hidden.icon.visible = false;
         assert!(model.apply_snapshot(
             NotificationSnapshot {
                 generation: 1,
-                icons: vec![icon("a", 1, true), icon("b", 2, false), icon("c", 3, false),],
+                icons: vec![
+                    icon("a", 1, true),
+                    icon("b", 2, false),
+                    icon("c", 3, false),
+                    hidden,
+                ],
                 notifications: Vec::new(),
                 windows_events: Default::default(),
             },
             2,
         ));
         assert_eq!(model.visible().len(), 2);
-        assert_eq!(model.overflow().len(), 1);
+        assert_eq!(model.overflow().len(), 2);
         let nodes = model.accessible_nodes();
-        assert_eq!(nodes.len(), 3);
+        assert_eq!(nodes.len(), 4);
         let unique = nodes
             .iter()
             .map(|node| node.key.clone())
@@ -281,5 +289,8 @@ mod tests {
                 .iter()
                 .any(|node| node.placement == NotificationPlacement::Overflow)
         );
+        assert!(nodes.iter().any(|node| {
+            node.key.client_id == "hidden" && node.placement == NotificationPlacement::Overflow
+        }));
     }
 }
