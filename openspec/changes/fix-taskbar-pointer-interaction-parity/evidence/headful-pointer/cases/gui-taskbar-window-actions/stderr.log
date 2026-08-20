@@ -1,0 +1,7 @@
+Active fixture was not minimized by taskbar left click
+At D:\SuperExplorer\SuperDesktop\scripts\capture-taskbar-window-actions.ps1:150 char:5
++     throw $Failure
++     ~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (Active fixture ...kbar left click:String) [], RuntimeException
+    + FullyQualifiedErrorId : Active fixture was not minimized by taskbar left click
+ 

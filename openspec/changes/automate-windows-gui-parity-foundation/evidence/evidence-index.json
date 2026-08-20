@@ -1,0 +1,44 @@
+{
+  "schema": "windows-gui-parity-evidence-index/v1",
+  "recorded_at": "2026-08-20T20:22:00+08:00",
+  "change": "automate-windows-gui-parity-foundation",
+  "result": "passed-with-explicit-host-conditionals",
+  "artifacts": [
+    {
+      "kind": "utit-report",
+      "path": "utit-results/gui-parity-20260820-r3/report.json",
+      "sha256": "e3739b5aaf80afa9db97faaba064a271d1a998cfb07dd33b03a27e2f65dce4c8",
+      "result": "10/10 selected cases passed"
+    },
+    {
+      "kind": "utit-summary",
+      "path": "utit-results/gui-parity-20260820-r3/summary.md",
+      "sha256": "fd54e34667408ed8f555269f3baa37e0ee2c3b5c2335116473f97e125d394602"
+    },
+    {
+      "kind": "explorer-policy-report",
+      "path": "utit-results/source-explorer-policy-20260820/report.json",
+      "sha256": "21b4bada7070f8e2e76b0d9e7d86c7065bb301af39ab1b7aa6cdaccb48332927"
+    },
+    {
+      "kind": "conditional-headful",
+      "path": "utit-results/gui-parity-20260820-r3/cases/gui-taskbar-auto-hide/auto-hide/headful-report.json",
+      "sha256": "a9a737f345def2f4258a8091731697a3b63ae331a48c57d707a5eeefc8db4a89",
+      "disposition": "physical cursor authority unavailable; native two-pixel region and reducer contracts passed"
+    },
+    {
+      "kind": "conditional-headful",
+      "path": "utit-results/gui-parity-20260820-r3/cases/gui-taskbar-hover-preview/hover-preview/headful-report.json",
+      "sha256": "0064501eeddceb031d9a4f611f7c73242ee10a29203c5b3e41e96312c9f8bbc2",
+      "disposition": "physical cursor authority unavailable; hover reducer, popup geometry contract, and screenshot passed"
+    }
+  ],
+  "quality": {
+    "fmt": "passed",
+    "workspace_check": "passed",
+    "workspace_tests": "passed",
+    "clippy_warnings_as_errors": "passed",
+    "openspec_strict": "passed",
+    "report_validation": "passed"
+  }
+}

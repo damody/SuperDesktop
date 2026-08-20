@@ -1,0 +1,186 @@
+{
+    "schema":  "system-status-headful/v3",
+    "result":  "passed",
+    "app_sha256":  "95ff584b91531fb4097c0dc6f6a4456faa14a2fbf561ce75d10051cc98fff589",
+    "original_input_profile":  "zh-TW",
+    "switched_input_profile":  null,
+    "original_profile_restored":  null,
+    "language_preferences_invoked":  false,
+    "language_preferences_visibility_claimed":  false,
+    "clock_weekday_visible":  true,
+    "clock_second_advanced":  true,
+    "start_survived_switch":  null,
+    "start_focus_restored_trace":  null,
+    "owned_flyouts":  [
+                          "network-power",
+                          "input",
+                          "volume",
+                          "calendar"
+                      ],
+    "pointer_interactions":  {
+                                 "input_left_flyout":  true,
+                                 "input_right_context":  true,
+                                 "volume_left_flyout":  true,
+                                 "volume_right_context":  true,
+                                 "background_context_absent":  true,
+                                 "physical_pointer":  true
+                             },
+    "geometry_thresholds":  {
+                                "width_tolerance_dip":  16,
+                                "taskbar_gap_min_dip":  2,
+                                "taskbar_gap_max_dip":  16
+                            },
+    "geometry_records":  [
+                             {
+                                 "kind":  "network-power",
+                                 "hwnd":  6229844,
+                                 "owned_popup_count":  1,
+                                 "dpi":  168,
+                                 "scale":  1.75,
+                                 "expected_width_dip":  360,
+                                 "width_dip":  373.71428571428572,
+                                 "height_dip":  646.85714285714289,
+                                 "taskbar_gap_dip":  85.714285714285708,
+                                 "taskbar_gap_max_dip":  142.85714285714286,
+                                 "contained":  true,
+                                 "popup_bounds":  {
+                                                      "left":  3184,
+                                                      "top":  668,
+                                                      "right":  3838,
+                                                      "bottom":  1800
+                                                  },
+                                 "taskbar_bounds":  {
+                                                        "left":  -12,
+                                                        "top":  1950,
+                                                        "right":  3852,
+                                                        "bottom":  2172
+                                                    },
+                                 "monitor_bounds":  {
+                                                        "left":  0,
+                                                        "top":  0,
+                                                        "right":  3840,
+                                                        "bottom":  2160
+                                                    }
+                             },
+                             {
+                                 "kind":  "input",
+                                 "hwnd":  6229844,
+                                 "owned_popup_count":  1,
+                                 "dpi":  168,
+                                 "scale":  1.75,
+                                 "expected_width_dip":  360,
+                                 "width_dip":  373.71428571428572,
+                                 "height_dip":  646.85714285714289,
+                                 "taskbar_gap_dip":  85.714285714285708,
+                                 "taskbar_gap_max_dip":  142.85714285714286,
+                                 "contained":  true,
+                                 "popup_bounds":  {
+                                                      "left":  3184,
+                                                      "top":  668,
+                                                      "right":  3838,
+                                                      "bottom":  1800
+                                                  },
+                                 "taskbar_bounds":  {
+                                                        "left":  -12,
+                                                        "top":  1950,
+                                                        "right":  3852,
+                                                        "bottom":  2172
+                                                    },
+                                 "monitor_bounds":  {
+                                                        "left":  0,
+                                                        "top":  0,
+                                                        "right":  3840,
+                                                        "bottom":  2160
+                                                    }
+                             },
+                             {
+                                 "kind":  "volume",
+                                 "hwnd":  54071342,
+                                 "owned_popup_count":  1,
+                                 "dpi":  168,
+                                 "scale":  1.75,
+                                 "expected_width_dip":  360,
+                                 "width_dip":  373.71428571428572,
+                                 "height_dip":  190.85714285714286,
+                                 "taskbar_gap_dip":  85.714285714285708,
+                                 "taskbar_gap_max_dip":  142.85714285714286,
+                                 "contained":  true,
+                                 "popup_bounds":  {
+                                                      "left":  3184,
+                                                      "top":  1466,
+                                                      "right":  3838,
+                                                      "bottom":  1800
+                                                  },
+                                 "taskbar_bounds":  {
+                                                        "left":  -12,
+                                                        "top":  1950,
+                                                        "right":  3852,
+                                                        "bottom":  2172
+                                                    },
+                                 "monitor_bounds":  {
+                                                        "left":  0,
+                                                        "top":  0,
+                                                        "right":  3840,
+                                                        "bottom":  2160
+                                                    }
+                             },
+                             {
+                                 "kind":  "calendar",
+                                 "hwnd":  55709742,
+                                 "owned_popup_count":  1,
+                                 "dpi":  168,
+                                 "scale":  1.75,
+                                 "expected_width_dip":  380,
+                                 "width_dip":  393.71428571428572,
+                                 "height_dip":  526.85714285714289,
+                                 "taskbar_gap_dip":  85.714285714285708,
+                                 "taskbar_gap_max_dip":  142.85714285714286,
+                                 "contained":  true,
+                                 "popup_bounds":  {
+                                                      "left":  3149,
+                                                      "top":  878,
+                                                      "right":  3838,
+                                                      "bottom":  1800
+                                                  },
+                                 "taskbar_bounds":  {
+                                                        "left":  -12,
+                                                        "top":  1950,
+                                                        "right":  3852,
+                                                        "bottom":  2172
+                                                    },
+                                 "monitor_bounds":  {
+                                                        "left":  0,
+                                                        "top":  0,
+                                                        "right":  3840,
+                                                        "bottom":  2160
+                                                    }
+                             }
+                         ],
+    "explorer_suppressed":  true,
+    "explorer_before":  [
+                            39304
+                        ],
+    "explorer_absent_during_capture":  true,
+    "screenshots":  [
+                        {
+                            "name":  "calendar-flyout.png",
+                            "sha256":  "0ebdf492b0e0b0ad1c2c1f9549223bbc7bdfddd21d74a655733e79e38eda6ba2",
+                            "bytes":  874066
+                        },
+                        {
+                            "name":  "input-flyout.png",
+                            "sha256":  "692825416fcd164c44409830a0e3c1c4d82ac1ff9d1608268b16de4274db652d",
+                            "bytes":  948682
+                        },
+                        {
+                            "name":  "network-power-flyout.png",
+                            "sha256":  "bce84400cc03d995b1ab2e95bb3e8f73f695007353eee36374845796194a11f7",
+                            "bytes":  948546
+                        },
+                        {
+                            "name":  "volume-flyout.png",
+                            "sha256":  "257ad6b9919c650a931d25940c08917443a6143dbd3f5a0428e7e11dab46dbf5",
+                            "bytes":  903078
+                        }
+                    ]
+}

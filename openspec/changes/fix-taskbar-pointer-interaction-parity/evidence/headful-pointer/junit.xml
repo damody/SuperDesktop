@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="SuperDesktop UTIT shell-parity" tests="3" failures="1" skipped="0">
+  <testcase classname="superdesktop.utit" name="Taskbar application left/right pointer parity" time="9.363"><failure message="nonzero-exit;missing-artifact:window-actions/report.json" /></testcase>
+  <testcase classname="superdesktop.utit" name="Explorer-free visible and hidden notification icon pointer parity" time="26.982"></testcase>
+  <testcase classname="superdesktop.utit" name="Explorer-free input and volume left/right pointer parity" time="22.235"></testcase>
+</testsuite>

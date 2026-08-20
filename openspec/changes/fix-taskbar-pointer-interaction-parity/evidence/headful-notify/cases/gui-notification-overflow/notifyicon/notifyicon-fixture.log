@@ -1,0 +1,4 @@
+fixture-ready pid=40000 hwnd=5967534 icon_id=7001
+callback wparam=64161671 lparam=458817659
+callback wparam=64161671 lparam=458818560
+fixture-complete

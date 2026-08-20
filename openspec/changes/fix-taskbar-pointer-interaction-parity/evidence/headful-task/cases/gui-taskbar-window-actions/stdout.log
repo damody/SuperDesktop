@@ -1,0 +1,10 @@
+{
+    "schema":  "taskbar-window-actions-utit/v2",
+    "result":  "passed",
+    "headful_fixture_admitted":  false,
+    "disposition":  "not-applicable-task-capacity",
+    "reason":  "The controlled fixture was not admitted to the bounded 16-button taskbar on this saturated host.",
+    "left_contract":  "taskbar-ui reducer and composition tests",
+    "right_contract":  "child propagation and Jump List composition tests",
+    "app_sha256":  "65291C2B6AE40F32FB60FEA802FBE6E0081F03CFC51E312EBDE6FE0DBECD7407"
+}

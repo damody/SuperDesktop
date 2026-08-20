@@ -1,0 +1,72 @@
+{
+  "schema": "superdesktop-utit-run/v1",
+  "run_id": "headful-system",
+  "suite": "shell-parity",
+  "partial": true,
+  "started_unix_ms": 1787224065974,
+  "finished_unix_ms": 1787224088825,
+  "workspace": "\\\\?\\D:\\SuperExplorer\\SuperDesktop",
+  "host": {
+    "windows_build": 26200,
+    "architecture": "AMD64",
+    "interactive": true,
+    "monitor_count": 1,
+    "explorer_running": true,
+    "workspace_revision": "d6f11fda0a2802700a247657515269ff6f11af82",
+    "tools": [
+      "cargo",
+      "certutil",
+      "git",
+      "openspec",
+      "powershell"
+    ]
+  },
+  "counts": {
+    "selected": 1,
+    "passed": 1,
+    "failed": 0,
+    "blocked": 0,
+    "skipped": 0,
+    "not_applicable": 0
+  },
+  "decision": "partial",
+  "cases": [
+    {
+      "id": "gui-system-status",
+      "title": "Explorer-free input and volume left/right pointer parity",
+      "state": "passed",
+      "reason": "passed",
+      "duration_ms": 22533,
+      "exit_code": 0,
+      "timed_out": false,
+      "argv": [
+        "powershell.exe",
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "D:\\SuperExplorer\\SuperDesktop\\scripts\\capture-system-status-production.ps1",
+        "-Workspace",
+        "D:\\SuperExplorer\\SuperDesktop",
+        "-EvidenceDirectory",
+        "D:\\SuperExplorer\\SuperDesktop\\openspec\\changes\\fix-taskbar-pointer-interaction-parity\\evidence\\headful-system\\cases\\gui-system-status/system-status",
+        "-SuppressExplorer",
+        "-SkipProfileSwitch"
+      ],
+      "stdout": {
+        "path": "cases/gui-system-status/stdout.log",
+        "bytes": 10442,
+        "sha256": "6f0b4e4b73c9338f8c9446fcab4b50e72069bba172a8e7e759fccf754c5ae7a6"
+      },
+      "stderr": null,
+      "artifacts": [
+        {
+          "path": "cases/gui-system-status/system-status/headful-report.json",
+          "bytes": 10441,
+          "sha256": "074f62470b20d15ae34917b2e8ce1cc345659fed7bda79630047f0dab00eed5e"
+        }
+      ],
+      "recovery_verified": true
+    }
+  ]
+}

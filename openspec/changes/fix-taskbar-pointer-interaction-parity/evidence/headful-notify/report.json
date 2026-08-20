@@ -1,0 +1,77 @@
+{
+  "schema": "superdesktop-utit-run/v1",
+  "run_id": "headful-notify",
+  "suite": "shell-parity",
+  "partial": true,
+  "started_unix_ms": 1787224115481,
+  "finished_unix_ms": 1787224142959,
+  "workspace": "\\\\?\\D:\\SuperExplorer\\SuperDesktop",
+  "host": {
+    "windows_build": 26200,
+    "architecture": "AMD64",
+    "interactive": true,
+    "monitor_count": 1,
+    "explorer_running": true,
+    "workspace_revision": "d6f11fda0a2802700a247657515269ff6f11af82",
+    "tools": [
+      "cargo",
+      "certutil",
+      "git",
+      "openspec",
+      "powershell"
+    ]
+  },
+  "counts": {
+    "selected": 1,
+    "passed": 1,
+    "failed": 0,
+    "blocked": 0,
+    "skipped": 0,
+    "not_applicable": 0
+  },
+  "decision": "partial",
+  "cases": [
+    {
+      "id": "gui-notification-overflow",
+      "title": "Explorer-free visible and hidden notification icon pointer parity",
+      "state": "passed",
+      "reason": "passed",
+      "duration_ms": 27133,
+      "exit_code": 0,
+      "timed_out": false,
+      "argv": [
+        "powershell.exe",
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "D:\\SuperExplorer\\SuperDesktop\\scripts\\capture-notifyicon-compatibility.ps1",
+        "-Workspace",
+        "D:\\SuperExplorer\\SuperDesktop",
+        "-OutputPath",
+        "D:\\SuperExplorer\\SuperDesktop\\openspec\\changes\\fix-taskbar-pointer-interaction-parity\\evidence\\headful-notify\\cases\\gui-notification-overflow/notifyicon/report.json",
+        "-ScreenshotPath",
+        "D:\\SuperExplorer\\SuperDesktop\\openspec\\changes\\fix-taskbar-pointer-interaction-parity\\evidence\\headful-notify\\cases\\gui-notification-overflow/notifyicon/overflow.png"
+      ],
+      "stdout": {
+        "path": "cases/gui-notification-overflow/stdout.log",
+        "bytes": 3821,
+        "sha256": "a0878c4ae48927ba3c2ca6a92f87f0e05886c654b59f349c06641a1c716ef175"
+      },
+      "stderr": null,
+      "artifacts": [
+        {
+          "path": "cases/gui-notification-overflow/notifyicon/report.json",
+          "bytes": 3820,
+          "sha256": "69f6050babd9014ea784e168ed98e8e6b55e47804038217912a8f9a39a1043c1"
+        },
+        {
+          "path": "cases/gui-notification-overflow/notifyicon/overflow.png",
+          "bytes": 64116,
+          "sha256": "9271f16c447f9c59c8a44e5e29358fc12b6f40da2ea90b413cde222026430890"
+        }
+      ],
+      "recovery_verified": true
+    }
+  ]
+}

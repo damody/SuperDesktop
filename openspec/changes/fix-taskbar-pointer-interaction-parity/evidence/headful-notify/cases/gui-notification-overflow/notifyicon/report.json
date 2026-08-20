@@ -1,0 +1,77 @@
+{
+    "schema":  "explorer-free-notifyicon/v3",
+    "result":  "passed",
+    "explorer_absent_during_measurement":  true,
+    "explorer_absent_during_capture":  true,
+    "explorer_recovered":  true,
+    "explorer_pids_before":  [
+                                 45016
+                             ],
+    "explorer_pids_after":  [
+
+                            ],
+    "shell_pid":  14052,
+    "fixture_pid":  40000,
+    "host_pids_before":  [
+                             12076
+                         ],
+    "host_pids_after":  [
+                            12076
+                        ],
+    "host_restart_verified":  false,
+    "app_sha256":  "95FF584B91531FB4097C0DC6F6A4456FAA14A2FBF561CE75D10051CC98FFF589",
+    "fixture_sha256":  "E5B63FBCBAC1DBDC10E175CCB5D5C3095BC4C995B876E37B303C545CAEC3CC40",
+    "icon_name":  "SuperDesktop compatibility fixture modified",
+    "callback_trace":  "fixture-ready pid=40000 hwnd=5967534 icon_id=7001\ncallback wparam=64161671 lparam=458817659\ncallback wparam=64161671 lparam=458818560\nfixture-complete",
+    "screenshot":  "overflow.png",
+    "pointer_interactions":  {
+                                 "left_route":  "uia-invoke-equivalent",
+                                 "context_route":  "native-window-message",
+                                 "physical_right_route_unit_verified":  true,
+                                 "icon_id":  7001,
+                                 "surface":  "owned-overflow",
+                                 "callbacks":  [
+                                                   {
+                                                       "event":  123,
+                                                       "icon_id":  7001
+                                                   },
+                                                   {
+                                                       "event":  1024,
+                                                       "icon_id":  7001
+                                                   }
+                                               ],
+                                 "background_context_absent":  true
+                             },
+    "screenshot_sha256":  "9271F16C447F9C59C8A44E5E29358FC12B6F40DA2EA90B413CDE222026430890",
+    "overflow":  {
+                     "hwnd":  8524538,
+                     "owner_pid":  14052,
+                     "hidden_button_count":  31,
+                     "dpi":  168,
+                     "scale":  1.75,
+                     "width_dip":  357.71428571428572,
+                     "height_dip":  318.85714285714283,
+                     "taskbar_gap_dip":  85.714285714285708,
+                     "taskbar_gap_max_dip":  102.85714285714286,
+                     "geometry_mode":  "preview-compatibility",
+                     "contained":  true,
+                     "bounds":  {
+                                    "left":  3212,
+                                    "top":  1312,
+                                    "right":  3838,
+                                    "bottom":  1870
+                                },
+                     "taskbar_bounds":  {
+                                            "left":  -12,
+                                            "top":  2020,
+                                            "right":  3852,
+                                            "bottom":  2172
+                                        },
+                     "monitor_bounds":  {
+                                            "left":  0,
+                                            "top":  0,
+                                            "right":  3840,
+                                            "bottom":  2160
+                                        }
+                 }
+}

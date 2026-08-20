@@ -1,0 +1,259 @@
+Diff in \\?\D:\SuperExplorer\SuperDesktop\crates\platform-win\src\common\taskbar.rs:933:
+         assert_eq!(production.matches("ms-settings:apps-volume").count(), 1);
+         assert_eq!(production.matches("ms-settings:sound").count(), 1);
+         for forbidden in ["explorer.exe", "powershell.exe", "cmd.exe"] {
+-            assert!(!production.contains(forbidden), "delegated context launch: {forbidden}");
++            assert!(
++                !production.contains(forbidden),
++                "delegated context launch: {forbidden}"
++            );
+         }
+     }
+ }
+Diff in \\?\D:\SuperExplorer\SuperDesktop\crates\superdesktop-app\src\surface_runtime.rs:52:
+     ShowDesktopObservation, ShowDesktopPlan, ShowDesktopSession, ShowDesktopTarget, StartActions,
+     StartPowerAction, StartSnapshot, StartView, StatusRegion, SystemControlContextCommand,
+     SystemControlContextKind, SystemControlContextView, SystemFlyoutKind, SystemFlyoutPresentation,
+-    SystemFlyoutTheme, SystemFlyoutView, SystemStatusAction, TaskAction,
+-    TaskFlyoutView, TaskViewEffect, TaskViewModel, TaskViewSurface, TaskbarCallbacks,
+-    TaskbarContextCommand, TaskbarContextView, TaskbarLayout, TaskbarSettingId,
+-    TaskbarSettingsEffect, TaskbarSettingsView, TaskbarView, TestClock, auto_hide_endpoints,
+-    reduce_auto_hide,
++    SystemFlyoutTheme, SystemFlyoutView, SystemStatusAction, TaskAction, TaskFlyoutView,
++    TaskViewEffect, TaskViewModel, TaskViewSurface, TaskbarCallbacks, TaskbarContextCommand,
++    TaskbarContextView, TaskbarLayout, TaskbarSettingId, TaskbarSettingsEffect,
++    TaskbarSettingsView, TaskbarView, TestClock, auto_hide_endpoints, reduce_auto_hide,
+ };
+ 
+ use crate::{
+Diff in \\?\D:\SuperExplorer\SuperDesktop\crates\superdesktop-utit\src\catalog.rs:552:
+             ])
+         );
+         assert!(pointer.cases.iter().all(|case| case.mandatory));
+-        assert!(pointer.cases.iter().filter(|case| case.explorer_free).count() >= 2);
++        assert!(
++            pointer
++                .cases
++                .iter()
++                .filter(|case| case.explorer_free)
++                .count()
++                >= 2
++        );
+     }
+ 
+     #[test]
+Diff in \\?\D:\SuperExplorer\SuperDesktop\crates\taskbar-ui\src\lib.rs:14:
+ mod start;
+ mod status;
+ mod surface;
+-mod system_flyout;
+ mod system_control_context;
++mod system_flyout;
+ mod task_view;
+ mod taskbar_settings;
+ mod tracker;
+Diff in \\?\D:\SuperExplorer\SuperDesktop\crates\taskbar-ui\src\lib.rs:57:
+ pub use surface::{
+     AppBarEffect, AppBarMode, AppBarRegistry, MonitorBar, MonitorGeometry, SurfaceChange,
+ };
+-pub use system_flyout::{
+-    NotificationCenterAction, NotificationCenterActionHandler, SystemFlyoutAction,
+-    SystemFlyoutDismiss, SystemFlyoutPresentation, SystemFlyoutTheme, SystemFlyoutView,
+-};
+ pub use system_control_context::{
+     SystemControlContextAction, SystemControlContextCommand, SystemControlContextDismiss,
+     SystemControlContextKind, SystemControlContextView,
+Diff in \\?\D:\SuperExplorer\SuperDesktop\crates\taskbar-ui\src\lib.rs:67:
+ };
++pub use system_flyout::{
++    NotificationCenterAction, NotificationCenterActionHandler, SystemFlyoutAction,
++    SystemFlyoutDismiss, SystemFlyoutPresentation, SystemFlyoutTheme, SystemFlyoutView,
++};
+ pub use task_view::{
+     DesktopCard, TaskViewAccessibleNode, TaskViewEffect, TaskViewModel, TaskViewSurface,
+     VirtualDesktopSnapshot,
+Diff in \\?\D:\SuperExplorer\SuperDesktop\crates\taskbar-ui\src\lib.rs:79:
+     Eligibility, OwnedWindowEvent, TaskWindow, TrackerPush, WindowObservation, WindowTracker,
+ };
+ pub use view::{
+-    NotificationOverflowCallback, SystemControlContextCallback, SystemFlyoutCallback, TaskHoverCallback,
+-    TaskPrimaryCallback,
+-    TaskbarBackgroundContextCallback, TaskbarCallbacks, TaskbarResizeCallback, TaskbarView,
++    NotificationOverflowCallback, SystemControlContextCallback, SystemFlyoutCallback,
++    TaskHoverCallback, TaskPrimaryCallback, TaskbarBackgroundContextCallback, TaskbarCallbacks,
++    TaskbarResizeCallback, TaskbarView,
+ };
+ 
+ pub const CRATE_ROLE: &str = "taskbar GPUI surface and window-management boundary";
+Diff in \\?\D:\SuperExplorer\SuperDesktop\crates\taskbar-ui\src\notification_overflow.rs:150:
+                     .on_key_down(move |event, _, _| {
+                         if matches!(event.keystroke.key.as_str(), "enter" | "space") {
+                             key_action(&key_key, NotificationEventKind::Activate);
+-                        } else if event.keystroke.key == "f10"
+-                            && event.keystroke.modifiers.shift
+-                        {
+-                            key_context_action(
+-                                &key_context_key,
+-                                NotificationEventKind::Context,
+-                            );
++                        } else if event.keystroke.key == "f10" && event.keystroke.modifiers.shift {
++                            key_context_action(&key_context_key, NotificationEventKind::Context);
+                         }
+                     })
+                     .when_some(icon, |entry, icon| {
+Diff in \\?\D:\SuperExplorer\SuperDesktop\crates\taskbar-ui\src\system_control_context.rs:32:
+     }
+ }
+ 
+-pub type SystemControlContextAction =
+-    Rc<dyn Fn(SystemControlContextCommand, &mut gpui::App)>;
++pub type SystemControlContextAction = Rc<dyn Fn(SystemControlContextCommand, &mut gpui::App)>;
+ pub type SystemControlContextDismiss = Rc<dyn Fn(&mut Window, &mut gpui::App)>;
+ 
+ pub struct SystemControlContextView {
+Diff in \\?\D:\SuperExplorer\SuperDesktop\crates\taskbar-ui\src\system_control_context.rs:68:
+ }
+ 
+ fn traditional_chinese() -> bool {
+-    std::env::var("SUPERDESKTOP_LOCALE")
+-        .is_ok_and(|locale| locale.eq_ignore_ascii_case("zh-TW"))
++    std::env::var("SUPERDESKTOP_LOCALE").is_ok_and(|locale| locale.eq_ignore_ascii_case("zh-TW"))
+ }
+ 
+ fn label(command: SystemControlContextCommand, zh_tw: bool) -> &'static str {
+Diff in \\?\D:\SuperExplorer\SuperDesktop\crates\taskbar-ui\src\system_control_context.rs:93:
+             .id("owned-system-control-context")
+             .role(gpui::Role::Menu)
+             .aria_label(match self.kind {
+-                SystemControlContextKind::Input => label(
+-                    SystemControlContextCommand::LanguagePreferences,
+-                    zh_tw,
+-                ),
++                SystemControlContextKind::Input => {
++                    label(SystemControlContextCommand::LanguagePreferences, zh_tw)
++                }
+                 SystemControlContextKind::Volume => {
+-                    if zh_tw { "音量功能表" } else { "Volume menu" }
++                    if zh_tw {
++                        "音量功能表"
++                    } else {
++                        "Volume menu"
++                    }
+                 }
+             })
+             .tab_index(0)
+Diff in \\?\D:\SuperExplorer\SuperDesktop\crates\taskbar-ui\src\system_control_context.rs:113:
+             .shadow_lg()
+             .flex()
+             .flex_col()
+-            .on_key_down(cx.listener(move |_, event: &gpui::KeyDownEvent, window, cx| {
+-                if event.keystroke.key == "escape" {
+-                    dismiss(window, cx);
+-                    cx.stop_propagation();
+-                }
+-            }))
+-            .children(self.kind.commands().iter().copied().enumerate().map(|(index, command)| {
+-                let click_action = self.action.clone();
+-                let key_action = self.action.clone();
+-                div()
+-                    .id(("system-control-context-command", index))
+-                    .role(gpui::Role::MenuItem)
+-                    .aria_label(label(command, zh_tw))
+-                    .tab_index(0)
+-                    .h(px(44.))
+-                    .px(px(12.))
+-                    .rounded(px(4.))
+-                    .flex()
+-                    .items_center()
+-                    .cursor_pointer()
+-                    .hover(move |style| style.bg(rgb(tokens.selected)))
+-                    .focus_visible(move |style| style.border_2().border_color(rgb(tokens.border)))
+-                    .on_click(move |_, _, cx| click_action(command, cx))
+-                    .on_key_down(move |event, _, cx| {
+-                        if matches!(event.keystroke.key.as_str(), "enter" | "space") {
+-                            key_action(command, cx);
+-                        }
+-                    })
+-                    .child(label(command, zh_tw))
+-            }))
++            .on_key_down(
++                cx.listener(move |_, event: &gpui::KeyDownEvent, window, cx| {
++                    if event.keystroke.key == "escape" {
++                        dismiss(window, cx);
++                        cx.stop_propagation();
++                    }
++                }),
++            )
++            .children(
++                self.kind
++                    .commands()
++                    .iter()
++                    .copied()
++                    .enumerate()
++                    .map(|(index, command)| {
++                        let click_action = self.action.clone();
++                        let key_action = self.action.clone();
++                        div()
++                            .id(("system-control-context-command", index))
++                            .role(gpui::Role::MenuItem)
++                            .aria_label(label(command, zh_tw))
++                            .tab_index(0)
++                            .h(px(44.))
++                            .px(px(12.))
++                            .rounded(px(4.))
++                            .flex()
++                            .items_center()
++                            .cursor_pointer()
++                            .hover(move |style| style.bg(rgb(tokens.selected)))
++                            .focus_visible(move |style| {
++                                style.border_2().border_color(rgb(tokens.border))
++                            })
++                            .on_click(move |_, _, cx| click_action(command, cx))
++                            .on_key_down(move |event, _, cx| {
++                                if matches!(event.keystroke.key.as_str(), "enter" | "space") {
++                                    key_action(command, cx);
++                                }
++                            })
++                            .child(label(command, zh_tw))
++                    }),
++            )
+     }
+ }
+ 
+Diff in \\?\D:\SuperExplorer\SuperDesktop\crates\taskbar-ui\src\system_control_context.rs:178:
+             "Open volume mixer",
+             "Sound settings",
+         ] {
+-            assert!(source.contains(required), "missing context contract: {required}");
++            assert!(
++                source.contains(required),
++                "missing context contract: {required}"
++            );
+         }
+     }
+ }
+Diff in \\?\D:\SuperExplorer\SuperDesktop\crates\taskbar-ui\src\view.rs:1548:
+             .and_then(|tail| tail.split(".id(\"clock-calendar-control\")").next())
+             .expect("input block");
+         for (name, block, action) in [
+-            ("notification", visible_notification, "NotificationEventKind::Context"),
++            (
++                "notification",
++                visible_notification,
++                "NotificationEventKind::Context",
++            ),
+             ("task", task_buttons, "callback(&context_stable_id, cx)"),
+             ("volume", volume, "SystemControlContextKind::Volume"),
+             ("input", input, "SystemControlContextKind::Input"),
+Diff in \\?\D:\SuperExplorer\SuperDesktop\crates\taskbar-ui\src\view.rs:1557:
+                 block.contains(".on_mouse_up(gpui::MouseButton::Right"),
+                 "{name} does not own right mouse-up"
+             );
+-            assert!(block.contains(action), "{name} emits the wrong context action");
++            assert!(
++                block.contains(action),
++                "{name} emits the wrong context action"
++            );
+             assert!(
+                 block.contains("cx.stop_propagation()"),
+                 "{name} can fall through to the taskbar background"

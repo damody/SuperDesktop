@@ -1,0 +1,696 @@
+   Compiling taskbar-state-host v0.1.0 (D:\SuperExplorer\SuperDesktop\crates\taskbar-state-host)
+   Compiling superdesktop-app v0.1.0 (D:\SuperExplorer\SuperDesktop\crates\superdesktop-app)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 4.36s
+     Running unittests src\lib.rs (target\debug\deps\desktop_ui-822f577cd6e52c15.exe)
+
+running 29 tests
+test geometry::tests::dpi_and_work_area_use_logical_units ... ok
+test context_menu::tests::pointer_keyboard_and_accessibility_share_typed_invocation ... ok
+test interaction::tests::context_menu_emits_typed_isolated_provider_request ... ok
+test interaction::tests::first_terminal_wins_for_bridge_and_association ... ok
+test interaction::tests::fixed_entry_is_truthful_accessible_and_has_no_local_claim ... ok
+test interaction::tests::pointer_keyboard_and_uia_emit_equivalent_folder_commands ... ok
+test geometry::tests::one_surface_per_monitor_and_no_orphans_after_hotplug ... ok
+test layout::tests::ctrl_shift_and_rubber_band_match_expected_items ... ok
+test view::tests::marquee_recomputes_live_hits_and_ctrl_unions_baseline ... ok
+test layout::tests::natural_sort_and_snapshot_restore_are_stable ... ok
+test namespace::tests::same_identity_deduplicates_without_using_display_name ... ok
+test namespace::tests::same_name_different_identity_stays_distinct ... ok
+test namespace::tests::unicode_hidden_and_system_rules_are_independent ... ok
+test operations::tests::reconcile_keeps_only_surviving_stable_identities ... ok
+test view::tests::authoritative_refresh_restores_only_surviving_selection ... ok
+test view::tests::context_menu_invocation_uses_the_same_typed_command_for_pointer_and_keyboard ... ok
+test view::tests::bc7_desktop_icon_payload_is_directly_renderable ... ok
+test view::tests::desktop_icon_pixels_are_validated_as_rgba ... ok
+test layout::tests::dpi_and_monitor_remap_keep_logical_positions_visible ... ok
+test view::tests::context_menu_keeps_pointer_anchor_and_uses_mouse_up_source_contract ... ok
+test layout::tests::grid_selection_and_collision_are_deterministic ... ok
+test view::tests::ordinary_empty_click_clears_and_lost_button_cancels_transient_state ... ok
+test wallpaper::tests::all_six_modes_have_deterministic_geometry ... ok
+test view::tests::item_primary_down_stops_background_marquee_in_source_contract ... ok
+test wallpaper::tests::invalid_source_uses_semantic_fallback_and_cache_is_bounded ... ok
+test watcher::tests::overflow_is_single_flight_and_stale_deltas_are_suppressed ... ok
+test operations::tests::validation_lifecycle_cancel_and_first_terminal_are_deterministic ... ok
+test view::tests::marquee_normalizes_reverse_drag_and_uses_threshold ... ok
+test watcher::tests::rename_storm_coalesces_and_stays_bounded ... ok
+
+test result: ok. 29 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (target\debug\deps\explorer_bridge-7c45763b639f9918.exe)
+
+running 13 tests
+test admission::tests::cancel_beats_success_and_duplicate_callback_is_diagnostic ... ok
+test command::tests::default_is_truthful_and_has_no_initial_path ... ok
+test admission::tests::duplicate_correlation_and_shutdown_rundown_are_bounded ... ok
+test launcher::tests::completion_callback_uses_frozen_no_unwind_fence ... ok
+test repair::tests::diagnostics_redact_profile_path_and_environment_value ... ok
+test launcher::tests::removed_or_changed_executable_fails_before_spawn ... ok
+test repair::tests::every_failure_has_localized_keyboard_repair_without_explorer_fallback ... ok
+test admission::tests::deadline_is_five_seconds_and_timeout_beats_late_success ... ok
+test command::tests::unicode_space_and_special_folder_round_trip_without_parent_mutation ... ok
+test resolver::tests::missing_directory_relative_and_path_substitution_fail_closed ... ok
+test command::tests::relative_missing_and_regular_file_are_rejected_before_spawn ... ok
+test resolver::tests::priority_is_setting_then_developer_then_adjacent ... ok
+test launcher::tests::explicit_application_spawn_and_raii_handle_cleanup ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+
+     Running unittests src\lib.rs (target\debug\deps\notification_area_host-fc085a3b64a32531.exe)
+
+running 9 tests
+test tests::compatibility_identity_is_explicitly_shell_only ... ok
+test tests::native_add_modify_version_focus_delete_lifecycle_is_monotonic ... ok
+test tests::native_callbacks_timeout_deduplicate_disconnect_and_restart_fail_closed ... ok
+test tests::registry_capacity_and_protected_overflow_remain_bounded ... ok
+test tests::protected_events_round_trip_only_to_the_owning_client ... ok
+test tests::identity_manifests_match_and_declare_documented_notification_capability ... ok
+test tests::lifecycle_stale_generation_disconnect_and_snapshot_are_deterministic ... ok
+test tests::history_capacity_dedup_disconnect_dismiss_and_clear_are_authoritative ... ok
+test tests::windows_reconciliation_preserves_local_history_is_bounded_and_generation_stable ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\main.rs (target\debug\deps\notification_area_host-f1f6c18d30793edb.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\host_process.rs (target\debug\deps\host_process-ff61e305c96842c8.exe)
+
+running 1 test
+test host_handles_lifecycle_malformed_input_and_eof ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running unittests src\lib.rs (target\debug\deps\platform_win-7bf77559a5adec7f.exe)
+
+running 99 tests
+test common::appbar_shell_hook::tests::wrong_session_and_retired_flash_identity_fail_closed ... ok
+test common::appbar_shell_hook::tests::shell_hook_queue_coalesces_duplicates_and_is_bounded ... ok
+test common::desktop::tests::association_rejects_non_file_without_spawning ... ok
+test common::appbar_shell_hook::tests::screen_rect_is_owned_and_has_no_native_handle ... ok
+test common::icon::tests::pixel_contract_rejects_malformed_buffers ... ok
+test common::desktop::tests::watcher_callback_is_owned_and_no_unwind ... ok
+test common::desktop_operations::tests::invalid_names_and_outside_roots_fail_closed ... ok
+test common::elevation::tests::rejects_invalid_inputs_without_uac ... ok
+test common::admission::tests::negative_fixtures_are_fail_closed_and_mutation_incapable ... ok
+test common::elevation::tests::source_uses_runas_waits_and_owns_the_process_handle ... ok
+test common::admission::tests::live_probe_reports_this_interactive_test_session ... ok
+test common::ffi_boundary::tests::double_callback_and_shutdown_race_are_fenced ... ok
+test common::ffi_boundary::tests::catches_panic_and_allows_later_callback ... ok
+test common::guardian_lease::tests::acknowledgement_is_bound_to_the_sealed_pipe_nonce ... ok
+test common::explorer_recovery::tests::takeover_source_is_exact_bounded_and_recovery_remains_available ... ok
+test common::guardian_lease::tests::binding_rejects_identity_and_file_changes ... ok
+test common::desktop_operations::tests::reparse_items_and_replace_destinations_never_mutate_their_targets ... ok
+test common::guardian_lease::tests::duplicate_roles_are_rejected ... ok
+test common::guardian_lease::tests::production_validator_rejects_duplicate_and_unexpected_claims ... ok
+test common::icon::tests::extended_filesystem_paths_are_normalized_for_shell_apis ... ok
+test common::icon::tests::bc7_icon_blocks_are_four_to_one_and_preserve_alpha_mode ... ok
+test common::ffi_boundary::tests::extern_system_callback_types_panic_without_unwind ... ok
+test common::guardian_lease::tests::claim_round_trip_is_not_argv ... ok
+test common::desktop::tests::stable_file_identity_survives_rename ... ok
+test common::monitor_dpi_start::tests::start_probe_fixtures_are_typed_and_never_invoke ... ok
+test common::monitor_dpi_start::tests::virtual_topology_has_explicit_origin_and_events ... ok
+test common::native_window::tests::adapter_uses_fixed_event_bits_without_claiming_native_messages ... ok
+test common::native_window::tests::callback_generation_mismatch_is_fenced_without_forwarding ... ok
+test common::native_window::tests::caught_callback_panic_becomes_typed_fatal_without_poisoning_state ... ok
+test common::native_window::tests::close_notification_and_native_destroy_can_arrive_in_either_order ... ok
+test common::native_window::tests::closing_fence_rejects_late_adapter_event ... ok
+test common::native_window::tests::dpi_payload_is_copied_before_forwarding_and_never_borrows_rect_memory ... ok
+test common::native_window::tests::raw_messages_are_observed_before_they_are_forwarded_and_stay_separate_from_adapter ... ok
+test common::native_window::tests::raw_arc_release_claim_is_exactly_once_even_after_remove_failure_path ... ok
+test common::native_window::tests::resource_snapshot_is_copyable_for_trace_handoff ... ok
+test common::native_window::tests::terminal_coordinator_requires_two_terminal_signals_and_order ... ok
+test common::notify_icon_compat::tests::callback_panic_and_repeated_teardown_are_fenced ... ok
+test common::notify_icon_compat::tests::copydata_transport_copies_supported_payload_before_return ... ok
+test common::notify_icon_compat::tests::live_owner_session_and_reuse_validation_fail_closed ... ok
+test common::native_window::tests::terminal_status_is_read_only_and_reports_independent_terminal_signals ... ok
+test common::notify_icon_compat::tests::callback_payload_negotiates_v4_and_legacy_without_borrowed_state ... ok
+test common::notify_icon_compat::tests::owned_copy_preserves_identity_tooltip_callback_and_state ... ok
+test common::notify_icon_compat::tests::explorer_owned_shell_tray_identity_blocks_preview_collision ... ok
+test common::notify_icon_compat::tests::malformed_layout_flags_tooltip_owner_and_icon_fail_closed ... ok
+test common::notify_icon_compat::tests::supported_layout_matrix_is_strict_and_monotonic ... ok
+test common::power::tests::confirmation_copy_is_nul_terminated ... ok
+test common::settings_file::tests::wide_paths_are_nul_terminated ... ok
+test common::notify_icon_compat::tests::borrowed_system_hicon_copies_pixels_without_transferring_ownership ... ok
+test common::shell_hotkey::tests::alt_tab_queue_preserves_repeated_cycles_before_commit ... ok
+test common::shell_hotkey::tests::production_hook_is_shell_scoped_bounded_and_has_no_registerhotkey_fallback ... ok
+test common::shell_hotkey::tests::reducer_routes_supported_shell_keys_once_and_passes_unsupported_chords ... ok
+test common::owner_lease::tests::session_mutex_fences_second_owner_and_revalidates_all_identity_fields ... ok
+test common::notify_icon_compat::tests::ingress_queue_coalesces_modifies_and_preserves_protected_delete ... ok
+test common::system_status::tests::input_provider_source_is_tsf_first_bounded_and_fixed_launch_only ... ok
+test common::system_status::tests::tsf_profile_ids_are_kind_specific_stable_and_exact ... ok
+test common::system_status::tests::wifi_native_decoder_bounds_lengths_and_preserves_truthful_flags ... ok
+test common::system_status::tests::wifi_adapter_source_owns_handles_memory_and_exact_command_identity ... ok
+test common::system_status::tests::wifi_reducer_deduplicates_and_orders_connected_saved_strongest ... ok
+test common::taskbar::tests::retired_exact_identity_action_fails_closed ... ok
+test common::desktop::tests::known_desktop_enumeration_returns_owned_stable_values ... ok
+test common::taskbar::tests::retired_window_action_fails_closed ... ok
+test common::taskbar::tests::shell_hook_callback_is_owned_and_no_unwind ... ok
+test common::settings_file::tests::native_adapter_round_trips_and_replaces ... ok
+test common::taskbar::tests::system_control_context_launches_have_only_compile_time_settings_targets ... ok
+test common::taskbar::tests::taskbar_resize_quantizes_to_exact_physical_row_heights ... ok
+test common::taskbar::tests::task_manager_path_is_canonical_system32_regular_file ... ok
+test common::taskbar_preview::tests::thumbnail_destination_preserves_landscape_portrait_and_square_ratios ... ok
+test common::taskbar_preview::tests::invalid_retired_and_expired_requests_fail_closed ... ok
+test common::desktop_operations::tests::rename_copy_collision_cancel_and_delete_are_admitted ... ok
+test common::taskbar::tests::taskbar_auto_hide_adapters_reject_invalid_and_foreign_windows ... ok
+test common::taskbar::tests::taskbar_resize_style_rejects_invalid_and_foreign_windows ... ok
+test common::taskbar_status::tests::local_time_is_owned_and_within_windows_calendar_bounds ... ok
+test common::virtual_desktop::tests::invalid_and_retired_windows_fail_before_com ... ok
+test common::windows_notification_events::tests::reducer_deduplicates_sorts_and_caps ... ok
+test common::start_search::tests::providers_are_bounded_cancellable_and_stable ... ok
+test common::windows_notification_events::tests::time_hash_id_and_text_bounds_are_deterministic ... ok
+test common::windows_notification_events::tests::production_source_uses_documented_listener_and_no_private_shell_route ... ok
+test common::jump_list::tests::invalid_application_never_creates_launch_task_and_output_is_bounded ... ok
+test common::taskbar::tests::real_snapshot_has_owned_stable_fields ... ok
+test common::taskbar::tests::owned_popup_topmost_promotion_is_nonactivating_and_fails_closed ... ok
+test common::desktop_operations::tests::recursive_directory_copy_reports_aggregate_progress_and_rolls_back_cancel ... ok
+test common::taskbar::tests::owned_taskbar_endpoint_move_is_exact_idempotent_and_rejects_retirement ... ok
+test common::explorer_recovery::tests::real_explorer_is_absolute_canonical_non_reparse_and_signed ... ok
+test common::explorer_recovery::tests::path_and_cwd_substitutes_are_not_inputs_to_resolution ... ok
+test common::start_search::tests::installed_ditto_and_snow_shot_shortcuts_are_found_when_present ... ok
+test common::system_status::tests::audio_commands_validate_ranges_and_confirm_current_state_without_drift ... ok
+test common::system_status::tests::real_audio_network_and_power_observations_are_bounded ... ok
+test common::system_status::tests::real_input_profiles_are_bounded_stable_and_include_active_profile ... ok
+test common::system_status::tests::wrong_session_and_unobserved_activation_timeout_fail_closed ... ok
+test common::system_status::tests::live_clock_and_complete_snapshot_are_real_and_valid ... ok
+test common::system_status::tests::malformed_and_stale_tsf_profile_ids_fail_before_activation ... ok
+test common::system_status::tests::wifi_commands_reject_empty_oversized_stale_and_unsaved_identity_before_mutation ... ok
+test common::system_status::tests::invalid_missing_and_same_profile_requests_are_fail_closed_or_observed ... ok
+test common::icon::tests::shell_executable_icon_has_owned_visible_pixels ... ok
+test common::desktop::tests::real_fixture_file_association_reaches_admission_and_executes_hidden ... ok
+test common::icon::tests::real_desktop_shell_items_have_visible_icons ... ok
+test common::icon::tests::repeated_shell_extraction_does_not_leak_gdi_objects ... ok
+test common::icon::tests::window_lookup_falls_back_without_panicking ... ok
+test common::explorer_recovery::tests::live_recovery_prefers_existing_verified_explorer_without_process_spawn ... ok
+
+test result: ok. 99 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.40s
+
+     Running unittests src\lib.rs (target\debug\deps\settings_store-10adde3d909c6fbb.exe)
+
+running 15 tests
+test json::tests::rejects_duplicate_keys_and_partial_documents ... ok
+test json::tests::round_trip_nested_json_deterministically ... ok
+test schema::tests::invalid_independent_fields_fall_back_without_losing_others ... ok
+test schema::tests::shell_preference_never_bypasses_per_launch_opt_in ... ok
+test schema::tests::desktop_sort_preference_round_trips_with_manual_positions ... ok
+test schema::tests::taskbar_context_fields_default_round_trip_and_isolate_invalid_enums ... ok
+test schema::tests::full_v1_round_trip_preserves_every_field_and_unknown_top_level ... ok
+test schema::tests::taskbar_labels_default_to_readable_and_preserve_explicit_false ... ok
+test schema::tests::migrates_v0_and_refuses_future_version ... ok
+test store::tests::fixture_guard_rejects_parent_escape_and_root_target ... ok
+test store::tests::save_increments_revision_and_round_trips_complete_document ... ok
+test store::tests::malformed_and_future_files_are_uniquely_quarantined ... ok
+test store::tests::post_replace_directory_flush_failure_leaves_complete_new_file ... ok
+test store::tests::fixture_guard_rejects_reparse_escape_when_supported ... ok
+test store::tests::every_pre_replace_crash_preserves_old_complete_file ... ok
+
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (target\debug\deps\shell_core-0cbaddc7637d9607.exe)
+
+running 18 tests
+test bridge::tests::default_launch_is_truthful_and_has_no_fake_local_path ... ok
+test model::tests::default_state_is_safe_preview_authority ... ok
+test identity::tests::identities_reject_ambiguous_or_unbounded_values ... ok
+test reducer::tests::cancel_wins_over_late_success ... ok
+test model::tests::state_contract_is_owned_and_cloneable ... ok
+test queue::tests::coalescing_is_deterministic_and_identity_domain_specific ... ok
+test queue::tests::full_protected_queue_turns_dropped_delta_into_overflow_event ... ok
+test identity::tests::identities_round_trip_and_sort_stably ... ok
+test queue::tests::terminal_is_never_dropped_when_queue_is_full ... ok
+test bridge::tests::message_keys_are_accessibility_safe_stable_tokens ... ok
+test reducer::tests::only_first_terminal_changes_state ... ok
+test reducer::tests::repeated_overflow_has_only_one_active_refresh ... ok
+test reducer::tests::shell_requires_explicit_opt_in_and_rejection_preserves_authority ... ok
+test reducer::tests::replay_is_deterministic_and_hash_stable ... ok
+test reducer::tests::watcher_overflow_restores_selection_by_stable_identity ... ok
+test reducer::tests::stale_success_after_refresh_cannot_modify_state ... ok
+test reducer::tests::window_overflow_preserves_existing_group_order ... ok
+test queue::tests::storm_never_exceeds_bound_and_emits_explicit_overflow ... ok
+
+test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\provider_contract.rs (target\debug\deps\provider_contract-427c4e10fe7ded77.exe)
+
+running 1 test
+test shell_core_can_consume_provider_contract_without_platform_types ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (target\debug\deps\shell_installer-a5a9d5f084046c08.exe)
+
+running 11 tests
+test process_quiescence::tests::rejects_relative_and_in_place_targets_before_process_enumeration ... ok
+test tests::repair_reuses_immutable_record_and_restores_each_transaction_pre_state ... ok
+test process_quiescence::tests::script_uses_exact_paths_and_a_bounded_verified_wait ... ok
+test windows_registry::tests::parses_unicode_and_exact_absence ... ok
+test tests::dry_run_drift_write_before_mutate_and_exact_absence_restore ... ok
+test tests::restore_reuses_original_record_and_removes_it_only_after_verification ... ok
+test tests::rollback_failure_is_terminal_and_preserves_recovery_record ... ok
+test tests::verification_failure_rolls_back_exact_prior_value ... ok
+test windows_registry::tests::write_script_uses_the_windows_powershell_registry_type_contract ... ok
+test tests::file_rollback_store_is_immutable_and_round_trips_exact_absence ... ok
+test tests::mutation_binary_drift_and_product_identity_fail_closed_but_restore_stays_reachable ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.25s
+
+     Running unittests src\main.rs (target\debug\deps\shell_installer-d575e3eece977f81.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\cli.rs (target\debug\deps\cli-02279a6e1609ae4b.exe)
+
+running 3 tests
+test malformed_invocation_is_machine_readable_and_does_not_create_metadata ... ok
+test quiesce_empty_install_directory_is_successful_and_machine_readable ... ok
+test invalid_product_identity_is_rejected_without_metadata_or_registry_authority ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.37s
+
+     Running unittests src\lib.rs (target\debug\deps\shell_provider_host-11c64728a923f5ea.exe)
+
+running 5 tests
+test tests::duplicate_capacity_deadline_and_cancel_are_terminal ... ok
+test tests::handshake_and_health_report_limits ... ok
+test tests::menu_tokens_are_generation_and_selection_bound ... ok
+test tests::settings_search_returns_generation_bound_terminal_batch ... ok
+test tests::jump_list_is_provider_backed_bounded_and_actionable ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running unittests src\main.rs (target\debug\deps\shell_provider_host-d58978450e3808c7.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\host_process.rs (target\debug\deps\host_process-c42c5cf5eee1f150.exe)
+
+running 1 test
+test process_handshakes_rejects_invalid_input_and_stops_on_eof ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running unittests src\lib.rs (target\debug\deps\shell_provider_protocol-b7c0eb3db846b224.exe)
+
+running 25 tests
+test envelope::tests::incompatible_major_and_expired_deadline_fail_closed ... ok
+test envelope::tests::additive_unknown_field_is_accepted ... ok
+test envelope::tests::oversized_frame_is_rejected ... ok
+test context_menu::tests::menu_round_trip_and_depth_limit_are_deterministic ... ok
+test notification::tests::compatibility_bounds_and_generations_fail_closed ... ok
+test search::tests::prefix_word_substring_unicode_and_ties_are_deterministic ... ok
+test notification::tests::icon_identity_and_rgba_size_fail_closed ... ok
+test envelope::tests::request_round_trips_deterministically ... ok
+test notification::tests::notification_fields_are_additive_bounded_and_frame_safe ... ok
+test taskbar_state::tests::group_priority_and_least_progress_match_windows ... ok
+test notification::tests::compatibility_operations_round_trip_with_owned_bounded_identity ... ok
+test notification::tests::windows_event_status_is_additive_bounded_and_internally_consistent ... ok
+test system_status::tests::language_preferences_is_fieldless_and_accepted_is_not_observed ... ok
+test system_status::tests::bounds_duplicate_and_active_identity_fail_closed ... ok
+test system_status::tests::commands_and_observed_terminals_require_bounded_identity_and_generation ... ok
+test system_status::tests::wifi_commands_and_accepted_terminal_require_exact_bounded_identity ... ok
+test taskbar_state::tests::activation_close_restart_and_hwnd_reuse_clear_only_authorized_fields ... ok
+test taskbar_state::tests::checked_ratio_handles_maximum_values_and_rejects_zero_total ... ok
+test system_status::tests::input_profiles_are_additive_exact_and_bounded ... ok
+test taskbar_state::tests::finite_and_until_foreground_attention_terminate_deterministically ... ok
+test jump_list::tests::request_rejects_empty_application_identity ... ok
+test system_status::tests::snapshot_round_trips_deterministically ... ok
+test system_status::tests::wifi_snapshot_is_additive_bounded_and_rejects_duplicate_ssids ... ok
+test taskbar_state::tests::host_requests_use_bounded_lowercase_json_frames ... ok
+test taskbar_state::tests::snapshot_round_trip_rejects_duplicate_and_stale_identity_fields ... ok
+
+test result: ok. 25 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (target\debug\deps\superdesktop_app-7332a1c67dacefe7.exe)
+
+running 55 tests
+test lifecycle::tests::every_identity_field_and_non_owner_cleanup_is_fenced ... ok
+test composition::tests::all_fixed_entry_inputs_share_typed_exactly_once_bridge_route ... ok
+test lifecycle::tests::commit_and_shutdown_are_strictly_ordered_and_idempotent ... ok
+test composition::tests::preview_composes_every_domain_without_shell_mutation ... ok
+test lifecycle::tests::all_phase_failpoints_rollback_and_health_never_switches_explorer ... ok
+test status_client::tests::restart_attempts_are_bounded_until_a_new_full_snapshot ... ok
+test status_client::tests::accepted_wifi_terminal_never_advances_or_fakes_an_observed_snapshot ... ok
+test status_client::tests::stale_restart_and_duplicate_terminal_are_fail_closed ... ok
+test lifecycle::tests::normal_product_launch_is_shell_and_preview_requires_explicit_opt_out ... ok
+test lifecycle::tests::preview_is_default_and_rejections_are_zero_mutation ... ok
+test surface_runtime::live_parity_tests::fixed_desktop_entry_reserves_its_cell_and_rehomes_overlapping_items ... ok
+test surface_runtime::live_parity_tests::start_geometry_centers_clamps_and_preserves_bottom_gap ... ok
+test notification_client::tests::compatibility_switch_is_explicit_and_never_enabled_by_preview_default ... ok
+test surface_runtime::live_parity_tests::jump_list_geometry_is_source_anchored_content_sized_and_mode_aware ... ok
+test surface_runtime::live_parity_tests::notification_overflow_geometry_matrix_tracks_mode_rows_and_icon_grid ... ok
+test surface_runtime::live_parity_tests::notification_overflow_uses_logical_bounds_and_reserves_owned_taskbar ... ok
+test shell_registration_tests::shell_registration_is_verified_before_guardian_and_explorer_shutdown ... ok
+test surface_runtime::live_parity_tests::input_profile_command_restores_owned_start_focus_without_mutating_composition ... ok
+test surface_runtime::live_parity_tests::alt_tab_uses_owned_snapshot_dwm_previews_and_exact_foreground_action ... ok
+test surface_runtime::live_parity_tests::owned_start_guard_rejects_a_delegated_callback_fixture ... ok
+test surface_runtime::live_parity_tests::preview_taskbar_reanchors_when_work_area_expands_after_explorer_exit ... ok
+test lifecycle::tests::simultaneous_owner_race_has_one_winner_and_crash_drop_transfers ... ok
+test surface_runtime::live_parity_tests::shell_attention_flashes_then_holds_until_activation ... ok
+test surface_runtime::live_parity_tests::start_geometry_matrix_preserves_windows_ratios_without_taskbar_overlap ... ok
+test surface_runtime::live_parity_tests::show_desktop_product_path_is_exact_identity_owned_and_never_delegates ... ok
+test surface_runtime::live_parity_tests::start_geometry_uses_matching_preview_and_shell_taskbar_anchors ... ok
+test surface_runtime::live_parity_tests::system_flyout_geometry_reserves_owned_taskbar_and_clamps_every_monitor_origin ... ok
+test surface_runtime::live_parity_tests::system_flyout_geometry_uses_exact_preview_and_shell_taskbar_anchors ... ok
+test surface_runtime::live_parity_tests::task_preview_card_width_tracks_live_window_aspect_and_available_width ... ok
+test surface_runtime::live_parity_tests::task_preview_geometry_anchors_clamps_and_scales_once ... ok
+test surface_runtime::live_parity_tests::taskbar_clock_locale_follows_configured_or_user_language_tag ... ok
+test surface_runtime::live_parity_tests::taskbar_context_geometry_clamps_to_monitor_and_settings_fit_work_area ... ok
+test surface_runtime::live_parity_tests::taskbar_context_settings_mutate_exactly_one_supported_field ... ok
+test surface_runtime::live_parity_tests::production_status_uses_platform_clock_and_refreshes_changed_values ... ok
+test surface_runtime::live_parity_tests::taskbar_preview_and_shell_keep_distinct_bottom_anchors_at_175_percent ... ok
+test surface_runtime::live_parity_tests::wifi_actions_map_to_exact_typed_commands_without_claiming_observation ... ok
+test surface_runtime::live_parity_tests::unavailable_status_providers_remain_independent ... ok
+test surface_runtime::live_parity_tests::system_flyout_geometry_matrix_preserves_windows_logical_ratios ... ok
+test surface_runtime::live_parity_tests::icon_cache_reuses_live_entries_prunes_stale_and_stays_bounded ... ok
+test taskbar_state_client::tests::client_source_bounds_restart_and_requests_clean_shutdown ... ok
+test taskbar_state_client::tests::reconciler_rejects_stale_and_clears_across_restart ... ok
+test surface_runtime::live_parity_tests::notification_show_all_admits_empty_and_complete_snapshots_without_delegation ... ok
+test surface_runtime::live_parity_tests::task_hover_preview_path_is_owned_delayed_and_exact_identity_resolved ... ok
+test surface_runtime::live_parity_tests::taskbar_settings_geometry_is_logical_once_across_dpi_and_small_monitors ... ok
+test surface_runtime::live_parity_tests::historical_platform_start_probe_remains_isolated_from_product_composition ... ok
+test surface_runtime::live_parity_tests::product_status_source_rejects_fixed_provider_values ... ok
+test surface_runtime::live_parity_tests::system_status_supervision_and_owned_flyouts_are_mode_independent ... ok
+test surface_runtime::live_parity_tests::owned_auto_hide_source_retries_lifecycle_and_observes_preview_attention ... ok
+test surface_runtime::live_parity_tests::task_preview_open_source_keeps_hover_passive_and_click_keyboard_focused ... ok
+test surface_runtime::live_parity_tests::popup_slots_end_read_borrows_before_mutation_and_start_panics_are_contained ... ok
+test surface_runtime::live_parity_tests::win_e_is_shell_scoped_and_routes_only_to_verified_superexplorer_foreground ... ok
+test surface_runtime::live_parity_tests::product_start_source_is_exclusively_owned_in_every_mode ... ok
+test surface_runtime::live_parity_tests::system_flyout_composition_is_explicit_truthful_and_never_delegates ... ok
+test surface_runtime::live_parity_tests::owned_taskbar_context_settings_are_atomic_and_never_delegate_to_explorer ... ok
+test surface_runtime::live_parity_tests::development_superexplorer_icon_source_is_discoverable_when_present ... ok
+
+test result: ok. 55 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running unittests src\main.rs (target\debug\deps\superdesktop_app-32c5d0375144d1cf.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (target\debug\deps\superdesktop_guardian-9b5b6231956064e9.exe)
+
+running 6 tests
+test recovery::tests::absent_explorer_spawns_once_and_repeated_concurrent_identity_shares_terminal ... ok
+test recovery::tests::forged_wrong_session_token_and_ambiguous_timing_are_zero_effect ... ok
+test recovery::tests::existing_explorer_is_shown_without_spawn_and_order_is_safe ... ok
+test recovery::tests::invocation_accepts_only_explicit_inherited_roles_and_absolute_terminal ... ok
+test recovery::tests::ten_forced_crash_timings_meet_deadline ... ok
+test tests::production_terminal_proves_parent_and_recovery_completion ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\main.rs (target\debug\deps\superdesktop_guardian-913109ebfddfa4b1.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (target\debug\deps\superdesktop_test_support-1a239bca6677c558.exe)
+
+running 12 tests
+test verification::tests::five_dpi_visual_geometry_and_hit_target_matrix_passes ... ok
+test verification::tests::every_resource_counter_has_an_independent_bound_and_stable_tail ... ok
+test completion_rollup::tests::missing_duplicate_unexpected_and_invalid_hash_sources_are_rejected ... ok
+test shell_fixture::tests::builder_is_deterministic ... ok
+test verification::tests::fixed_performance_thresholds_use_raw_samples ... ok
+test verification::tests::visual_contract_rejects_ssim_geometry_state_and_hit_target_drift ... ok
+test completion_rollup::tests::checked_in_rollup_has_a_valid_derived_blocked_decision ... ok
+test verification::tests::ime_composition_commit_cancel_preserve_focus ... ok
+test completion_rollup::tests::missing_or_unexpected_gate_is_structural_failure ... ok
+test verification::tests::zh_tw_english_zh_cn_fallback_and_rtl_are_layout_safe ... ok
+test completion_rollup::tests::exact_pass_set_is_deterministic_and_release_allowed ... ok
+test completion_rollup::tests::every_pending_or_failed_gate_blocks_release ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\main.rs (target\debug\deps\superdesktop_test_support-eb36c67c2ee76e03.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\core_consumers.rs (target\debug\deps\core_consumers-fbcef1e7b4e65142.exe)
+
+running 4 tests
+test bridge_consumer_contract_compiles ... ok
+test desktop_consumer_contract_compiles ... ok
+test lifecycle_consumer_contract_compiles ... ok
+test taskbar_consumer_contract_compiles ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (target\debug\deps\superdesktop_utit-4f94a816c4356977.exe)
+
+running 13 tests
+test report::tests::projections_escape_unicode_xml_markdown_and_are_stable ... ok
+test cli::tests::parses_every_command_and_rejects_unknown_or_duplicate_filters ... ok
+test catalog::tests::pointer_parity_cases_cover_applications_notifications_input_and_volume ... ok
+test catalog::tests::filters_are_explicit_partial_and_unknown_fails ... ok
+test executor::tests::decision_never_hides_failure_blocked_skip_or_filtering ... ok
+test executor::tests::powershell_argv_never_receives_extended_length_prefixes ... ok
+test preflight::tests::prerequisites_are_truthful_and_never_infer_external_passes ... ok
+test catalog::tests::production_crates_never_depend_on_utit_and_executor_has_no_shell_string_route ... ok
+test catalog::tests::duplicate_zero_timeout_escape_and_missing_watchdog_fail ... ok
+test catalog::tests::real_catalog_is_unique_closed_and_admitted ... ok
+test report::tests::validator_rejects_duplicate_count_decision_and_hash_drift ... ok
+test executor::tests::explorer_free_case_rejects_a_report_without_absence_and_recovery_proof ... ok
+test executor::tests::pass_failure_missing_artifact_and_timeout_are_distinct ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.75s
+
+     Running unittests src\main.rs (target\debug\deps\superdesktop_utit-603441dc16449379.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\lib.rs (target\debug\deps\system_status_host-d462611662f4f46e.exe)
+
+running 6 tests
+test tests::wifi_host_source_routes_only_typed_identity_bound_commands ... ok
+test tests::language_preferences_route_is_fieldless_fixed_and_accepted_without_observation ... ok
+test tests::callback_panic_shutdown_coalescing_and_overflow_are_bounded ... ok
+test tests::authoritative_reconciliation_timer_is_single_flight ... ok
+test tests::handshake_snapshot_health_and_stale_command_are_deterministic ... ok
+test tests::wifi_refresh_returns_accepted_or_truthful_provider_failure_and_routes_network_event ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+
+     Running unittests src\main.rs (target\debug\deps\system_status_host-1fbecae76bbb54f7.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\host_process.rs (target\debug\deps\host_process-3662f8c0f01a870c.exe)
+
+running 1 test
+test process_handshakes_snapshots_rejects_malformed_input_and_stops_on_eof ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+     Running unittests src\bin\taskbar_progress_fixture.rs (target\debug\deps\taskbar_progress_fixture-813612d7e8f587a3.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\main.rs (target\debug\deps\taskbar_state_host-1d6842f724329b42.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\host_process.rs (target\debug\deps\host_process-19f2a60103e9a5c3.exe)
+
+running 2 tests
+test host_returns_health_snapshot_and_clean_shutdown ... ok
+state=2 percent=42 hwnd=A70F72
+test ordinary_itaskbarlist3_calls_publish_progress_snapshot ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.56s
+
+     Running unittests src\lib.rs (target\debug\deps\taskbar_ui-5850036e49835fe7.exe)
+
+running 81 tests
+test advanced::tests::alt_tab_selection_wraps_forward_backward_and_handles_empty_snapshots ... ok
+test advanced::tests::hover_preview_generation_rejects_stale_open_and_close_timers ... ok
+test advanced::tests::high_contrast_and_unavailable_states_do_not_rely_on_opacity_or_color_alone ... ok
+test auto_hide::tests::hide_requires_full_delay_and_reveal_is_immediate ... ok
+test advanced::tests::flyout_delay_reconcile_actions_and_fallback_are_stable ... ok
+test advanced::tests::labeled_buttons_use_long_reference_indicator_and_icon_only_stays_short ... ok
+test advanced::tests::popup_crossing_invalidates_close_and_repeated_cycles_stay_exact ... ok
+test advanced::tests::windows11_indicator_geometry_covers_every_running_state ... ok
+test auto_hide::tests::pointer_return_hold_disable_and_cursor_failure_are_idempotent ... ok
+test start::tests::missing_refused_and_stale_are_truthful ... ok
+test notification_area::tests::snapshot_overflow_input_latency_and_unavailable_are_truthful ... ok
+test grouping::tests::identity_collision_and_snapshot_reorder_do_not_merge_or_reorder ... ok
+test start::tests::owned_start_ime_generation_merge_navigation_and_accessibility ... ok
+test interaction::tests::fixed_entry_sources_emit_equivalent_truthful_bridge_request ... ok
+test interaction::tests::multi_window_selection_escapes_and_returns_focus ... ok
+test start::tests::path_result_is_eligible_for_native_start_icon ... ok
+test interaction::tests::pinned_without_windows_launches_and_fixed_failure_is_first_terminal ... ok
+test advanced::tests::progress_attention_and_accessibility_remain_independent ... ok
+test layout::tests::invalid_rows_fall_back_only_to_two_and_scale_with_dpi ... ok
+test layout::tests::one_two_three_row_geometry_has_no_overlap ... ok
+test layout::tests::slot_order_rows_hit_targets_and_overflow_are_deterministic ... ok
+test notification_area::tests::accessible_nodes_are_a_complete_unique_snapshot_across_placements ... ok
+test show_desktop::tests::completion_clears_session_and_allows_a_new_cycle ... ok
+test show_desktop::tests::empty_or_failed_minimize_does_not_create_active_session ... ok
+test show_desktop::tests::first_cycle_selects_only_visible_eligible_non_minimized_windows ... ok
+test show_desktop::tests::partial_success_is_the_only_restore_set ... ok
+test notification_overflow::tests::overflow_surface_matches_windows11_interaction_contract ... ok
+test advanced::tests::jump_lists_overlay_and_preferences_are_independent_and_bounded ... ok
+test show_desktop::tests::restore_requires_complete_fresh_identity_and_eligibility ... ok
+test grouping::tests::pin_order_round_trips_and_rejects_membership_drift ... ok
+test interaction::tests::active_minimizes_inactive_activates_and_minimized_restores ... ok
+test start::tests::home_all_apps_and_power_are_bounded_sorted_and_dismissible ... ok
+test start::tests::start_strings_are_complete_localized_and_fall_back_to_english ... ok
+test start::tests::query_temporarily_overrides_page_without_changing_pins ... ok
+test auto_hide::tests::endpoint_geometry_preserves_negative_origin_height_and_two_pixel_edge ... ok
+test start::tests::start_visual_tokens_keep_high_contrast_geometry_distinct ... ok
+test status::tests::locale_clock_is_deterministic ... ok
+test status::tests::unavailable_provider_is_independent_and_no_fake_tray_is_rendered ... ok
+test surface::tests::preview_maps_one_bar_per_monitor_without_work_area_effects ... ok
+test surface::tests::registration_failure_returns_to_unreserved_state ... ok
+test surface::tests::shell_reconciles_dpi_remove_and_idempotent_teardown ... ok
+test system_control_context::tests::context_commands_are_fixed_by_control_kind ... ok
+test system_control_context::tests::owned_context_has_accessible_dismissal_contract ... ok
+test system_flyout::tests::flyout_tokens_locale_and_profile_tags_are_bounded_and_distinct ... ok
+test system_flyout::tests::input_method_rows_keep_duplicate_languages_distinct_and_bounded ... ok
+test system_flyout::tests::network_and_power_summaries_distinguish_not_present_from_failure ... ok
+test system_flyout::tests::wifi_rows_cover_empty_single_and_maximum_lists_with_exact_action_gating ... ok
+test system_flyout::tests::windows_style_calendar_grid_handles_leap_year_and_selected_day ... ok
+test task_view::tests::partial_capability_is_truthful_and_window_move_remains_available ... ok
+test task_view::tests::stale_snapshot_and_stale_windows_are_ignored_or_reconciled ... ok
+test taskbar_settings::tests::context_labels_and_checked_states_are_truthful_in_both_locales ... ok
+test taskbar_settings::tests::context_navigation_wraps_and_emits_one_typed_command ... ok
+test start::tests::windows11_view_contract_has_sections_icons_and_collapsed_power ... ok
+test taskbar_settings::tests::responsive_layout_uses_compact_padding_and_bounded_centered_content ... ok
+test taskbar_settings::tests::settings_model_changes_only_supported_fields_and_reconciles_revision ... ok
+test taskbar_settings::tests::context_menu_observes_window_deactivation_without_descendant_focus_hooks ... ok
+test taskbar_settings::tests::settings_scrollbar_geometry_is_bounded_and_handles_fit_without_division ... ok
+test taskbar_settings::tests::settings_tokens_keep_geometry_stable_and_high_contrast_explicit ... ok
+test taskbar_settings::tests::unsupported_rows_explain_unavailability_and_never_mutate ... ok
+test tracker::tests::authoritative_snapshot_preserves_membership_order_across_content_churn ... ok
+test tracker::tests::filters_all_excluded_window_classes ... ok
+test tracker::tests::storm_is_bounded_overflow_single_flight_and_stale_snapshot_rejected ... ok
+test view::tests::adaptive_task_width_shrinks_before_overflow_and_respects_rows ... ok
+test view::tests::labels_can_only_be_hidden_when_a_real_icon_exists ... ok
+test view::tests::bc7_task_icon_payload_is_directly_renderable ... ok
+test view::tests::no_icon_always_uses_readable_english_and_traditional_chinese_labels ... ok
+test taskbar_settings::tests::geometry_source_contract_uses_windows11_dimensions_and_accessibility ... ok
+test view::tests::system_flyouts_are_exclusive_and_rapid_switches_are_deterministic ... ok
+test view::tests::child_right_click_routes_are_exact_and_stop_background_propagation ... ok
+test view::tests::task_icon_pixels_are_validated_as_rgba ... ok
+test view::tests::clock_width_rows_alignment_and_accessible_order_match_windows ... ok
+test taskbar_settings::tests::settings_window_chrome_source_tracks_scroll_and_uses_shared_dismissal ... ok
+test view::tests::taskbar_chrome_tokens_and_compact_locale_labels_are_deterministic ... ok
+test view::tests::show_desktop_corner_is_exact_owned_accessible_and_full_height ... ok
+test view::tests::task_label_source_contract_keeps_truthful_fallback_and_ellipsis_container ... ok
+test view::tests::task_visual_source_contract_uses_windows_indicators_and_background_progress ... ok
+test view::tests::tray_show_all_control_is_unconditional_complete_and_theme_aware ... ok
+test view::tests::taskbar_resize_quantization_lock_strip_and_continuous_rows_are_deterministic ... ok
+test view::tests::taskbar_chrome_source_uses_shared_interaction_and_system_geometry ... ok
+test view::tests::system_status_source_contract_keeps_accessible_owned_controls_and_safe_unavailable_ui ... ok
+test system_flyout::tests::owned_flyout_contract_is_keyboard_accessible_and_has_no_fake_unavailable_action ... ok
+
+test result: ok. 81 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+   Doc-tests desktop_ui
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests explorer_bridge
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests notification_area_host
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests platform_win
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests settings_store
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests shell_core
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests shell_installer
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests shell_provider_host
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests shell_provider_protocol
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests superdesktop_app
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests superdesktop_guardian
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests superdesktop_test_support
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests superdesktop_utit
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests system_status_host
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests taskbar_ui
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

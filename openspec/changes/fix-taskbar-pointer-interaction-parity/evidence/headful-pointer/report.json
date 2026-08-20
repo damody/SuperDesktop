@@ -1,0 +1,143 @@
+{
+  "schema": "superdesktop-utit-run/v1",
+  "run_id": "headful-pointer",
+  "suite": "shell-parity",
+  "partial": true,
+  "started_unix_ms": 1787224158002,
+  "finished_unix_ms": 1787224217307,
+  "workspace": "\\\\?\\D:\\SuperExplorer\\SuperDesktop",
+  "host": {
+    "windows_build": 26200,
+    "architecture": "AMD64",
+    "interactive": true,
+    "monitor_count": 1,
+    "explorer_running": true,
+    "workspace_revision": "d6f11fda0a2802700a247657515269ff6f11af82",
+    "tools": [
+      "cargo",
+      "certutil",
+      "git",
+      "openspec",
+      "powershell"
+    ]
+  },
+  "counts": {
+    "selected": 3,
+    "passed": 2,
+    "failed": 1,
+    "blocked": 0,
+    "skipped": 0,
+    "not_applicable": 0
+  },
+  "decision": "failed",
+  "cases": [
+    {
+      "id": "gui-taskbar-window-actions",
+      "title": "Taskbar application left/right pointer parity",
+      "state": "failed",
+      "reason": "nonzero-exit;missing-artifact:window-actions/report.json",
+      "duration_ms": 9363,
+      "exit_code": 1,
+      "timed_out": false,
+      "argv": [
+        "powershell.exe",
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "D:\\SuperExplorer\\SuperDesktop\\scripts\\capture-taskbar-window-actions.ps1",
+        "-Workspace",
+        "D:\\SuperExplorer\\SuperDesktop",
+        "-EvidenceDirectory",
+        "D:\\SuperExplorer\\SuperDesktop\\openspec\\changes\\fix-taskbar-pointer-interaction-parity\\evidence\\headful-pointer\\cases\\gui-taskbar-window-actions/window-actions"
+      ],
+      "stdout": null,
+      "stderr": {
+        "path": "cases/gui-taskbar-window-actions/stderr.log",
+        "bytes": 390,
+        "sha256": "04c181227bfa43c18fb116addeab2abb930b2b9d6a27c940aab339339582181c"
+      },
+      "artifacts": [],
+      "recovery_verified": true
+    },
+    {
+      "id": "gui-notification-overflow",
+      "title": "Explorer-free visible and hidden notification icon pointer parity",
+      "state": "passed",
+      "reason": "passed",
+      "duration_ms": 26982,
+      "exit_code": 0,
+      "timed_out": false,
+      "argv": [
+        "powershell.exe",
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "D:\\SuperExplorer\\SuperDesktop\\scripts\\capture-notifyicon-compatibility.ps1",
+        "-Workspace",
+        "D:\\SuperExplorer\\SuperDesktop",
+        "-OutputPath",
+        "D:\\SuperExplorer\\SuperDesktop\\openspec\\changes\\fix-taskbar-pointer-interaction-parity\\evidence\\headful-pointer\\cases\\gui-notification-overflow/notifyicon/report.json",
+        "-ScreenshotPath",
+        "D:\\SuperExplorer\\SuperDesktop\\openspec\\changes\\fix-taskbar-pointer-interaction-parity\\evidence\\headful-pointer\\cases\\gui-notification-overflow/notifyicon/overflow.png"
+      ],
+      "stdout": {
+        "path": "cases/gui-notification-overflow/stdout.log",
+        "bytes": 3821,
+        "sha256": "56df3e45eeafd6923091aad7cb44da45193057f55d94132898007aa0f644a84c"
+      },
+      "stderr": null,
+      "artifacts": [
+        {
+          "path": "cases/gui-notification-overflow/notifyicon/report.json",
+          "bytes": 3820,
+          "sha256": "4b93d862bf70b987ef7b8357e191e72735600be1e644e01da236f363a31ab8a9"
+        },
+        {
+          "path": "cases/gui-notification-overflow/notifyicon/overflow.png",
+          "bytes": 55526,
+          "sha256": "d4ddc41197721e1c48f886426e3b7799a954f5e36dbd99dba79347b36aea00f7"
+        }
+      ],
+      "recovery_verified": true
+    },
+    {
+      "id": "gui-system-status",
+      "title": "Explorer-free input and volume left/right pointer parity",
+      "state": "passed",
+      "reason": "passed",
+      "duration_ms": 22235,
+      "exit_code": 0,
+      "timed_out": false,
+      "argv": [
+        "powershell.exe",
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "D:\\SuperExplorer\\SuperDesktop\\scripts\\capture-system-status-production.ps1",
+        "-Workspace",
+        "D:\\SuperExplorer\\SuperDesktop",
+        "-EvidenceDirectory",
+        "D:\\SuperExplorer\\SuperDesktop\\openspec\\changes\\fix-taskbar-pointer-interaction-parity\\evidence\\headful-pointer\\cases\\gui-system-status/system-status",
+        "-SuppressExplorer",
+        "-SkipProfileSwitch"
+      ],
+      "stdout": {
+        "path": "cases/gui-system-status/stdout.log",
+        "bytes": 10440,
+        "sha256": "84b8fe7f5076c721696929ad37ae9f1b46e6b1883690a328ed21034575b2dfee"
+      },
+      "stderr": null,
+      "artifacts": [
+        {
+          "path": "cases/gui-system-status/system-status/headful-report.json",
+          "bytes": 10439,
+          "sha256": "5e9cf6414a8360bcedf14f4ec260d63abeeaa3f5fd43de5b3d776b424d080261"
+        }
+      ],
+      "recovery_verified": true
+    }
+  ]
+}
