@@ -2,7 +2,7 @@
 
 ## Goal
 
-Make a task button's right-click behavior match the Windows taskbar contract: the Jump List is the only popup shown, its entries belong to the selected application, and essential taskbar actions remain available.
+Make a task button's right-click behavior match the Windows File Explorer taskbar contract as closely as SuperDesktop's owned-shell architecture permits: the Jump List is the only popup shown, its entries belong to the selected application, and essential taskbar actions remain available.
 
 ## Scope
 
@@ -25,13 +25,14 @@ Right-clicking a task button performs one atomic popup transition:
 3. Close a previously open Jump List when the same toggle path requires dismissal, or build a new Jump List for the selected application.
 4. Open only the Jump List and give it keyboard focus.
 
-The resulting Jump List is grouped like a Windows taskbar menu:
+The resulting Jump List is grouped and ordered like File Explorer's Windows taskbar menu:
 
 - Provider-supplied application tasks may appear when valid.
 - The inaccurate global `Recent` and `Frequent` groups do not appear.
-- Local taskbar actions appear at the bottom.
+- Local taskbar actions appear in the bottom command area without a synthetic `Actions` heading.
 - A single-window application shows `Close window`; a grouped application shows `Close all windows`.
 - Exactly one of `Pin to taskbar` and `Unpin from taskbar` is present according to persisted state.
+- The pin/unpin action precedes the final close action. Existing minimize and maximize commands may remain above these required bottom actions, but must not create duplicate close commands.
 
 ## Architecture
 
