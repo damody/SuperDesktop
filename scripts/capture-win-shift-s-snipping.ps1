@@ -118,10 +118,10 @@ try {
     $overlayBounds = $parts[3]
     $process = Get-CimInstance Win32_Process -Filter "ProcessId=$overlayPid"
     if ($null -eq $process -or $process.Name -ne 'SnippingTool.exe') { throw "Unexpected overlay owner: pid=$overlayPid name=$($process.Name)" }
-    if ($process.CommandLine -notmatch 'ms-screenclip:///?source=HotKey') { throw "Unexpected Snipping Tool command line: $($process.CommandLine)" }
+    if (-not ([string]$process.CommandLine).Contains('ms-screenclip:///?source=HotKey')) { throw "Unexpected Snipping Tool command line: $($process.CommandLine)" }
     if ($process.ExecutablePath -notmatch '\\WindowsApps\\Microsoft\.ScreenSketch_.+\\SnippingTool\\SnippingTool\.exe$') { throw "Unexpected Snipping Tool path: $($process.ExecutablePath)" }
     $signature = Get-AuthenticodeSignature -LiteralPath $process.ExecutablePath
-    if ($signature.Status -ne [Management.Automation.SignatureStatus]::Valid) { throw "Snipping Tool signature is not valid: $($signature.Status)" }
+    if ($signature.Status -ne [System.Management.Automation.SignatureStatus]::Valid) { throw "Snipping Tool signature is not valid: $($signature.Status)" }
 
     Send-Escape
     Wait-Until { @([SuperDesktopScreenSnipNative]::OverlayWindows()).Count -eq 0 } 4000 'Snipping Tool overlay did not dismiss after Escape' | Out-Null
