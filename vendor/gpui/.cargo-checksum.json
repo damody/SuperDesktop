@@ -51,7 +51,7 @@
                   "src/_ownership_and_data_flow.rs":  "4edbde237dc322ceac8969028811fd30d87a8bd108475a642c4fb961b2770258",
                   "src/action.rs":  "26977f80f4ddfcf0cea915609f24b3693086920af21dc439458c06febb4b09c2",
                   "src/app.rs":  "6f13e4dc3cfcc788b4779e25dd9137d90e6410199c1c39b906992bb4603025b8",
-                  "src/app/async_context.rs":  "3453971e76b7d33fbf652998d1c911b967d7ccd6ee0da6054ee5703d9f80384f",
+                  "src/app/async_context.rs":  "58a084b212718bec515a6be44d6af704a47450c5fb02e5291290178659d50924",
                   "src/app/context.rs":  "35b95074073ec27c2dc8d98793e8281e821b56ba702038ea2ce7b23606954db1",
                   "src/app/entity_map.rs":  "9e89ba8858008a30bd6351470f325a837282676730970ac673b51c0fb5328ce1",
                   "src/app/headless_app_context.rs":  "28f4324199aba665ea248a0462f22ff24faf310b01f4bea6416d6d6e57a69ee0",

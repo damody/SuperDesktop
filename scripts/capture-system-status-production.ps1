@@ -31,6 +31,10 @@ public static class SuperDesktopFlyoutFocus {
     [DllImport("user32.dll")]
     public static extern bool SetForegroundWindow(IntPtr hwnd);
     [DllImport("user32.dll")]
+    public static extern IntPtr GetWindowLongPtrW(IntPtr hwnd, int index);
+    [DllImport("user32.dll")]
+    public static extern bool IsWindow(IntPtr hwnd);
+    [DllImport("user32.dll")]
     public static extern uint GetDpiForWindow(IntPtr hwnd);
     [DllImport("user32.dll")]
     public static extern bool SetCursorPos(int x, int y);
@@ -83,6 +87,31 @@ function Invoke-Element([System.Windows.Automation.AutomationElement]$Element) {
     if ($null -eq $Element) { throw 'Required UI Automation element was not found.' }
     $pattern = $Element.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)
     $pattern.Invoke()
+}
+
+function Get-PopupHwnd([System.Windows.Automation.AutomationElement]$Element, [IntPtr]$TaskbarHwnd) {
+    $current = $Element
+    while ($null -ne $current) {
+        $candidate = [IntPtr][int]$current.Current.NativeWindowHandle
+        if ($candidate -ne [IntPtr]::Zero -and $candidate -ne $TaskbarHwnd) { return $candidate }
+        $current = [System.Windows.Automation.TreeWalker]::ControlViewWalker.GetParent($current)
+    }
+    throw 'System context item did not resolve to a popup HWND.'
+}
+
+function Assert-TopmostAndDismiss([System.Windows.Automation.AutomationElement]$Element, [IntPtr]$TaskbarHwnd, [string]$Kind) {
+    $popupHwnd = Get-PopupHwnd $Element $TaskbarHwnd
+    $topmost = (([SuperDesktopFlyoutFocus]::GetWindowLongPtrW($popupHwnd, -20).ToInt64() -band 0x8) -ne 0)
+    if (-not $topmost) { throw "$Kind context HWND is not WS_EX_TOPMOST." }
+    [SuperDesktopFlyoutFocus]::SetForegroundWindow($TaskbarHwnd) | Out-Null
+    $deadline = [DateTime]::UtcNow.AddSeconds(3)
+    do {
+        if (-not [SuperDesktopFlyoutFocus]::IsWindow($popupHwnd)) {
+            return [ordered]@{popup_hwnd=$popupHwnd.ToInt64();ws_ex_topmost=$true;dismissed_after_focus_loss=$true}
+        }
+        Start-Sleep -Milliseconds 50
+    } while ([DateTime]::UtcNow -lt $deadline)
+    throw "$Kind topmost context did not dismiss after focus loss."
 }
 
 function Click-Element([System.Windows.Automation.AutomationElement]$Element, [ValidateSet('Left','Right')][string]$Button) {
@@ -413,7 +442,7 @@ try {
             ([string]$item.Current.Name -eq 'Language preferences' -or [string]$item.Current.Name -eq (-join @([char]0x8a9e,[char]0x8a00,[char]0x559c,[char]0x597d,[char]0x8a2d,[char]0x5b9a)))
     }
     if ($null -eq $inputContext) { throw 'Input right click did not open the owned Language preferences context menu.' }
-    [System.Windows.Forms.SendKeys]::SendWait('{ESC}')
+    $inputContextEvidence = Assert-TopmostAndDismiss $inputContext ([IntPtr]$process.MainWindowHandle) 'Input'
     Start-Sleep -Milliseconds 150
     $volume = Find-Element $taskbar { param($item) $item.Current.ControlType -eq $button -and $item.Current.Name.StartsWith('Volume ') }
     [SuperDesktopFlyoutFocus]::SetForegroundWindow([IntPtr]$process.MainWindowHandle) | Out-Null
@@ -430,12 +459,12 @@ try {
             ([string]$item.Current.Name -eq 'Sound settings' -or [string]$item.Current.Name -eq (-join @([char]0x97f3,[char]0x6548,[char]0x8a2d,[char]0x5b9a)))
     }
     if ($null -eq $volumeMixer -or $null -eq $soundSettings) { throw 'Volume right click did not expose both owned fixed context actions.' }
+    $volumeContextEvidence = Assert-TopmostAndDismiss $volumeMixer ([IntPtr]$process.MainWindowHandle) 'Volume'
     $backgroundSettings = Find-OwnedPopupElement $process.Id $process.MainWindowHandle {
         param($item)
         $item.Current.ControlType -eq [System.Windows.Automation.ControlType]::MenuItem -and [string]$item.Current.Name -eq 'Taskbar settings'
     } 250
     if ($null -ne $backgroundSettings) { throw 'System-control right click leaked into the taskbar background menu.' }
-    [System.Windows.Forms.SendKeys]::SendWait('{ESC}')
     Start-Sleep -Milliseconds 150
 
     $calendar = Find-Element $taskbar {
@@ -559,6 +588,10 @@ try {
             volume_right_context=$true
             background_context_absent=$true
             physical_pointer=$true
+        }
+        context_topmost=[ordered]@{
+            input=$inputContextEvidence
+            volume=$volumeContextEvidence
         }
         geometry_thresholds=[ordered]@{width_tolerance_dip=16.0;taskbar_gap_min_dip=2.0;taskbar_gap_max_dip=16.0}
         geometry_records=$geometryRecords

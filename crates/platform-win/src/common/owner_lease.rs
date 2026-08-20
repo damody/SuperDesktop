@@ -108,6 +108,10 @@ pub struct SessionOwnerMutex {
 
 impl SessionOwnerMutex {
     pub fn acquire() -> Result<Self, &'static str> {
+        Self::acquire_in_namespace("SuperDesktop.Owner.Session")
+    }
+
+    fn acquire_in_namespace(namespace: &str) -> Result<Self, &'static str> {
         if PROCESS_OWNS_SESSION
             .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
             .is_err()
@@ -116,7 +120,7 @@ impl SessionOwnerMutex {
         }
         let reset = || PROCESS_OWNS_SESSION.store(false, Ordering::Release);
         let identity = current_identity().inspect_err(|_| reset())?;
-        let name = format!("Local\\SuperDesktop.Owner.Session.{}", identity.session_id)
+        let name = format!("Local\\{namespace}.{}", identity.session_id)
             .encode_utf16()
             .chain(Some(0))
             .collect::<Vec<_>>();
@@ -279,12 +283,21 @@ mod tests {
     use super::*;
     #[test]
     fn session_mutex_fences_second_owner_and_revalidates_all_identity_fields() {
-        let first = SessionOwnerMutex::acquire().unwrap();
-        assert_eq!(SessionOwnerMutex::acquire().err(), Some("already-owned"));
+        let namespace = format!("SuperDesktop.Owner.Test.{}", std::process::id());
+        let Ok(first) = SessionOwnerMutex::acquire_in_namespace(&namespace) else {
+            panic!("fixture owner mutex must be available")
+        };
+        assert_eq!(
+            SessionOwnerMutex::acquire_in_namespace(&namespace).err(),
+            Some("already-owned")
+        );
         assert!(first.revalidate().is_ok());
         assert!(!first.identity().user_sid_hex.is_empty());
         assert!(first.identity().file.file_index != 0);
-        first.release().unwrap();
-        SessionOwnerMutex::acquire().unwrap().release().unwrap();
+        assert!(first.release().is_ok());
+        let Ok(second) = SessionOwnerMutex::acquire_in_namespace(&namespace) else {
+            panic!("fixture owner mutex must be reacquirable")
+        };
+        assert!(second.release().is_ok());
     }
 }

@@ -31,6 +31,17 @@ impl AsyncApp {
             .upgrade()
             .expect("app was released before async operation completed")
     }
+
+    /// Tries to invoke a callback in the application context without panicking
+    /// when a synchronous platform callback already holds the application borrow.
+    pub fn try_update<R>(&self, f: impl FnOnce(&mut App) -> R) -> Result<R> {
+        let app = self.app.upgrade().context("app was released")?;
+        let mut lock = app.try_borrow_mut()?;
+        if lock.quitting {
+            bail!("app is quitting");
+        }
+        Ok(lock.update(f))
+    }
 }
 
 impl AppContext for AsyncApp {

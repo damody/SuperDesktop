@@ -16,8 +16,8 @@ use desktop_ui::{
     DesktopTransferStatus, DesktopView, MenuModel, TransferIntent, execute_desktop_operation,
 };
 use gpui::{
-    App, AppContext, Bounds, WindowBackgroundAppearance, WindowBounds, WindowKind, WindowOptions,
-    point, px, size,
+    App, AppContext, Bounds, Window, WindowBackgroundAppearance, WindowBounds, WindowKind,
+    WindowOptions, point, px, size,
 };
 use platform_win::common::{
     appbar_shell_hook::{
@@ -272,7 +272,9 @@ impl ProductionTransferRuntime {
 }
 
 fn trace_action(action: &str) {
-    if !action.starts_with("error:")
+    let recoverable_warning = action == "taskbar:appbar-unavailable-owned-shell";
+    if !recoverable_warning
+        && !action.starts_with("error:")
         && ["error", "failed", "rejected", "unavailable", "exhausted"]
             .iter()
             .any(|marker| action.contains(marker))
@@ -299,6 +301,28 @@ fn trace_action(action: &str) {
 fn report_error(context: &str, error: impl std::fmt::Display) {
     eprintln!("SuperDesktop error [{context}]: {error}");
     trace_action(&format!("error:{context}:{error}"));
+}
+
+fn promote_owned_context_popup(window: &mut Window, kind: &str) -> bool {
+    let promoted = hwnd(window)
+        .map_err(str::to_owned)
+        .and_then(promote_owned_popup_topmost);
+    match promoted {
+        Ok(()) => {
+            trace_action(&format!("{kind}:topmost-established"));
+            true
+        }
+        Err(error) => {
+            report_error(&format!("{kind}:topmost"), error);
+            window.remove_window();
+            false
+        }
+    }
+}
+
+fn force_appbar_unavailable_for_verification() -> bool {
+    std::env::var_os("SUPERDESKTOP_VERIFICATION_SURFACE").is_some()
+        && std::env::var("SUPERDESKTOP_TEST_FORCE_APPBAR_UNAVAILABLE").as_deref() == Ok("1")
 }
 
 fn guard_ui_action(context: &str, action: impl FnOnce()) {
@@ -1653,7 +1677,7 @@ fn schedule_preview_close(
             background
                 .timer(Duration::from_millis(HOVER_PREVIEW_CLOSE_GRACE_MS))
                 .await;
-            async_app.update(|app| {
+            if let Err(error) = async_app.try_update(|app| {
                 if controller.borrow().can_close(token)
                     && let Some(handle) = slot.borrow_mut().take()
                 {
@@ -1661,7 +1685,9 @@ fn schedule_preview_close(
                     active_popup.set(0);
                     trace_action("task-preview:hover-closed");
                 }
-            });
+            }) {
+                report_error("task-preview:close-update", error);
+            }
         })
         .detach();
 }
@@ -1693,7 +1719,7 @@ fn schedule_preview_pointer_monitor(
                 if start.elapsed() < Duration::from_millis(HOVER_PREVIEW_CLOSE_GRACE_MS) {
                     continue;
                 }
-                async_app.update(|app| {
+                if let Err(error) = async_app.try_update(|app| {
                     if active_popup.get() == popup_hwnd {
                         if let Some(handle) = slot.borrow_mut().take() {
                             let _ = handle.update(app, |_, window, _| window.remove_window());
@@ -1701,7 +1727,9 @@ fn schedule_preview_pointer_monitor(
                         active_popup.set(0);
                         trace_action("task-preview:hover-closed");
                     }
-                });
+                }) {
+                    report_error("task-preview:pointer-monitor-update", error);
+                }
                 return;
             }
         })
@@ -1826,7 +1854,7 @@ fn schedule_preview_open(
             background
                 .timer(Duration::from_millis(HOVER_PREVIEW_DELAY_MS))
                 .await;
-            async_app.update(|app| {
+            if let Err(error) = async_app.try_update(|app| {
                 if controller.borrow().can_open(&stable_id, token) {
                     open_task_preview(
                         &stable_id,
@@ -1840,7 +1868,9 @@ fn schedule_preview_open(
                         PreviewOpenSource::Hover,
                     );
                 }
-            });
+            }) {
+                report_error("task-preview:open-update", error);
+            }
         })
         .detach();
 }
@@ -3738,18 +3768,25 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                     let configured = hwnd(window).and_then(|value| {
                         let mut lease = ControlledShellCapability::attach_controlled_window(value)
                             .map_err(|_| "taskbar-capability-attach")?;
-                        let appbar_available = !shell
-                            || production_taskbar_settings.auto_hide
-                            || lease.register_appbar().is_ok();
+                        let force_appbar_unavailable = force_appbar_unavailable_for_verification();
+                        let appbar_available = if force_appbar_unavailable {
+                            false
+                        } else {
+                            !shell
+                                || production_taskbar_settings.auto_hide
+                                || lease.register_appbar().is_ok()
+                        };
                         lease
                             .register_shell_hook()
                             .map_err(|_| "taskbar-hook-register")?;
-                        if shell {
-                            if !appbar_available {
-                                trace_action("taskbar:appbar-unavailable-owned-shell");
-                            } else if production_taskbar_settings.auto_hide {
-                                trace_action("taskbar:auto-hide-appbar-skipped");
-                            }
+                        if !appbar_available && (shell || force_appbar_unavailable) {
+                            trace_action("taskbar:appbar-unavailable-owned-shell");
+                            trace_action("taskbar:appbar-fallback-geometry-active");
+                            eprintln!(
+                                "SuperDesktop warning [taskbar:appbar]: AppBar registration unavailable; continuing with owned monitor geometry"
+                            );
+                        } else if shell && production_taskbar_settings.auto_hide {
+                            trace_action("taskbar:auto-hide-appbar-skipped");
                         } else {
                             trace_action("taskbar:preview-shell-hook-owned");
                         }
@@ -4164,6 +4201,8 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                 let invoke_target = Rc::clone(&jump_settings_target);
                                 let invoke_settings = Rc::clone(&jump_persisted_settings);
                                 let invoke_application = application_id.clone();
+                                let jump_topmost = Rc::new(Cell::new(false));
+                                let jump_topmost_for_open = Rc::clone(&jump_topmost);
                                 let opened = app.open_window(
                                     jump_list_options(
                                         &jump_list_monitor,
@@ -4175,6 +4214,10 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                     ),
                                     move |window, cx| {
                                         window.activate_window();
+                                        jump_topmost_for_open.set(promote_owned_context_popup(
+                                            window,
+                                            "taskbar:jump-list",
+                                        ));
                                         let dismiss_slot = Rc::clone(&dismiss_slot);
                                         cx.new(move |cx| {
                                             JumpListView::new(
@@ -4237,14 +4280,21 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                                     window.remove_window();
                                                     *dismiss_slot.borrow_mut() = None;
                                                 }),
+                                                window,
                                                 cx,
                                             )
                                         })
                                     },
                                 );
                                 if let Ok(handle) = opened {
-                                    *jump_list_window_for_taskbar.borrow_mut() = Some(handle);
-                                    trace_action("taskbar:jump-list-opened");
+                                    if jump_topmost.get() {
+                                        *jump_list_window_for_taskbar.borrow_mut() = Some(handle);
+                                        trace_action("taskbar:jump-list-opened");
+                                    } else {
+                                        let _ = handle.update(app, |_, window, _| {
+                                            window.remove_window()
+                                        });
+                                    }
                                 }
                             }),
                             taskbar_context: Rc::new(move |anchor, app| {
@@ -4261,6 +4311,8 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                 let live_settings = Rc::clone(&context_persisted_settings);
                                 let context_show_desktop = Rc::clone(&show_desktop_session_for_context);
                                 let context_rows = live_settings.borrow().taskbar.rows;
+                                let context_topmost = Rc::new(Cell::new(false));
+                                let context_topmost_for_open = Rc::clone(&context_topmost);
                                 let opened = app.open_window(
                                     taskbar_context_options(
                                         &context_monitor,
@@ -4270,6 +4322,10 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                     ),
                                     move |window, cx| {
                                         window.activate_window();
+                                        context_topmost_for_open.set(promote_owned_context_popup(
+                                            window,
+                                            "taskbar:context",
+                                        ));
                                         let dismiss_slot = Rc::clone(&context_slot);
                                         let settings_slot_for_action = Rc::clone(&settings_slot);
                                         let monitor_for_action = settings_monitor.clone();
@@ -4422,8 +4478,14 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                     },
                                 );
                                 if let Ok(handle) = opened {
-                                    *context_window_for_taskbar.borrow_mut() = Some(handle);
-                                    trace_action("taskbar:context-opened");
+                                    if context_topmost.get() {
+                                        *context_window_for_taskbar.borrow_mut() = Some(handle);
+                                        trace_action("taskbar:context-opened");
+                                    } else {
+                                        let _ = handle.update(app, |_, window, _| {
+                                            window.remove_window()
+                                        });
+                                    }
                                 }
                             }),
                             resize_rows: Rc::new(move |rows, window, _| {
@@ -4738,6 +4800,9 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                 let action_client = Rc::clone(&system_context_status_client);
                                 let action_status = Rc::clone(&system_context_status);
                                 let action_start = Rc::clone(&system_context_start);
+                                let system_context_topmost = Rc::new(Cell::new(false));
+                                let system_context_topmost_for_open =
+                                    Rc::clone(&system_context_topmost);
                                 let opened = app.open_window(
                                     system_control_context_options(
                                         &system_context_monitor,
@@ -4748,6 +4813,12 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                     ),
                                     move |window, cx| {
                                         window.activate_window();
+                                        system_context_topmost_for_open.set(
+                                            promote_owned_context_popup(
+                                                window,
+                                                "status:context",
+                                            ),
+                                        );
                                         let dismiss_slot = Rc::clone(&dismiss_slot);
                                         cx.new(move |cx| {
                                             SystemControlContextView::new(
@@ -4796,12 +4867,18 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                     },
                                 );
                                 if let Ok(handle) = opened {
-                                    *system_context_window_for_taskbar.borrow_mut() =
-                                        Some((kind, generation, handle));
-                                    trace_action(match kind {
-                                        SystemControlContextKind::Input => "status:input-context-opened",
-                                        SystemControlContextKind::Volume => "status:volume-context-opened",
-                                    });
+                                    if system_context_topmost.get() {
+                                        *system_context_window_for_taskbar.borrow_mut() =
+                                            Some((kind, generation, handle));
+                                        trace_action(match kind {
+                                            SystemControlContextKind::Input => "status:input-context-opened",
+                                            SystemControlContextKind::Volume => "status:volume-context-opened",
+                                        });
+                                    } else {
+                                        let _ = handle.update(app, |_, window, _| {
+                                            window.remove_window()
+                                        });
+                                    }
                                 } else {
                                     trace_action("status:context-open-failed");
                                 }
@@ -4890,7 +4967,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                     .borrow_mut()
                                     .terminal(correlation_id, terminal);
                             }
-                            transfer_app.update(|app| {
+                            if let Err(error) = transfer_app.try_update(|app| {
                                 for handle in &transfer_handles {
                                     let _ = handle.update(app, |view, _, cx| {
                                         view.set_transfer_status(status.clone());
@@ -4901,7 +4978,9 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                         cx.notify();
                                     });
                                 }
-                            });
+                            }) {
+                                report_error("desktop:transfer-update", error);
+                            }
                         }
                     })
                     .detach();
@@ -4930,7 +5009,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                 .is_empty();
                             let context_open = auto_hide_context.borrow().is_some();
                             let settings_open = auto_hide_settings_window.borrow().is_some();
-                            auto_hide_app.update(|app| {
+                            if let Err(error) = auto_hide_app.try_update(|app| {
                                 for (index, handle) in auto_hide_handles.iter().enumerate() {
                                     let Some(runtime) = auto_hide_runtimes.get(index) else {
                                         continue;
@@ -4950,7 +5029,9 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                         );
                                     });
                                 }
-                            });
+                            }) {
+                                report_error("taskbar:auto-hide-update", error);
+                            }
                         }
                     })
                     .detach();
@@ -5166,7 +5247,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                             let current_status = status(refresh_status_reconciler.borrow().snapshot());
                             let current_system_snapshot =
                                 refresh_status_reconciler.borrow().snapshot().cloned();
-                            refresh_app.update(|app| {
+                            if let Err(error) = refresh_app.try_update(|app| {
                                 if let Some(action) = shell_hotkey_action {
                                     match action {
                                         ShellHotkeyAction::OpenExplorer => {}
@@ -5680,7 +5761,9 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                 if !alive {
                                     app.quit();
                                 }
-                            });
+                            }) {
+                                report_error("taskbar:refresh-update", error);
+                            }
                         }
                     })
                     .detach();
@@ -5701,7 +5784,9 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                 foreground
                     .spawn(async move {
                         background.timer(duration).await;
-                        async_app.update(|app| {
+                        let mut retry_count = 0_u8;
+                        loop {
+                            match async_app.try_update(|app| {
                             provider_stop_for_timer.store(true, Ordering::Release);
                             if let Some(worker) = provider_worker_for_timer.borrow_mut().take() {
                                 let _ = worker.join();
@@ -5736,13 +5821,13 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                             for lease in leases_for_timer.borrow_mut().iter_mut() {
                                 lease.teardown();
                             }
-                            for handle in desktop_handles {
+                            for handle in &desktop_handles {
                                 let _ = handle.update(app, |_, window, _| window.remove_window());
                             }
-                            for handle in taskbar_handles {
+                            for handle in &taskbar_handles {
                                 let _ = handle.update(app, |_, window, _| window.remove_window());
                             }
-                            for slot in system_flyout_windows {
+                            for slot in &system_flyout_windows {
                                 if let Some((_, handle)) = slot.borrow_mut().take() {
                                     let _ = handle.update(app, |_, window, _| window.remove_window());
                                 }
@@ -5755,7 +5840,19 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                             }
                             *terminal_for_timer.borrow_mut() = Some(Ok(()));
                             app.quit();
-                        });
+                            }) {
+                                Ok(()) => break,
+                                Err(error) if retry_count < 20 => {
+                                    retry_count = retry_count.saturating_add(1);
+                                    report_error("shutdown:async-update-retry", error);
+                                    background.timer(Duration::from_millis(10)).await;
+                                }
+                                Err(error) => {
+                                    report_error("shutdown:async-update-rejected", error);
+                                    break;
+                                }
+                            }
+                        }
                     })
                     .detach();
             }
@@ -6421,6 +6518,103 @@ mod live_parity_tests {
             .expect("Jump List provider query");
         assert!(cancel < remove && remove < snapshot && snapshot < provider);
         assert!(callback.contains("active_preview_for_context.set(0)"));
+    }
+
+    #[test]
+    fn async_runtime_updates_are_fallible_and_preserve_existing_gpui_api() {
+        let gpui = include_str!("../../../vendor/gpui/src/app/async_context.rs");
+        for required in [
+            "pub fn try_update<R>",
+            "app.try_borrow_mut()?",
+            "bail!(\"app is quitting\")",
+            "pub fn update<R>",
+        ] {
+            assert!(
+                gpui.contains(required),
+                "missing fallible GPUI API: {required}"
+            );
+        }
+
+        let source = include_str!("surface_runtime.rs");
+        let production = source.split("#[cfg(test)]").next().unwrap_or(source);
+        for forbidden in [
+            "async_app.update(",
+            "transfer_app.update(",
+            "auto_hide_app.update(",
+            "refresh_app.update(",
+        ] {
+            assert!(
+                !production.contains(forbidden),
+                "panic-prone async update remains: {forbidden}"
+            );
+        }
+        for required in [
+            "task-preview:close-update",
+            "task-preview:pointer-monitor-update",
+            "task-preview:open-update",
+            "desktop:transfer-update",
+            "taskbar:auto-hide-update",
+            "taskbar:refresh-update",
+            "shutdown:async-update-retry",
+        ] {
+            assert!(
+                production.contains(required),
+                "missing rejection trace: {required}"
+            );
+        }
+    }
+
+    #[test]
+    fn every_independent_context_popup_uses_one_time_fail_closed_promotion() {
+        let source = include_str!("surface_runtime.rs");
+        let production = source.split("#[cfg(test)]").next().unwrap_or(source);
+        let helper = production
+            .split("fn promote_owned_context_popup")
+            .nth(1)
+            .and_then(|tail| tail.split("fn guard_ui_action").next())
+            .expect("context popup promotion helper");
+        assert!(helper.contains("and_then(promote_owned_popup_topmost)"));
+        assert!(helper.contains("window.remove_window()"));
+        assert!(helper.contains("report_error"));
+        for forbidden in ["loop {", "timer(", "sleep(", "spawn("] {
+            assert!(
+                !helper.contains(forbidden),
+                "recurring promotion: {forbidden}"
+            );
+        }
+        assert_eq!(
+            production.matches("promote_owned_context_popup(").count(),
+            4
+        );
+        for required in [
+            "\"taskbar:jump-list\"",
+            "\"taskbar:context\"",
+            "\"status:context\"",
+            "{kind}:topmost-established",
+        ] {
+            assert!(
+                production.contains(required),
+                "missing promoted route: {required}"
+            );
+        }
+    }
+
+    #[test]
+    fn appbar_unavailable_is_degraded_geometry_not_terminal_failure() {
+        let source = include_str!("surface_runtime.rs");
+        let production = source.split("#[cfg(test)]").next().unwrap_or(source);
+        let fallback = production
+            .split("if !appbar_available")
+            .nth(1)
+            .and_then(|tail| tail.split("} else if").next())
+            .expect("AppBar fallback branch");
+        assert!(fallback.contains("taskbar:appbar-unavailable-owned-shell"));
+        assert!(fallback.contains("taskbar:appbar-fallback-geometry-active"));
+        assert!(fallback.contains("SuperDesktop warning [taskbar:appbar]"));
+        assert!(!fallback.contains("return"));
+        assert!(!fallback.contains("app.quit"));
+        assert!(production.contains("refresh_foreground"));
+        assert!(production.contains("taskbar:refresh-update"));
     }
 
     #[test]

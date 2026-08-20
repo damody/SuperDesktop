@@ -21,9 +21,13 @@ Add-Type @'
 using System;
 using System.Runtime.InteropServices;
 public static class UtitWindowActionsNative {
+    [StructLayout(LayoutKind.Sequential)] public struct RECT { public int Left, Top, Right, Bottom; }
     [DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y);
     [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hwnd);
     [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+    [DllImport("user32.dll")] public static extern void SwitchToThisWindow(IntPtr hwnd, bool altTab);
+    [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr hwnd, out RECT rect);
+    [DllImport("user32.dll")] public static extern IntPtr GetWindowLongPtrW(IntPtr hwnd, int index);
     [DllImport("user32.dll")] public static extern void mouse_event(uint flags, uint x, uint y, uint data, UIntPtr extra);
     [DllImport("user32.dll")] public static extern bool IsIconic(IntPtr hwnd);
     [DllImport("user32.dll")] public static extern bool IsZoomed(IntPtr hwnd);
@@ -41,6 +45,17 @@ public static class UtitWindowActionsNative {
         mouse_event(8, 0, 0, 0, UIntPtr.Zero);
         System.Threading.Thread.Sleep(50);
         mouse_event(16, 0, 0, 0, UIntPtr.Zero);
+    }
+    public static void ActivateByClick(IntPtr hwnd) {
+        RECT rect;
+        if (!GetWindowRect(hwnd, out rect)) throw new InvalidOperationException("GetWindowRect");
+        int x = rect.Left + Math.Max(20, (rect.Right - rect.Left) / 2);
+        int y = rect.Top + Math.Min(24, Math.Max(8, (rect.Bottom - rect.Top) / 8));
+        SetCursorPos(x, y);
+        mouse_event(1, 0, 0, 0, UIntPtr.Zero);
+        System.Threading.Thread.Sleep(75);
+        mouse_event(2, 0, 0, 0, UIntPtr.Zero);
+        mouse_event(4, 0, 0, 0, UIntPtr.Zero);
     }
 }
 '@
@@ -161,7 +176,17 @@ function Assert-NoPreviewReopenedAfterContext([int]$DurationMilliseconds) {
     if ($reopenedIndex -ge 0) { throw 'A stale hover timer reopened the preview after task context cancellation.' }
 }
 
-function Inspect-TaskMenuExclusivity([int]$ProcessId, [string]$Title) {
+function Get-PopupHwnd([System.Windows.Automation.AutomationElement]$Element, [IntPtr]$TaskbarHwnd) {
+    $current = $Element
+    while ($null -ne $current) {
+        $candidate = [IntPtr][int]$current.Current.NativeWindowHandle
+        if ($candidate -ne [IntPtr]::Zero -and $candidate -ne $TaskbarHwnd) { return $candidate }
+        $current = [System.Windows.Automation.TreeWalker]::ControlViewWalker.GetParent($current)
+    }
+    throw 'Jump List UIA element did not resolve to a popup HWND.'
+}
+
+function Inspect-TaskMenuExclusivity([int]$ProcessId, [string]$Title, [IntPtr]$FixtureHwnd) {
     [UtitWindowActionsNative]::SetCursorPos(0, 0) | Out-Null
     [UtitWindowActionsNative]::mouse_event(1, 0, 0, 0, [UIntPtr]::Zero)
     Start-Sleep -Milliseconds 300
@@ -178,6 +203,9 @@ function Inspect-TaskMenuExclusivity([int]$ProcessId, [string]$Title) {
     ) | Out-Null
     [UtitWindowActionsNative]::RightClick($x, $y)
     $jumpList = Wait-OwnedElement $ProcessId 'Jump List' $null 3000
+    $jumpListHwnd = Get-PopupHwnd $jumpList ([IntPtr][int]$target.Window.Current.NativeWindowHandle)
+    $jumpListTopmost = (([UtitWindowActionsNative]::GetWindowLongPtrW($jumpListHwnd, -20).ToInt64() -band 0x8) -ne 0)
+    if (-not $jumpListTopmost) { throw 'Jump List HWND is not WS_EX_TOPMOST.' }
     Assert-OwnedElementAbsent $ProcessId 'Window previews' 800
     Assert-NoPreviewReopenedAfterContext 100
 
@@ -208,9 +236,17 @@ function Inspect-TaskMenuExclusivity([int]$ProcessId, [string]$Title) {
             throw "Unscoped or synthetic Jump List heading visible: $heading"
         }
     }
-    [System.Windows.Forms.SendKeys]::SendWait('{ESC}')
-    Start-Sleep -Milliseconds 150
-    return $labels
+    [UtitWindowActionsNative]::SetForegroundWindow($FixtureHwnd) | Out-Null
+    [UtitWindowActionsNative]::SwitchToThisWindow($FixtureHwnd, $true)
+    [UtitWindowActionsNative]::ActivateByClick($FixtureHwnd)
+    Wait-WindowState $FixtureHwnd { [UtitWindowActionsNative]::GetForegroundWindow() -eq $FixtureHwnd } 'Fixture did not become foreground for Jump List dismissal'
+    Wait-WindowState $jumpListHwnd { -not [UtitWindowActionsNative]::IsWindow($jumpListHwnd) } 'Topmost Jump List did not dismiss after focus moved away'
+    return [pscustomobject]@{
+        Labels = $labels
+        Hwnd = $jumpListHwnd.ToInt64()
+        Topmost = $jumpListTopmost
+        DismissedAfterFocusLoss = $true
+    }
 }
 
 function Invoke-TaskMenuAction([int]$ProcessId, [string]$Title, [string]$Action) {
@@ -378,7 +414,8 @@ try {
     Invoke-TaskPrimary $app.Id $title
     Wait-WindowState $fixtureHwnd { -not (Find-TaskButton $app.Id $title).Button.Current.Name.Contains('[minimized]') } 'Minimized fixture was not restored by taskbar left click'
 
-    $menuLabels = Inspect-TaskMenuExclusivity $app.Id $title
+    $menuInspection = Inspect-TaskMenuExclusivity $app.Id $title $fixtureHwnd
+    $menuLabels = $menuInspection.Labels
 
     Invoke-TaskMenuAction $app.Id $title 'Minimize'
     Wait-WindowState $fixtureHwnd { [UtitWindowActionsNative]::IsIconic($fixtureHwnd) } 'Fixture was not minimized by the Jump List'
@@ -408,6 +445,9 @@ try {
         minimized_observed = $true
         maximized_observed = $true
         close_observed = $true
+        jump_list_hwnd = $menuInspection.Hwnd
+        jump_list_ws_ex_topmost = $menuInspection.Topmost
+        jump_list_dismissed_after_focus_loss = $menuInspection.DismissedAfterFocusLoss
         pointer_interactions = [ordered]@{
             left_route = 'uia-invoke-equivalent'
             right_route = 'physical-pointer'

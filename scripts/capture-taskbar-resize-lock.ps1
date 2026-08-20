@@ -2,7 +2,8 @@ param(
     [string]$Workspace = '',
     [Parameter(Mandatory = $true)][string]$EvidenceDirectory,
     [switch]$Locked,
-    [switch]$SuppressExplorer
+    [switch]$SuppressExplorer,
+    [switch]$ForceAppBarUnavailable
 )
 
 $ErrorActionPreference = 'Stop'
@@ -47,6 +48,7 @@ public static class SuperDesktopTaskbarPointer {
     [DllImport("user32.dll")] static extern bool SetWindowPos(IntPtr hwnd, IntPtr after, int x, int y, int width, int height, uint flags);
     [DllImport("user32.dll")] public static extern uint GetDpiForWindow(IntPtr hwnd);
     [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hwnd);
+    [DllImport("user32.dll")] public static extern bool IsWindow(IntPtr hwnd);
     [DllImport("user32.dll")] static extern bool SetCursorPos(int x, int y);
     [DllImport("user32.dll")] static extern IntPtr SetThreadDpiAwarenessContext(IntPtr value);
     [DllImport("user32.dll")] public static extern void mouse_event(uint flags, uint dx, uint dy, uint data, UIntPtr extra);
@@ -84,6 +86,29 @@ function Get-Rect([IntPtr]$Hwnd) {
 
 function Get-Style([IntPtr]$Hwnd) {
     [SuperDesktopTaskbarPointer]::GetWindowLongPtrW($Hwnd, -16).ToInt64()
+}
+
+function Get-ExStyle([IntPtr]$Hwnd) {
+    [SuperDesktopTaskbarPointer]::GetWindowLongPtrW($Hwnd, -20).ToInt64()
+}
+
+function Get-PopupHwnd([System.Windows.Automation.AutomationElement]$Element, [IntPtr]$TaskbarHwnd) {
+    $current = $Element
+    while ($null -ne $current) {
+        $candidate = [IntPtr][int]$current.Current.NativeWindowHandle
+        if ($candidate -ne [IntPtr]::Zero -and $candidate -ne $TaskbarHwnd) { return $candidate }
+        $current = [System.Windows.Automation.TreeWalker]::ControlViewWalker.GetParent($current)
+    }
+    throw 'Context menu item did not resolve to a popup HWND.'
+}
+
+function Wait-HwndGone([IntPtr]$Hwnd) {
+    $deadline = [DateTime]::UtcNow.AddSeconds(3)
+    do {
+        if (-not [SuperDesktopTaskbarPointer]::IsWindow($Hwnd)) { return }
+        Start-Sleep -Milliseconds 50
+    } while ([DateTime]::UtcNow -lt $deadline)
+    throw "Popup HWND remained after focus loss: $($Hwnd.ToInt64())"
 }
 
 function Get-ClientTop([IntPtr]$Hwnd) {
@@ -221,7 +246,7 @@ function Find-LockMenuItem([int]$ProcessId, [IntPtr]$TaskbarHwnd) {
 function Open-LockMenuItem([IntPtr]$TaskbarHwnd, [int]$ProcessId) {
     $rect = Get-Rect $TaskbarHwnd
     [SuperDesktopTaskbarPointer]::SetForegroundWindow($TaskbarHwnd) | Out-Null
-    [SuperDesktopTaskbarPointer]::RightClick($rect.Left + 68, $rect.Top + [Math]::Min(20, [Math]::Max(4, $rect.Height - 4)))
+    [SuperDesktopTaskbarPointer]::RightClick([int](($rect.Left + $rect.Right) / 2), $rect.Top + 2)
     $item = Find-LockMenuItem $ProcessId $TaskbarHwnd
     if ($null -eq $item) {
         $root = [System.Windows.Automation.AutomationElement]::FromHandle($TaskbarHwnd)
@@ -233,7 +258,13 @@ function Open-LockMenuItem([IntPtr]$TaskbarHwnd, [int]$ProcessId) {
                 [System.Windows.Automation.ControlType]::Button
             )
         )
-        if ($null -ne $focusTarget) { $focusTarget.SetFocus() }
+        try {
+            $root.SetFocus()
+        } catch {
+            if ($null -ne $focusTarget) {
+                try { $focusTarget.SetFocus() } catch {}
+            }
+        }
         [SuperDesktopTaskbarPointer]::ShiftF10()
         $item = Find-LockMenuItem $ProcessId $TaskbarHwnd
     }
@@ -255,11 +286,13 @@ $priorSurface = $env:SUPERDESKTOP_VERIFICATION_SURFACE
 $priorTrace = $env:SUPERDESKTOP_ACTION_TRACE
 $priorTheme = $env:SUPERDESKTOP_THEME
 $priorLocale = $env:SUPERDESKTOP_LOCALE
+$priorForceAppBar = $env:SUPERDESKTOP_TEST_FORCE_APPBAR_UNAVAILABLE
 $env:LOCALAPPDATA = $profileRoot
 $env:SUPERDESKTOP_VERIFICATION_SURFACE = 'taskbar'
 $env:SUPERDESKTOP_ACTION_TRACE = $tracePath
 $env:SUPERDESKTOP_THEME = 'light'
 $env:SUPERDESKTOP_LOCALE = 'en-US'
+if ($ForceAppBarUnavailable) { $env:SUPERDESKTOP_TEST_FORCE_APPBAR_UNAVAILABLE = '1' }
 $watchdog = $null
 $suppressor = $null
 $process = $null
@@ -281,7 +314,9 @@ try {
     Remove-Item -LiteralPath $tracePath -ErrorAction SilentlyContinue
     $arguments = @('--verification-capture-ms','20000')
     if ($SuppressExplorer) { $arguments += '--shell' }
-    $process = Start-Process -FilePath $appPath -ArgumentList $arguments -PassThru
+    $stdoutPath = Join-Path $EvidenceDirectory 'superdesktop.stdout.log'
+    $stderrPath = Join-Path $EvidenceDirectory 'superdesktop.stderr.log'
+    $process = Start-Process -FilePath $appPath -ArgumentList $arguments -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath -PassThru
     $deadline = [DateTime]::UtcNow.AddSeconds(6)
     do { Start-Sleep -Milliseconds 100; $process.Refresh() } while ($process.MainWindowHandle -eq [IntPtr]::Zero -and -not $process.HasExited -and [DateTime]::UtcNow -lt $deadline)
     if ($process.HasExited -or $process.MainWindowHandle -eq [IntPtr]::Zero) { throw 'SuperDesktop taskbar HWND did not appear.' }
@@ -293,6 +328,13 @@ try {
     $hasThickFrame = ($initialStyle -band 0x00040000) -ne 0
     if ($Locked -and $hasThickFrame) { throw 'Locked taskbar unexpectedly has WS_THICKFRAME.' }
     if (-not $Locked -and -not $hasThickFrame) { throw 'Unlocked taskbar is missing WS_THICKFRAME.' }
+
+    $lockMenuItem = Open-LockMenuItem $taskbarHwnd $process.Id
+    $contextPopupHwnd = Get-PopupHwnd $lockMenuItem $taskbarHwnd
+    $contextTopmost = ((Get-ExStyle $contextPopupHwnd) -band 0x8) -ne 0
+    if (-not $contextTopmost) { throw 'Taskbar context menu HWND is not WS_EX_TOPMOST.' }
+    [SuperDesktopTaskbarPointer]::SetForegroundWindow($taskbarHwnd) | Out-Null
+    Wait-HwndGone $contextPopupHwnd
 
     $threeRows = $null
     $oneRow = $null
@@ -335,6 +377,13 @@ try {
     }
     $process.WaitForExit()
     $trace = Get-Content -Raw -Encoding UTF8 -LiteralPath $tracePath
+    $stderr = Get-Content -Raw -Encoding UTF8 -LiteralPath $stderrPath -ErrorAction SilentlyContinue
+    if ($stderr -match 'RefCell already borrowed|thread .+ panicked') {
+        throw "SuperDesktop emitted a borrow panic: $stderr"
+    }
+    if ($ForceAppBarUnavailable -and $trace -notmatch 'taskbar:appbar-unavailable-owned-shell') {
+        throw 'Forced AppBar-unavailable state was not observed.'
+    }
     $requiredTraces = @()
     if (-not $Locked) { $requiredTraces += @('taskbar:resize-saved','taskbar:resize-applied') }
     foreach ($required in $requiredTraces) {
@@ -357,7 +406,7 @@ try {
         app_sha256=(Get-Sha256 $appPath)
         explorer_before=$explorerBefore
         explorer_absent_during_capture=$explorerAbsent
-        appbar_disposition=if(-not $SuppressExplorer){'not-applicable-preview'}elseif($trace -match 'taskbar:resize-appbar-synced'){'registered'}else{'unavailable-owned-shell'}
+        appbar_disposition=if($ForceAppBarUnavailable){'forced-unavailable-verification'}elseif(-not $SuppressExplorer){'not-applicable-preview'}elseif($trace -match 'taskbar:resize-appbar-synced'){'registered'}else{'unavailable-owned-shell'}
         initial_rect=$initialRect
         initial_client=$initialClient
         three_rows_rect=$threeRows
@@ -366,7 +415,16 @@ try {
         one_row_client=$oneRowClient
         locked_drag_rect=$afterLockedDrag
         initial_style=$initialStyle
-        context_menu=[ordered]@{disposition='covered-by-taskbar-ui-context-contract';input_authority='not-required-by-resize-case'}
+        context_menu=[ordered]@{
+            popup_hwnd=$contextPopupHwnd.ToInt64()
+            ws_ex_topmost=$contextTopmost
+            dismissed_after_focus_loss=$true
+            input_authority='physical-pointer-or-shift-f10-fallback'
+        }
+        force_appbar_unavailable=[bool]$ForceAppBarUnavailable
+        appbar_unavailable_observed=if($ForceAppBarUnavailable){$true}else{$null}
+        process_survived_bounded_run=$true
+        refcell_borrow_panic_absent=$true
         final_settings=@{rows=$settings.taskbar.rows;locked=$settings.taskbar.locked;lock_action_persisted=$false}
         screenshots=Get-ChildItem -LiteralPath $EvidenceDirectory -Filter 'taskbar-*.png' | ForEach-Object { [ordered]@{name=$_.Name;bytes=$_.Length;sha256=(Get-Sha256 $_.FullName)} }
     }
@@ -382,4 +440,5 @@ try {
     if ($null -eq $priorTrace) { Remove-Item Env:SUPERDESKTOP_ACTION_TRACE -ErrorAction SilentlyContinue } else { $env:SUPERDESKTOP_ACTION_TRACE=$priorTrace }
     if ($null -eq $priorTheme) { Remove-Item Env:SUPERDESKTOP_THEME -ErrorAction SilentlyContinue } else { $env:SUPERDESKTOP_THEME=$priorTheme }
     if ($null -eq $priorLocale) { Remove-Item Env:SUPERDESKTOP_LOCALE -ErrorAction SilentlyContinue } else { $env:SUPERDESKTOP_LOCALE=$priorLocale }
+    if ($null -eq $priorForceAppBar) { Remove-Item Env:SUPERDESKTOP_TEST_FORCE_APPBAR_UNAVAILABLE -ErrorAction SilentlyContinue } else { $env:SUPERDESKTOP_TEST_FORCE_APPBAR_UNAVAILABLE=$priorForceAppBar }
 }

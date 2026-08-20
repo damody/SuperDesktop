@@ -6,7 +6,8 @@ use std::{
 
 use gpui::{
     App, Context, FocusHandle, InteractiveElement, IntoElement, ParentElement, Render,
-    StatefulInteractiveElement, Styled, Window, canvas, div, prelude::FluentBuilder as _, px, rgb,
+    StatefulInteractiveElement, Styled, Subscription, Window, canvas, div,
+    prelude::FluentBuilder as _, px, rgb,
 };
 use platform_win::common::taskbar_preview::{LiveThumbnail, ThumbnailRect};
 
@@ -857,6 +858,7 @@ pub struct JumpListView {
     invoke: JumpListInvokeAction,
     dismiss: FlyoutDismissAction,
     focus: FocusHandle,
+    _activation_subscription: Subscription,
 }
 
 impl JumpListView {
@@ -864,14 +866,22 @@ impl JumpListView {
         model: JumpListModel,
         invoke: JumpListInvokeAction,
         dismiss: FlyoutDismissAction,
+        window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
+        let activation_subscription = cx.observe_window_activation(window, |this, window, cx| {
+            if !window.is_window_active() {
+                let dismiss = this.dismiss.clone();
+                dismiss(window, cx);
+            }
+        });
         Self {
             model,
             focused: 0,
             invoke,
             dismiss,
             focus: cx.focus_handle(),
+            _activation_subscription: activation_subscription,
         }
     }
 

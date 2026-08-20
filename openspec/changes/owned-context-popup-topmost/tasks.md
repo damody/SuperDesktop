@@ -10,8 +10,8 @@
 **Gate／Evidence：** `G-ASYNC-NO-PANIC`; `evidence/index.jsonl` tasks 1.1.1–1.1.2.
 **完成門檻：** Contention and released/quitting app states return errors; existing `update` remains available.
 
-- [ ] 1.1.1 Implement `AsyncApp::try_update` with `try_borrow_mut`, quit-state rejection, and `anyhow::Result`.
-- [ ] 1.1.2 Add compile/source coverage proving the fallible path exists without removing or weakening the existing API.
+- [x] 1.1.1 Implement `AsyncApp::try_update` with `try_borrow_mut`, quit-state rejection, and `anyhow::Result`.
+- [x] 1.1.2 Add compile/source coverage proving the fallible path exists without removing or weakening the existing API.
 
 ### 1.2 Migrate SuperDesktop asynchronous callbacks
 
@@ -23,9 +23,9 @@
 **Gate／Evidence：** `G-ASYNC-NO-PANIC`; `evidence/index.jsonl` tasks 1.2.1–1.2.3.
 **完成門檻：** Production source contains no post-await infallible AsyncApp update; repeating loops continue after rejection; one-shot callbacks fail without panic.
 
-- [ ] 1.2.1 Migrate preview open/close and pointer-monitor timers to `try_update` with contextual rejection traces.
-- [ ] 1.2.2 Migrate transfer, auto-hide, and refresh loops to skip contended ticks and continue their bounded cadence.
-- [ ] 1.2.3 Migrate timed shutdown and add source-level regression coverage banning production `AsyncApp::update` at asynchronous sites.
+- [x] 1.2.1 Migrate preview open/close and pointer-monitor timers to `try_update` with contextual rejection traces.
+- [x] 1.2.2 Migrate transfer, auto-hide, and refresh loops to skip contended ticks and continue their bounded cadence.
+- [x] 1.2.3 Migrate timed shutdown and add source-level regression coverage banning production `AsyncApp::update` at asynchronous sites.
 
 ### 1.3 Preserve AppBar-unavailable operation
 
@@ -37,8 +37,8 @@
 **Gate／Evidence：** `G-APPBAR-RECOVERY`; `evidence/index.jsonl` tasks 1.3.1–1.3.2.
 **完成門檻：** AppBar rejection does not set terminal error or quit; shell hook and taskbar geometry remain operational.
 
-- [ ] 1.3.1 Make initial AppBar failure explicitly trace a degraded state while continuing owned taskbar setup.
-- [ ] 1.3.2 Add lifecycle/source coverage proving AppBar-unavailable does not enter terminal/quit paths and refresh remains installed.
+- [x] 1.3.1 Make initial AppBar failure explicitly trace a degraded state while continuing owned taskbar setup.
+- [x] 1.3.2 Add lifecycle/source coverage proving AppBar-unavailable does not enter terminal/quit paths and refresh remains installed.
 
 ## 2. Context popup z-order parity
 
@@ -52,8 +52,8 @@
 **Gate／Evidence：** `G-POPUP-TOPMOST`; `evidence/index.jsonl` tasks 2.1.1–2.1.2.
 **完成門檻：** Helper promotes once, returns success only after native confirmation, and removes/reports failed popups.
 
-- [ ] 2.1.1 Implement a shared owned-context promotion helper with per-kind success/failure console and trace output.
-- [ ] 2.1.2 Add source tests proving the helper uses the platform boundary and contains no polling, sleep, or recurring worker.
+- [x] 2.1.1 Implement a shared owned-context promotion helper with per-kind success/failure console and trace output.
+- [x] 2.1.2 Add source tests proving the helper uses the platform boundary and contains no polling, sleep, or recurring worker.
 
 ### 2.2 Apply promotion to every independent right-click popup
 
@@ -65,9 +65,9 @@
 **Gate／Evidence：** `G-POPUP-TOPMOST`; `evidence/index.jsonl` tasks 2.2.1–2.2.3.
 **完成門檻：** All three routes promote before constructing/storing views; failure paths do not emit opened traces.
 
-- [ ] 2.2.1 Apply promotion and fail-closed handle storage to task application Jump Lists.
-- [ ] 2.2.2 Apply promotion and fail-closed handle storage to taskbar background context menus.
-- [ ] 2.2.3 Apply promotion and fail-closed handle storage to input/volume system-control context menus.
+- [x] 2.2.1 Apply promotion and fail-closed handle storage to task application Jump Lists.
+- [x] 2.2.2 Apply promotion and fail-closed handle storage to taskbar background context menus.
+- [x] 2.2.3 Apply promotion and fail-closed handle storage to input/volume system-control context menus.
 
 ### 2.3 Prove native z-order, dismissal, and crash survival headfully
 
@@ -79,10 +79,10 @@
 **Gate／Evidence：** `G-POPUP-TOPMOST`, `G-APPBAR-RECOVERY`, `G-ASYNC-NO-PANIC`; focused reports and `evidence/index.jsonl` tasks 2.3.1–2.3.4.
 **完成門檻：** Native topmost and focus-loss dismissal pass for every route; process survives bounded degraded/stress run; stderr has no borrow panic; two consecutive runs validate.
 
-- [ ] 2.3.1 Extend physical-pointer UTIT to verify native topmost state for task Jump List and taskbar background menu.
-- [ ] 2.3.2 Extend physical-pointer UTIT to verify native topmost state for input and volume context menus.
-- [ ] 2.3.3 Verify focus-loss dismissal and bounded AppBar-unavailable/refresh/popup stress with no `RefCell already borrowed` output.
-- [ ] 2.3.4 Execute and validate two consecutive focused UTIT runs with zero failed or blocked cases.
+- [x] 2.3.1 Extend physical-pointer UTIT to verify native topmost state for task Jump List and taskbar background menu.
+- [x] 2.3.2 Extend physical-pointer UTIT to verify native topmost state for input and volume context menus.
+- [x] 2.3.3 Verify focus-loss dismissal and bounded AppBar-unavailable/refresh/popup stress with no `RefCell already borrowed` output.
+- [x] 2.3.4 Execute and validate two consecutive focused UTIT runs with zero failed or blocked cases.
 
 ## 3. Quality, release, and integration
 
@@ -96,9 +96,9 @@
 **Gate／Evidence：** `G-RUST-QUALITY`; `evidence/index.jsonl` tasks 3.1.1–3.1.3.
 **完成門檻：** Every command exits zero and no affected gate is skipped.
 
-- [ ] 3.1.1 Run `cargo fmt --all -- --check`, PowerShell parse, and `git diff --check`.
-- [ ] 3.1.2 Run affected GPUI/workspace package tests including platform-win, taskbar-ui, superdesktop-app, and superdesktop-utit.
-- [ ] 3.1.3 Run Clippy with `-D warnings` for every affected package/target.
+- [x] 3.1.1 Run `cargo fmt --all -- --check`, PowerShell parse, and `git diff --check`.
+- [x] 3.1.2 Run affected GPUI/workspace package tests including platform-win, taskbar-ui, superdesktop-app, and superdesktop-utit.
+- [x] 3.1.3 Run Clippy with `-D warnings` for every affected package/target.
 
 ### 3.2 Build complete release artifacts
 
