@@ -96,6 +96,19 @@ pub fn run_product_for(
     Ok(())
 }
 
+/// Runs the real owned-shell surfaces and hotkey hook for a bounded headful
+/// verification without mutating shell registration, arming recovery, or
+/// launching the elevated Explorer closer.
+pub fn run_owned_hotkey_verification_for(
+    duration: std::time::Duration,
+) -> Result<(), &'static str> {
+    let request = ExecutionRequest { shell: true };
+    let owner = admit_shell(&request)?.ok_or("verification-owner-missing")?;
+    surface_runtime::run(true, Some(duration))?;
+    owner.release()?;
+    Ok(())
+}
+
 fn close_explorer_with_uac() -> Result<(), &'static str> {
     let executable = std::env::current_exe().map_err(|_| "app-current-executable")?;
     let helper = executable
@@ -284,5 +297,35 @@ mod shell_registration_tests {
         assert!(lib.contains("restore_default_explorer_registration"));
         assert!(!runtime.contains("superdesktop-explorer-suppression"));
         assert!(!runtime.contains("EXPLORER_SUPPRESSION_ENABLED"));
+    }
+
+    #[test]
+    fn owned_hotkey_verification_keeps_admission_but_skips_shell_mutation() {
+        let source = include_str!("lib.rs");
+        let body = source
+            .split("pub fn run_owned_hotkey_verification_for")
+            .nth(1)
+            .and_then(|tail| tail.split("fn close_explorer_with_uac").next())
+            .expect("owned hotkey verification body");
+        for required in [
+            "admit_shell(&request)",
+            "surface_runtime::run(true",
+            "owner.release()",
+        ] {
+            assert!(
+                body.contains(required),
+                "missing verification safety: {required}"
+            );
+        }
+        for forbidden in [
+            "ensure_current_user_shell_registration",
+            "arm_recovery_guardian",
+            "close_explorer_with_uac",
+        ] {
+            assert!(
+                !body.contains(forbidden),
+                "verification mutates shell: {forbidden}"
+            );
+        }
     }
 }

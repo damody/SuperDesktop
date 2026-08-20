@@ -22,5 +22,13 @@
     "correction": "Use documented IApplicationActivationManager::ActivateForProtocol with the fixed Microsoft ScreenSketch AUMID and observed native-hotkey URI.",
     "scope_unchanged": true,
     "gates_unchanged": true
+  },
+  "test_lifecycle_refinement": {
+    "adjustment_id": "A-003-nonmutating-owned-hotkey-entry",
+    "classification": "A",
+    "reason": "The generic --shell product path mutates Winlogon and arms recovery, which is inappropriate for a bounded physical shortcut fixture.",
+    "correction": "Add a verification-only entry that retains session/owner admission and real hook/surface code while skipping registry, guardian, and UAC mutation. The harness remains responsible for Explorer suppression and recovery.",
+    "production_behavior_unchanged": true,
+    "gates_unchanged": true
   }
 }

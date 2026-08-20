@@ -107,7 +107,7 @@ try {
     $env:LOCALAPPDATA = $profileRoot
     $env:SUPEREXPLORER_PATH = $superExplorerAdjacent
     Remove-Item -LiteralPath $tracePath -Force -ErrorAction SilentlyContinue
-    $app = Start-Process -FilePath $appPath -ArgumentList '--verification-capture-ms', '22000', '--shell' -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath -PassThru
+    $app = Start-Process -FilePath $appPath -ArgumentList '--verification-owned-hotkey-capture-ms', '22000' -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath -PassThru
     Wait-Until { $app.Refresh(); $app.MainWindowHandle -ne [IntPtr]::Zero } 7000 'SuperDesktop taskbar did not appear' | Out-Null
     Wait-Until { (Test-Path $tracePath) -and ((Get-Content $tracePath -Raw -Encoding UTF8) -match 'win-e:hook-active') } 4000 'Owned-shell hotkey hook did not become active' | Out-Null
 
@@ -173,7 +173,11 @@ try {
 }
 finally {
     Send-Escape
-    if ($app -and -not $app.HasExited) { Stop-Process -Id $app.Id -Force -ErrorAction SilentlyContinue }
+    if ($app -and -not $app.HasExited) {
+        if (-not $app.WaitForExit(26000)) {
+            Stop-Process -Id $app.Id -Force -ErrorAction SilentlyContinue
+        }
+    }
     if ($suppressor -and -not $suppressor.HasExited) { Stop-Process -Id $suppressor.Id -Force -ErrorAction SilentlyContinue }
     if (-not (Get-Process explorer -ErrorAction SilentlyContinue)) { Start-Process $explorerPath }
     if ($watchdog -and -not $watchdog.HasExited) { Stop-Process -Id $watchdog.Id -Force -ErrorAction SilentlyContinue }

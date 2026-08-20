@@ -45,7 +45,7 @@ No hook is installed when `run(shell)` receives false. Therefore preview mode wi
 
 ### 5. Gate the real chord without retaining captured screen content
 
-Unit tests cover reducer/queue/protocol source contracts. A new headful UTIT sends physical Windows, Shift, and S key events, waits for requested/accepted traces plus a built-in screen-clipping process or surface, sends Escape, and verifies both the overlay is dismissed and SuperDesktop remains alive. Reports contain identities, trace/hash data, and booleans but no screenshot of the user's desktop.
+Unit tests cover reducer/queue/protocol source contracts. A bounded verification-only entry retains normal session/owner admission but runs the real owned surfaces and hook without mutating Winlogon registration, arming the recovery guardian, or invoking UAC; the harness itself removes and restores Explorer. A new headful UTIT sends physical Windows, Shift, and S key events, waits for requested/accepted traces plus a built-in screen-clipping process or surface, sends Escape, and verifies both the overlay is dismissed and SuperDesktop remains alive. Reports contain identities, trace/hash data, and booleans but no screenshot of the user's desktop.
 
 The focused case must pass twice. Workspace tests, Clippy with denied warnings, release, installer, and embedded candidate hash equality remain blocking.
 

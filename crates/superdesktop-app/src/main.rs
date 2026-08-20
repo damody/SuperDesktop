@@ -3,7 +3,10 @@
 #[cfg(not(windows))]
 compile_error!("SuperDesktop is supported only on Windows targets.");
 
-use superdesktop_app::{ExecutionRequest, run_preflight, run_product, run_product_for};
+use superdesktop_app::{
+    ExecutionRequest, run_owned_hotkey_verification_for, run_preflight, run_product,
+    run_product_for,
+};
 
 fn main() {
     let args = std::env::args_os().skip(1).collect::<Vec<_>>();
@@ -68,6 +71,30 @@ fn main() {
             Some(std::time::Duration::from_millis(milliseconds)),
         ) {
             eprintln!("verification capture failed: {reason}");
+            std::process::exit(3);
+        }
+        return;
+    }
+    if args
+        .first()
+        .is_some_and(|arg| arg == "--verification-owned-hotkey-capture-ms")
+    {
+        let Some(milliseconds) = args
+            .get(1)
+            .and_then(|value| value.to_str())
+            .and_then(|value| value.parse::<u64>().ok())
+        else {
+            eprintln!("invalid owned hotkey verification duration");
+            std::process::exit(2);
+        };
+        if !(250..=60_000).contains(&milliseconds) {
+            eprintln!("owned hotkey verification duration outside bounds");
+            std::process::exit(2);
+        }
+        if let Err(reason) =
+            run_owned_hotkey_verification_for(std::time::Duration::from_millis(milliseconds))
+        {
+            eprintln!("owned hotkey verification failed: {reason}");
             std::process::exit(3);
         }
         return;
