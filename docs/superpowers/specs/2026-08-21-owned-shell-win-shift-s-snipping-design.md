@@ -14,11 +14,11 @@ The active-key fence consumes repeats and the matching key-up exactly as for the
 
 ## Native activation
 
-The GPUI foreground refresh path receives `OpenScreenSnip` and invokes a platform-owned helper. A live Windows 11 observation of the real Explorer-handled chord showed Snipping Tool launched with `ms-screenclip:///?source=HotKey`; the helper launches that exact compile-time fixed URI through `ShellExecuteExW` with no user-controlled input and no retained process handle. Windows resolves the registered built-in handler and presents its native overlay.
+The GPUI foreground refresh path receives `OpenScreenSnip` and invokes a platform-owned helper. A live Windows 11 observation of the real Explorer-handled chord showed Snipping Tool launched with `ms-screenclip:///?source=HotKey`. Explorer-free testing then proved that ShellExecute accepted the URI without creating the overlay, so the helper now uses Windows' documented `IApplicationActivationManager::ActivateForProtocol` with the fixed built-in AUMID `Microsoft.ScreenSketch_8wekyb3d8bbwe!App` and that exact URI. `CLSCTX_LOCAL_SERVER` owns activation-argument lifetime without Explorer or a retained process handle.
 
 Microsoft's newer `ms-screenclip://capture/...` app-integration protocol is not used: it requires a packaged caller plus a registered redirect URI and is intended to return captured media to an app. SuperDesktop is matching the OS hotkey and does not request captured content.
 
-This is preferred over a hard-coded `SnippingTool.exe` path or undocumented command-line switches, which vary across Windows releases. Re-injecting the same key chord is rejected because it can recurse through the low-level hook and can double-trigger when another shell component is present.
+This is preferred over ShellExecute, a hard-coded `SnippingTool.exe` path, or undocumented executable switches. Re-injecting the same key chord is rejected because it can recurse through the low-level hook and can double-trigger when another shell component is present.
 
 ## Mode boundary
 

@@ -35,13 +35,13 @@
 
 **目的：** Open the native image-snipping overlay without Explorer or path discovery.
 **輸入：** Fixed observed `ms-screenclip:///?source=HotKey` design and platform Win32 boundary.
-**產出：** Narrow fallible `ShellExecuteExW` helper and source-contract tests.
+**產出：** Narrow fallible `IApplicationActivationManager` protocol helper and source-contract tests.
 **依賴：** 2.1.
 **Owner／Wave：** Primary agent / Wave 2.
 **Gate／Evidence：** NATIVE-01; tasks 2.2.1–2.2.3.
 **完成門檻：** Fixed URI admission compiles, retains no process handle, rejects all fallback mechanisms, and returns typed errors.
 
-- [x] 2.2.1 Implement the compile-time fixed `ms-screenclip:///?source=HotKey` ShellExecuteExW admission helper.
+- [x] 2.2.1 Implement fixed-AUMID `ActivateForProtocol` admission for `ms-screenclip:///?source=HotKey`.
 - [x] 2.2.2 Keep URI activation outside the low-level hook and expose a fallible platform result.
 - [x] 2.2.3 Add source contracts forbidding Explorer, executable lookup, key reinjection, and third-party fallback.
 

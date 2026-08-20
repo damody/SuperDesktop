@@ -14,5 +14,13 @@
     "design.md",
     "specs/owned-shell-screen-snipping-shortcut/spec.md",
     "tasks.md"
-  ]
+  ],
+  "follow_up": {
+    "adjustment_id": "B-002-explorer-free-com-activation",
+    "classification": "B",
+    "reason": "Explorer-free headful run proved ShellExecute returned success without creating SnipOverlayRootWindow.",
+    "correction": "Use documented IApplicationActivationManager::ActivateForProtocol with the fixed Microsoft ScreenSketch AUMID and observed native-hotkey URI.",
+    "scope_unchanged": true,
+    "gates_unchanged": true
+  }
 }

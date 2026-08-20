@@ -29,11 +29,11 @@ Launching inside the hook was rejected because a global low-level callback must 
 
 ### 2. Use a fixed Windows protocol
 
-`platform-win::common::shell_hotkey` exposes a narrow `open_screen_snipping_overlay()` helper. A live observation of Explorer's real chord on the target Windows 11 build produced the Snipping Tool command line `ms-screenclip:///?source=HotKey`; the helper supplies only that compile-time UTF-16 URI to `ShellExecuteExW` with `SEE_MASK_FLAG_NO_UI` and no retained process handle. No caller data crosses this boundary.
+`platform-win::common::shell_hotkey` exposes a narrow `open_screen_snipping_overlay()` helper. A live observation of Explorer's real chord on the target Windows 11 build produced the Snipping Tool command line `ms-screenclip:///?source=HotKey`. Explorer-free evidence showed ShellExecute accepted that URI without presenting the overlay, so the helper uses the documented `IApplicationActivationManager::ActivateForProtocol` local-server COM boundary with fixed AUMID `Microsoft.ScreenSketch_8wekyb3d8bbwe!App` and the exact observed URI. No caller data crosses this boundary.
 
 The newer `ms-screenclip://capture/...` integration API is deliberately excluded because Microsoft requires a packaged caller and registered redirect URI, while the owned shell needs native hotkey behavior and must not receive captured media.
 
-Hard-coded Store-app paths, `SnippingTool.exe` switches, Explorer mediation, and key re-injection were rejected as version-sensitive, unavailable in the owned shell, or recursion-prone.
+ShellExecute, hard-coded Store-app paths, `SnippingTool.exe` switches, Explorer mediation, and key re-injection were rejected as Explorer-dependent, version-sensitive, unavailable in the owned shell, or recursion-prone.
 
 ### 3. Dispatch on GPUI's existing foreground refresh
 
