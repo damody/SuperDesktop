@@ -501,6 +501,13 @@ pub struct HoverPreviewController {
 }
 
 impl HoverPreviewController {
+    pub fn cancel(&mut self) -> u64 {
+        self.generation = self.generation.wrapping_add(1);
+        self.task = None;
+        self.popup_hovered = false;
+        self.generation
+    }
+
     pub fn enter_task(&mut self, task: impl Into<String>) -> u64 {
         let task = task.into();
         if self.task.as_ref() != Some(&task) {
@@ -979,7 +986,7 @@ impl Render for JumpListView {
                     div()
                         .flex()
                         .flex_col()
-                        .when(first_in_group, |element| {
+                        .when(first_in_group && group != JumpListGroup::Local, |element| {
                             element.child(
                                 div()
                                     .id(format!("jump-list-heading-{group:?}"))
@@ -993,6 +1000,13 @@ impl Render for JumpListView {
                                     .opacity(0.68)
                                     .child(group.label()),
                             )
+                        })
+                        .when(first_in_group && group == JumpListGroup::Local, |element| {
+                            element
+                                .mt(px(4.))
+                                .pt(px(4.))
+                                .border_t_1()
+                                .border_color(rgb(tokens.border))
                         })
                         .child(item)
                 },
@@ -1135,6 +1149,20 @@ mod tests {
     }
 
     #[test]
+    fn context_cancel_clears_hover_state_and_invalidates_every_stale_token() {
+        let mut controller = HoverPreviewController::default();
+        let task_token = controller.enter_task("one");
+        let popup_token = controller.enter_popup();
+        let cancelled = controller.cancel();
+        assert_ne!(cancelled, task_token);
+        assert_ne!(cancelled, popup_token);
+        assert!(!controller.can_open("one", task_token));
+        assert!(!controller.can_open("one", cancelled));
+        assert!(!controller.can_close(popup_token));
+        assert!(controller.can_close(cancelled));
+    }
+
+    #[test]
     fn jump_lists_overlay_and_preferences_are_independent_and_bounded() {
         let list = JumpListModel::compose(
             vec![command("same", true)],
@@ -1149,12 +1177,13 @@ mod tests {
             "Recent",
             "Frequent",
             "Tasks",
-            "Actions",
             "jump-list-heading-",
             ".h(px(24.))",
         ] {
             assert!(source.contains(required), "missing {required}");
         }
+        assert!(source.contains("group != JumpListGroup::Local"));
+        assert!(source.contains("group == JumpListGroup::Local"));
         assert!(!source.contains(".child(\"•\")"));
         let mut overlay = TaskOverlay::default();
         overlay.set_progress(ProgressState::Error(500));

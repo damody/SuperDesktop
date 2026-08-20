@@ -77,11 +77,151 @@ function Find-TaskButton([int]$ProcessId, [string]$Title) {
     throw "Task button not found: $Title; observed=$(@($observedNames) -join ' | ')"
 }
 
+function Find-OwnedElement([int]$ProcessId, [string]$Name, [System.Windows.Automation.ControlType]$ControlType = $null) {
+    $windows = [System.Windows.Automation.AutomationElement]::RootElement.FindAll(
+        [System.Windows.Automation.TreeScope]::Children,
+        [System.Windows.Automation.Condition]::TrueCondition
+    )
+    for ($windowIndex = 0; $windowIndex -lt $windows.Count; $windowIndex++) {
+        $window = $windows.Item($windowIndex)
+        if ($window.Current.ProcessId -ne $ProcessId) { continue }
+        if (
+            [string]$window.Current.Name -eq $Name -and
+            ($null -eq $ControlType -or $window.Current.ControlType -eq $ControlType)
+        ) {
+            return $window
+        }
+        $conditions = [Collections.Generic.List[System.Windows.Automation.Condition]]::new()
+        $conditions.Add([System.Windows.Automation.PropertyCondition]::new(
+            [System.Windows.Automation.AutomationElement]::NameProperty,
+            $Name
+        ))
+        if ($null -ne $ControlType) {
+            $conditions.Add([System.Windows.Automation.PropertyCondition]::new(
+                [System.Windows.Automation.AutomationElement]::ControlTypeProperty,
+                $ControlType
+            ))
+        }
+        $condition = if ($conditions.Count -eq 1) {
+            $conditions[0]
+        } else {
+            [System.Windows.Automation.AndCondition]::new($conditions.ToArray())
+        }
+        $element = $window.FindFirst(
+            [System.Windows.Automation.TreeScope]::Descendants,
+            $condition
+        )
+        if ($null -ne $element) { return $element }
+    }
+    return $null
+}
+
+function Wait-OwnedElement([int]$ProcessId, [string]$Name, [System.Windows.Automation.ControlType]$ControlType, [int]$TimeoutMilliseconds = 5000) {
+    $deadline = [DateTime]::UtcNow.AddMilliseconds($TimeoutMilliseconds)
+    do {
+        $element = Find-OwnedElement $ProcessId $Name $ControlType
+        if ($null -ne $element) { return $element }
+        Start-Sleep -Milliseconds 50
+    } while ([DateTime]::UtcNow -lt $deadline)
+    throw "Owned element did not appear: $Name"
+}
+
+function Assert-OwnedElementAbsent([int]$ProcessId, [string]$Name, [int]$DurationMilliseconds) {
+    $deadline = [DateTime]::UtcNow.AddMilliseconds($DurationMilliseconds)
+    do {
+        if ($null -ne (Find-OwnedElement $ProcessId $Name)) {
+            throw "Owned element unexpectedly visible: $Name"
+        }
+        Start-Sleep -Milliseconds 50
+    } while ([DateTime]::UtcNow -lt $deadline)
+}
+
+function Wait-TracePattern([string]$Pattern, [int]$TimeoutMilliseconds = 5000) {
+    $deadline = [DateTime]::UtcNow.AddMilliseconds($TimeoutMilliseconds)
+    do {
+        if (
+            (Test-Path -LiteralPath $script:tracePath) -and
+            (Get-Content -Raw -LiteralPath $script:tracePath) -match $Pattern
+        ) {
+            return
+        }
+        Start-Sleep -Milliseconds 50
+    } while ([DateTime]::UtcNow -lt $deadline)
+    throw "Trace pattern did not appear: $Pattern"
+}
+
+function Assert-NoPreviewReopenedAfterContext([int]$DurationMilliseconds) {
+    Start-Sleep -Milliseconds $DurationMilliseconds
+    $trace = Get-Content -Raw -LiteralPath $script:tracePath
+    $cancelIndex = $trace.LastIndexOf('task-preview:context-cancelled', [StringComparison]::Ordinal)
+    if ($cancelIndex -lt 0) { throw 'Task context did not record preview cancellation.' }
+    $jumpIndex = $trace.IndexOf('taskbar:jump-list-opened', $cancelIndex, [StringComparison]::Ordinal)
+    if ($jumpIndex -lt 0) { throw 'Jump List did not open after preview cancellation.' }
+    $reopenedIndex = $trace.IndexOf('task-preview:hover-opened', $cancelIndex, [StringComparison]::Ordinal)
+    if ($reopenedIndex -ge 0) { throw 'A stale hover timer reopened the preview after task context cancellation.' }
+}
+
+function Inspect-TaskMenuExclusivity([int]$ProcessId, [string]$Title) {
+    [UtitWindowActionsNative]::SetCursorPos(0, 0) | Out-Null
+    [UtitWindowActionsNative]::mouse_event(1, 0, 0, 0, [UIntPtr]::Zero)
+    Start-Sleep -Milliseconds 300
+    $target = Find-TaskButton $ProcessId $Title
+    $bounds = $target.Button.Current.BoundingRectangle
+    $x = [int]($bounds.Left + $bounds.Width / 2)
+    $y = [int]($bounds.Top + $bounds.Height / 2)
+    [UtitWindowActionsNative]::SetCursorPos($x, $y) | Out-Null
+    [UtitWindowActionsNative]::mouse_event(1, 0, 0, 0, [UIntPtr]::Zero)
+    Wait-TracePattern 'task-preview:hover-opened' 3000
+
+    [UtitWindowActionsNative]::SetForegroundWindow(
+        [IntPtr][int]$target.Window.Current.NativeWindowHandle
+    ) | Out-Null
+    [UtitWindowActionsNative]::RightClick($x, $y)
+    $jumpList = Wait-OwnedElement $ProcessId 'Jump List' $null 3000
+    Assert-OwnedElementAbsent $ProcessId 'Window previews' 800
+    Assert-NoPreviewReopenedAfterContext 100
+
+    $menuItems = $jumpList.FindAll(
+        [System.Windows.Automation.TreeScope]::Descendants,
+        [System.Windows.Automation.PropertyCondition]::new(
+            [System.Windows.Automation.AutomationElement]::ControlTypeProperty,
+            [System.Windows.Automation.ControlType]::MenuItem
+        )
+    )
+    $labels = @()
+    for ($index = 0; $index -lt $menuItems.Count; $index++) {
+        $labels += [string]$menuItems.Item($index).Current.Name
+    }
+    $pinIndex = [Array]::IndexOf($labels, 'Unpin from taskbar')
+    if ($pinIndex -lt 0) { $pinIndex = [Array]::IndexOf($labels, 'Pin to taskbar') }
+    $closeIndex = [Array]::IndexOf($labels, 'Close window')
+    if ($pinIndex -lt 0 -or $closeIndex -lt 0 -or $pinIndex -ge $closeIndex) {
+        throw "Explorer bottom command order rejected: $($labels -join ' | ')"
+    }
+    foreach ($forbidden in @('Close all windows', 'ms-gamingoverlay---', 'Actions')) {
+        if ($labels -contains $forbidden -or $null -ne (Find-OwnedElement $ProcessId $forbidden)) {
+            throw "Forbidden Jump List entry visible: $forbidden"
+        }
+    }
+    foreach ($heading in @('Recent', 'Frequent', 'Actions')) {
+        if ($null -ne (Find-OwnedElement $ProcessId $heading ([System.Windows.Automation.ControlType]::Header))) {
+            throw "Unscoped or synthetic Jump List heading visible: $heading"
+        }
+    }
+    [System.Windows.Forms.SendKeys]::SendWait('{ESC}')
+    Start-Sleep -Milliseconds 150
+    return $labels
+}
+
 function Invoke-TaskMenuAction([int]$ProcessId, [string]$Title, [string]$Action) {
     [UtitWindowActionsNative]::SetCursorPos(0, 0) | Out-Null
     Start-Sleep -Milliseconds 500
     $target = Find-TaskButton $ProcessId $Title
     $button = $target.Button
+    [UtitWindowActionsNative]::SetForegroundWindow(
+        [IntPtr][int]$target.Window.Current.NativeWindowHandle
+    ) | Out-Null
+    Start-Sleep -Milliseconds 100
     $bounds = $button.Current.BoundingRectangle
     [UtitWindowActionsNative]::RightClick(
         [int]($bounds.Left + $bounds.Width / 2),
@@ -119,8 +259,10 @@ function Invoke-TaskMenuAction([int]$ProcessId, [string]$Title, [string]$Action)
                 ))
             )
             if ($null -ne $item) {
-                [System.Windows.Forms.SendKeys]::SendWait('{ESC}')
-                Start-Sleep -Milliseconds 150
+                $invoke = [System.Windows.Automation.InvokePattern]$item.GetCurrentPattern(
+                    [System.Windows.Automation.InvokePattern]::Pattern
+                )
+                $invoke.Invoke()
                 return
             }
         }
@@ -236,9 +378,14 @@ try {
     Invoke-TaskPrimary $app.Id $title
     Wait-WindowState $fixtureHwnd { -not (Find-TaskButton $app.Id $title).Button.Current.Name.Contains('[minimized]') } 'Minimized fixture was not restored by taskbar left click'
 
+    $menuLabels = Inspect-TaskMenuExclusivity $app.Id $title
+
     Invoke-TaskMenuAction $app.Id $title 'Minimize'
+    Wait-WindowState $fixtureHwnd { [UtitWindowActionsNative]::IsIconic($fixtureHwnd) } 'Fixture was not minimized by the Jump List'
     Invoke-TaskMenuAction $app.Id $title 'Maximize'
+    Wait-WindowState $fixtureHwnd { [UtitWindowActionsNative]::IsZoomed($fixtureHwnd) } 'Fixture was not maximized by the Jump List'
     Invoke-TaskMenuAction $app.Id $title 'Close window'
+    Wait-WindowState $fixtureHwnd { -not [UtitWindowActionsNative]::IsWindow($fixtureHwnd) } 'Fixture was not closed by the Jump List'
     $trace = Get-Content -Raw -LiteralPath $tracePath
     if ($trace -match 'taskbar:context-opened') { throw 'Task-button right click leaked into the taskbar background menu.' }
     if (([regex]::Matches($trace, 'taskbar:jump-list-opened')).Count -lt 3) { throw 'Task-button right clicks did not open owned Jump Lists.' }
@@ -250,7 +397,17 @@ try {
         fixture_hwnd = $fixtureHwnd.ToInt64()
         left_minimized_observed = $true
         left_restored_observed = $true
-        context_commands_present = @('Minimize', 'Maximize', 'Close window')
+        context_commands_present = $menuLabels
+        preview_visible_before_context = $true
+        preview_absent_when_jump_list_opened = $true
+        preview_absent_after_hover_delay = $true
+        unscoped_recent_absent = $true
+        synthetic_actions_heading_absent = $true
+        pin_command_present = $true
+        pin_precedes_close = $true
+        minimized_observed = $true
+        maximized_observed = $true
+        close_observed = $true
         pointer_interactions = [ordered]@{
             left_route = 'uia-invoke-equivalent'
             right_route = 'physical-pointer'

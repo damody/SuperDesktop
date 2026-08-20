@@ -1,0 +1,70 @@
+{
+  "schema": "superdesktop-utit-run/v1",
+  "run_id": "focused-1",
+  "suite": "shell-parity",
+  "partial": true,
+  "started_unix_ms": 1787237119250,
+  "finished_unix_ms": 1787237128183,
+  "workspace": "\\\\?\\D:\\SuperExplorer\\SuperDesktop",
+  "host": {
+    "windows_build": 26200,
+    "architecture": "AMD64",
+    "interactive": true,
+    "monitor_count": 1,
+    "explorer_running": true,
+    "workspace_revision": "8ea7606f4afe88e2a4e401ee3d06c88d5eb87691",
+    "tools": [
+      "cargo",
+      "certutil",
+      "git",
+      "openspec",
+      "powershell"
+    ]
+  },
+  "counts": {
+    "selected": 1,
+    "passed": 1,
+    "failed": 0,
+    "blocked": 0,
+    "skipped": 0,
+    "not_applicable": 0
+  },
+  "decision": "partial",
+  "cases": [
+    {
+      "id": "gui-taskbar-window-actions",
+      "title": "Taskbar application left/right pointer parity",
+      "state": "passed",
+      "reason": "passed",
+      "duration_ms": 8870,
+      "exit_code": 0,
+      "timed_out": false,
+      "argv": [
+        "powershell.exe",
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "D:\\SuperExplorer\\SuperDesktop\\scripts\\capture-taskbar-window-actions.ps1",
+        "-Workspace",
+        "D:\\SuperExplorer\\SuperDesktop",
+        "-EvidenceDirectory",
+        "D:\\SuperExplorer\\SuperDesktop\\openspec\\changes\\taskbar-jump-list-parity\\evidence\\focused-1\\cases\\gui-taskbar-window-actions/window-actions"
+      ],
+      "stdout": {
+        "path": "cases/gui-taskbar-window-actions/stdout.log",
+        "bytes": 1599,
+        "sha256": "f8826b872d301f6467808e7453730056c8389bfdf6a11c24ea84171e441e189a"
+      },
+      "stderr": null,
+      "artifacts": [
+        {
+          "path": "cases/gui-taskbar-window-actions/window-actions/report.json",
+          "bytes": 1598,
+          "sha256": "e20d76a253304e7f85f117cf484dcdf482375a3ee131386a038a3d59798e3d30"
+        }
+      ],
+      "recovery_verified": true
+    }
+  ]
+}

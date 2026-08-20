@@ -980,6 +980,62 @@ fn query_jump_list(
     JumpListModel::compose(response.recent, response.frequent, response.tasks, local)
 }
 
+fn taskbar_local_commands(
+    pinned: bool,
+    target_minimized: Option<bool>,
+    application_window_count: usize,
+) -> Vec<CommandDescriptor> {
+    let mut commands = vec![
+        CommandDescriptor {
+            id: CommandId("local:taskbar-minimize".into()),
+            label: "Minimize".into(),
+            enabled: target_minimized.is_some_and(|minimized| !minimized),
+            risk: CommandRisk::Normal,
+            children: Vec::new(),
+        },
+        CommandDescriptor {
+            id: CommandId("local:taskbar-maximize".into()),
+            label: "Maximize".into(),
+            enabled: target_minimized.is_some(),
+            risk: CommandRisk::Normal,
+            children: Vec::new(),
+        },
+        CommandDescriptor {
+            id: CommandId("local:taskbar-pin".into()),
+            label: if pinned {
+                "Unpin from taskbar"
+            } else {
+                "Pin to taskbar"
+            }
+            .into(),
+            enabled: true,
+            risk: CommandRisk::Normal,
+            children: Vec::new(),
+        },
+    ];
+    let grouped = application_window_count > 1;
+    commands.push(CommandDescriptor {
+        id: CommandId(
+            if grouped {
+                "local:taskbar-close-all"
+            } else {
+                "local:taskbar-close-window"
+            }
+            .into(),
+        ),
+        label: if grouped {
+            "Close all windows"
+        } else {
+            "Close window"
+        }
+        .into(),
+        enabled: application_window_count > 0,
+        risk: CommandRisk::Destructive,
+        children: Vec::new(),
+    });
+    commands
+}
+
 fn activate_jump_command(command: &CommandDescriptor) -> bool {
     let id = command.id.0.as_str();
     let path = id
@@ -3615,6 +3671,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                 let worker_rows = Arc::clone(&auto_hide_fast_rows);
                 let worker_stop = Arc::clone(&auto_hide_worker_stop);
                 let worker_handle_slot = Rc::clone(&auto_hide_worker_handle);
+                let flyout_window_for_context_seed = Rc::clone(&flyout_window);
                 let taskbar_monitor_name = taskbar_monitor.device_name.clone();
                 let explorer_shell_present_at_open = match trusted_explorer_shell_present() {
                     Ok(present) => present,
@@ -3814,6 +3871,10 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                         let taskbar_hwnd_for_hover = Rc::clone(&taskbar_hwnd_identity);
                         let active_preview_for_click = Rc::clone(&active_preview_hwnd);
                         let active_preview_for_hover = Rc::clone(&active_preview_hwnd);
+                        let active_preview_for_context = Rc::clone(&active_preview_hwnd);
+                        let hover_preview_for_context = Rc::clone(&hover_preview_controller);
+                        let flyout_window_for_context =
+                            Rc::clone(&flyout_window_for_context_seed);
                         let mut view = TaskbarView {
                         accessible_root_name: "SuperTaskbar".into(),
                         layout: TaskbarLayout::calculate(
@@ -4030,6 +4091,12 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                             }),
                             task_context: Rc::new(move |stable_id, app| {
                                 trace_action("taskbar:jump-list-requested");
+                                hover_preview_for_context.borrow_mut().cancel();
+                                if let Some(preview) = flyout_window_for_context.borrow_mut().take() {
+                                    let _ = preview.update(app, |_, window, _| window.remove_window());
+                                }
+                                active_preview_for_context.set(0);
+                                trace_action("task-preview:context-cancelled");
                                 let existing_jump_list = *jump_list_window_for_taskbar.borrow();
                                 if let Some(existing) = existing_jump_list {
                                     if existing
@@ -4061,8 +4128,14 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                 };
                                 let application_windows = windows
                                     .iter()
-                                    .filter(|window| window.application_identity == application_id)
-                                    .map(|window| window.hwnd_identity)
+                                    .filter(|window| {
+                                        window.application_identity == application_id
+                                            && window.visible
+                                            && !window.tool_window
+                                            && !window.cloaked
+                                            && !window.owned_transient
+                                    })
+                                    .cloned()
                                     .collect::<Vec<_>>();
                                 let target_window = windows
                                     .iter()
@@ -4073,45 +4146,11 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                     .taskbar
                                     .pins
                                     .contains(&application_id);
-                                let local = vec![
-                                    CommandDescriptor {
-                                        id: CommandId("local:taskbar-minimize".into()),
-                                        label: "Minimize".into(),
-                                        enabled: target_window
-                                            .as_ref()
-                                            .is_some_and(|window| !window.minimized),
-                                        risk: CommandRisk::Normal,
-                                        children: Vec::new(),
-                                    },
-                                    CommandDescriptor {
-                                        id: CommandId("local:taskbar-maximize".into()),
-                                        label: "Maximize".into(),
-                                        enabled: target_window.is_some(),
-                                        risk: CommandRisk::Normal,
-                                        children: Vec::new(),
-                                    },
-                                    CommandDescriptor {
-                                        id: CommandId("local:taskbar-close-window".into()),
-                                        label: "Close window".into(),
-                                        enabled: target_window.is_some(),
-                                        risk: CommandRisk::Destructive,
-                                        children: Vec::new(),
-                                    },
-                                    CommandDescriptor {
-                                        id: CommandId("local:taskbar-pin".into()),
-                                        label: if pinned { "Unpin from taskbar" } else { "Pin to taskbar" }.into(),
-                                        enabled: true,
-                                        risk: CommandRisk::Normal,
-                                        children: Vec::new(),
-                                    },
-                                    CommandDescriptor {
-                                        id: CommandId("local:taskbar-close-all".into()),
-                                        label: "Close all windows".into(),
-                                        enabled: !application_windows.is_empty(),
-                                        risk: CommandRisk::Destructive,
-                                        children: Vec::new(),
-                                    },
-                                ];
+                                let local = taskbar_local_commands(
+                                    pinned,
+                                    target_window.as_ref().map(|window| window.minimized),
+                                    application_windows.len(),
+                                );
                                 let model = query_jump_list(&jump_list_provider, &application_id, local);
                                 let jump_entry_count = model.entries().len();
                                 let jump_group_count = model
@@ -4177,9 +4216,11 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                                                 Err(_) => false,
                                                             }
                                                         }
-                                                        "local:taskbar-close-all" => application_windows.iter().all(|hwnd| {
-                                                            platform_win::common::taskbar::apply_window_action(
-                                                                *hwnd,
+                                                        "local:taskbar-close-all" => application_windows.iter().all(|target| {
+                                                            platform_win::common::taskbar::apply_window_action_to_owned_identity(
+                                                                target.hwnd_identity,
+                                                                target.process_id,
+                                                                &target.window_identity,
                                                                 platform_win::common::taskbar::WindowAction::Close,
                                                             )
                                                             .is_ok()
@@ -6356,6 +6397,77 @@ mod live_parity_tests {
                 "borrow can panic: {forbidden}"
             );
         }
+    }
+
+    #[test]
+    fn task_context_cancels_preview_before_every_fallible_resolution_path() {
+        let source = include_str!("surface_runtime.rs");
+        let callback = source
+            .split("task_context: Rc::new")
+            .nth(1)
+            .and_then(|tail| tail.split("taskbar_context: Rc::new").next())
+            .expect("task context callback source");
+        let cancel = callback
+            .find("hover_preview_for_context.borrow_mut().cancel()")
+            .expect("preview generation cancellation");
+        let remove = callback
+            .find("flyout_window_for_context.borrow_mut().take()")
+            .expect("visible preview removal");
+        let snapshot = callback
+            .find("snapshot_task_windows()")
+            .expect("task snapshot");
+        let provider = callback
+            .find("query_jump_list(")
+            .expect("Jump List provider query");
+        assert!(cancel < remove && remove < snapshot && snapshot < provider);
+        assert!(callback.contains("active_preview_for_context.set(0)"));
+    }
+
+    #[test]
+    fn explorer_aligned_local_commands_have_one_pin_and_one_final_close() {
+        let single = super::taskbar_local_commands(false, Some(false), 1);
+        let single_labels = single
+            .iter()
+            .map(|command| command.label.as_str())
+            .collect::<Vec<_>>();
+        assert_eq!(
+            single_labels,
+            ["Minimize", "Maximize", "Pin to taskbar", "Close window"]
+        );
+        assert_eq!(
+            single
+                .iter()
+                .filter(|command| command.id.0.contains("close"))
+                .count(),
+            1
+        );
+
+        let grouped = super::taskbar_local_commands(true, Some(true), 2);
+        let grouped_labels = grouped
+            .iter()
+            .map(|command| command.label.as_str())
+            .collect::<Vec<_>>();
+        assert_eq!(
+            grouped_labels,
+            [
+                "Minimize",
+                "Maximize",
+                "Unpin from taskbar",
+                "Close all windows"
+            ]
+        );
+        assert!(!grouped[0].enabled);
+        assert_eq!(
+            grouped
+                .iter()
+                .filter(|command| command.id.0.contains("close"))
+                .count(),
+            1
+        );
+
+        let source = include_str!("surface_runtime.rs");
+        assert!(source.contains("Err(_) => false"));
+        assert!(source.contains("taskbar:jump-list-action-rejected"));
     }
 
     #[test]

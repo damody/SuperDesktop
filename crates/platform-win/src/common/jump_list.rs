@@ -1,47 +1,21 @@
-//! Bounded, owned Jump List data collected outside the GPUI process.
+//! Bounded, application-owned Jump List data collected outside the GPUI process.
 
-use std::ffi::c_void;
-use std::fs;
 use std::path::{Path, PathBuf};
-use std::time::SystemTime;
 
 use shell_provider_protocol::{CommandDescriptor, CommandId, CommandRisk, JumpListResponse};
-use windows::Win32::System::Com::CoTaskMemFree;
-use windows::Win32::UI::Shell::{FOLDERID_Recent, KF_FLAG_DEFAULT, SHGetKnownFolderPath};
 
 pub fn enumerate(application_id: &str, limit: usize) -> JumpListResponse {
     let application = PathBuf::from(application_id)
         .canonicalize()
         .ok()
         .filter(|path| path.is_file());
-    let mut recent = recent_root()
-        .and_then(|root| fs::read_dir(root).ok())
-        .into_iter()
-        .flatten()
-        .filter_map(Result::ok)
-        .filter_map(|entry| {
-            let path = entry.path().canonicalize().ok()?;
-            path.is_file().then(|| {
-                let modified = entry
-                    .metadata()
-                    .and_then(|metadata| metadata.modified())
-                    .unwrap_or(SystemTime::UNIX_EPOCH);
-                (modified, path)
-            })
-        })
-        .collect::<Vec<_>>();
-    recent.sort_by(|left, right| right.0.cmp(&left.0).then_with(|| left.1.cmp(&right.1)));
-    let recent = recent
-        .into_iter()
-        .take(limit.min(20))
-        .map(|(_, path)| command_for_path("open", "Open", &path))
-        .collect();
+    let _ = limit;
     let tasks = application
         .as_deref()
         .map(|path| vec![command_for_path("launch", "Open new window", path)])
         .unwrap_or_default();
     JumpListResponse {
-        recent,
+        recent: Vec::new(),
         frequent: Vec::new(),
         tasks,
     }
@@ -64,25 +38,25 @@ fn command_for_path(prefix: &str, fallback: &str, path: &Path) -> CommandDescrip
     }
 }
 
-fn recent_root() -> Option<PathBuf> {
-    // SAFETY: The static known-folder GUID is valid. The returned CoTaskMem
-    // allocation is copied into PathBuf and freed exactly once.
-    unsafe {
-        let path = SHGetKnownFolderPath(&FOLDERID_Recent, KF_FLAG_DEFAULT, None).ok()?;
-        let result = path.to_string().ok().map(PathBuf::from);
-        CoTaskMemFree(Some(path.0.cast::<c_void>()));
-        result
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn invalid_application_never_creates_launch_task_and_output_is_bounded() {
+    fn invalid_application_never_creates_launch_task_or_unowned_destinations() {
         let output = enumerate(r"C:\definitely-missing\app.exe", 3);
         assert!(output.tasks.is_empty());
-        assert!(output.recent.len() <= 3);
+        assert!(output.recent.is_empty());
+        assert!(output.frequent.is_empty());
+    }
+
+    #[test]
+    fn current_executable_keeps_launch_task_without_global_recent_items() {
+        let application = std::env::current_exe().unwrap();
+        let output = enumerate(application.to_string_lossy().as_ref(), 20);
+        assert!(output.recent.is_empty());
+        assert!(output.frequent.is_empty());
+        assert_eq!(output.tasks.len(), 1);
+        assert!(output.tasks[0].id.0.starts_with("jump:launch:"));
     }
 }

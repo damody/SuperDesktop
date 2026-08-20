@@ -455,7 +455,8 @@ mod tests {
         let ResponseBody::JumpList(list) = response.body else {
             panic!()
         };
-        assert!(list.recent.len() <= 20);
+        assert!(list.recent.is_empty());
+        assert!(list.frequent.is_empty());
         assert_eq!(list.tasks.len(), 1);
         assert!(list.tasks[0].id.0.starts_with("jump:launch:"));
     }

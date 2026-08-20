@@ -1,0 +1,35 @@
+{
+    "schema":  "taskbar-window-actions-utit/v2",
+    "result":  "passed",
+    "fixture_pid":  39372,
+    "fixture_hwnd":  20188740,
+    "left_minimized_observed":  true,
+    "left_restored_observed":  true,
+    "context_commands_present":  [
+                                     "taskbar-progress-fixture",
+                                     "Minimize",
+                                     "Maximize",
+                                     "Pin to taskbar",
+                                     "Close window"
+                                 ],
+    "preview_visible_before_context":  true,
+    "preview_absent_when_jump_list_opened":  true,
+    "preview_absent_after_hover_delay":  true,
+    "unscoped_recent_absent":  true,
+    "synthetic_actions_heading_absent":  true,
+    "pin_command_present":  true,
+    "pin_precedes_close":  true,
+    "minimized_observed":  true,
+    "maximized_observed":  true,
+    "close_observed":  true,
+    "pointer_interactions":  {
+                                 "left_route":  "uia-invoke-equivalent",
+                                 "right_route":  "physical-pointer",
+                                 "inactive_left_activated":  true,
+                                 "active_left_minimized":  true,
+                                 "minimized_left_restored":  true,
+                                 "right_click_jump_list":  true,
+                                 "background_context_absent":  true
+                             },
+    "app_sha256":  "0927BFF338FCEC5F984CB99A0897D8F3851031B658AF67B6940881225582935E"
+}

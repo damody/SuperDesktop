@@ -10,9 +10,9 @@
 **Gate／Evidence：** `G-POPUP-EXCLUSIVE`; `evidence/index.jsonl` records for tasks 1.1.1–1.1.3.
 **完成門檻：** Pending timers cannot open after cancellation, visible previews are removed, and every task-context early return occurs after cancellation.
 
-- [ ] 1.1.1 Add `HoverPreviewController::cancel` and unit-test task, popup-hover, and stale-generation reset behavior.
-- [ ] 1.1.2 Capture the preview controller, preview window slot, and active preview HWND in the task-context callback and cancel/remove/clear them before Jump List toggle or lookup.
-- [ ] 1.1.3 Add source-level regression coverage proving preview cancellation precedes task snapshot/provider early-return paths.
+- [x] 1.1.1 Add `HoverPreviewController::cancel` and unit-test task, popup-hover, and stale-generation reset behavior.
+- [x] 1.1.2 Capture the preview controller, preview window slot, and active preview HWND in the task-context callback and cancel/remove/clear them before Jump List toggle or lookup.
+- [x] 1.1.3 Add source-level regression coverage proving preview cancellation precedes task snapshot/provider early-return paths.
 
 ### 1.2 Make destination data truthful and application-scoped
 
@@ -24,8 +24,8 @@
 **Gate／Evidence：** `G-DESTINATION-OWNERSHIP`; `evidence/index.jsonl` records for tasks 1.2.1–1.2.2.
 **完成門檻：** Invalid or valid executable requests never emit unverified global Recent/Frequent items, and valid executable tasks remain actionable.
 
-- [ ] 1.2.1 Remove global `FOLDERID_Recent` enumeration and return empty Recent/Frequent groups unless ownership is proven.
-- [ ] 1.2.2 Update platform/provider tests to reject unrelated destination labels while retaining the canonical executable `Open new window` task.
+- [x] 1.2.1 Remove global `FOLDERID_Recent` enumeration and return empty Recent/Frequent groups unless ownership is proven.
+- [x] 1.2.2 Update platform/provider tests to reject unrelated destination labels while retaining the canonical executable `Open new window` task.
 
 ### 1.3 Align required bottom commands with File Explorer
 
@@ -37,10 +37,10 @@
 **Gate／Evidence：** `G-EXPLORER-COMMANDS`; `evidence/index.jsonl` records for tasks 1.3.1–1.3.4.
 **完成門檻：** Single-window lists contain pin/unpin then `Close window`; grouped lists contain pin/unpin then `Close all windows`; no duplicate close or `Actions` heading exists.
 
-- [ ] 1.3.1 Recompose local commands so optional minimize/maximize precede pin/unpin and exactly one final close command.
-- [ ] 1.3.2 Route the single and grouped close commands through captured exact identities and report partial/rejected execution truthfully.
-- [ ] 1.3.3 Render the local group without a synthetic heading while preserving accessible menu semantics and separator spacing.
-- [ ] 1.3.4 Add model/application source tests for single/group command labels, order, uniqueness, and pin persistence failure reporting.
+- [x] 1.3.1 Recompose local commands so optional minimize/maximize precede pin/unpin and exactly one final close command.
+- [x] 1.3.2 Route the single and grouped close commands through captured exact identities and report partial/rejected execution truthfully.
+- [x] 1.3.3 Render the local group without a synthetic heading while preserving accessible menu semantics and separator spacing.
+- [x] 1.3.4 Add model/application source tests for single/group command labels, order, uniqueness, and pin persistence failure reporting.
 
 ## 2. Headful and automated verification
 
@@ -54,9 +54,9 @@
 **Gate／Evidence：** `G-UTIT-INTERACTION`; focused UTIT report and `evidence/index.jsonl` records for tasks 2.1.1–2.1.3.
 **完成門檻：** Physical hover/right-click proves immediate and delayed preview absence, required commands, and exact minimize/maximize/close actions in two consecutive runs.
 
-- [ ] 2.1.1 Extend the fixture flow to establish hover preview state, right-click, and assert the `Window previews` surface is absent when the Jump List appears.
-- [ ] 2.1.2 Assert preview absence again after the configured hover delay and record pin/unpin plus applicable close command order.
-- [ ] 2.1.3 Execute two consecutive focused runs and validate both run reports with zero failed or blocked cases.
+- [x] 2.1.1 Extend the fixture flow to establish hover preview state, right-click, and assert the `Window previews` surface is absent when the Jump List appears.
+- [x] 2.1.2 Assert preview absence again after the configured hover delay and record pin/unpin plus applicable close command order.
+- [x] 2.1.3 Execute two consecutive focused runs and validate both run reports with zero failed or blocked cases.
 
 ### 2.2 Run package quality gates
 
@@ -68,9 +68,9 @@
 **Gate／Evidence：** `G-RUST-QUALITY`; `evidence/index.jsonl` records for tasks 2.2.1–2.2.3.
 **完成門檻：** Every command exits zero; warnings are denied; no gate is skipped.
 
-- [ ] 2.2.1 Run `cargo fmt --all -- --check` and `git diff --check`.
-- [ ] 2.2.2 Run tests for `platform-win`, `shell-provider-host`, `taskbar-ui`, `superdesktop-app`, and `superdesktop-utit`.
-- [ ] 2.2.3 Run Clippy with `-D warnings` for every affected package.
+- [x] 2.2.1 Run `cargo fmt --all -- --check` and `git diff --check`.
+- [x] 2.2.2 Run tests for `platform-win`, `shell-provider-host`, `taskbar-ui`, `superdesktop-app`, and `superdesktop-utit`.
+- [x] 2.2.3 Run Clippy with `-D warnings` for every affected package.
 
 ## 3. Release integration and evidence
 
