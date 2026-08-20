@@ -4,6 +4,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+Import-Module Microsoft.PowerShell.Security -ErrorAction Stop
 if ([string]::IsNullOrWhiteSpace($Workspace)) {
     $Workspace = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 }
