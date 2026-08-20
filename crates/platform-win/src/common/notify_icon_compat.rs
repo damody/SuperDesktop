@@ -38,7 +38,7 @@ use windows::Win32::{
             PostMessageW, PostQuitMessage, RegisterClassW, RegisterWindowMessageW,
             SetWindowLongPtrW, TranslateMessage, UnregisterClassW, WINDOW_EX_STYLE, WINDOW_STYLE,
             WM_CLOSE, WM_CONTEXTMENU, WM_COPYDATA, WM_DESTROY, WM_LBUTTONUP, WM_MOUSEMOVE,
-            WM_NCCREATE, WNDCLASSW,
+            WM_NCCREATE, WM_RBUTTONUP, WNDCLASSW,
         },
     },
 };
@@ -788,7 +788,8 @@ pub fn callback_payload_at(
         (NotifyIconLayoutVersion::V4, NotificationEventKind::Activate) => NIN_SELECT,
         (NotifyIconLayoutVersion::V4, NotificationEventKind::Focus) => NIN_KEYSELECT,
         (_, NotificationEventKind::Activate) => WM_LBUTTONUP,
-        (_, NotificationEventKind::Context) => WM_CONTEXTMENU,
+        (NotifyIconLayoutVersion::V4, NotificationEventKind::Context) => WM_CONTEXTMENU,
+        (_, NotificationEventKind::Context) => WM_RBUTTONUP,
         (_, NotificationEventKind::Hover) => WM_MOUSEMOVE,
         (_, NotificationEventKind::Focus) => NIN_KEYSELECT,
     };
@@ -1130,7 +1131,7 @@ mod tests {
         icon.callback.negotiated_version = NotifyIconLayoutVersion::V2;
         let legacy = callback_payload(&icon, NotificationEventKind::Context);
         assert_eq!(legacy.wparam, 77);
-        assert_eq!(legacy.lparam as u32, WM_CONTEXTMENU);
+        assert_eq!(legacy.lparam as u32, WM_RBUTTONUP);
         assert_eq!(
             deliver_callback(&icon, NotificationEventKind::Activate),
             Err("notify-icon-owner-window-dead")
