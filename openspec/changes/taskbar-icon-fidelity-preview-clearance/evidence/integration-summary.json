@@ -1,0 +1,9 @@
+{
+  "schema": "taskbar-icon-fidelity-preview-clearance-integration/v1",
+  "nested_evidence_revision": "450374f35fb11f6d747d4f360e3cb1d610a4fe52",
+  "parent_integration_revision": "9b15101e4a304875fe6eea33acc46a3494d9132e",
+  "parent_commit_subject": "整合 SuperDesktop 圖示清晰度與預覽避讓",
+  "parent_changed_paths": ["SuperDesktop"],
+  "unrelated_staged_paths": [],
+  "final_gitlink_resynchronization_required_after_task-closure_commit": true
+}

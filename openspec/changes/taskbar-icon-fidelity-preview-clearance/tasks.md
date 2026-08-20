@@ -135,4 +135,4 @@
 - [x] 5.2.1 Map proposal, design, requirements, scenarios, gates, and all task IDs in the final evidence index.
 - [x] 5.2.2 Review the implementation for handle ownership, panic paths, geometry consistency, regressions, and unrelated changes.
 - [x] 5.2.3 Run strict OpenSpec/task validation and mark every evidence-backed leaf complete.
-- [ ] 5.2.4 Commit the nested change and synchronize only the SuperDesktop gitlink in the parent repository.
+- [x] 5.2.4 Commit the nested change and synchronize only the SuperDesktop gitlink in the parent repository.
