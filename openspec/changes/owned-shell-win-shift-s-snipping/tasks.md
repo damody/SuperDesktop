@@ -63,17 +63,17 @@
 
 ### 3.1 Add a privacy-preserving headful UTIT case
 
-**目的：** Prove a real Explorer-free chord opens and dismisses the built-in overlay.
+**目的：** Prove a real owned-shell chord uses a bounded verified Explorer broker, opens the built-in overlay, and returns to Explorer-absent state.
 **輸入：** Release candidate, existing UTIT input helpers/catalog patterns, runtime traces.
 **產出：** Headful PowerShell case, catalog entry, hashed JSON/log evidence without screen-content images.
 **依賴：** 2.3.
 **Owner／Wave：** Primary agent / Wave 3.
 **Gate／Evidence：** GUI-01; tasks 3.1.1–3.1.4.
-**完成門檻：** Test sends physical keys, observes traces plus signed/system overlay identity, dismisses with Escape, proves app survival, and stores no screenshot.
+**完成門檻：** Test starts and ends Explorer-absent, sends physical keys, observes the temporary verified broker plus signed/system overlay identity, dismisses with Escape, proves app survival, and stores no screenshot.
 
 - [x] 3.1.1 Implement physical Windows+Shift+S and Escape input with bounded watchdog/recovery.
-- [x] 3.1.2 Observe the built-in clipping surface/process and reject source-only or conditional passes.
-- [x] 3.1.3 Register the mandatory Explorer-free case and its privacy-preserving artifacts in UTIT.
+- [x] 3.1.2 Observe the temporary verified Explorer broker and built-in clipping surface/process, then prove both disappear after Escape.
+- [x] 3.1.3 Register the mandatory owned-shell broker-bounded case and its privacy-preserving artifacts in UTIT.
 - [x] 3.1.4 Add UTIT catalog/report contract tests for the new case.
 
 ### 3.2 Execute the focused physical gate twice
@@ -86,7 +86,7 @@
 **Gate／Evidence：** GUI-02; tasks 3.2.1–3.2.2.
 **完成門檻：** Two consecutive clean-launch runs pass every mandatory assertion with the same candidate hash.
 
-- [ ] 3.2.1 Run and index the first Explorer-free physical shortcut result.
+- [ ] 3.2.1 Run and index the first owned-shell broker-bounded physical shortcut result.
 - [ ] 3.2.2 Run and index the second clean-launch physical shortcut result.
 
 ## 4. Source and release gates

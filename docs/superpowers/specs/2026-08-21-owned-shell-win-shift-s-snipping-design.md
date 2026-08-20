@@ -18,13 +18,15 @@ The GPUI foreground refresh path receives `OpenScreenSnip` and invokes a platfor
 
 Microsoft's newer `ms-screenclip://capture/...` app-integration protocol is not used: it requires a packaged caller plus a registered redirect URI and is intended to return captured media to an app. SuperDesktop is matching the OS hotkey and does not request captured content.
 
-This is preferred over ShellExecute, a hard-coded `SnippingTool.exe` path, or undocumented executable switches. Re-injecting the same key chord is rejected because it can recurse through the low-level hook and can double-trigger when another shell component is present.
+Windows 11 build 26200 testing established that Snipping Tool creates no overlay while Explorer is entirely absent, regardless of ShellExecute, `/clip`, or direct packaged-app activation. The helper therefore starts the already security-validated inbox Explorer only when no Explorer shell pre-exists, keeps that broker alive while `SnipOverlayRootWindow` exists, then closes it through the existing current-session/canonical-path verifier. A pre-existing Explorer shell is never classified as or closed as this temporary broker.
+
+This is preferred over a hard-coded `SnippingTool.exe` path, undocumented executable switches, or a custom capture UI. Re-injecting the same key chord is rejected because it can recurse through the low-level hook and can double-trigger when another shell component is present.
 
 ## Mode boundary
 
 `ShellHotkeys::start` remains guarded by the existing owned-shell flag. Therefore:
 
-- owned shell / Explorer absent: SuperDesktop consumes the chord and launches `ms-screenclip:///?source=HotKey`;
+- owned shell / Explorer absent: SuperDesktop consumes the chord, starts a bounded verified inbox Explorer broker, launches the fixed Snipping Tool activation, and closes only that broker after the overlay disappears;
 - Explorer-compatible preview mode: SuperDesktop installs no shell hotkey hook and Windows handles the chord unchanged;
 - startup or hook failure: existing console diagnostics remain authoritative and no partial second hook is installed.
 

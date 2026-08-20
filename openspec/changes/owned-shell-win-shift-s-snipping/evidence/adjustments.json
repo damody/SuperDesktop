@@ -46,5 +46,14 @@
     "correction": "Use IApplicationActivationManager::ActivateApplication with the observed fixed AUMID, fixed hotkey argument, and AO_NONE.",
     "scope_unchanged": true,
     "gates_unchanged": true
+  },
+  "temporary_broker_correction": {
+    "adjustment_id": "C-001-bounded-inbox-explorer-broker",
+    "classification": "C",
+    "authority": "User explicitly directed autonomous decisions and native Windows parity without further confirmation.",
+    "reason": "Windows 11 build 26200 produced no SnipOverlayRootWindow with Explorer absent through ShellExecute, direct /clip, ActivateForProtocol, or ActivateApplication. The overlay also disappears if Explorer is terminated while it is open.",
+    "correction": "Start only signed canonical inbox Explorer when absent, retain it only while SnipOverlayRootWindow exists, then terminate through current-session/canonical-path validation. Never close a pre-existing Explorer as request-owned.",
+    "built_in_snipping_tool_requirement_preserved": true,
+    "privacy_gate_unchanged": true
   }
 }

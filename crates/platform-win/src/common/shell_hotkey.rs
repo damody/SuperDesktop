@@ -7,6 +7,7 @@ use std::{
         mpsc,
     },
     thread::JoinHandle,
+    time::{Duration, Instant},
 };
 
 use windows::Win32::{
@@ -24,7 +25,7 @@ use windows::Win32::{
         },
         Shell::{AO_NONE, ApplicationActivationManager, IApplicationActivationManager},
         WindowsAndMessaging::{
-            CallNextHookEx, GetMessageW, HC_ACTION, KBDLLHOOKSTRUCT, MSG, PM_NOREMOVE,
+            CallNextHookEx, FindWindowW, GetMessageW, HC_ACTION, KBDLLHOOKSTRUCT, MSG, PM_NOREMOVE,
             PeekMessageW, PostThreadMessageW, SetWindowsHookExW, UnhookWindowsHookEx,
             WH_KEYBOARD_LL, WM_KEYDOWN, WM_KEYUP, WM_QUIT, WM_SYSKEYDOWN, WM_SYSKEYUP,
         },
@@ -123,11 +124,38 @@ fn action_for_key(
 
 /// Opens the Windows-registered built-in image-snipping overlay.
 pub fn open_screen_snipping_overlay() -> Result<(), String> {
+    let explorer_preexisting = super::explorer_recovery::trusted_explorer_shell_present()
+        .map_err(|error| format!("screen-snipping Explorer observation failed: {error}"))?;
+    if !explorer_preexisting {
+        super::explorer_recovery::recover_explorer_shell()
+            .map_err(|error| format!("screen-snipping Explorer broker launch failed: {error}"))?;
+        let deadline = Instant::now() + Duration::from_secs(5);
+        while Instant::now() < deadline {
+            if super::explorer_recovery::trusted_explorer_shell_present().unwrap_or(false) {
+                break;
+            }
+            std::thread::sleep(Duration::from_millis(50));
+        }
+        if !super::explorer_recovery::trusted_explorer_shell_present().unwrap_or(false) {
+            let _ = super::explorer_recovery::shutdown_trusted_explorer_shell();
+            return Err("screen-snipping Explorer broker did not become ready".to_owned());
+        }
+    }
+    let cleanup_broker = || {
+        if !explorer_preexisting {
+            super::explorer_recovery::shutdown_trusted_explorer_shell()
+                .map(|_| ())
+                .map_err(|error| format!("screen-snipping Explorer broker cleanup failed: {error}"))
+        } else {
+            Ok(())
+        }
+    };
     let initialize = unsafe { CoInitializeEx(None, COINIT_APARTMENTTHREADED) };
     let initialized = match initialize {
         result if result.is_ok() => true,
         RPC_E_CHANGED_MODE => false,
         error => {
+            let _ = cleanup_broker();
             return Err(format!(
                 "screen-snipping COM initialization failed: {}",
                 WindowsError::from_hresult(error)
@@ -156,7 +184,39 @@ pub fn open_screen_snipping_overlay() -> Result<(), String> {
     if initialized {
         unsafe { CoUninitialize() };
     }
-    result
+    if let Err(error) = result {
+        return match cleanup_broker() {
+            Ok(()) => Err(error),
+            Err(cleanup) => Err(format!("{error}; {cleanup}")),
+        };
+    }
+    let appear_deadline = Instant::now() + Duration::from_secs(5);
+    while Instant::now() < appear_deadline && !screen_snipping_overlay_visible() {
+        std::thread::sleep(Duration::from_millis(50));
+    }
+    if !screen_snipping_overlay_visible() {
+        let cleanup = cleanup_broker();
+        return Err(cleanup.err().map_or_else(
+            || "screen-snipping overlay did not appear".to_owned(),
+            |cleanup| format!("screen-snipping overlay did not appear; {cleanup}"),
+        ));
+    }
+    let dismiss_deadline = Instant::now() + Duration::from_secs(600);
+    while Instant::now() < dismiss_deadline && screen_snipping_overlay_visible() {
+        std::thread::sleep(Duration::from_millis(50));
+    }
+    if screen_snipping_overlay_visible() {
+        let cleanup = cleanup_broker();
+        return Err(cleanup.err().map_or_else(
+            || "screen-snipping overlay dismissal timed out".to_owned(),
+            |cleanup| format!("screen-snipping overlay dismissal timed out; {cleanup}"),
+        ));
+    }
+    cleanup_broker()
+}
+
+fn screen_snipping_overlay_visible() -> bool {
+    unsafe { FindWindowW(w!("SnipOverlayRootWindow"), None) }.is_ok()
 }
 
 fn reduce_shell_hotkey(
@@ -478,6 +538,9 @@ mod tests {
             "w!(\"ms-screenclip:///?source=HotKey\")",
             "CLSCTX_LOCAL_SERVER",
             "AO_NONE",
+            "recover_explorer_shell",
+            "shutdown_trusted_explorer_shell",
+            "SnipOverlayRootWindow",
         ] {
             assert!(
                 helper.contains(required),

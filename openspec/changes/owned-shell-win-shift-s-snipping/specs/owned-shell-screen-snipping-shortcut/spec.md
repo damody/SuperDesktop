@@ -20,7 +20,7 @@ SuperDesktop SHALL consume `Win+Shift+S` in owned-shell mode and enqueue exactly
 - **THEN** SuperDesktop does not enqueue or consume the chord through its shell reducer
 
 ### Requirement: Built-in Snipping Tool overlay activation
-SuperDesktop SHALL activate the Windows-registered built-in image-snipping overlay through `IApplicationActivationManager::ActivateApplication` using only the fixed built-in AUMID `Microsoft.ScreenSketch_8wekyb3d8bbwe!App`, observed native-hotkey argument `ms-screenclip:///?source=HotKey`, and `AO_NONE`; it SHALL NOT use ShellExecute, `ActivateForProtocol`, resolve or launch Explorer, discover an executable path, register a capture callback, or launch a third-party capture program.
+SuperDesktop SHALL activate the Windows-registered built-in image-snipping overlay through `IApplicationActivationManager::ActivateApplication` using only the fixed built-in AUMID `Microsoft.ScreenSketch_8wekyb3d8bbwe!App`, observed native-hotkey argument `ms-screenclip:///?source=HotKey`, and `AO_NONE`; it SHALL NOT use ShellExecute, `ActivateForProtocol`, discover a Snipping Tool executable path, register a capture callback, or launch a third-party capture program.
 
 #### Scenario: Protocol activation accepted
 - **WHEN** the queued screen-snipping action is dispatched and Windows accepts the registered protocol
@@ -28,7 +28,22 @@ SuperDesktop SHALL activate the Windows-registered built-in image-snipping overl
 
 #### Scenario: Protocol activation rejected
 - **WHEN** Windows rejects or cannot resolve the fixed screen-clipping protocol
-- **THEN** SuperDesktop prints a scoped console error, remains alive, and performs no fallback launch
+- **THEN** SuperDesktop cleans up any request-owned Explorer broker, prints a scoped console error, remains alive, and performs no capture-program fallback launch
+
+### Requirement: Bounded verified Explorer broker
+When Explorer is absent, SuperDesktop SHALL use only the verified inbox Explorer as a temporary broker while the built-in overlay is visible and SHALL close only a broker owned by that request after the overlay disappears.
+
+#### Scenario: Owned shell starts without Explorer
+- **WHEN** `Win+Shift+S` is dispatched with no verified Explorer shell present
+- **THEN** SuperDesktop launches the signed canonical inbox Explorer, waits for the built-in overlay, and keeps the broker only until the overlay is dismissed
+
+#### Scenario: Overlay finishes or is cancelled
+- **WHEN** `SnipOverlayRootWindow` disappears after capture or Escape
+- **THEN** SuperDesktop validates current session and canonical Explorer identity, closes the request-owned broker, and records accepted only after cleanup succeeds
+
+#### Scenario: Explorer pre-existed the request
+- **WHEN** a verified Explorer shell was already present before dispatch
+- **THEN** SuperDesktop uses Windows' existing native support and does not close that pre-existing Explorer as request-owned
 
 ### Requirement: Explorer-compatible delegation
 SuperDesktop SHALL install no shell shortcut hook in Explorer-compatible preview mode, leaving `Win+Shift+S` to Windows without duplicate activation.
@@ -38,7 +53,7 @@ SuperDesktop SHALL install no shell shortcut hook in Explorer-compatible preview
 - **THEN** no SuperDesktop screen-snipping action is enqueued for the chord
 
 ### Requirement: Physical shortcut release evidence
-The release candidate SHALL pass a headful Explorer-free test that sends the physical chord, observes the built-in overlay and both admission traces, dismisses the overlay with Escape, and verifies SuperDesktop survival without storing screen-content screenshots.
+The release candidate SHALL pass a headful owned-shell test that starts with Explorer absent, sends the physical chord, observes the temporary verified broker plus built-in overlay and both admission traces, dismisses the overlay with Escape, verifies Explorer is absent again, and verifies SuperDesktop survival without storing screen-content screenshots.
 
 #### Scenario: Two clean headful runs
 - **WHEN** the focused test runs twice from clean owned-shell launches

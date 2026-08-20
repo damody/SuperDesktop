@@ -94,6 +94,7 @@ $priorSuperExplorer = $env:SUPEREXPLORER_PATH
 $app = $null
 $watchdog = $null
 $suppressor = $null
+$postSuppressor = $null
 $explorerPath = Join-Path $env:WINDIR 'explorer.exe'
 try {
     Send-Escape
@@ -112,9 +113,13 @@ try {
     Wait-Until { (Test-Path $tracePath) -and ((Get-Content $tracePath -Raw -Encoding UTF8) -match 'win-e:hook-active') } 4000 'Owned-shell hotkey hook did not become active' | Out-Null
 
     $triggeredAt = [DateTime]::UtcNow
+    if ($suppressor -and -not $suppressor.HasExited) { Stop-Process -Id $suppressor.Id -Force }
+    $suppressor = $null
     Send-ScreenSnipChord
     Wait-Until { (Get-Content $tracePath -Raw -Encoding UTF8) -match 'shell-hotkey:screen-snip-requested' } 4000 'Screen-snip request trace missing' | Out-Null
     $overlayRecord = Wait-Until { @([SuperDesktopScreenSnipNative]::OverlayWindows()) | Select-Object -First 1 } 5000 'Built-in Snipping Tool overlay was not observed'
+    $temporaryExplorerObserved = [bool](Get-Process explorer -ErrorAction SilentlyContinue)
+    if (-not $temporaryExplorerObserved) { throw 'Verified Explorer broker was not present during the native overlay' }
     $parts = $overlayRecord -split '\|', 4
     if ($parts.Count -ne 4) { throw "Malformed overlay identity: $overlayRecord" }
     $overlayHwnd = [int64]$parts[0]
@@ -131,6 +136,8 @@ try {
     Send-Escape
     Wait-Until { @([SuperDesktopScreenSnipNative]::OverlayWindows()).Count -eq 0 } 4000 'Snipping Tool overlay did not dismiss after Escape' | Out-Null
     Wait-Until { (Get-Content $tracePath -Raw -Encoding UTF8) -match 'shell-hotkey:screen-snip-accepted' } 5000 'Screen-snip accepted trace missing after dismissal' | Out-Null
+    $postSuppressor = Start-Process powershell.exe -WindowStyle Hidden -PassThru -ArgumentList '-NoProfile', '-WindowStyle', 'Hidden', '-Command', '$deadline=[DateTime]::UtcNow.AddSeconds(8);while([DateTime]::UtcNow-lt$deadline){Get-Process explorer -ErrorAction SilentlyContinue|Stop-Process -Force -ErrorAction SilentlyContinue;Start-Sleep -Milliseconds 10}'
+    Wait-Until { -not (Get-Process explorer -ErrorAction SilentlyContinue) } 4000 'Temporary Explorer broker did not terminate after overlay dismissal' | Out-Null
     $app.Refresh()
     if ($app.HasExited) { throw "SuperDesktop exited during screen-snip capture: $($app.ExitCode)" }
     $trace = Get-Content $tracePath -Raw -Encoding UTF8
@@ -163,6 +170,9 @@ try {
         superdesktop_survived = $true
         runtime_error_signature_absent = $true
         explorer_absent_during_capture = $explorerAbsent
+        explorer_absent_before_hotkey = $true
+        temporary_verified_explorer_broker_observed = $temporaryExplorerObserved
+        explorer_absent_after_dismissal = $explorerAbsent
         explorer_recovered = $true
         screen_content_artifacts = @()
         trace = 'screen-snip.log'
@@ -179,6 +189,7 @@ finally {
         }
     }
     if ($suppressor -and -not $suppressor.HasExited) { Stop-Process -Id $suppressor.Id -Force -ErrorAction SilentlyContinue }
+    if ($postSuppressor -and -not $postSuppressor.HasExited) { Stop-Process -Id $postSuppressor.Id -Force -ErrorAction SilentlyContinue }
     if (-not (Get-Process explorer -ErrorAction SilentlyContinue)) { Start-Process $explorerPath }
     if ($watchdog -and -not $watchdog.HasExited) { Stop-Process -Id $watchdog.Id -Force -ErrorAction SilentlyContinue }
     if ($null -eq $priorSurface) { Remove-Item Env:SUPERDESKTOP_VERIFICATION_SURFACE -ErrorAction SilentlyContinue } else { $env:SUPERDESKTOP_VERIFICATION_SURFACE = $priorSurface }

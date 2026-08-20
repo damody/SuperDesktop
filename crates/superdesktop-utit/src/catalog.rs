@@ -376,7 +376,7 @@ pub fn catalog() -> Vec<TestCase> {
         ),
         headful_case(
             "gui-win-shift-s-snipping",
-            "Explorer-free native Win+Shift+S Snipping Tool overlay",
+            "Owned-shell native Win+Shift+S with bounded inbox Explorer broker",
             "capture-win-shift-s-snipping.ps1",
             &[
                 "-Workspace",
@@ -388,7 +388,7 @@ pub fn catalog() -> Vec<TestCase> {
                 "screen-snip/headful-report.json",
                 "screen-snip/screen-snip.log",
             ],
-            true,
+            false,
             75,
         ),
     ];
@@ -583,13 +583,13 @@ mod tests {
     }
 
     #[test]
-    fn screen_snipping_case_is_mandatory_explorer_free_and_privacy_preserving() {
+    fn screen_snipping_case_is_mandatory_broker_bounded_and_privacy_preserving() {
         let case = catalog()
             .into_iter()
             .find(|case| case.id == "gui-win-shift-s-snipping")
             .expect("screen snipping case");
-        assert!(case.mandatory && case.explorer_free);
-        assert!(matches!(case.recovery, Recovery::ExplorerWatchdog { .. }));
+        assert!(case.mandatory && !case.explorer_free);
+        assert!(matches!(case.recovery, Recovery::None));
         assert!(
             case.artifacts
                 .iter()

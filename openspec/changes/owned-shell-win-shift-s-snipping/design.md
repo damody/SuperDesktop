@@ -33,15 +33,17 @@ Launching inside the hook was rejected because a global low-level callback must 
 
 The newer `ms-screenclip://capture/...` integration API is deliberately excluded because Microsoft requires a packaged caller and registered redirect URI, while the owned shell needs native hotkey behavior and must not receive captured media.
 
-ShellExecute, `ActivateForProtocol`, hard-coded Store-app paths, `SnippingTool.exe` discovery, Explorer mediation, and key re-injection were rejected as Explorer-dependent, contract-incompatible, version-sensitive, unavailable in the owned shell, or recursion-prone.
+Windows 11 build 26200 evidence showed that ShellExecute, direct `/clip`, and packaged-app activation all create no overlay while Explorer is entirely absent. When no Explorer shell pre-exists, the activation worker therefore starts the existing security-validated inbox Explorer as a bounded broker, waits for its shell window, activates Snipping Tool, keeps the broker until `SnipOverlayRootWindow` disappears, and then uses the existing session/canonical-path-validated shutdown. A pre-existing Explorer shell is never closed by this broker cleanup.
+
+ShellExecute, `ActivateForProtocol`, hard-coded Store-app paths, `SnippingTool.exe` discovery, key re-injection, and a custom capture surface were rejected as contract-incompatible, version-sensitive, recursion-prone, or contrary to the requested built-in tool behavior.
 
 ### 3. Dispatch on GPUI's existing foreground refresh
 
 The refresh loop handles the action outside the hook and starts one named activation worker per fenced physical press. The worker owns COM initialization and can wait for the packaged app without blocking GPUI. Success writes requested/accepted trace events. Failure calls `report_error("shell-hotkey:screen-snip", error)` and leaves SuperDesktop alive. The action does not require a taskbar handle or foreground activation.
 
-### 4. Preserve the mode boundary
+### 4. Preserve the mode boundary and bound the required broker
 
-No hook is installed when `run(shell)` receives false. Therefore preview mode with Explorer continues to use Windows' native shortcut path and cannot double-launch. Owned-shell UTIT explicitly suppresses Explorer and passes `--shell`.
+No hook is installed when `run(shell)` receives false. Therefore preview mode with Explorer continues to use Windows' native shortcut path and cannot double-launch. The owned-shell verification starts with Explorer absent, observes the temporary verified broker only during the overlay, and requires Explorer absent again after Escape before restoring the user's normal Explorer session.
 
 ### 5. Gate the real chord without retaining captured screen content
 
@@ -55,7 +57,8 @@ Hook registration, protocol admission, runtime update, and headful observation f
 
 ## Risks / Trade-offs
 
-- [Protocol registration is damaged or Snipping Tool is removed] → emit the exact console error and keep the shell alive; do not masquerade as success.
+- [Protocol registration is damaged or Snipping Tool is removed] → emit the exact console error, clean up any broker started by this request, and keep the shell alive.
+- [Explorer broker launch or cleanup fails] → use only the existing signed/canonical/session-validated lifecycle and report a scoped error; never terminate a pre-existing Explorer shell as request-owned.
 - [Windows changes the hosting process name or hotkey URI] → headful evidence compares the current signed Snipping Tool process/command identity; an observed contract change triggers a B-level design correction rather than a silent fallback.
 - [Synthetic keys are blocked by desktop authority] → the focused run fails rather than using a source-only conditional pass.
 - [The overlay can expose desktop content] → store no overlay screenshot; retain only process/window metadata and traces.

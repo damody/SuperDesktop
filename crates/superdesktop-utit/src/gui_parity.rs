@@ -318,7 +318,7 @@ pub fn gui_parity_manifest() -> Vec<GuiSurfaceSpec> {
             required_controls: &["screen-clipping-overlay"],
             required_actions: &["keyboard"],
             artifacts: SCREEN_SNIP_ARTIFACTS,
-            explorer_policy: ManifestExplorerPolicy::RequiredAbsent,
+            explorer_policy: ManifestExplorerPolicy::RecoveryOnly,
             mandatory: true,
         },
         GuiSurfaceSpec {
