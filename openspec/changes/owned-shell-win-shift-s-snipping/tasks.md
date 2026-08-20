@@ -86,8 +86,8 @@
 **Gate／Evidence：** GUI-02; tasks 3.2.1–3.2.2.
 **完成門檻：** Two consecutive clean-launch runs pass every mandatory assertion with the same candidate hash.
 
-- [ ] 3.2.1 Run and index the first owned-shell broker-bounded physical shortcut result.
-- [ ] 3.2.2 Run and index the second clean-launch physical shortcut result.
+- [x] 3.2.1 Run and index the first owned-shell broker-bounded physical shortcut result.
+- [x] 3.2.2 Run and index the second clean-launch physical shortcut result.
 
 ## 4. Source and release gates
 
@@ -115,7 +115,7 @@
 **Gate／Evidence：** REL-01; tasks 4.2.1–4.2.3.
 **完成門檻：** Release and installer builds pass, embedded binary hash equals candidate hash, and unrelated files remain unstaged.
 
-- [ ] 4.2.1 Build the SuperDesktop release candidate and record its hash.
+- [x] 4.2.1 Build the SuperDesktop release candidate and record its hash.
 - [ ] 4.2.2 Build the all-component SuperExplorer installer without launching it and record its hash.
 - [ ] 4.2.3 Extract the packaged SuperDesktop binary and prove hash/provenance equality.
 

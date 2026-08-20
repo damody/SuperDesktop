@@ -1,0 +1,38 @@
+{
+  "schema": "owned-shell-win-shift-s-snipping-headful-summary/v1",
+  "candidate_sha256": "FA805C1B4B77274BE401A53E7A6971B0EEB3AED6C6D40642838CEB145A5A0945",
+  "raw_evidence_root": "D:/SuperExplorer/build/logs/owned-shell-win-shift-s-snipping",
+  "runs": [
+    {
+      "id": "run1",
+      "result": "passed",
+      "report_sha256": "02FC334086E29948B6B50DEA9B015DDC7253FF758080FE9FE31C3E6E8CCA5660",
+      "request_trace": true,
+      "accepted_trace": true,
+      "overlay_class": "SnipOverlayRootWindow",
+      "store_package": "Microsoft.ScreenSketch_11.2602.49.0_x64__8wekyb3d8bbwe",
+      "temporary_verified_broker": true,
+      "explorer_absent_before": true,
+      "explorer_absent_after": true,
+      "escape_dismissed": true,
+      "superdesktop_survived": true,
+      "screen_content_artifacts": 0
+    },
+    {
+      "id": "run2",
+      "result": "passed",
+      "report_sha256": "44E67C43ADB52CA371333462F8F4827665C283E5BCB0E207FFE9C45192715B0E",
+      "request_trace": true,
+      "accepted_trace": true,
+      "overlay_class": "SnipOverlayRootWindow",
+      "store_package": "Microsoft.ScreenSketch_11.2602.49.0_x64__8wekyb3d8bbwe",
+      "temporary_verified_broker": true,
+      "explorer_absent_before": true,
+      "explorer_absent_after": true,
+      "escape_dismissed": true,
+      "superdesktop_survived": true,
+      "screen_content_artifacts": 0
+    }
+  ],
+  "gate_result": "passed_twice"
+}
