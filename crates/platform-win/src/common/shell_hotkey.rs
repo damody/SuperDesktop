@@ -22,10 +22,7 @@ use windows::Win32::{
         Input::KeyboardAndMouse::{
             GetAsyncKeyState, VK_CONTROL, VK_LWIN, VK_MENU, VK_RWIN, VK_SHIFT,
         },
-        Shell::{
-            ApplicationActivationManager, IApplicationActivationManager, IShellItem,
-            IShellItemArray, SHCreateItemFromParsingName, SHCreateShellItemArrayFromShellItem,
-        },
+        Shell::{AO_NONE, ApplicationActivationManager, IApplicationActivationManager},
         WindowsAndMessaging::{
             CallNextHookEx, GetMessageW, HC_ACTION, KBDLLHOOKSTRUCT, MSG, PM_NOREMOVE,
             PeekMessageW, PostThreadMessageW, SetWindowsHookExW, UnhookWindowsHookEx,
@@ -138,19 +135,18 @@ pub fn open_screen_snipping_overlay() -> Result<(), String> {
         }
     };
     let result = (|| {
-        // SAFETY: every input is compile-time fixed, the Shell item and array
-        // are owned COM values, and the local-server activation manager owns
-        // the protocol activation arguments for the returned app process.
-        let item: IShellItem =
-            unsafe { SHCreateItemFromParsingName(w!("ms-screenclip:///?source=HotKey"), None) }
-                .map_err(|error| format!("screen-snipping URI item creation failed: {error}"))?;
-        let items: IShellItemArray = unsafe { SHCreateShellItemArrayFromShellItem(&item) }
-            .map_err(|error| format!("screen-snipping URI array creation failed: {error}"))?;
+        // SAFETY: the AUMID and launch arguments are compile-time fixed, and
+        // the local-server activation manager owns the activation arguments
+        // for the returned packaged-app process.
         let activation: IApplicationActivationManager =
             unsafe { CoCreateInstance(&ApplicationActivationManager, None, CLSCTX_LOCAL_SERVER) }
                 .map_err(|error| format!("screen-snipping activation manager failed: {error}"))?;
         let process_id = unsafe {
-            activation.ActivateForProtocol(w!("Microsoft.ScreenSketch_8wekyb3d8bbwe!App"), &items)
+            activation.ActivateApplication(
+                w!("Microsoft.ScreenSketch_8wekyb3d8bbwe!App"),
+                w!("ms-screenclip:///?source=HotKey"),
+                AO_NONE,
+            )
         }
         .map_err(|error| format!("screen-snipping protocol activation failed: {error}"))?;
         (process_id != 0)
@@ -477,10 +473,11 @@ mod tests {
             .expect("screen snip helper");
         for required in [
             "IApplicationActivationManager",
-            "ActivateForProtocol",
+            "ActivateApplication",
             "w!(\"Microsoft.ScreenSketch_8wekyb3d8bbwe!App\")",
             "w!(\"ms-screenclip:///?source=HotKey\")",
             "CLSCTX_LOCAL_SERVER",
+            "AO_NONE",
         ] {
             assert!(
                 helper.contains(required),
@@ -491,6 +488,7 @@ mod tests {
             "explorer.exe",
             "SnippingTool.exe",
             "ShellExecuteExW",
+            "ActivateForProtocol",
             "CreateProcess",
             "keybd_event",
             "SendInput",

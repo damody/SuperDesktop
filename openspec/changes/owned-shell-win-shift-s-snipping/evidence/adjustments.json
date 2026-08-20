@@ -38,5 +38,13 @@
     "correction": "Run one named COM worker per fenced physical press; observe and dismiss the overlay before requiring the accepted trace.",
     "behavior_unchanged": true,
     "gates_unchanged": true
+  },
+  "activation_contract_correction": {
+    "adjustment_id": "B-003-generic-packaged-app-activation",
+    "classification": "B",
+    "reason": "ActivateForProtocol returned 0x80270254 because Snipping Tool does not declare the observed hotkey URI as a Windows.Protocol extension.",
+    "correction": "Use IApplicationActivationManager::ActivateApplication with the observed fixed AUMID, fixed hotkey argument, and AO_NONE.",
+    "scope_unchanged": true,
+    "gates_unchanged": true
   }
 }

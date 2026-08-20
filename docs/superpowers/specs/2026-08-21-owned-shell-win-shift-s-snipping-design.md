@@ -14,7 +14,7 @@ The active-key fence consumes repeats and the matching key-up exactly as for the
 
 ## Native activation
 
-The GPUI foreground refresh path receives `OpenScreenSnip` and invokes a platform-owned helper. A live Windows 11 observation of the real Explorer-handled chord showed Snipping Tool launched with `ms-screenclip:///?source=HotKey`. Explorer-free testing then proved that ShellExecute accepted the URI without creating the overlay, so the helper now uses Windows' documented `IApplicationActivationManager::ActivateForProtocol` with the fixed built-in AUMID `Microsoft.ScreenSketch_8wekyb3d8bbwe!App` and that exact URI. `CLSCTX_LOCAL_SERVER` owns activation-argument lifetime without Explorer or a retained process handle.
+The GPUI foreground refresh path receives `OpenScreenSnip` and invokes a platform-owned helper. A live Windows 11 observation of the real Explorer-handled chord showed Snipping Tool launched with AUMID `Microsoft.ScreenSketch_8wekyb3d8bbwe!App` and argument `ms-screenclip:///?source=HotKey`. Explorer-free testing proved that ShellExecute did not create the overlay and `ActivateForProtocol` was rejected because the package does not expose that URI as a Windows.Protocol extension. The helper therefore uses Windows' documented `IApplicationActivationManager::ActivateApplication` with the observed fixed AUMID, fixed argument, and `AO_NONE`. `CLSCTX_LOCAL_SERVER` owns activation-argument lifetime without Explorer or a retained process handle.
 
 Microsoft's newer `ms-screenclip://capture/...` app-integration protocol is not used: it requires a packaged caller plus a registered redirect URI and is intended to return captured media to an app. SuperDesktop is matching the OS hotkey and does not request captured content.
 
@@ -37,7 +37,7 @@ Successful admission records `shell-hotkey:screen-snip-requested` and `shell-hot
 ## Verification
 
 - Reducer tests distinguish `Win+S`, `Win+Shift+S`, repeats, key-up, and unsupported Control/Alt variants.
-- Source-contract tests prove the fixed URI, `ShellExecuteExW`, no `explorer.exe`, no executable-path lookup, and complete action-code round trip.
+- Source-contract tests prove fixed AUMID/argument activation, forbid `ShellExecuteExW` and `ActivateForProtocol`, forbid `explorer.exe` and executable-path lookup, and cover the complete action-code round trip.
 - A headful Explorer-free UTIT sends the physical chord to the release candidate, observes both trace events and the built-in screen clipping surface/process, sends Escape to dismiss it, and verifies SuperDesktop remains alive without panic/error signatures.
 - The focused headful case passes twice from clean launches.
 - Formatting, workspace tests, Clippy with warnings denied, release build, installer build, embedded-binary hash comparison, and parent gitlink integration remain blocking gates.

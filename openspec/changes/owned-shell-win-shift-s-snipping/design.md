@@ -29,11 +29,11 @@ Launching inside the hook was rejected because a global low-level callback must 
 
 ### 2. Use a fixed Windows protocol
 
-`platform-win::common::shell_hotkey` exposes a narrow `open_screen_snipping_overlay()` helper. A live observation of Explorer's real chord on the target Windows 11 build produced the Snipping Tool command line `ms-screenclip:///?source=HotKey`. Explorer-free evidence showed ShellExecute accepted that URI without presenting the overlay, so the helper uses the documented `IApplicationActivationManager::ActivateForProtocol` local-server COM boundary with fixed AUMID `Microsoft.ScreenSketch_8wekyb3d8bbwe!App` and the exact observed URI. No caller data crosses this boundary.
+`platform-win::common::shell_hotkey` exposes a narrow `open_screen_snipping_overlay()` helper. A live observation of Explorer's real chord on the target Windows 11 build produced Snipping Tool AUMID `Microsoft.ScreenSketch_8wekyb3d8bbwe!App` with command argument `ms-screenclip:///?source=HotKey`. Explorer-free evidence showed ShellExecute accepted without presenting the overlay and `ActivateForProtocol` returned `0x80270254` because the package does not declare this as a Windows.Protocol extension. The helper therefore uses documented local-server `IApplicationActivationManager::ActivateApplication` with the fixed observed AUMID, fixed argument, and `AO_NONE`. No caller data crosses this boundary.
 
 The newer `ms-screenclip://capture/...` integration API is deliberately excluded because Microsoft requires a packaged caller and registered redirect URI, while the owned shell needs native hotkey behavior and must not receive captured media.
 
-ShellExecute, hard-coded Store-app paths, `SnippingTool.exe` switches, Explorer mediation, and key re-injection were rejected as Explorer-dependent, version-sensitive, unavailable in the owned shell, or recursion-prone.
+ShellExecute, `ActivateForProtocol`, hard-coded Store-app paths, `SnippingTool.exe` discovery, Explorer mediation, and key re-injection were rejected as Explorer-dependent, contract-incompatible, version-sensitive, unavailable in the owned shell, or recursion-prone.
 
 ### 3. Dispatch on GPUI's existing foreground refresh
 
