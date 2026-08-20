@@ -4,7 +4,6 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-Import-Module Microsoft.PowerShell.Security -ErrorAction Stop
 if ([string]::IsNullOrWhiteSpace($Workspace)) {
     $Workspace = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 }
@@ -14,6 +13,10 @@ $superExplorerSource = Join-Path (Split-Path -Parent $Workspace) 'target/release
 if (-not (Test-Path -LiteralPath $superExplorerSource -PathType Leaf)) { throw "Missing SuperExplorer release companion: $superExplorerSource" }
 $superExplorerAdjacent = Join-Path (Split-Path -Parent $appPath) 'SuperExplorer.exe'
 Copy-Item -LiteralPath $superExplorerSource -Destination $superExplorerAdjacent -Force
+$screenSketchPackage = @(Get-AppxPackage -Name Microsoft.ScreenSketch | Where-Object { $_.Status -eq 'Ok' }) | Select-Object -First 1
+if ($null -eq $screenSketchPackage) { throw 'Microsoft ScreenSketch package is unavailable' }
+if ([string]$screenSketchPackage.SignatureKind -ne 'Store' -or [string]$screenSketchPackage.Publisher -notmatch '^CN=Microsoft Corporation,') { throw "ScreenSketch package identity rejected: $($screenSketchPackage.PackageFullName)" }
+$screenSketchRoot = [IO.Path]::GetFullPath([string]$screenSketchPackage.InstallLocation)
 New-Item -ItemType Directory -Force -Path $EvidenceDirectory | Out-Null
 $tracePath = Join-Path $EvidenceDirectory 'screen-snip.log'
 $stdoutPath = Join-Path $EvidenceDirectory 'app-stdout.log'
@@ -130,9 +133,8 @@ try {
     $process = Get-CimInstance Win32_Process -Filter "ProcessId=$overlayPid"
     if ($null -eq $process -or $process.Name -ne 'SnippingTool.exe') { throw "Unexpected overlay owner: pid=$overlayPid name=$($process.Name)" }
     if (-not ([string]$process.CommandLine).Contains('ms-screenclip:///?source=HotKey')) { throw "Unexpected Snipping Tool command line: $($process.CommandLine)" }
-    if ($process.ExecutablePath -notmatch '\\WindowsApps\\Microsoft\.ScreenSketch_.+\\SnippingTool\\SnippingTool\.exe$') { throw "Unexpected Snipping Tool path: $($process.ExecutablePath)" }
-    $signature = Get-AuthenticodeSignature -LiteralPath $process.ExecutablePath
-    if ($signature.Status -ne [System.Management.Automation.SignatureStatus]::Valid) { throw "Snipping Tool signature is not valid: $($signature.Status)" }
+    $expectedSnippingTool = Join-Path $screenSketchRoot 'SnippingTool\SnippingTool.exe'
+    if ([IO.Path]::GetFullPath([string]$process.ExecutablePath) -ne [IO.Path]::GetFullPath($expectedSnippingTool)) { throw "Unexpected Snipping Tool path: $($process.ExecutablePath)" }
 
     Send-Escape
     Wait-Until { @([SuperDesktopScreenSnipNative]::OverlayWindows()).Count -eq 0 } 4000 'Snipping Tool overlay did not dismiss after Escape' | Out-Null
@@ -165,7 +167,9 @@ try {
         overlay_process = $process.Name
         overlay_path = $process.ExecutablePath
         overlay_command_line = $process.CommandLine
-        overlay_signature = [string]$signature.Status
+        overlay_package = $screenSketchPackage.PackageFullName
+        overlay_package_publisher = $screenSketchPackage.Publisher
+        overlay_signature = [string]$screenSketchPackage.SignatureKind
         triggered_utc = $triggeredAt.ToString('o')
         escape_dismissed = $true
         superdesktop_survived = $true
