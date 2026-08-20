@@ -20,7 +20,7 @@
     "command": "cargo build --release -p superdesktop-app",
     "exit_status": 0,
     "path": "target/release/superdesktop-app.exe",
-    "sha256": "B1B02FF6B45B2069DC61F37205AD2A6B9E3FBD12C216EEEF37FEE6A4FB7C4FAC",
+    "sha256": "686DB80637BB1BC5CAB2B98EC814B9639FA23812BE76269F4CD167A05FAD34B3",
     "matches_gui_candidate": true
   }
 }

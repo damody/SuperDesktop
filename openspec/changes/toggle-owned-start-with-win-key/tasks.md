@@ -84,8 +84,8 @@
 **Gate／Evidence：** REL-01; tasks 4.2.1–4.2.2.
 **完成門檻：** Installer build exits zero, package provenance names the nested commit/candidate, and unrelated paths remain unchanged.
 
-- [ ] 4.2.1 Commit intended nested changes and synchronize only the SuperDesktop gitlink plus intended integration artifacts in the parent.
-- [ ] 4.2.2 Build the all-component installer without launch and record installer/candidate hashes and repository status.
+- [x] 4.2.1 Commit intended nested changes and synchronize only the SuperDesktop gitlink plus intended integration artifacts in the parent.
+- [x] 4.2.2 Build the all-component installer without launch and record installer/candidate hashes and repository status.
 
 ## 5. Final traceability review
 
@@ -99,6 +99,6 @@
 **Gate／Evidence：** REVIEW-01; tasks 5.1.1–5.1.3.
 **完成門檻：** Every leaf has unique passed evidence, every scenario maps to a gate, OpenSpec validates strictly, zero P0/P1 remains, and tracked repositories are clean.
 
-- [ ] 5.1.1 Map proposal, decisions, requirements, scenarios, tasks, gates, commands, and artifacts in the evidence index.
-- [ ] 5.1.2 Review hook bounds, state recovery, callback borrowing, shell isolation, GUI cleanup, regressions, and unrelated diffs.
-- [ ] 5.1.3 Run strict OpenSpec, detailed-task, evidence-schema, formatting, and final repository validation; commit the completed change.
+- [x] 5.1.1 Map proposal, decisions, requirements, scenarios, tasks, gates, commands, and artifacts in the evidence index.
+- [x] 5.1.2 Review hook bounds, state recovery, callback borrowing, shell isolation, GUI cleanup, regressions, and unrelated diffs.
+- [x] 5.1.3 Run strict OpenSpec, detailed-task, evidence-schema, formatting, and final repository validation; commit the completed change.
