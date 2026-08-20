@@ -302,6 +302,25 @@ pub fn catalog() -> Vec<TestCase> {
             75,
         ),
         headful_case(
+            "gui-volume-generation-recovery",
+            "Volume pointer and keyboard recovery across status-host generations",
+            "capture-volume-generation-recovery.ps1",
+            &[
+                "-Workspace",
+                "{workspace}",
+                "-EvidenceDirectory",
+                "{out}/volume-recovery",
+            ],
+            &[
+                "volume-recovery/headful-report.json",
+                "volume-recovery/pointer-recovered.png",
+                "volume-recovery/keyboard-recovered.png",
+                "volume-recovery/volume-recovery.log",
+            ],
+            false,
+            60,
+        ),
+        headful_case(
             "gui-taskbar-resize",
             "Explorer-free taskbar resize and lock",
             "capture-taskbar-resize-lock.ps1",
@@ -408,6 +427,7 @@ pub fn catalog() -> Vec<TestCase> {
                 | "gui-notification-overflow"
                 | "gui-notification-center"
                 | "gui-system-status"
+                | "gui-volume-generation-recovery"
                 | "gui-taskbar-resize"
                 | "gui-taskbar-auto-hide"
                 | "gui-taskbar-hover-preview"

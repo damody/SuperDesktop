@@ -254,7 +254,7 @@ pub fn gui_parity_manifest() -> Vec<GuiSurfaceSpec> {
         spec(
             "system-volume",
             "taskbar-ui",
-            &["gui-system-status"],
+            &["gui-system-status", "gui-volume-generation-recovery"],
             SYSTEM_RULES,
         ),
         spec(

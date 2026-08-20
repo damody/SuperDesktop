@@ -148,6 +148,8 @@ impl SystemFlyoutView {
                 dismiss(window, cx);
             }
         });
+        let focus = cx.focus_handle();
+        window.focus(&focus, cx);
         Self {
             kind,
             snapshot,
@@ -158,7 +160,7 @@ impl SystemFlyoutView {
             notification_action,
             notification_error: None,
             dismiss,
-            focus: cx.focus_handle(),
+            focus,
             _activation_subscription: activation_subscription,
         }
     }
@@ -487,8 +489,7 @@ fn weekday_sunday_zero(year: i32, month: u8, day: u8) -> u8 {
 }
 
 impl Render for SystemFlyoutView {
-    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        window.focus(&self.focus, cx);
+    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let dismiss = self.dismiss.clone();
         let kind = self.kind;
         let snapshot = self.snapshot.clone();
@@ -503,6 +504,8 @@ impl Render for SystemFlyoutView {
             }
             _ => None,
         };
+        let root_volume_key = action.clone();
+        let root_volume = volume;
         let calendar = calendar_month(&self.status.date);
         let (network_name, network_detail, network_available) =
             network_summary(snapshot.as_ref(), presentation);
@@ -545,6 +548,20 @@ impl Render for SystemFlyoutView {
                     if event.keystroke.key == "escape" {
                         dismiss(window, cx);
                         cx.stop_propagation();
+                    } else if kind == SystemFlyoutKind::Volume
+                        && let Some((current, _)) = root_volume
+                    {
+                        let value = match event.keystroke.key.as_str() {
+                            "left" | "down" => Some(current.saturating_sub(5)),
+                            "right" | "up" => Some(current.saturating_add(5).min(100)),
+                            "home" => Some(0),
+                            "end" => Some(100),
+                            _ => None,
+                        };
+                        if let Some(value) = value {
+                            root_volume_key(SystemStatusAction::SetVolume(value), cx);
+                            cx.stop_propagation();
+                        }
                     }
                 }),
             )
@@ -2011,6 +2028,7 @@ mod tests {
             "owned-volume-actions",
             "owned-volume-slider",
             "Role::Slider",
+            "root_volume_key(SystemStatusAction::SetVolume(value), cx)",
             "\"home\" => Some(0)",
             "\"end\" => Some(100)",
             "observe_window_activation",
@@ -2046,6 +2064,7 @@ mod tests {
             "event.keystroke.key == \"delete\"",
             ".line_clamp(3)",
             "SystemFlyoutChromeTokens",
+            "window.focus(&focus, cx)",
             ".hover(move |style|",
             ".active(move |style|",
             ".focus_visible(move |style|",
@@ -2056,6 +2075,8 @@ mod tests {
                 "missing owned flyout contract: {required}"
             );
         }
+        assert_eq!(production.matches("window.focus(&focus, cx)").count(), 1);
+        assert_eq!(production.matches("window.focus(").count(), 1);
         assert!(!production.contains("keyboard_settings_open"));
         for forbidden in [
             "explorer.exe",

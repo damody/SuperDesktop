@@ -3094,6 +3094,131 @@ fn adjacent_input_profile_id(snapshot: &SystemStatusSnapshot, direction: i32) ->
     input.profiles.get(target).map(|profile| profile.id.clone())
 }
 
+const SYSTEM_STATUS_COMMAND_MAX_ATTEMPTS: usize = 2;
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct SystemStatusCommandExecution {
+    response: SystemStatusHostResponse,
+    recovered_stale_generation: bool,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+enum SystemStatusCommandFailure {
+    ProviderUnavailable,
+    Transport(&'static str),
+    InvalidResponse,
+    ResyncTransport(&'static str),
+    ResyncInvalidResponse,
+    ResyncDidNotAdvance,
+}
+
+impl SystemStatusCommandFailure {
+    fn message(&self) -> String {
+        match self {
+            Self::ProviderUnavailable => "system status provider is unavailable".into(),
+            Self::Transport(reason) => format!("status command transport failed: {reason}"),
+            Self::InvalidResponse => "status command returned an invalid response".into(),
+            Self::ResyncTransport(reason) => {
+                format!("status generation resynchronization failed: {reason}")
+            }
+            Self::ResyncInvalidResponse => {
+                "status generation resynchronization returned an invalid response".into()
+            }
+            Self::ResyncDidNotAdvance => {
+                "status generation resynchronization did not advance the host generation".into()
+            }
+        }
+    }
+
+    const fn provider_failed(&self) -> bool {
+        matches!(self, Self::Transport(_) | Self::ResyncTransport(_))
+    }
+}
+
+fn execute_system_status_command<R, N>(
+    command: SystemStatusCommand,
+    command_timeout: Duration,
+    reconciler: &mut StatusReconciler,
+    mut request: R,
+    mut now_ms: N,
+) -> Result<SystemStatusCommandExecution, SystemStatusCommandFailure>
+where
+    R: FnMut(&SystemStatusHostRequest, Duration) -> Result<SystemStatusHostResponse, &'static str>,
+    N: FnMut() -> u64,
+{
+    let mut recovered_stale_generation = false;
+    let mut command_host_generation = None;
+    for attempt in 0..SYSTEM_STATUS_COMMAND_MAX_ATTEMPTS {
+        let Some(expected_host_generation) = command_host_generation.or_else(|| {
+            reconciler
+                .snapshot()
+                .map(|snapshot| snapshot.host_generation)
+        }) else {
+            return Err(SystemStatusCommandFailure::ProviderUnavailable);
+        };
+        let correlation_id = format!(
+            "system-status-{}",
+            NEXT_PROVIDER_REQUEST.fetch_add(1, Ordering::Relaxed)
+        );
+        let command_request = SystemStatusHostRequest::Command {
+            request: SystemStatusCommandRequest {
+                correlation_id,
+                expected_host_generation,
+                deadline_unix_ms: now_ms().saturating_add(command_timeout.as_millis() as u64),
+                command: command.clone(),
+            },
+        };
+        let response = request(
+            &command_request,
+            command_timeout + Duration::from_millis(250),
+        )
+        .map_err(SystemStatusCommandFailure::Transport)?;
+        let SystemStatusHostResponse::Terminal(terminal) = &response else {
+            return Err(SystemStatusCommandFailure::InvalidResponse);
+        };
+        if terminal.terminal == SystemStatusTerminalKind::StaleGeneration
+            && attempt + 1 < SYSTEM_STATUS_COMMAND_MAX_ATTEMPTS
+        {
+            trace_action("status:command-stale-generation");
+            let resync = request(
+                &SystemStatusHostRequest::Snapshot,
+                Duration::from_millis(500),
+            )
+            .map_err(SystemStatusCommandFailure::ResyncTransport)?;
+            let SystemStatusHostResponse::Snapshot(snapshot) = &resync else {
+                return Err(SystemStatusCommandFailure::ResyncInvalidResponse);
+            };
+            if snapshot.host_generation == expected_host_generation {
+                return Err(SystemStatusCommandFailure::ResyncDidNotAdvance);
+            }
+            command_host_generation = Some(snapshot.host_generation);
+            reconciler.apply(resync);
+            recovered_stale_generation = true;
+            trace_action("status:command-generation-resynchronized");
+            trace_action("status:command-retrying");
+            continue;
+        }
+
+        reconciler.apply(response.clone());
+        match request(
+            &SystemStatusHostRequest::Snapshot,
+            Duration::from_millis(500),
+        ) {
+            Ok(snapshot @ SystemStatusHostResponse::Snapshot(_)) => {
+                reconciler.apply(snapshot);
+                trace_action("status:command-final-snapshot");
+            }
+            Ok(_) => trace_action("status:command-final-snapshot-invalid"),
+            Err(_) => trace_action("status:command-final-snapshot-failed"),
+        }
+        return Ok(SystemStatusCommandExecution {
+            response,
+            recovered_stale_generation,
+        });
+    }
+    unreachable!("the bounded command loop always returns on its final attempt")
+}
+
 fn apply_system_status_action(
     action: SystemStatusAction,
     app: &mut App,
@@ -3107,33 +3232,21 @@ fn apply_system_status_action(
     } else {
         Duration::from_millis(1_000)
     };
-    let Some(expected_host_generation) = reconciler
-        .borrow()
-        .snapshot()
-        .map(|snapshot| snapshot.host_generation)
-    else {
-        trace_action("status:command-provider-unavailable");
-        return;
-    };
     let command = system_status_command(action);
-    let correlation_id = format!(
-        "system-status-{}",
-        NEXT_PROVIDER_REQUEST.fetch_add(1, Ordering::Relaxed)
-    );
-    let request = SystemStatusHostRequest::Command {
-        request: SystemStatusCommandRequest {
-            correlation_id,
-            expected_host_generation,
-            deadline_unix_ms: unix_time_ms().saturating_add(command_timeout.as_millis() as u64),
+    let execution = {
+        let mut client = client.borrow_mut();
+        let mut reconciler = reconciler.borrow_mut();
+        execute_system_status_command(
             command,
-        },
+            command_timeout,
+            &mut reconciler,
+            |request, timeout| client.request(request, timeout),
+            unix_time_ms,
+        )
     };
-    let response = client
-        .borrow_mut()
-        .request(&request, command_timeout + Duration::from_millis(250));
-    match response {
-        Ok(response @ SystemStatusHostResponse::Terminal(_)) => {
-            if let SystemStatusHostResponse::Terminal(terminal) = &response
+    match execution {
+        Ok(execution) => {
+            if let SystemStatusHostResponse::Terminal(terminal) = &execution.response
                 && !matches!(
                     terminal.terminal,
                     SystemStatusTerminalKind::Observed | SystemStatusTerminalKind::Accepted
@@ -3144,21 +3257,22 @@ fn apply_system_status_action(
                     format!("{:?}: {}", terminal.terminal, terminal.message),
                 );
             }
-            reconciler.borrow_mut().apply(response);
-            if let Ok(snapshot @ SystemStatusHostResponse::Snapshot(_)) =
-                client.borrow_mut().request(
-                    &SystemStatusHostRequest::Snapshot,
-                    Duration::from_millis(500),
-                )
-            {
-                reconciler.borrow_mut().apply(snapshot);
+            if execution.recovered_stale_generation {
+                trace_action("status:command-generation-recovered");
             }
             trace_action("status:command-terminal");
         }
-        Ok(_) => trace_action("status:command-invalid-response"),
-        Err(_) => {
-            reconciler.borrow_mut().provider_unavailable();
-            trace_action("status:command-provider-failed");
+        Err(SystemStatusCommandFailure::ProviderUnavailable) => {
+            trace_action("status:command-provider-unavailable");
+        }
+        Err(failure) => {
+            report_error("status:command", failure.message());
+            if failure.provider_failed() {
+                reconciler.borrow_mut().provider_unavailable();
+                trace_action("status:command-provider-failed");
+            } else {
+                trace_action("status:command-rejected");
+            }
         }
     }
     if restore_start_focus && let Some(start) = *start_window.borrow() {
@@ -5975,15 +6089,23 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
 mod live_parity_tests {
     use super::{
         AttentionRuntime, DEFAULT_FLASH_EDGES, HSHELL_FLASH, HSHELL_WINDOWACTIVATED,
-        ICON_CACHE_LIMIT, MonitorRecord, apply_taskbar_context_setting, prune_icon_cache,
-        reconcile_desktop_item_positions, start_window_geometry, taskbar_physical_geometry,
+        ICON_CACHE_LIMIT, MonitorRecord, SystemStatusCommandFailure, apply_taskbar_context_setting,
+        execute_system_status_command, prune_icon_cache, reconcile_desktop_item_positions,
+        start_window_geometry, taskbar_physical_geometry,
     };
+    use crate::status_client::StatusReconciler;
     use desktop_ui::AccessibleNode;
     use gpui::{WindowBounds, point, px};
     use platform_win::common::appbar_shell_hook::OwnedShellHookEvent;
     use platform_win::common::monitor_dpi_start::ScreenRect;
     use settings_store::{TaskbarAlignment, TaskbarSearchMode, TaskbarSettings};
-    use std::collections::{BTreeMap, BTreeSet};
+    use shell_provider_protocol::{
+        AudioStatus, ClockCalendarStatus, InputProfile, InputProfileKind, InputStatus,
+        NetworkStatus, PowerStatus, StatusAvailability, SystemStatusCommand,
+        SystemStatusCommandRequest, SystemStatusCommandTerminal, SystemStatusHostRequest,
+        SystemStatusHostResponse, SystemStatusSnapshot, SystemStatusTerminalKind,
+    };
+    use std::collections::{BTreeMap, BTreeSet, VecDeque};
     use std::path::Path;
     use std::time::Instant;
     use taskbar_ui::TaskbarContextCommand;
@@ -6058,6 +6180,286 @@ mod live_parity_tests {
             }
         "#;
         assert!(!product_status_has_no_fixed_provider_values(fixed_fixture));
+    }
+
+    fn status_snapshot(host_generation: u64, snapshot_generation: u64) -> SystemStatusSnapshot {
+        SystemStatusSnapshot {
+            host_generation,
+            snapshot_generation,
+            network: StatusAvailability::Available(NetworkStatus {
+                connected: true,
+                internet: true,
+                display_name: "fixture".into(),
+                wifi: StatusAvailability::Unavailable {
+                    reason: "fixture".into(),
+                },
+            }),
+            audio: StatusAvailability::Available(AudioStatus {
+                endpoint_id: "fixture-audio".into(),
+                volume_percent: 40,
+                muted: false,
+            }),
+            power: StatusAvailability::Available(PowerStatus {
+                ac_online: true,
+                charging: false,
+                battery_percent: None,
+            }),
+            clock: StatusAvailability::Available(ClockCalendarStatus {
+                unix_ms: 1,
+                locale: "en-US".into(),
+                time_zone: "UTC".into(),
+            }),
+            input: StatusAvailability::Available(InputStatus {
+                active_profile_id: "input".into(),
+                profiles: vec![InputProfile {
+                    id: "input".into(),
+                    language_tag: "en-US".into(),
+                    display_name: "English".into(),
+                    input_method_name: "US keyboard".into(),
+                    kind: InputProfileKind::LegacyKeyboardLayout,
+                    language_id: 0x0409,
+                    tsf_class_id: None,
+                    tsf_profile_id: None,
+                    hkl: None,
+                }],
+            }),
+            overflowed: false,
+        }
+    }
+
+    fn status_terminal(
+        correlation_id: &str,
+        host_generation: u64,
+        terminal: SystemStatusTerminalKind,
+    ) -> SystemStatusHostResponse {
+        SystemStatusHostResponse::Terminal(SystemStatusCommandTerminal {
+            correlation_id: correlation_id.into(),
+            host_generation,
+            observed_snapshot_generation: (terminal == SystemStatusTerminalKind::Observed)
+                .then_some(2),
+            terminal,
+            message: String::new(),
+        })
+    }
+
+    fn run_status_script(
+        command: SystemStatusCommand,
+        responses: Vec<Result<SystemStatusHostResponse, &'static str>>,
+        now_values: Vec<u64>,
+    ) -> (
+        Result<super::SystemStatusCommandExecution, SystemStatusCommandFailure>,
+        Vec<SystemStatusHostRequest>,
+        StatusReconciler,
+    ) {
+        run_status_script_from(1, command, responses, now_values)
+    }
+
+    fn run_status_script_from(
+        initial_host_generation: u64,
+        command: SystemStatusCommand,
+        responses: Vec<Result<SystemStatusHostResponse, &'static str>>,
+        now_values: Vec<u64>,
+    ) -> (
+        Result<super::SystemStatusCommandExecution, SystemStatusCommandFailure>,
+        Vec<SystemStatusHostRequest>,
+        StatusReconciler,
+    ) {
+        let mut reconciler = StatusReconciler::default();
+        assert!(
+            reconciler.apply(SystemStatusHostResponse::Snapshot(status_snapshot(
+                initial_host_generation,
+                1,
+            )))
+        );
+        let mut responses = VecDeque::from(responses);
+        let mut requests = Vec::new();
+        let mut now_values = VecDeque::from(now_values);
+        let result = execute_system_status_command(
+            command,
+            std::time::Duration::from_millis(1_000),
+            &mut reconciler,
+            |request, _| {
+                requests.push(request.clone());
+                responses.pop_front().expect("scripted response")
+            },
+            || now_values.pop_front().expect("scripted clock"),
+        );
+        assert!(responses.is_empty(), "unused scripted responses");
+        (result, requests, reconciler)
+    }
+
+    #[test]
+    fn status_command_ordinary_success_and_provider_failure_are_not_retried() {
+        for terminal in [
+            SystemStatusTerminalKind::Observed,
+            SystemStatusTerminalKind::ProviderFailure,
+        ] {
+            let (result, requests, reconciler) = run_status_script(
+                SystemStatusCommand::SetVolume { volume_percent: 44 },
+                vec![
+                    Ok(status_terminal("host", 1, terminal)),
+                    Ok(SystemStatusHostResponse::Snapshot(status_snapshot(1, 3))),
+                ],
+                vec![100],
+            );
+            let execution = result.expect("terminal execution");
+            assert!(!execution.recovered_stale_generation);
+            assert_eq!(requests.len(), 2);
+            assert_eq!(reconciler.snapshot().unwrap().snapshot_generation, 3);
+        }
+    }
+
+    #[test]
+    fn command_host_generation_is_used_when_observer_lineage_is_numerically_newer() {
+        let (result, requests, reconciler) = run_status_script_from(
+            20,
+            SystemStatusCommand::SetVolume { volume_percent: 55 },
+            vec![
+                Ok(status_terminal(
+                    "observer-generation-rejected",
+                    10,
+                    SystemStatusTerminalKind::StaleGeneration,
+                )),
+                Ok(SystemStatusHostResponse::Snapshot(status_snapshot(10, 4))),
+                Ok(status_terminal(
+                    "command-host-observed",
+                    10,
+                    SystemStatusTerminalKind::Observed,
+                )),
+                Ok(SystemStatusHostResponse::Snapshot(status_snapshot(10, 6))),
+            ],
+            vec![100, 200],
+        );
+        assert!(
+            result
+                .expect("command-host retry")
+                .recovered_stale_generation
+        );
+        let retry = requests
+            .iter()
+            .filter_map(|request| match request {
+                SystemStatusHostRequest::Command { request } => Some(request),
+                _ => None,
+            })
+            .nth(1)
+            .expect("retry request");
+        assert_eq!(retry.expected_host_generation, 10);
+        assert_eq!(reconciler.snapshot().unwrap().host_generation, 20);
+    }
+
+    #[test]
+    fn volume_and_mute_resynchronize_once_then_complete_with_fresh_identity() {
+        for command in [
+            SystemStatusCommand::SetVolume { volume_percent: 52 },
+            SystemStatusCommand::SetMute { muted: true },
+        ] {
+            let (result, requests, reconciler) = run_status_script(
+                command.clone(),
+                vec![
+                    Ok(status_terminal(
+                        "stale",
+                        2,
+                        SystemStatusTerminalKind::StaleGeneration,
+                    )),
+                    Ok(SystemStatusHostResponse::Snapshot(status_snapshot(2, 1))),
+                    Ok(status_terminal(
+                        "observed",
+                        2,
+                        SystemStatusTerminalKind::Observed,
+                    )),
+                    Ok(SystemStatusHostResponse::Snapshot(status_snapshot(2, 3))),
+                ],
+                vec![1_000, 2_000],
+            );
+            let execution = result.expect("recovered execution");
+            assert!(execution.recovered_stale_generation);
+            assert_eq!(requests.len(), 4);
+            let commands = requests
+                .iter()
+                .filter_map(|request| match request {
+                    SystemStatusHostRequest::Command { request } => Some(request),
+                    _ => None,
+                })
+                .collect::<Vec<&SystemStatusCommandRequest>>();
+            assert_eq!(commands.len(), 2);
+            assert_eq!(commands[0].expected_host_generation, 1);
+            assert_eq!(commands[1].expected_host_generation, 2);
+            assert_ne!(commands[0].correlation_id, commands[1].correlation_id);
+            assert_eq!(commands[0].deadline_unix_ms, 2_000);
+            assert_eq!(commands[1].deadline_unix_ms, 3_000);
+            assert_eq!(commands[0].command, command);
+            assert_eq!(commands[1].command, command);
+            assert_eq!(reconciler.snapshot().unwrap().host_generation, 2);
+            assert_eq!(reconciler.snapshot().unwrap().snapshot_generation, 3);
+        }
+    }
+
+    #[test]
+    fn second_stale_terminal_stops_at_two_attempts() {
+        let (result, requests, _) = run_status_script(
+            SystemStatusCommand::SetVolume { volume_percent: 60 },
+            vec![
+                Ok(status_terminal(
+                    "stale-one",
+                    2,
+                    SystemStatusTerminalKind::StaleGeneration,
+                )),
+                Ok(SystemStatusHostResponse::Snapshot(status_snapshot(2, 1))),
+                Ok(status_terminal(
+                    "stale-two",
+                    3,
+                    SystemStatusTerminalKind::StaleGeneration,
+                )),
+                Ok(SystemStatusHostResponse::Snapshot(status_snapshot(3, 1))),
+            ],
+            vec![10, 20],
+        );
+        let execution = result.expect("bounded final terminal");
+        let SystemStatusHostResponse::Terminal(terminal) = execution.response else {
+            panic!("terminal response")
+        };
+        assert_eq!(terminal.terminal, SystemStatusTerminalKind::StaleGeneration);
+        assert_eq!(requests.len(), 4);
+        assert_eq!(
+            requests
+                .iter()
+                .filter(|request| matches!(request, SystemStatusHostRequest::Command { .. }))
+                .count(),
+            2
+        );
+    }
+
+    #[test]
+    fn invalid_command_response_and_failed_resync_never_replay() {
+        let (invalid, requests, _) = run_status_script(
+            SystemStatusCommand::SetMute { muted: true },
+            vec![Ok(SystemStatusHostResponse::Snapshot(status_snapshot(
+                1, 2,
+            )))],
+            vec![1],
+        );
+        assert_eq!(invalid, Err(SystemStatusCommandFailure::InvalidResponse));
+        assert_eq!(requests.len(), 1);
+
+        let (resync, requests, _) = run_status_script(
+            SystemStatusCommand::SetMute { muted: true },
+            vec![
+                Ok(status_terminal(
+                    "stale",
+                    2,
+                    SystemStatusTerminalKind::StaleGeneration,
+                )),
+                Err("fixture-disconnected"),
+            ],
+            vec![1],
+        );
+        assert_eq!(
+            resync,
+            Err(SystemStatusCommandFailure::ResyncTransport(
+                "fixture-disconnected"
+            ))
+        );
+        assert_eq!(requests.len(), 2);
     }
 
     #[test]

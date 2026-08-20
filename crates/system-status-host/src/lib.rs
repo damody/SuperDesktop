@@ -458,6 +458,25 @@ mod tests {
     }
 
     #[test]
+    fn generation_mismatch_is_rejected_before_any_platform_command_dispatch() {
+        let source = include_str!("lib.rs");
+        let production = source.split("#[cfg(test)]").next().unwrap_or(source);
+        let gate = production
+            .find("if request.expected_host_generation != self.host_generation")
+            .expect("generation admission gate");
+        let dispatch = production
+            .find("let (result, accepted_event, accepted_message) = match request.command")
+            .expect("platform command dispatch");
+        let volume = production
+            .find("set_volume_and_observe(volume_percent)")
+            .expect("Core Audio volume dispatch");
+        let mute = production
+            .find("set_mute_and_observe(muted)")
+            .expect("Core Audio mute dispatch");
+        assert!(gate < dispatch && dispatch < volume && dispatch < mute);
+    }
+
+    #[test]
     fn callback_panic_shutdown_coalescing_and_overflow_are_bounded() {
         let mut runtime = SystemStatusRuntime::default();
         assert!(runtime.provider_callback(|| ProviderEvent::Audio));
