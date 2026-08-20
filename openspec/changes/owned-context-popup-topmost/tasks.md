@@ -110,8 +110,8 @@
 **Gate／Evidence：** `G-RELEASE`; `evidence/index.jsonl` tasks 3.2.1–3.2.2.
 **完成門檻：** Release workspace and installer builder exit zero; hashes and sizes are recorded.
 
-- [ ] 3.2.1 Build the full SuperDesktop release workspace with locked offline dependencies and hash required binaries.
-- [ ] 3.2.2 Build the combined installer without launching it and record path, size, and SHA-256.
+- [x] 3.2.1 Build the full SuperDesktop release workspace with locked offline dependencies and hash required binaries.
+- [x] 3.2.2 Build the combined installer without launching it and record path, size, and SHA-256.
 
 ### 3.3 Finalize evidence and scoped integration
 
@@ -123,6 +123,6 @@
 **Gate／Evidence：** `G-INTEGRATION`; `evidence/index.jsonl` tasks 3.3.1–3.3.3.
 **完成門檻：** Every leaf is evidence-backed; strict validation passes; only scoped paths/gitlink are committed.
 
-- [ ] 3.3.1 Write unique evidence records with commands, expected/actual results, exit status, hashes, gates, and timestamps.
-- [ ] 3.3.2 Complete tasks and run detailed-task, strict OpenSpec, placeholder, and contradiction checks.
-- [ ] 3.3.3 Commit scoped SuperDesktop changes and synchronize the outer repository gitlink without staging unrelated files.
+- [x] 3.3.1 Write unique evidence records with commands, expected/actual results, exit status, hashes, gates, and timestamps.
+- [x] 3.3.2 Complete tasks and run detailed-task, strict OpenSpec, placeholder, and contradiction checks.
+- [x] 3.3.3 Commit scoped SuperDesktop changes and synchronize the outer repository gitlink without staging unrelated files.
