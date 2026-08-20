@@ -104,7 +104,6 @@ fn main() -> ExitCode {
                 start: Rc::new(|_| {}),
                 show_desktop: Rc::new(|_| {}),
                 task_view: Rc::new(|_| {}),
-                fixed: Rc::new(|| {}),
                 task: Rc::new(|_, _, _, _| {}),
                 task_hover: Rc::new(|_, _, _| {}),
                 task_context: Rc::new(|_, _| {}),
@@ -163,10 +162,8 @@ fn main() -> ExitCode {
             let opened = cx.open_window(options(900.0, 80.0, 200.0, 700.0, true), move |_, cx| {
                 cx.new(move |_| TaskbarView {
                     accessible_root_name: "Show all tray icons fixture".into(),
-                    layout: TaskbarLayout::calculate(1, 96, 900.0, &[], &["superexplorer".into()]),
+                    layout: TaskbarLayout::calculate(1, 96, 900.0, &[], &[]),
                     tasks: Vec::new(),
-                    fixed_name: "SuperExplorer".into(),
-                    fixed_icon: None,
                     status: status(),
                     system_snapshot: None,
                     system_flyout: None,

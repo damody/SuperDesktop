@@ -3821,13 +3821,9 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                             taskbar_monitor.dpi_x,
                             width as f32,
                             &[],
-                            &["superexplorer".into()],
+                            &[],
                         ),
                         tasks: taskbar_tasks,
-                        fixed_name: fixed_label().into(),
-                        fixed_icon: superexplorer_executable().and_then(|path| {
-                            platform_win::common::icon::shell_icon_for_path(&path, 32)
-                        }),
                         status: status(status_for_taskbar.borrow().snapshot()),
                         system_snapshot: status_for_taskbar.borrow().snapshot().cloned(),
                         system_flyout: None,
@@ -3980,7 +3976,6 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                     trace_action("task-view:opened");
                                 }
                             }),
-                            fixed: Rc::new(launch_superexplorer),
                             task: Rc::new(move |stable_id, observed_active, observed_minimized, app| {
                                 let group_ids = group_window_ids(stable_id);
                                 if group_ids.len() <= 1 {

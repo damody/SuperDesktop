@@ -131,10 +131,6 @@ fn adaptive_labeled_task_width(
         .clamp(WindowsGuiMetrics::PRIMARY_TARGET_WIDTH, 160.0)
 }
 
-fn fixed_entry_indicator_width(task_width: f32) -> f32 {
-    (task_width - 16.0).max(12.0)
-}
-
 fn toggled_system_flyout(
     current: Option<SystemFlyoutKind>,
     requested: SystemFlyoutKind,
@@ -238,8 +234,6 @@ pub struct TaskbarView {
     pub accessible_root_name: String,
     pub layout: TaskbarLayout,
     pub tasks: Vec<AccessibleTask>,
-    pub fixed_name: String,
-    pub fixed_icon: Option<IconData>,
     pub status: StatusRegion,
     pub system_snapshot: Option<SystemStatusSnapshot>,
     pub system_flyout: Option<SystemFlyoutKind>,
@@ -292,7 +286,6 @@ pub struct TaskbarCallbacks {
     pub start: Rc<dyn Fn(&mut App)>,
     pub show_desktop: Rc<dyn Fn(&mut App)>,
     pub task_view: Rc<dyn Fn(&mut App)>,
-    pub fixed: Rc<dyn Fn()>,
     pub task: TaskPrimaryCallback,
     pub task_hover: TaskHoverCallback,
     pub task_context: TaskCallback,
@@ -341,7 +334,6 @@ impl Render for TaskbarView {
             .callbacks
             .as_ref()
             .map(|value| Rc::clone(&value.task_view));
-        let fixed = self.callbacks.as_ref().map(|value| Rc::clone(&value.fixed));
         let task_callback = self.callbacks.as_ref().map(|value| Rc::clone(&value.task));
         let task_hover_callback = self
             .callbacks
@@ -402,8 +394,6 @@ impl Render for TaskbarView {
         let start_key = start.clone();
         let search_callback = start.clone();
         let task_view_key = task_view.clone();
-        let fixed_key = fixed.clone();
-        let root_fixed_key = fixed.clone();
         let keyboard_focus = self.keyboard_focus.clone();
         let dismiss_focus = self.keyboard_focus.clone();
         let overflow_open = false;
@@ -446,7 +436,7 @@ impl Render for TaskbarView {
             + (CLOCK_CONTROL_WIDTH - LEGACY_CLOCK_CONTROL_WIDTH)
             + notification_area_reserved_width
             + SHOW_DESKTOP_CORNER_WIDTH;
-        let adaptive_task_slots = self.tasks.len().saturating_add(1);
+        let adaptive_task_slots = self.tasks.len();
         let adaptive_task_width = adaptive_labeled_task_width(
             window.bounds().size.width.as_f32(),
             left_reserved,
@@ -454,7 +444,6 @@ impl Render for TaskbarView {
             adaptive_task_slots,
             taskbar_rows,
         );
-        let fixed_indicator_width = fixed_entry_indicator_width(adaptive_task_width);
         let start_color = if high_contrast {
             rgb(0xffff00)
         } else {
@@ -493,16 +482,11 @@ impl Render for TaskbarView {
                     }
                     return;
                 }
-                if event.keystroke.key == "tab" && event.keystroke.modifiers.platform {
-                    if let Some(callback) = &task_view_key {
-                        callback(cx);
-                    }
-                    return;
-                }
-                if matches!(event.keystroke.key.as_str(), "enter" | "space")
-                    && let Some(callback) = &root_fixed_key
+                if event.keystroke.key == "tab"
+                    && event.keystroke.modifiers.platform
+                    && let Some(callback) = &task_view_key
                 {
-                    callback();
+                    callback(cx);
                 }
             }))
             .size_full()
@@ -806,70 +790,6 @@ impl Render for TaskbarView {
                     .when(alignment == TaskbarAlignment::Center, |element| element.content_center())
                     .items_start()
                     .overflow_hidden()
-                    .child(
-                        div()
-                            .id("superexplorer-fixed-entry")
-                            .role(gpui::Role::Button)
-                            .aria_label(self.fixed_name.clone())
-                            .tab_index(0)
-                            .w(px(adaptive_task_width))
-                            .h(px(40.))
-                            .flex_none()
-                            .px_2()
-                            .relative()
-                            .flex()
-                            .items_center()
-                            .cursor_pointer()
-                            .hover(move |style| style.bg(rgb(tokens.hover)))
-                            .active(move |style| style.bg(rgb(tokens.pressed)))
-                            .focus_visible(move |style| {
-                                style.border_2().border_color(rgb(tokens.focus))
-                            })
-                            .on_click(move |_, _, _| {
-                                if let Some(callback) = &fixed {
-                                    callback();
-                                }
-                            })
-                            .on_key_down(move |event, _, _| {
-                                if matches!(event.keystroke.key.as_str(), "enter" | "space")
-                                    && let Some(callback) = &fixed_key
-                                {
-                                    callback();
-                                }
-                            })
-                            .when_some(
-                                self.fixed_icon.as_ref().and_then(icon_render_image),
-                                |element, icon| {
-                                    element.child(
-                                        img(icon)
-                                            .w(px(24.))
-                                            .h(px(24.))
-                                            .mr_2()
-                                            .flex_none()
-                                            .object_fit(ObjectFit::Contain),
-                                    )
-                                },
-                            )
-                            .child(
-                                div()
-                                    .flex_1()
-                                    .min_w_0()
-                                    .overflow_hidden()
-                                    .whitespace_nowrap()
-                                    .text_ellipsis()
-                                    .child(self.fixed_name.clone()),
-                            )
-                            .child(
-                                div()
-                                    .absolute()
-                                    .left(px(8.))
-                                    .bottom_0()
-                                    .w(px(fixed_indicator_width))
-                                    .h(px(3.))
-                                    .rounded_full()
-                                    .bg(rgb(if high_contrast { 0x00ffff } else { 0x5b8db8 })),
-                            ),
-                    )
                     .children(self.tasks.iter().map(move |task| {
                         let callback = task_callback.clone();
                         let key_callback = callback.clone();
@@ -1517,7 +1437,7 @@ mod tests {
     use super::{
         CLOCK_CONTROL_WIDTH, SHOW_DESKTOP_CORNER_WIDTH, TaskbarChromeTokens, activates_button,
         adaptive_labeled_task_width, bc7_render_image, clock_accessible_label,
-        compact_input_language, fixed_entry_indicator_width, icon_render_image, task_display_label,
+        compact_input_language, icon_render_image, task_display_label,
         taskbar_rows_for_logical_height, taskbar_search_label, toggled_system_flyout,
     };
     use crate::{
@@ -1778,15 +1698,9 @@ mod tests {
                 "missing taskbar chrome: {required}"
             );
         }
-        let fixed_start = source.find(".id(\"superexplorer-fixed-entry\")").unwrap();
-        let fixed_end = source[fixed_start..]
-            .find(".children(self.tasks.iter()")
-            .unwrap()
-            + fixed_start;
-        let fixed_source = &source[fixed_start..fixed_end];
-        assert!(fixed_source.contains(".w(px(adaptive_task_width))"));
-        assert!(fixed_source.contains(".w(px(fixed_indicator_width))"));
-        assert!(!fixed_source.contains(".w(px(160.))"));
+        let production = source.split("#[cfg(test)]").next().unwrap_or(source);
+        assert!(!production.contains("superexplorer-fixed-entry"));
+        assert!(!production.contains("fixed_entry_indicator_width"));
     }
 
     #[test]
@@ -1922,19 +1836,17 @@ mod tests {
             adaptive_labeled_task_width(1920.0, 204.0, 510.0, 10, 2),
             160.0
         );
-        let without_fixed = adaptive_labeled_task_width(1920.0, 44.0, 510.0, 12, 1);
-        let with_fixed = adaptive_labeled_task_width(1920.0, 44.0, 510.0, 13, 1);
-        assert!(with_fixed < without_fixed);
-        assert_eq!(fixed_entry_indicator_width(160.0), 144.0);
-        assert_eq!(fixed_entry_indicator_width(44.0), 28.0);
+        let twelve_tasks = adaptive_labeled_task_width(1920.0, 44.0, 510.0, 12, 1);
+        let thirteen_tasks = adaptive_labeled_task_width(1920.0, 44.0, 510.0, 13, 1);
+        assert!(thirteen_tasks < twelve_tasks);
         let source = include_str!("view.rs");
         for required in [
             "adaptive_labeled_task_width(",
             "left_reserved",
             "right_reserved",
             "adaptive_task_slots",
-            "fixed_entry_indicator_width(adaptive_task_width)",
-            "let task_width = if labeled_button { adaptive_task_width } else { 44.0 }",
+            "let adaptive_task_slots = self.tasks.len()",
+            "WindowsGuiMetrics::PRIMARY_TARGET_WIDTH",
         ] {
             assert!(source.contains(required), "missing {required}");
         }
