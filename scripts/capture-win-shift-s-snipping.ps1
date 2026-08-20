@@ -180,7 +180,7 @@ try {
         escape_dismissed = $true
         superdesktop_survived = $true
         runtime_error_signature_absent = $true
-        explorer_absent_during_capture = $explorerAbsent
+        explorer_absent_during_capture = $false
         explorer_absent_before_hotkey = $true
         temporary_verified_explorer_broker_observed = $temporaryExplorerObserved
         explorer_absent_after_dismissal = $explorerAbsent
