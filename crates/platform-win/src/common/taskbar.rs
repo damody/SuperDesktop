@@ -13,7 +13,7 @@ use std::{
 
 use windows::Win32::{
     Foundation::{CloseHandle, HWND, LPARAM, LRESULT, POINT, RECT, WPARAM},
-    Graphics::Gdi::ClientToScreen,
+    Graphics::Gdi::{ClientToScreen, CreateRectRgn, DeleteObject, HGDIOBJ, SetWindowRgn},
     System::SystemInformation::GetWindowsDirectoryW,
     System::Threading::{
         GetCurrentProcessId, OpenProcess, PROCESS_NAME_FORMAT, PROCESS_QUERY_LIMITED_INFORMATION,
@@ -52,6 +52,18 @@ thread_local! {
     static TASKBAR_RESIZE_SESSIONS: RefCell<BTreeSet<isize>> = const { RefCell::new(BTreeSet::new()) };
 }
 
+pub fn open_volume_mixer() -> Result<(), String> {
+    const VOLUME_MIXER_SETTINGS: &str = "ms-settings:apps-volume";
+    super::desktop::launch_settings_uri(VOLUME_MIXER_SETTINGS)
+        .map_err(|error| format!("volume mixer launch failed: {error:?}"))
+}
+
+pub fn open_sound_settings() -> Result<(), String> {
+    const SOUND_SETTINGS: &str = "ms-settings:sound";
+    super::desktop::launch_settings_uri(SOUND_SETTINGS)
+        .map_err(|error| format!("sound settings launch failed: {error:?}"))
+}
+
 fn quantized_taskbar_outer_height(proposed_height: i32, dpi: u32) -> (u8, i32) {
     let row_height = ((40u32.saturating_mul(dpi.max(96)) + 48) / 96).max(1) as i32;
     let rows = ((proposed_height.max(1) + row_height / 2) / row_height).clamp(1, 3) as u8;
@@ -78,12 +90,16 @@ unsafe extern "system" fn taskbar_resize_subclass_proc(
         let _ = catch_unwind(AssertUnwindSafe(|| {
             let mut client = RECT::default();
             if unsafe { GetClientRect(hwnd, &mut client) }.is_ok() {
+                let packed = lparam.0 as u64;
+                let client_top = (packed >> 32) as u32 as i32;
+                let client_height = (packed & u64::from(u32::MAX)) as u32 as i32;
+                let _ = set_owned_taskbar_auto_hide_clip(hwnd.0 as isize, false);
                 let _ = configure_and_show_taskbar_window(
                     hwnd.0 as isize,
                     wparam.0 as i32,
-                    lparam.0 as i32,
+                    client_top,
                     client.right - client.left,
-                    client.bottom - client.top,
+                    client_height,
                 );
             }
         }));
@@ -161,8 +177,9 @@ pub fn post_owned_taskbar_reveal(
     hwnd_identity: isize,
     client_left: i32,
     client_top: i32,
+    client_height: i32,
 ) -> Result<(), String> {
-    if hwnd_identity == 0 {
+    if hwnd_identity == 0 || client_height <= 2 {
         return Err("taskbar-reveal-hwnd-zero".into());
     }
     let hwnd = HWND(hwnd_identity as *mut c_void);
@@ -176,15 +193,56 @@ pub fn post_owned_taskbar_reveal(
         {
             return Err("taskbar-reveal-hwnd-foreign".into());
         }
+        let packed = ((u64::from(client_top as u32)) << 32) | u64::from(client_height as u32);
         PostMessageW(
             Some(hwnd),
             taskbar_auto_hide_reveal_message().map_err(str::to_owned)?,
             WPARAM(client_left as usize),
-            LPARAM(client_top as isize),
+            LPARAM(packed as isize),
         )
         .map_err(|error| error.to_string())?;
     }
     Ok(())
+}
+
+pub fn set_owned_taskbar_auto_hide_clip(
+    hwnd_identity: isize,
+    hidden: bool,
+) -> Result<bool, String> {
+    if hwnd_identity == 0 {
+        return Err("taskbar-auto-hide-clip-hwnd-zero".into());
+    }
+    let hwnd = HWND(hwnd_identity as *mut c_void);
+    let mut owner_pid = 0;
+    let mut client = RECT::default();
+    unsafe {
+        if !IsWindow(Some(hwnd)).as_bool()
+            || GetWindowThreadProcessId(hwnd, Some(&mut owner_pid)) == 0
+            || owner_pid != GetCurrentProcessId()
+        {
+            return Err("taskbar-auto-hide-clip-hwnd-invalid".into());
+        }
+        if !hidden {
+            return (SetWindowRgn(hwnd, None, true) != 0)
+                .then_some(true)
+                .ok_or_else(|| "taskbar-auto-hide-clip-clear".into());
+        }
+        GetClientRect(hwnd, &mut client).map_err(|error| error.to_string())?;
+        let height = client.bottom - client.top;
+        let width = client.right - client.left;
+        if width <= 0 || height <= 2 {
+            return Err("taskbar-auto-hide-clip-geometry".into());
+        }
+        let region = CreateRectRgn(0, height - 2, width, height);
+        if region.is_invalid() {
+            return Err("taskbar-auto-hide-clip-region".into());
+        }
+        if SetWindowRgn(hwnd, Some(region), true) == 0 {
+            let _ = DeleteObject(HGDIOBJ(region.0));
+            return Err("taskbar-auto-hide-clip-apply".into());
+        }
+    }
+    Ok(true)
 }
 
 /// Resolves the inbox Task Manager from the Windows directory and launches the
@@ -895,8 +953,16 @@ mod tests {
             (client.right - client.left, client.bottom - client.top),
             (640, 70)
         );
+        assert!(set_owned_taskbar_auto_hide_clip(hwnd.0 as isize, true).unwrap());
+        let mut region = RECT::default();
+        let region_type =
+            unsafe { windows::Win32::Graphics::Gdi::GetWindowRgnBox(hwnd, &mut region) };
+        assert_ne!(region_type.0, 0);
+        assert_eq!(region.bottom - region.top, 2);
+        assert!(set_owned_taskbar_auto_hide_clip(hwnd.0 as isize, false).unwrap());
         unsafe { DestroyWindow(hwnd).unwrap() };
         assert!(move_owned_taskbar_client(hwnd.0 as isize, 0, 0, 640, 70).is_err());
+        assert!(set_owned_taskbar_auto_hide_clip(hwnd.0 as isize, true).is_err());
     }
     #[test]
     fn task_manager_path_is_canonical_system32_regular_file() {
@@ -910,5 +976,21 @@ mod tests {
         assert!(metadata.is_file());
         assert!(!metadata.file_type().is_symlink());
         assert_eq!(metadata.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT, 0);
+    }
+
+    #[test]
+    fn system_control_context_launches_have_only_compile_time_settings_targets() {
+        let production = include_str!("taskbar.rs")
+            .split("#[cfg(test)]")
+            .next()
+            .unwrap_or_default();
+        assert_eq!(production.matches("ms-settings:apps-volume").count(), 1);
+        assert_eq!(production.matches("ms-settings:sound").count(), 1);
+        for forbidden in ["explorer.exe", "powershell.exe", "cmd.exe"] {
+            assert!(
+                !production.contains(forbidden),
+                "delegated context launch: {forbidden}"
+            );
+        }
     }
 }

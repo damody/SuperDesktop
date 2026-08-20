@@ -14,11 +14,13 @@ mod show_desktop;
 mod start;
 mod status;
 mod surface;
+mod system_control_context;
 mod system_flyout;
 mod task_view;
 mod taskbar_settings;
 mod tracker;
 mod view;
+mod windows_metrics;
 
 pub use advanced::{
     AdvancedTaskbarPreferences, AltTabDismissAction, AltTabView, FlyoutAction, FlyoutHoverAction,
@@ -56,6 +58,10 @@ pub use status::{
 pub use surface::{
     AppBarEffect, AppBarMode, AppBarRegistry, MonitorBar, MonitorGeometry, SurfaceChange,
 };
+pub use system_control_context::{
+    SystemControlContextAction, SystemControlContextCommand, SystemControlContextDismiss,
+    SystemControlContextKind, SystemControlContextView,
+};
 pub use system_flyout::{
     NotificationCenterAction, NotificationCenterActionHandler, SystemFlyoutAction,
     SystemFlyoutDismiss, SystemFlyoutPresentation, SystemFlyoutTheme, SystemFlyoutView,
@@ -74,8 +80,10 @@ pub use tracker::{
     Eligibility, OwnedWindowEvent, TaskWindow, TrackerPush, WindowObservation, WindowTracker,
 };
 pub use view::{
-    NotificationOverflowCallback, SystemFlyoutCallback, TaskHoverCallback,
-    TaskbarBackgroundContextCallback, TaskbarCallbacks, TaskbarResizeCallback, TaskbarView,
+    NotificationOverflowCallback, SystemControlContextCallback, SystemFlyoutCallback,
+    TaskHoverCallback, TaskPrimaryCallback, TaskbarBackgroundContextCallback, TaskbarCallbacks,
+    TaskbarResizeCallback, TaskbarView,
 };
+pub use windows_metrics::WindowsGuiMetrics;
 
 pub const CRATE_ROLE: &str = "taskbar GPUI surface and window-management boundary";

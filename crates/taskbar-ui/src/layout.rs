@@ -1,3 +1,5 @@
+use crate::WindowsGuiMetrics;
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct TaskbarRows(u8);
 
@@ -59,7 +61,7 @@ impl TaskbarLayout {
     ) -> Self {
         let rows = TaskbarRows::new(rows);
         let scale = dpi.max(96) as f32 / 96.0;
-        let row_height = 40.0 * scale;
+        let row_height = WindowsGuiMetrics::TASKBAR_ROW_HEIGHT * scale;
         let height = row_height * f32::from(rows.get());
         let start_width = 48.0 * scale;
         let status_width = 180.0 * scale;

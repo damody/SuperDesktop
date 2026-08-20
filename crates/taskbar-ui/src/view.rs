@@ -15,8 +15,8 @@ use gpui::{
 
 use crate::{
     AccessibleTask, NotificationAccessibleNode, NotificationAreaModel, NotificationPlacement,
-    StatusRegion, SystemFlyoutKind, SystemStatusAction, TaskOverlay, TaskVisualState,
-    TaskbarLayout,
+    StatusRegion, SystemControlContextKind, SystemFlyoutKind, SystemStatusAction, TaskOverlay,
+    TaskVisualState, TaskbarLayout, WindowsGuiMetrics,
 };
 use settings_store::{TaskbarAlignment, TaskbarSearchMode};
 use shell_provider_protocol::{
@@ -127,7 +127,8 @@ fn adaptive_labeled_task_width(
         return 160.0;
     }
     let columns = task_count.div_ceil(usize::from(rows.clamp(1, 3))).max(1) as f32;
-    ((window_width - left_reserved - right_reserved).max(0.0) / columns).clamp(44.0, 160.0)
+    ((window_width - left_reserved - right_reserved).max(0.0) / columns)
+        .clamp(WindowsGuiMetrics::PRIMARY_TARGET_WIDTH, 160.0)
 }
 
 fn fixed_entry_indicator_width(task_width: f32) -> f32 {
@@ -255,16 +256,19 @@ pub struct TaskbarView {
 }
 
 pub type TaskCallback = Rc<dyn Fn(&str, &mut App)>;
+pub type TaskPrimaryCallback = Rc<dyn Fn(&str, bool, bool, &mut App)>;
 pub type TaskHoverCallback = Rc<dyn Fn(&str, bool, &mut App)>;
 pub type NotificationCallback = Rc<dyn Fn(&IconKey, NotificationEventKind)>;
 pub type NotificationOverflowCallback = Rc<dyn Fn(Vec<NotificationAccessibleNode>, &mut App)>;
 pub type SystemStatusCallback = Rc<dyn Fn(SystemStatusAction, &mut App)>;
 pub type SystemFlyoutCallback = Rc<dyn Fn(SystemFlyoutKind, &mut App)>;
+pub type SystemControlContextCallback =
+    Rc<dyn Fn(SystemControlContextKind, gpui::Point<gpui::Pixels>, &mut App)>;
 pub type TaskbarBackgroundContextCallback = Rc<dyn Fn(gpui::Point<gpui::Pixels>, &mut App)>;
 pub type TaskbarResizeCallback = Rc<dyn Fn(u8, &mut Window, &mut App) -> bool>;
 
 fn taskbar_rows_for_logical_height(height: f32) -> u8 {
-    ((height / 40.0).round() as i32).clamp(1, 3) as u8
+    ((height / WindowsGuiMetrics::TASKBAR_ROW_HEIGHT).round() as i32).clamp(1, 3) as u8
 }
 
 struct NotificationTooltip {
@@ -289,7 +293,7 @@ pub struct TaskbarCallbacks {
     pub show_desktop: Rc<dyn Fn(&mut App)>,
     pub task_view: Rc<dyn Fn(&mut App)>,
     pub fixed: Rc<dyn Fn()>,
-    pub task: TaskCallback,
+    pub task: TaskPrimaryCallback,
     pub task_hover: TaskHoverCallback,
     pub task_context: TaskCallback,
     pub taskbar_context: TaskbarBackgroundContextCallback,
@@ -298,6 +302,7 @@ pub struct TaskbarCallbacks {
     pub notification_overflow: NotificationOverflowCallback,
     pub system_status: SystemStatusCallback,
     pub system_flyout: SystemFlyoutCallback,
+    pub system_context: SystemControlContextCallback,
     pub rendered: Rc<dyn Fn()>,
 }
 
@@ -350,6 +355,7 @@ impl Render for TaskbarView {
             .callbacks
             .as_ref()
             .map(|value| Rc::clone(&value.taskbar_context));
+        let taskbar_context_key_callback = taskbar_context_callback.clone();
         let overlays = self.overlays.clone();
         let show_labels = self.show_labels;
         let search_mode = self.search_mode;
@@ -372,12 +378,18 @@ impl Render for TaskbarView {
             .callbacks
             .as_ref()
             .map(|value| Rc::clone(&value.system_flyout));
+        let system_context_callback = self
+            .callbacks
+            .as_ref()
+            .map(|value| Rc::clone(&value.system_context));
         let network_flyout_callback = system_flyout_callback.clone();
         let network_flyout_key_callback = system_flyout_callback.clone();
         let volume_flyout_callback = system_flyout_callback.clone();
         let volume_flyout_key_callback = system_flyout_callback.clone();
         let input_flyout_callback = system_flyout_callback.clone();
         let input_flyout_key_callback = system_flyout_callback.clone();
+        let volume_context_callback = system_context_callback.clone();
+        let input_context_callback = system_context_callback;
         let calendar_flyout_callback = system_flyout_callback;
         let calendar_flyout_key_callback = calendar_flyout_callback.clone();
         let volume_callback = system_status_callback.clone();
@@ -406,7 +418,8 @@ impl Render for TaskbarView {
             .filter(|node| node.placement == NotificationPlacement::Overflow)
             .cloned()
             .collect::<Vec<_>>();
-        let notification_area_reserved_width = visible_notifications.len() as f32 * 36.0 + 32.0;
+        let notification_area_reserved_width =
+            visible_notifications.len() as f32 * WindowsGuiMetrics::STATUS_TARGET_SIZE + 32.0;
         let theme = std::env::var("SUPERDESKTOP_THEME").ok();
         let high_contrast = theme.as_deref() == Some("high-contrast");
         let tokens = TaskbarChromeTokens::new(theme.as_deref());
@@ -418,11 +431,17 @@ impl Render for TaskbarView {
         let reduced_motion = std::env::var("SUPERDESKTOP_REDUCED_MOTION").as_deref() == Ok("1");
         let search_width = match search_mode {
             TaskbarSearchMode::Hidden => 0.0,
-            TaskbarSearchMode::Icon => 44.0,
+            TaskbarSearchMode::Icon => WindowsGuiMetrics::PRIMARY_TARGET_WIDTH,
             TaskbarSearchMode::Box => 168.0,
         };
         let taskbar_rows = self.layout.rows.get();
-        let left_reserved = 44.0 + search_width + if show_task_view { 44.0 } else { 0.0 };
+        let left_reserved = WindowsGuiMetrics::PRIMARY_TARGET_WIDTH
+            + search_width
+            + if show_task_view {
+                WindowsGuiMetrics::PRIMARY_TARGET_WIDTH
+            } else {
+                0.0
+            };
         let right_reserved = 210.0
             + (CLOCK_CONTROL_WIDTH - LEGACY_CLOCK_CONTROL_WIDTH)
             + notification_area_reserved_width
@@ -466,6 +485,12 @@ impl Render for TaskbarView {
                         window.focus(focus, cx);
                     }
                     cx.notify();
+                    return;
+                }
+                if event.keystroke.key == "f10" && event.keystroke.modifiers.shift {
+                    if let Some(callback) = &taskbar_context_key_callback {
+                        callback(gpui::point(px(68.0), px(20.0)), cx);
+                    }
                     return;
                 }
                 if event.keystroke.key == "tab" && event.keystroke.modifiers.platform {
@@ -555,10 +580,14 @@ impl Render for TaskbarView {
                                     callback(&key, NotificationEventKind::Activate);
                                 }
                             })
-                            .on_mouse_up(gpui::MouseButton::Right, move |_, _, _| {
+                            .on_mouse_down(gpui::MouseButton::Right, move |_, _, cx| {
                                 if let Some(callback) = &context_callback {
                                     callback(&context_key, NotificationEventKind::Context);
+                                    cx.stop_propagation();
                                 }
+                            })
+                            .on_mouse_up(gpui::MouseButton::Right, move |_, _, cx| {
+                                cx.stop_propagation();
                             })
                             .when_some(icon, |element, image| {
                                 element.child(
@@ -715,7 +744,11 @@ impl Render for TaskbarView {
                         .aria_label(search_label)
                         .tab_index(0)
                         .h(bar_height)
-                        .w(px(if search_mode == TaskbarSearchMode::Box { 168.0 } else { 44.0 }))
+                        .w(px(if search_mode == TaskbarSearchMode::Box {
+                            168.0
+                        } else {
+                            WindowsGuiMetrics::PRIMARY_TARGET_WIDTH
+                        }))
                         .px(px(12.))
                         .flex_none()
                         .flex()
@@ -841,12 +874,16 @@ impl Render for TaskbarView {
                         let callback = task_callback.clone();
                         let key_callback = callback.clone();
                         let context_callback = task_context_callback.clone();
+                        let key_context_callback = task_context_callback.clone();
                         let hover_callback = task_hover_callback.clone();
                         let stable_id = task.stable_id.clone();
                         let key_stable_id = stable_id.clone();
                         let context_stable_id = stable_id.clone();
+                        let key_context_stable_id = stable_id.clone();
                         let hover_stable_id = stable_id.clone();
                         let available = task.available;
+                        let observed_active = task.active;
+                        let observed_minimized = task.minimized;
                         let overlay =
                             overlays
                                 .get(&task.stable_id)
@@ -890,7 +927,11 @@ impl Render for TaskbarView {
                             icon.is_some(),
                         );
                         let labeled_button = show_labels || icon.is_none();
-                        let task_width = if labeled_button { adaptive_task_width } else { 44.0 };
+                        let task_width = if labeled_button {
+                            adaptive_task_width
+                        } else {
+                            WindowsGuiMetrics::PRIMARY_TARGET_WIDTH
+                        };
                         let indicator_width =
                             visual.indicator_width_for(labeled_button, task_width);
                         div()
@@ -939,17 +980,35 @@ impl Render for TaskbarView {
                                 element
                                     .on_click(move |_, _, cx| {
                                         if let Some(callback) = &callback {
-                                            callback(&stable_id, cx);
+                                            callback(
+                                                &stable_id,
+                                                observed_active,
+                                                observed_minimized,
+                                                cx,
+                                            );
                                         }
                                     })
                                     .on_key_down(move |event, _, cx| {
                                         if matches!(event.keystroke.key.as_str(), "enter" | "space")
                                             && let Some(callback) = &key_callback
                                         {
-                                            callback(&key_stable_id, cx);
+                                            callback(
+                                                &key_stable_id,
+                                                observed_active,
+                                                observed_minimized,
+                                                cx,
+                                            );
+                                        } else if event.keystroke.key == "f10"
+                                            && event.keystroke.modifiers.shift
+                                            && let Some(callback) = &key_context_callback
+                                        {
+                                            callback(&key_context_stable_id, cx);
                                         }
                                     })
-                                    .on_mouse_down(gpui::MouseButton::Right, move |_, _, cx| {
+                                    .on_mouse_down(gpui::MouseButton::Right, |_, _, cx| {
+                                        cx.stop_propagation();
+                                    })
+                                    .on_mouse_up(gpui::MouseButton::Right, move |_, _, cx| {
                                         if let Some(callback) = &context_callback {
                                             callback(&context_stable_id, cx);
                                         }
@@ -1128,6 +1187,15 @@ impl Render for TaskbarView {
                                 }
                                 cx.notify();
                             }))
+                            .on_mouse_down(gpui::MouseButton::Right, move |event, _, cx| {
+                                if let Some(callback) = &volume_context_callback {
+                                    callback(SystemControlContextKind::Volume, event.position, cx);
+                                    cx.stop_propagation();
+                                }
+                            })
+                            .on_mouse_up(gpui::MouseButton::Right, move |_, _, cx| {
+                                cx.stop_propagation();
+                            })
                             .on_key_down(_cx.listener(
                                 move |this, event: &gpui::KeyDownEvent, _, cx| {
                                     if activates_button(&event.keystroke.key) {
@@ -1193,6 +1261,15 @@ impl Render for TaskbarView {
                                 }
                                 cx.notify();
                             }))
+                            .on_mouse_down(gpui::MouseButton::Right, move |event, _, cx| {
+                                if let Some(callback) = &input_context_callback {
+                                    callback(SystemControlContextKind::Input, event.position, cx);
+                                    cx.stop_propagation();
+                                }
+                            })
+                            .on_mouse_up(gpui::MouseButton::Right, move |_, _, cx| {
+                                cx.stop_propagation();
+                            })
                             .on_key_down(_cx.listener(
                                 move |this, event: &gpui::KeyDownEvent, _, cx| {
                                     if activates_button(&event.keystroke.key) {
@@ -1481,6 +1558,56 @@ mod tests {
     }
 
     #[test]
+    fn child_right_click_routes_are_exact_and_stop_background_propagation() {
+        let source = include_str!("view.rs");
+        let visible_notification = source
+            .split(".children(visible_notifications")
+            .nth(1)
+            .and_then(|tail| tail.split("notification-overflow-control").next())
+            .expect("visible notification block");
+        let task_buttons = source
+            .split(".children(self.tasks.iter()")
+            .nth(1)
+            .and_then(|tail| tail.split("system-status-region").next())
+            .expect("task button block");
+        let volume = source
+            .split(".id(\"volume-control\")")
+            .nth(1)
+            .and_then(|tail| tail.split(".id(\"input-language-control\")").next())
+            .expect("volume block");
+        let input = source
+            .split(".id(\"input-language-control\")")
+            .nth(1)
+            .and_then(|tail| tail.split(".id(\"clock-calendar-control\")").next())
+            .expect("input block");
+        for (name, block, action) in [
+            (
+                "notification",
+                visible_notification,
+                "NotificationEventKind::Context",
+            ),
+            ("task", task_buttons, "callback(&context_stable_id, cx)"),
+            ("volume", volume, "SystemControlContextKind::Volume"),
+            ("input", input, "SystemControlContextKind::Input"),
+        ] {
+            assert!(
+                block.contains(".on_mouse_up(gpui::MouseButton::Right"),
+                "{name} does not own right mouse-up"
+            );
+            assert!(
+                block.contains(action),
+                "{name} emits the wrong context action"
+            );
+            assert!(
+                block.contains("cx.stop_propagation()"),
+                "{name} can fall through to the taskbar background"
+            );
+        }
+        assert!(!volume.contains("SystemControlContextKind::Input"));
+        assert!(!input.contains("SystemControlContextKind::Volume"));
+    }
+
+    #[test]
     fn clock_width_rows_alignment_and_accessible_order_match_windows() {
         let status = StatusRegion::new(
             TestClock {
@@ -1675,7 +1802,7 @@ mod tests {
             .expect("inline overflow boundary");
         let control = &production[start..end];
         for required in [
-            "visible_notifications.len() as f32 * 36.0 + 32.0",
+            "visible_notifications.len() as f32 * WindowsGuiMetrics::STATUS_TARGET_SIZE",
             "Show all tray icons",
             "顯示所有系統匣圖示",
             "callback(this.notification_area.accessible_nodes(), cx)",

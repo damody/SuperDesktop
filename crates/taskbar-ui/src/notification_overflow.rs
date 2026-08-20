@@ -7,7 +7,7 @@ use gpui::{
 };
 use shell_provider_protocol::{IconKey, NotificationEventKind};
 
-use crate::{NotificationAccessibleNode, view::icon_render_image};
+use crate::{NotificationAccessibleNode, WindowsGuiMetrics, view::icon_render_image};
 
 pub type NotificationOverflowAction = Rc<dyn Fn(&IconKey, NotificationEventKind)>;
 pub type NotificationOverflowDismiss = Rc<dyn Fn(&mut Window, &mut gpui::App)>;
@@ -76,8 +76,8 @@ impl Render for NotificationOverflowView {
             .tab_index(0)
             .track_focus(&self.focus)
             .size_full()
-            .p(px(12.))
-            .rounded(px(12.))
+            .p(px(WindowsGuiMetrics::NOTIFICATION_OVERFLOW_PADDING))
+            .rounded(px(WindowsGuiMetrics::POPUP_RADIUS))
             .border_1()
             .border_color(rgb(panel_border))
             .bg(rgb(panel_background))
@@ -113,9 +113,11 @@ impl Render for NotificationOverflowView {
             .children(self.nodes.iter().cloned().map(move |node| {
                 let click_action = action.clone();
                 let key_action = action.clone();
+                let key_context_action = action.clone();
                 let context_action = action.clone();
                 let click_key = node.key.clone();
                 let key_key = node.key.clone();
+                let key_context_key = node.key.clone();
                 let context_key = node.key.clone();
                 let icon = node.icon.as_ref().and_then(icon_render_image);
                 div()
@@ -123,8 +125,8 @@ impl Render for NotificationOverflowView {
                     .role(gpui::Role::Button)
                     .aria_label(node.name)
                     .tab_index(0)
-                    .w(px(48.))
-                    .h(px(48.))
+                    .w(px(WindowsGuiMetrics::NOTIFICATION_OVERFLOW_CELL))
+                    .h(px(WindowsGuiMetrics::NOTIFICATION_OVERFLOW_CELL))
                     .rounded(px(6.))
                     .border_1()
                     .border_color(rgb(panel_background))
@@ -138,12 +140,18 @@ impl Render for NotificationOverflowView {
                     .on_click(move |_, _, _| {
                         click_action(&click_key, NotificationEventKind::Activate);
                     })
-                    .on_mouse_up(gpui::MouseButton::Right, move |_, _, _| {
+                    .on_mouse_down(gpui::MouseButton::Right, move |_, _, cx| {
                         context_action(&context_key, NotificationEventKind::Context);
+                        cx.stop_propagation();
+                    })
+                    .on_mouse_up(gpui::MouseButton::Right, move |_, _, cx| {
+                        cx.stop_propagation();
                     })
                     .on_key_down(move |event, _, _| {
                         if matches!(event.keystroke.key.as_str(), "enter" | "space") {
                             key_action(&key_key, NotificationEventKind::Activate);
+                        } else if event.keystroke.key == "f10" && event.keystroke.modifiers.shift {
+                            key_context_action(&key_context_key, NotificationEventKind::Context);
                         }
                     })
                     .when_some(icon, |entry, icon| {

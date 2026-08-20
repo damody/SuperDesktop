@@ -30,7 +30,7 @@ use platform_win::common::{
     taskbar::{
         configure_and_show_taskbar_window, move_owned_taskbar_client, owned_taskbar_resize_active,
         physical_cursor_position, post_owned_taskbar_reveal, promote_owned_popup_topmost,
-        snapshot_task_windows,
+        set_owned_taskbar_auto_hide_clip, snapshot_task_windows,
     },
 };
 use raw_window_handle::{HasWindowHandle, RawWindowHandle};
@@ -50,11 +50,12 @@ use taskbar_ui::{
     HoverPreviewController, JumpListModel, JumpListView, NotificationAreaModel,
     NotificationCenterAction, NotificationOverflowView, PreviewCard, ProgressState, ProviderState,
     ShowDesktopObservation, ShowDesktopPlan, ShowDesktopSession, ShowDesktopTarget, StartActions,
-    StartPowerAction, StartSnapshot, StartView, StatusRegion, SystemFlyoutKind,
-    SystemFlyoutPresentation, SystemFlyoutTheme, SystemFlyoutView, SystemStatusAction, TaskAction,
-    TaskFlyoutView, TaskViewEffect, TaskViewModel, TaskViewSurface, TaskbarCallbacks,
-    TaskbarContextCommand, TaskbarContextView, TaskbarLayout, TaskbarSettingId,
-    TaskbarSettingsEffect, TaskbarSettingsView, TaskbarView, TestClock, auto_hide_endpoints,
+    StartPowerAction, StartSnapshot, StartView, StatusRegion, SystemControlContextCommand,
+    SystemControlContextKind, SystemControlContextView, SystemFlyoutKind, SystemFlyoutPresentation,
+    SystemFlyoutTheme, SystemFlyoutView, SystemStatusAction, TaskAction, TaskFlyoutView,
+    TaskViewEffect, TaskViewModel, TaskViewSurface, TaskbarCallbacks, TaskbarContextCommand,
+    TaskbarContextView, TaskbarLayout, TaskbarSettingId, TaskbarSettingsEffect,
+    TaskbarSettingsView, TaskbarView, TestClock, WindowsGuiMetrics, auto_hide_endpoints,
     reduce_auto_hide,
 };
 
@@ -1194,8 +1195,9 @@ fn show_desktop_item_properties(runtime: &Rc<RefCell<DesktopNamespaceRuntime>>, 
     }
 }
 
-fn activate_task(stable_id: &str) {
+fn activate_task(stable_id: &str, observed_foreground: bool, observed_minimized: bool) {
     trace_action("task");
+    trace_action(&format!("task:identity:{stable_id}"));
     let Some(hex) = stable_id.rsplit(':').next() else {
         return;
     };
@@ -1211,14 +1213,25 @@ fn activate_task(stable_id: &str) {
     else {
         return;
     };
-    let action = if window.foreground {
+    let action = if observed_foreground {
         platform_win::common::taskbar::WindowAction::Minimize
-    } else if window.minimized {
-        platform_win::common::taskbar::WindowAction::RestoreAndActivate
     } else {
-        platform_win::common::taskbar::WindowAction::Activate
+        platform_win::common::taskbar::WindowAction::RestoreAndActivate
     };
-    let _ = platform_win::common::taskbar::apply_window_action(window.hwnd_identity, action);
+    let trace = match action {
+        platform_win::common::taskbar::WindowAction::Minimize => "task:left-minimized",
+        platform_win::common::taskbar::WindowAction::RestoreAndActivate if observed_minimized => {
+            "task:left-restored-activated"
+        }
+        platform_win::common::taskbar::WindowAction::RestoreAndActivate => "task:left-activated",
+        platform_win::common::taskbar::WindowAction::Activate => "task:left-activated",
+        _ => "task:left-action",
+    };
+    if platform_win::common::taskbar::apply_window_action(window.hwnd_identity, action).is_ok() {
+        trace_action(trace);
+    } else {
+        trace_action("task:left-action-rejected");
+    }
 }
 
 fn show_desktop_observation(
@@ -1978,7 +1991,7 @@ fn options(
     let scale = monitor.dpi_x as f32 / 96.0;
     let width = (monitor.bounds.right - monitor.bounds.left) as f32 / scale;
     let height = if taskbar {
-        40.0 * f32::from(taskbar_rows.clamp(1, 3))
+        WindowsGuiMetrics::taskbar_height(taskbar_rows)
     } else if interactive {
         (monitor.work_area.bottom - monitor.work_area.top) as f32 / scale
     } else {
@@ -2112,16 +2125,23 @@ fn reconcile_taskbar_auto_hide(
             endpoints,
         },
     );
-    let endpoint = match effect {
-        AutoHideEffect::Show => Some(endpoints.visible),
-        AutoHideEffect::Hide => Some(endpoints.hidden),
-        AutoHideEffect::NoChange => None,
+    let applied = match effect {
+        AutoHideEffect::Show => hwnd(window).is_ok_and(|raw| {
+            set_owned_taskbar_auto_hide_clip(raw, false).is_ok()
+                && move_owned_taskbar_client(
+                    raw,
+                    endpoints.visible.left,
+                    endpoints.visible.top,
+                    endpoints.visible.width(),
+                    endpoints.visible.height(),
+                )
+                .is_ok()
+        }),
+        AutoHideEffect::Hide => {
+            hwnd(window).is_ok_and(|raw| set_owned_taskbar_auto_hide_clip(raw, true).is_ok())
+        }
+        AutoHideEffect::NoChange => true,
     };
-    let applied = endpoint.is_none_or(|rect| {
-        hwnd(window).is_ok_and(|raw| {
-            move_owned_taskbar_client(raw, rect.left, rect.top, rect.width(), rect.height()).is_ok()
-        })
-    });
     if applied {
         *runtime.state.borrow_mut() = next;
         if effect == AutoHideEffect::Show {
@@ -2204,7 +2224,7 @@ fn taskbar_physical_geometry(
     rows: u8,
 ) -> TaskbarPhysicalGeometry {
     let scale = monitor.dpi_x as f32 / 96.0;
-    let height = (40.0 * f32::from(rows.clamp(1, 3)) * scale).round() as i32;
+    let height = (WindowsGuiMetrics::taskbar_height(rows) * scale).round() as i32;
     let bottom = if shell {
         monitor.bounds.bottom
     } else {
@@ -2238,7 +2258,8 @@ fn start_window_geometry(
 ) -> StartWindowGeometry {
     let scale = monitor.dpi_x as f32 / 96.0;
     let monitor_width = (monitor.work_area.right - monitor.work_area.left) as f32 / scale;
-    let width = (monitor_width - 24.0).clamp(1.0, 640.0);
+    let width = (monitor_width - WindowsGuiMetrics::START_HORIZONTAL_MARGIN * 2.0)
+        .clamp(1.0, WindowsGuiMetrics::START_WIDTH);
     let work_left = monitor.work_area.left as f32 / scale;
     let work_top = monitor.work_area.top as f32 / scale;
     let taskbar_bottom = if shell {
@@ -2246,9 +2267,11 @@ fn start_window_geometry(
     } else {
         monitor.work_area.bottom as f32 / scale
     };
-    let start_bottom =
-        (taskbar_bottom - 40.0 * f32::from(taskbar_rows.clamp(1, 3)) - 12.0).max(work_top + 1.0);
-    let height = (start_bottom - work_top).clamp(1.0, 720.0);
+    let start_bottom = (taskbar_bottom
+        - WindowsGuiMetrics::taskbar_height(taskbar_rows)
+        - WindowsGuiMetrics::START_TASKBAR_GAP)
+        .max(work_top + 1.0);
+    let height = (start_bottom - work_top).clamp(1.0, WindowsGuiMetrics::START_MAX_HEIGHT);
     StartWindowGeometry {
         left: work_left + (monitor_width - width).max(0.0) / 2.0,
         top: (start_bottom - height).max(work_top),
@@ -2391,11 +2414,14 @@ fn system_flyout_geometry(
     let work_right = monitor.work_area.right as f32 / scale;
     let work_bottom = monitor.work_area.bottom as f32 / scale;
     let (preferred_width, preferred_height): (f32, f32) = match kind {
-        SystemFlyoutKind::Input => (360.0, 112.0 + input_profile_count.clamp(1, 6) as f32 * 56.0),
-        SystemFlyoutKind::Volume => (360.0, 184.0),
-        SystemFlyoutKind::NetworkPower => (360.0, 640.0),
+        SystemFlyoutKind::Input => (
+            WindowsGuiMetrics::SYSTEM_FLYOUT_WIDTH,
+            112.0 + input_profile_count.clamp(1, 6) as f32 * 56.0,
+        ),
+        SystemFlyoutKind::Volume => (WindowsGuiMetrics::SYSTEM_FLYOUT_WIDTH, 184.0),
+        SystemFlyoutKind::NetworkPower => (WindowsGuiMetrics::SYSTEM_FLYOUT_WIDTH, 640.0),
         SystemFlyoutKind::Calendar => (
-            380.0,
+            WindowsGuiMetrics::CALENDAR_FLYOUT_WIDTH,
             if notification_count == 0 {
                 520.0
             } else {
@@ -2403,8 +2429,8 @@ fn system_flyout_geometry(
             },
         ),
     };
-    let gap = 8.0;
-    let taskbar_height = 40.0 * f32::from(taskbar_rows.clamp(1, 3));
+    let gap = WindowsGuiMetrics::POPUP_GAP;
+    let taskbar_height = WindowsGuiMetrics::taskbar_height(taskbar_rows);
     let usable_width = (work_right - work_left - gap * 2.0).max(1.0);
     let taskbar_bottom = if shell {
         monitor.bounds.bottom as f32 / scale
@@ -2471,23 +2497,24 @@ fn notification_overflow_bounds(
     taskbar_rows: u8,
 ) -> NotificationOverflowBounds {
     let scale = monitor.dpi_x as f32 / 96.0;
-    let logical_width: f32 = 344.0;
-    let rows = icon_count.max(1).div_ceil(6).min(6) as f32;
-    let logical_height = 24.0 + rows * 48.0;
+    let logical_width = WindowsGuiMetrics::NOTIFICATION_OVERFLOW_WIDTH;
+    let rows = WindowsGuiMetrics::overflow_rows(icon_count).min(6) as f32;
+    let logical_height = WindowsGuiMetrics::NOTIFICATION_OVERFLOW_PADDING * 2.0
+        + rows * WindowsGuiMetrics::NOTIFICATION_OVERFLOW_CELL;
     let work_left = monitor.work_area.left as f32 / scale;
     let work_top = monitor.work_area.top as f32 / scale;
     let work_right = monitor.work_area.right as f32 / scale;
     let work_bottom = monitor.work_area.bottom as f32 / scale;
-    let taskbar_height = 40.0 * f32::from(taskbar_rows.clamp(1, 3));
+    let taskbar_height = WindowsGuiMetrics::taskbar_height(taskbar_rows);
     let taskbar_bottom = if shell {
         monitor.bounds.bottom as f32 / scale
     } else {
         work_bottom
     };
-    let bottom = taskbar_bottom - taskbar_height - 8.0;
+    let bottom = taskbar_bottom - taskbar_height - WindowsGuiMetrics::POPUP_GAP;
     let width = logical_width.min(work_right - work_left);
     let height = logical_height.min((bottom - work_top).max(1.0));
-    let right = work_right - 8.0;
+    let right = work_right - WindowsGuiMetrics::POPUP_EDGE_MARGIN;
     NotificationOverflowBounds {
         left: (right - width).max(work_left),
         top: (bottom - height).max(work_top),
@@ -2545,8 +2572,11 @@ fn jump_list_geometry(
     } else {
         monitor.work_area.bottom as f32 / scale
     };
-    let popup_bottom = taskbar_bottom - 40.0 * f32::from(taskbar_rows.clamp(1, 3)) - 8.0;
-    let width = 360.0_f32.min((work_right - work_left - 16.0).max(1.0));
+    let popup_bottom = taskbar_bottom
+        - WindowsGuiMetrics::taskbar_height(taskbar_rows)
+        - WindowsGuiMetrics::POPUP_GAP;
+    let width = WindowsGuiMetrics::PREVIEW_WIDTH
+        .min((work_right - work_left - WindowsGuiMetrics::POPUP_EDGE_MARGIN * 2.0).max(1.0));
     let entries = entry_count.max(1) as f32;
     let gaps = entry_count.saturating_sub(1) as f32 * 2.0;
     let separators = group_count.saturating_sub(1) as f32;
@@ -2558,8 +2588,9 @@ fn jump_list_geometry(
         .map(|x| x as f32 / scale)
         .unwrap_or(fallback_anchor);
     let left = (anchor - width / 2.0).clamp(
-        work_left + 8.0,
-        (work_right - 8.0 - width).max(work_left + 8.0),
+        work_left + WindowsGuiMetrics::POPUP_EDGE_MARGIN,
+        (work_right - WindowsGuiMetrics::POPUP_EDGE_MARGIN - width)
+            .max(work_left + WindowsGuiMetrics::POPUP_EDGE_MARGIN),
     );
     JumpListGeometry {
         left,
@@ -2609,8 +2640,55 @@ fn taskbar_context_options(
     anchor: gpui::Point<gpui::Pixels>,
 ) -> WindowOptions {
     let (left, top, _, _) = taskbar_context_placement(monitor, shell, rows, anchor);
-    let width = 220.0;
+    let width = WindowsGuiMetrics::TASKBAR_CONTEXT_WIDTH;
     let height = 244.0;
+    WindowOptions {
+        window_bounds: Some(WindowBounds::Windowed(Bounds {
+            origin: point(px(left), px(top)),
+            size: size(px(width), px(height)),
+        })),
+        titlebar: None,
+        focus: true,
+        show: true,
+        kind: WindowKind::PopUp,
+        is_movable: false,
+        is_resizable: false,
+        is_minimizable: false,
+        window_background: WindowBackgroundAppearance::Opaque,
+        ..Default::default()
+    }
+}
+
+fn system_control_context_options(
+    monitor: &MonitorRecord,
+    shell: bool,
+    rows: u8,
+    anchor: gpui::Point<gpui::Pixels>,
+    kind: SystemControlContextKind,
+) -> WindowOptions {
+    let scale = monitor.dpi_x as f32 / 96.0;
+    let width = WindowsGuiMetrics::SYSTEM_CONTEXT_WIDTH;
+    let height = match kind {
+        SystemControlContextKind::Input => {
+            WindowsGuiMetrics::CONTEXT_PADDING * 2.0 + WindowsGuiMetrics::CONTEXT_ROW_HEIGHT
+        }
+        SystemControlContextKind::Volume => {
+            WindowsGuiMetrics::CONTEXT_PADDING * 2.0 + WindowsGuiMetrics::CONTEXT_ROW_HEIGHT * 2.0
+        }
+    };
+    let monitor_left = monitor.bounds.left as f32 / scale;
+    let monitor_right = monitor.bounds.right as f32 / scale;
+    let monitor_top = monitor.bounds.top as f32 / scale;
+    let taskbar_bottom = if shell {
+        monitor.bounds.bottom
+    } else {
+        monitor.work_area.bottom
+    } as f32
+        / scale;
+    let taskbar_top = taskbar_bottom - WindowsGuiMetrics::taskbar_height(rows);
+    let left = (monitor_left + anchor.x.as_f32() - width / 2.0)
+        .clamp(monitor_left, (monitor_right - width).max(monitor_left));
+    let top = (taskbar_top - height - WindowsGuiMetrics::POPUP_GAP).max(monitor_top);
     WindowOptions {
         window_bounds: Some(WindowBounds::Windowed(Bounds {
             origin: point(px(left), px(top)),
@@ -2635,7 +2713,7 @@ fn taskbar_context_placement(
     anchor: gpui::Point<gpui::Pixels>,
 ) -> (f32, f32, f32, f32) {
     let scale = monitor.dpi_x as f32 / 96.0;
-    let width = 220.0;
+    let width = WindowsGuiMetrics::TASKBAR_CONTEXT_WIDTH;
     let height = 244.0;
     let monitor_left = monitor.bounds.left as f32 / scale;
     let monitor_right = monitor.bounds.right as f32 / scale;
@@ -2646,10 +2724,10 @@ fn taskbar_context_placement(
         monitor.work_area.bottom
     } as f32
         / scale;
-    let taskbar_top = taskbar_bottom - 40.0 * rows.clamp(1, 3) as f32;
+    let taskbar_top = taskbar_bottom - WindowsGuiMetrics::taskbar_height(rows);
     let left = (monitor_left + anchor.x.as_f32() - width / 2.0)
         .clamp(monitor_left, (monitor_right - width).max(monitor_left));
-    let top = (taskbar_top - height - 8.0).max(monitor_top);
+    let top = (taskbar_top - height - WindowsGuiMetrics::POPUP_GAP).max(monitor_top);
     (left, top, width, height)
 }
 
@@ -3052,7 +3130,11 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
     let desktop_operations = Rc::new(RefCell::new(DesktopOperationController::default()));
     let desktop_transfers = ProductionTransferRuntime::default();
     let provider_client = Rc::new(RefCell::new(ProviderClient::adjacent()?));
-    let mut initial_notification_client = NotificationClient::adjacent(shell)?;
+    let verification_notifyicon_compatibility = verification_surface.as_deref() == Some("taskbar")
+        && std::env::var("SUPERDESKTOP_VERIFICATION_NOTIFYICON_COMPAT")
+            .is_ok_and(|value| value == "1");
+    let mut initial_notification_client =
+        NotificationClient::adjacent(shell || verification_notifyicon_compatibility)?;
     if shell
         && !matches!(
             initial_notification_client.request(
@@ -3493,11 +3575,26 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                 )>));
                 system_flyout_windows.push(Rc::clone(&system_flyout_window));
                 let system_flyout_window_for_taskbar = Rc::clone(&system_flyout_window);
+                let system_flyout_window_for_context = Rc::clone(&system_flyout_window);
                 let system_flyout_monitor = taskbar_monitor.clone();
                 let system_flyout_settings = Rc::clone(&persisted_settings);
                 let system_flyout_status = Rc::clone(&status_reconciler);
                 let system_flyout_client = Rc::clone(&status_client);
                 let system_flyout_start = Rc::clone(&start_window);
+                let system_context_window = Rc::new(RefCell::new(None::<(
+                    SystemControlContextKind,
+                    u64,
+                    gpui::WindowHandle<SystemControlContextView>,
+                )>));
+                let system_context_generation = Rc::new(Cell::new(0_u64));
+                let system_context_window_for_taskbar = Rc::clone(&system_context_window);
+                let system_context_window_for_flyout = Rc::clone(&system_context_window);
+                let system_context_generation_for_taskbar = Rc::clone(&system_context_generation);
+                let system_context_monitor = taskbar_monitor.clone();
+                let system_context_settings = Rc::clone(&persisted_settings);
+                let system_context_status_client = Rc::clone(&status_client);
+                let system_context_status = Rc::clone(&status_reconciler);
+                let system_context_start = Rc::clone(&start_window);
                 let context_window_for_taskbar = Rc::clone(&taskbar_context_window);
                 let settings_window_for_context = Rc::clone(&taskbar_settings_window);
                 let context_monitor = taskbar_monitor.clone();
@@ -3528,6 +3625,11 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                 };
                 let taskbar_bounds_mode =
                     taskbar_uses_monitor_bounds(shell, explorer_shell_present_at_open);
+                // Once Explorer is absent, every owned surface and worker must use the
+                // same physical monitor anchor as the taskbar itself. Mixing the raw
+                // preview flag with the effective taskbar mode creates a full native-
+                // taskbar-height gap and breaks auto-hide at the physical screen edge.
+                let shell = taskbar_bounds_mode;
                 let taskbar = cx.open_window(
                     options(
                         &monitor,
@@ -3633,18 +3735,26 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                             worker_anchor_bottom,
                                             height,
                                         ) && let Ok((x, y)) = physical_cursor_position()
-                                            && endpoints
+                                        {
+                                            if y >= worker_anchor_bottom.saturating_sub(4) {
+                                                trace_action(&format!(
+                                                    "taskbar:auto-hide-fast-cursor:{x}:{y}:{worker_anchor_bottom}"
+                                                ));
+                                            }
+                                            if endpoints
                                                 .reveal
                                                 .contains(taskbar_ui::PhysicalPoint { x, y })
                                             && post_owned_taskbar_reveal(
                                                 value,
                                                 endpoints.visible.left,
                                                 endpoints.visible.top,
+                                                endpoints.visible.height(),
                                             )
                                             .is_ok()
-                                        {
-                                            worker_hidden.store(false, Ordering::Release);
-                                            trace_action("taskbar:auto-hide-fast-shown");
+                                            {
+                                                worker_hidden.store(false, Ordering::Release);
+                                                trace_action("taskbar:auto-hide-fast-shown");
+                                            }
                                         }
                                     }
                                     std::thread::sleep(Duration::from_millis(50));
@@ -3871,10 +3981,10 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                 }
                             }),
                             fixed: Rc::new(launch_superexplorer),
-                            task: Rc::new(move |stable_id, app| {
+                            task: Rc::new(move |stable_id, observed_active, observed_minimized, app| {
                                 let group_ids = group_window_ids(stable_id);
-                                if group_ids.is_empty() {
-                                    activate_task(stable_id);
+                                if group_ids.len() <= 1 {
+                                    activate_task(stable_id, observed_active, observed_minimized);
                                     return;
                                 }
                                 open_task_preview(
@@ -3924,6 +4034,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                 }
                             }),
                             task_context: Rc::new(move |stable_id, app| {
+                                trace_action("taskbar:jump-list-requested");
                                 let existing_jump_list = *jump_list_window_for_taskbar.borrow();
                                 if let Some(existing) = existing_jump_list {
                                     if existing
@@ -4434,6 +4545,12 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                 );
                             }),
                             system_flyout: Rc::new(move |kind, app| {
+                                if let Some((_, _, handle)) =
+                                    system_context_window_for_flyout.borrow_mut().take()
+                                {
+                                    let _ = handle.update(app, |_, window, _| window.remove_window());
+                                    trace_action("status:context-dismissed-for-flyout");
+                                }
                                 if let Some((open_kind, handle)) =
                                     system_flyout_window_for_taskbar.borrow_mut().take()
                                 {
@@ -4559,6 +4676,98 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                     trace_action("status:owned-flyout-opened");
                                 } else {
                                     trace_action("status:flyout-open-failed");
+                                }
+                            }),
+                            system_context: Rc::new(move |kind, anchor, app| {
+                                if let Some((open_kind, _, handle)) =
+                                    system_context_window_for_taskbar.borrow_mut().take()
+                                {
+                                    let _ = handle.update(app, |_, window, _| window.remove_window());
+                                    if open_kind == kind {
+                                        trace_action("status:context-closed");
+                                        return;
+                                    }
+                                }
+                                if let Some((_, handle)) =
+                                    system_flyout_window_for_context.borrow_mut().take()
+                                {
+                                    let _ = handle.update(app, |_, window, _| window.remove_window());
+                                    trace_action("status:flyout-dismissed-for-context");
+                                }
+                                let generation = system_context_generation_for_taskbar
+                                    .get()
+                                    .saturating_add(1);
+                                system_context_generation_for_taskbar.set(generation);
+                                let dismiss_slot = Rc::clone(&system_context_window_for_taskbar);
+                                let action_client = Rc::clone(&system_context_status_client);
+                                let action_status = Rc::clone(&system_context_status);
+                                let action_start = Rc::clone(&system_context_start);
+                                let opened = app.open_window(
+                                    system_control_context_options(
+                                        &system_context_monitor,
+                                        shell,
+                                        system_context_settings.borrow().taskbar.rows,
+                                        anchor,
+                                        kind,
+                                    ),
+                                    move |window, cx| {
+                                        window.activate_window();
+                                        let dismiss_slot = Rc::clone(&dismiss_slot);
+                                        cx.new(move |cx| {
+                                            SystemControlContextView::new(
+                                                kind,
+                                                Rc::new(move |command, app| match command {
+                                                    SystemControlContextCommand::LanguagePreferences => {
+                                                        apply_system_status_action(
+                                                            SystemStatusAction::OpenLanguagePreferences,
+                                                            app,
+                                                            &action_client,
+                                                            &action_status,
+                                                            &action_start,
+                                                        );
+                                                        trace_action("status:input-context-language-preferences");
+                                                    }
+                                                    SystemControlContextCommand::OpenVolumeMixer => {
+                                                        trace_action(if platform_win::common::taskbar::open_volume_mixer().is_ok() {
+                                                            "status:volume-mixer-launched"
+                                                        } else {
+                                                            "status:volume-mixer-rejected"
+                                                        });
+                                                    }
+                                                    SystemControlContextCommand::OpenSoundSettings => {
+                                                        trace_action(if platform_win::common::taskbar::open_sound_settings().is_ok() {
+                                                            "status:sound-settings-launched"
+                                                        } else {
+                                                            "status:sound-settings-rejected"
+                                                        });
+                                                    }
+                                                }),
+                                                Rc::new(move |window, _| {
+                                                    window.remove_window();
+                                                    let is_current = dismiss_slot
+                                                        .borrow()
+                                                        .as_ref()
+                                                        .is_some_and(|(_, current, _)| *current == generation);
+                                                    if is_current {
+                                                        *dismiss_slot.borrow_mut() = None;
+                                                    }
+                                                    trace_action("status:context-dismissed");
+                                                }),
+                                                window,
+                                                cx,
+                                            )
+                                        })
+                                    },
+                                );
+                                if let Ok(handle) = opened {
+                                    *system_context_window_for_taskbar.borrow_mut() =
+                                        Some((kind, generation, handle));
+                                    trace_action(match kind {
+                                        SystemControlContextKind::Input => "status:input-context-opened",
+                                        SystemControlContextKind::Volume => "status:volume-context-opened",
+                                    });
+                                } else {
+                                    trace_action("status:context-open-failed");
                                 }
                             }),
                             rendered: Rc::new(trace_rendered_frame),

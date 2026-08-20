@@ -105,7 +105,7 @@ fn main() -> ExitCode {
                 show_desktop: Rc::new(|_| {}),
                 task_view: Rc::new(|_| {}),
                 fixed: Rc::new(|| {}),
-                task: Rc::new(|_, _| {}),
+                task: Rc::new(|_, _, _, _| {}),
                 task_hover: Rc::new(|_, _, _| {}),
                 task_context: Rc::new(|_, _| {}),
                 taskbar_context: Rc::new(|_, _| {}),
@@ -142,6 +142,7 @@ fn main() -> ExitCode {
                 }),
                 system_status: Rc::new(|_, _| {}),
                 system_flyout: Rc::new(|_, _| {}),
+                system_context: Rc::new(|_, _, _| {}),
                 rendered: Rc::new(|| {}),
             };
             let mut notification_area = NotificationAreaModel::default();

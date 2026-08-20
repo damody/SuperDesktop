@@ -190,7 +190,9 @@ mod tests {
         let composition = include_str!("surface_runtime.rs");
         assert!(client.contains("if self.compatibility_enabled"));
         assert!(client.contains("command.arg(\"--shell-notifyicon\")"));
-        assert!(composition.contains("NotificationClient::adjacent(shell)"));
+        assert!(composition.contains("SUPERDESKTOP_VERIFICATION_NOTIFYICON_COMPAT"));
+        assert!(composition.contains("verification_surface.as_deref() == Some(\"taskbar\")"));
+        assert!(composition.contains("shell || verification_notifyicon_compatibility"));
         assert!(!composition.contains("NotificationClient::adjacent(true)"));
         assert!(client.contains("MAX_CONSECUTIVE_RESTARTS"));
         assert!(client.contains("notification-restart-capacity"));
