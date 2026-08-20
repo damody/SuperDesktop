@@ -374,6 +374,23 @@ pub fn catalog() -> Vec<TestCase> {
             true,
             75,
         ),
+        headful_case(
+            "gui-win-shift-s-snipping",
+            "Explorer-free native Win+Shift+S Snipping Tool overlay",
+            "capture-win-shift-s-snipping.ps1",
+            &[
+                "-Workspace",
+                "{workspace}",
+                "-EvidenceDirectory",
+                "{out}/screen-snip",
+            ],
+            &[
+                "screen-snip/headful-report.json",
+                "screen-snip/screen-snip.log",
+            ],
+            true,
+            75,
+        ),
     ];
     for case in &mut cases {
         if matches!(
@@ -387,6 +404,7 @@ pub fn catalog() -> Vec<TestCase> {
                 | "gui-taskbar-resize"
                 | "gui-taskbar-auto-hide"
                 | "gui-taskbar-hover-preview"
+                | "gui-win-shift-s-snipping"
                 | "unit-taskbar-ui"
         ) {
             case.tags.push("gui-parity".into());
@@ -562,6 +580,32 @@ mod tests {
         assert!(smoke.cases.len() < shell.cases.len());
         assert!(shell.cases.len() < full.cases.len());
         assert!(!smoke.partial && !shell.partial && !full.partial);
+    }
+
+    #[test]
+    fn screen_snipping_case_is_mandatory_explorer_free_and_privacy_preserving() {
+        let case = catalog()
+            .into_iter()
+            .find(|case| case.id == "gui-win-shift-s-snipping")
+            .expect("screen snipping case");
+        assert!(case.mandatory && case.explorer_free);
+        assert!(matches!(case.recovery, Recovery::ExplorerWatchdog { .. }));
+        assert!(
+            case.artifacts
+                .iter()
+                .any(|artifact| artifact.path.ends_with("headful-report.json"))
+        );
+        assert!(
+            case.artifacts
+                .iter()
+                .any(|artifact| artifact.path.ends_with("screen-snip.log"))
+        );
+        assert!(
+            !case
+                .artifacts
+                .iter()
+                .any(|artifact| artifact.path.ends_with(".png"))
+        );
     }
 
     #[test]

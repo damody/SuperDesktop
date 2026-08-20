@@ -14,7 +14,9 @@ The active-key fence consumes repeats and the matching key-up exactly as for the
 
 ## Native activation
 
-The GPUI foreground refresh path receives `OpenScreenSnip` and invokes a platform-owned helper. The helper launches the compile-time fixed URI `ms-screenclip:` through `ShellExecuteExW` with no user-controlled input and no retained process handle. Windows resolves the registered built-in handler and presents its native overlay.
+The GPUI foreground refresh path receives `OpenScreenSnip` and invokes a platform-owned helper. A live Windows 11 observation of the real Explorer-handled chord showed Snipping Tool launched with `ms-screenclip:///?source=HotKey`; the helper launches that exact compile-time fixed URI through `ShellExecuteExW` with no user-controlled input and no retained process handle. Windows resolves the registered built-in handler and presents its native overlay.
+
+Microsoft's newer `ms-screenclip://capture/...` app-integration protocol is not used: it requires a packaged caller plus a registered redirect URI and is intended to return captured media to an app. SuperDesktop is matching the OS hotkey and does not request captured content.
 
 This is preferred over a hard-coded `SnippingTool.exe` path or undocumented command-line switches, which vary across Windows releases. Re-injecting the same key chord is rejected because it can recurse through the low-level hook and can double-trigger when another shell component is present.
 
@@ -22,7 +24,7 @@ This is preferred over a hard-coded `SnippingTool.exe` path or undocumented comm
 
 `ShellHotkeys::start` remains guarded by the existing owned-shell flag. Therefore:
 
-- owned shell / Explorer absent: SuperDesktop consumes the chord and launches `ms-screenclip:`;
+- owned shell / Explorer absent: SuperDesktop consumes the chord and launches `ms-screenclip:///?source=HotKey`;
 - Explorer-compatible preview mode: SuperDesktop installs no shell hotkey hook and Windows handles the chord unchanged;
 - startup or hook failure: existing console diagnostics remain authoritative and no partial second hook is installed.
 

@@ -1,0 +1,18 @@
+{
+  "adjustment_id": "B-001-native-hotkey-uri-observation",
+  "classification": "B",
+  "reason": "Microsoft deprecated the bare legacy ms-screenclip: app-integration entry, while a live Windows 11 Explorer-handled Win+Shift+S observation showed the actual Snipping Tool command ms-screenclip:///?source=HotKey.",
+  "correction": "Use the exact observed OS-hotkey URI and explicitly exclude the packaged capture/callback protocol.",
+  "scope_unchanged": true,
+  "gates_unchanged": true,
+  "observed_process": "SnippingTool.exe",
+  "observed_command_line_suffix": "ms-screenclip:///?source=HotKey",
+  "official_protocol_reference": "https://learn.microsoft.com/en-us/windows/apps/develop/launch/launch-snipping-tool",
+  "updated_artifacts": [
+    "docs/superpowers/specs/2026-08-21-owned-shell-win-shift-s-snipping-design.md",
+    "proposal.md",
+    "design.md",
+    "specs/owned-shell-screen-snipping-shortcut/spec.md",
+    "tasks.md"
+  ]
+}

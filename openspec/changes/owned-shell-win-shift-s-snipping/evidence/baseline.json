@@ -1,0 +1,23 @@
+{
+  "nested_revision": "299c716e",
+  "parent_revision": "6b1e9ca",
+  "tracked_worktrees_clean": true,
+  "preserved_untracked_exclusions": [
+    "openspec/changes/align-start-footer-windows11-parity/evidence/focused/cases/gui-start/*.log",
+    "openspec/changes/owned-context-popup-topmost/evidence/resize-1/",
+    "utit-results/",
+    "all pre-existing parent untracked build and evidence outputs"
+  ],
+  "current_hotkey_path": [
+    "platform-win::shell_hotkey::keyboard_hook",
+    "platform-win::shell_hotkey::reduce_shell_hotkey",
+    "ShellHotkeys::take_requested",
+    "superdesktop-app foreground refresh match"
+  ],
+  "baseline_behavior": {
+    "win_s": "OpenSearch",
+    "win_shift_s": "unsupported and passed onward",
+    "hook_scope": "run(shell) only",
+    "screen_clip_protocol_helper": "absent"
+  }
+}

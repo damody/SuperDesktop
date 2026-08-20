@@ -5,7 +5,7 @@ When SuperDesktop replaces Explorer as the shell, the native `Win+Shift+S` path 
 ## What Changes
 
 - Add a distinct, repeat-safe `Win+Shift+S` action to the owned-shell keyboard hook while preserving `Win+S` search.
-- Activate the built-in Windows screen-clipping overlay through the fixed `ms-screenclip:` protocol.
+- Activate the built-in Windows screen-clipping overlay through the exact observed hotkey URI `ms-screenclip:///?source=HotKey`.
 - Keep Explorer-compatible mode delegated entirely to Windows and prevent duplicate activation.
 - Print protocol activation failures to the console without panic, fallback executable lookup, or third-party launch.
 - Add reducer, source-contract, headful Explorer-free, release, installer, and provenance gates.

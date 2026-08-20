@@ -29,7 +29,9 @@ Launching inside the hook was rejected because a global low-level callback must 
 
 ### 2. Use a fixed Windows protocol
 
-`platform-win::common::shell_hotkey` exposes a narrow `open_screen_snipping_overlay()` helper. It supplies only the compile-time UTF-16 `ms-screenclip:` URI to `ShellExecuteExW` with `SEE_MASK_FLAG_NO_UI` and no retained process handle. No caller data crosses this boundary.
+`platform-win::common::shell_hotkey` exposes a narrow `open_screen_snipping_overlay()` helper. A live observation of Explorer's real chord on the target Windows 11 build produced the Snipping Tool command line `ms-screenclip:///?source=HotKey`; the helper supplies only that compile-time UTF-16 URI to `ShellExecuteExW` with `SEE_MASK_FLAG_NO_UI` and no retained process handle. No caller data crosses this boundary.
+
+The newer `ms-screenclip://capture/...` integration API is deliberately excluded because Microsoft requires a packaged caller and registered redirect URI, while the owned shell needs native hotkey behavior and must not receive captured media.
 
 Hard-coded Store-app paths, `SnippingTool.exe` switches, Explorer mediation, and key re-injection were rejected as version-sensitive, unavailable in the owned shell, or recursion-prone.
 
@@ -54,7 +56,7 @@ Hook registration, protocol admission, runtime update, and headful observation f
 ## Risks / Trade-offs
 
 - [Protocol registration is damaged or Snipping Tool is removed] → emit the exact console error and keep the shell alive; do not masquerade as success.
-- [Windows changes the hosting process name] → headful evidence accepts a bounded set of signed system identities or an observable Snipping overlay window, while protocol/trace admission remains mandatory.
+- [Windows changes the hosting process name or hotkey URI] → headful evidence compares the current signed Snipping Tool process/command identity; an observed contract change triggers a B-level design correction rather than a silent fallback.
 - [Synthetic keys are blocked by desktop authority] → the focused run fails rather than using a source-only conditional pass.
 - [The overlay can expose desktop content] → store no overlay screenshot; retain only process/window metadata and traces.
 

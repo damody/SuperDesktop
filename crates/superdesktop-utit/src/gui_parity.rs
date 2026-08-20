@@ -106,6 +106,18 @@ const UNIT_ARTIFACTS: &[GuiArtifactSpec] = &[GuiArtifactSpec {
     kind: GuiArtifactKind::TestLog,
     required: true,
 }];
+const SCREEN_SNIP_ARTIFACTS: &[GuiArtifactSpec] = &[
+    GuiArtifactSpec {
+        name: "measurement",
+        kind: GuiArtifactKind::Measurement,
+        required: true,
+    },
+    GuiArtifactSpec {
+        name: "trace",
+        kind: GuiArtifactKind::Trace,
+        required: true,
+    },
+];
 
 const DEFAULT_VARIANTS: &[GuiVariant] = &[
     GuiVariant {
@@ -287,6 +299,28 @@ pub fn gui_parity_manifest() -> Vec<GuiSurfaceSpec> {
             &["gui-taskbar-hover-preview"],
             POPUP_RULES,
         ),
+        GuiSurfaceSpec {
+            id: "screen-snipping-shortcut",
+            owner: "platform-win",
+            reference_family: "windows-11-native-hotkey",
+            case_ids: &["gui-win-shift-s-snipping"],
+            variants: &[GuiVariant {
+                mode: "shell",
+                theme: "system",
+                locale: "system",
+                dpi: 96,
+                rows: 1,
+            }],
+            rules: &[GeometryRule::Contained {
+                inner: "snip-overlay",
+                outer: "monitor",
+            }],
+            required_controls: &["screen-clipping-overlay"],
+            required_actions: &["keyboard"],
+            artifacts: SCREEN_SNIP_ARTIFACTS,
+            explorer_policy: ManifestExplorerPolicy::RequiredAbsent,
+            mandatory: true,
+        },
         GuiSurfaceSpec {
             id: "task-view-alt-tab",
             owner: "taskbar-ui",

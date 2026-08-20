@@ -10,9 +10,9 @@
 **Gate／Evidence：** BASE-01; `evidence/index.jsonl` tasks 1.1.1–1.1.3.
 **完成門檻：** Revisions, call paths, exclusions, and unique evidence record fields are written and parse successfully.
 
-- [ ] 1.1.1 Record parent/nested revisions and preserve all pre-existing dirty paths.
-- [ ] 1.1.2 Record the reducer, hook, runtime dispatch, and native activation baseline.
-- [ ] 1.1.3 Create and validate the unique append-only evidence index contract.
+- [x] 1.1.1 Record parent/nested revisions and preserve all pre-existing dirty paths.
+- [x] 1.1.2 Record the reducer, hook, runtime dispatch, and native activation baseline.
+- [x] 1.1.3 Create and validate the unique append-only evidence index contract.
 
 ## 2. Owned-shell shortcut implementation
 
@@ -26,24 +26,24 @@
 **Gate／Evidence：** HOTKEY-01; tasks 2.1.1–2.1.4.
 **完成門檻：** Initial, repeat, key-up, search, and unsupported modifier matrices pass with no hook-side launch work.
 
-- [ ] 2.1.1 Add `OpenScreenSnip` to the bounded action bit/code round trip.
-- [ ] 2.1.2 Map Windows+Shift+S separately from Windows+S in the pure reducer.
-- [ ] 2.1.3 Preserve repeat suppression, matching key-up consumption, and Control/Alt pass-through.
-- [ ] 2.1.4 Add focused reducer and queue tests for every shortcut scenario.
+- [x] 2.1.1 Add `OpenScreenSnip` to the bounded action bit/code round trip.
+- [x] 2.1.2 Map Windows+Shift+S separately from Windows+S in the pure reducer.
+- [x] 2.1.3 Preserve repeat suppression, matching key-up consumption, and Control/Alt pass-through.
+- [x] 2.1.4 Add focused reducer and queue tests for every shortcut scenario.
 
 ### 2.2 Activate the fixed built-in Windows protocol
 
 **目的：** Open the native image-snipping overlay without Explorer or path discovery.
-**輸入：** Fixed `ms-screenclip:` design and platform Win32 boundary.
+**輸入：** Fixed observed `ms-screenclip:///?source=HotKey` design and platform Win32 boundary.
 **產出：** Narrow fallible `ShellExecuteExW` helper and source-contract tests.
 **依賴：** 2.1.
 **Owner／Wave：** Primary agent / Wave 2.
 **Gate／Evidence：** NATIVE-01; tasks 2.2.1–2.2.3.
 **完成門檻：** Fixed URI admission compiles, retains no process handle, rejects all fallback mechanisms, and returns typed errors.
 
-- [ ] 2.2.1 Implement the compile-time fixed `ms-screenclip:` ShellExecuteExW admission helper.
-- [ ] 2.2.2 Keep URI activation outside the low-level hook and expose a fallible platform result.
-- [ ] 2.2.3 Add source contracts forbidding Explorer, executable lookup, key reinjection, and third-party fallback.
+- [x] 2.2.1 Implement the compile-time fixed `ms-screenclip:///?source=HotKey` ShellExecuteExW admission helper.
+- [x] 2.2.2 Keep URI activation outside the low-level hook and expose a fallible platform result.
+- [x] 2.2.3 Add source contracts forbidding Explorer, executable lookup, key reinjection, and third-party fallback.
 
 ### 2.3 Dispatch and diagnose on the GPUI foreground path
 
@@ -55,9 +55,9 @@
 **Gate／Evidence：** RUNTIME-01; tasks 2.3.1–2.3.3.
 **完成門檻：** Dispatch is exhaustive, emits requested/accepted traces, reports rejection to console, and preview mode remains unhooked.
 
-- [ ] 2.3.1 Dispatch `OpenScreenSnip` from the existing foreground refresh loop.
-- [ ] 2.3.2 Emit requested/accepted trace events and scoped console errors without unwrap or panic.
-- [ ] 2.3.3 Add composition tests proving owned-shell-only hook installation and exhaustive runtime routing.
+- [x] 2.3.1 Dispatch `OpenScreenSnip` from the existing foreground refresh loop.
+- [x] 2.3.2 Emit requested/accepted trace events and scoped console errors without unwrap or panic.
+- [x] 2.3.3 Add composition tests proving owned-shell-only hook installation and exhaustive runtime routing.
 
 ## 3. Physical shortcut verification
 
@@ -71,10 +71,10 @@
 **Gate／Evidence：** GUI-01; tasks 3.1.1–3.1.4.
 **完成門檻：** Test sends physical keys, observes traces plus signed/system overlay identity, dismisses with Escape, proves app survival, and stores no screenshot.
 
-- [ ] 3.1.1 Implement physical Windows+Shift+S and Escape input with bounded watchdog/recovery.
-- [ ] 3.1.2 Observe the built-in clipping surface/process and reject source-only or conditional passes.
-- [ ] 3.1.3 Register the mandatory Explorer-free case and its privacy-preserving artifacts in UTIT.
-- [ ] 3.1.4 Add UTIT catalog/report contract tests for the new case.
+- [x] 3.1.1 Implement physical Windows+Shift+S and Escape input with bounded watchdog/recovery.
+- [x] 3.1.2 Observe the built-in clipping surface/process and reject source-only or conditional passes.
+- [x] 3.1.3 Register the mandatory Explorer-free case and its privacy-preserving artifacts in UTIT.
+- [x] 3.1.4 Add UTIT catalog/report contract tests for the new case.
 
 ### 3.2 Execute the focused physical gate twice
 
@@ -101,9 +101,9 @@
 **Gate／Evidence：** SRC-01; tasks 4.1.1–4.1.3.
 **完成門檻：** Every command returns exit 0 and Clippy reports no denied warning.
 
-- [ ] 4.1.1 Run Rust/PowerShell formatting or parser checks and focused shortcut tests.
-- [ ] 4.1.2 Run the complete SuperDesktop workspace test suite.
-- [ ] 4.1.3 Run workspace Clippy for all targets with warnings denied.
+- [x] 4.1.1 Run Rust/PowerShell formatting or parser checks and focused shortcut tests.
+- [x] 4.1.2 Run the complete SuperDesktop workspace test suite.
+- [x] 4.1.3 Run workspace Clippy for all targets with warnings denied.
 
 ### 4.2 Build and package the exact verified candidate
 

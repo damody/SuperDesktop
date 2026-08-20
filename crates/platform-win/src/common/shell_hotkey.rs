@@ -1,6 +1,7 @@
 //! Shell-owned Windows-key routing with bounded thread and hook lifetime.
 
 use std::{
+    mem::size_of,
     panic::{AssertUnwindSafe, catch_unwind},
     sync::{
         atomic::{AtomicBool, AtomicI32, AtomicU32, Ordering},
@@ -16,13 +17,16 @@ use windows::Win32::{
         Input::KeyboardAndMouse::{
             GetAsyncKeyState, VK_CONTROL, VK_LWIN, VK_MENU, VK_RWIN, VK_SHIFT,
         },
+        Shell::{SEE_MASK_FLAG_NO_UI, SHELLEXECUTEINFOW, ShellExecuteExW},
         WindowsAndMessaging::{
             CallNextHookEx, GetMessageW, HC_ACTION, KBDLLHOOKSTRUCT, MSG, PM_NOREMOVE,
-            PeekMessageW, PostThreadMessageW, SetWindowsHookExW, UnhookWindowsHookEx,
-            WH_KEYBOARD_LL, WM_KEYDOWN, WM_KEYUP, WM_QUIT, WM_SYSKEYDOWN, WM_SYSKEYUP,
+            PeekMessageW, PostThreadMessageW, SW_SHOWNORMAL, SetWindowsHookExW,
+            UnhookWindowsHookEx, WH_KEYBOARD_LL, WM_KEYDOWN, WM_KEYUP, WM_QUIT, WM_SYSKEYDOWN,
+            WM_SYSKEYUP,
         },
     },
 };
+use windows::core::w;
 
 const VK_A: u32 = 0x41;
 const VK_D: u32 = 0x44;
@@ -47,6 +51,7 @@ pub enum ShellHotkeyAction {
     AltTabBackward = 1 << 9,
     AltTabCommit = 1 << 10,
     AltTabCancel = 1 << 11,
+    OpenScreenSnip = 1 << 12,
 }
 
 impl ShellHotkeyAction {
@@ -64,6 +69,7 @@ impl ShellHotkeyAction {
             512 => Some(Self::AltTabBackward),
             1024 => Some(Self::AltTabCommit),
             2048 => Some(Self::AltTabCancel),
+            4096 => Some(Self::OpenScreenSnip),
             _ => None,
         }
     }
@@ -102,12 +108,29 @@ fn action_for_key(
         VK_D if !shift => Some(ShellHotkeyAction::ShowDesktop),
         VK_SPACE if shift => Some(ShellHotkeyAction::CycleInputPrevious),
         VK_SPACE => Some(ShellHotkeyAction::CycleInput),
-        VK_S if !shift => Some(ShellHotkeyAction::OpenSearch),
+        VK_S if shift => Some(ShellHotkeyAction::OpenScreenSnip),
+        VK_S => Some(ShellHotkeyAction::OpenSearch),
         VK_TAB if !shift => Some(ShellHotkeyAction::OpenTaskView),
         VK_A if !shift => Some(ShellHotkeyAction::OpenNetworkPower),
         VK_N if !shift => Some(ShellHotkeyAction::OpenNotifications),
         _ => None,
     }
+}
+
+/// Opens the Windows-registered built-in image-snipping overlay.
+pub fn open_screen_snipping_overlay() -> Result<(), String> {
+    let mut execute = SHELLEXECUTEINFOW {
+        cbSize: size_of::<SHELLEXECUTEINFOW>() as u32,
+        fMask: SEE_MASK_FLAG_NO_UI,
+        lpFile: w!("ms-screenclip:///?source=HotKey"),
+        nShow: SW_SHOWNORMAL.0,
+        ..Default::default()
+    };
+    // SAFETY: every pointer in the structure is a compile-time fixed string or
+    // null, the structure remains live for the synchronous admission call, and
+    // no process handle is requested or retained.
+    unsafe { ShellExecuteExW(&mut execute) }
+        .map_err(|error| format!("Windows screen-clipping protocol activation failed: {error}"))
 }
 
 fn reduce_shell_hotkey(
@@ -336,6 +359,26 @@ mod tests {
             (true, Some(ShellHotkeyAction::CycleInputPrevious), VK_SPACE)
         );
         assert_eq!(
+            reduce_shell_hotkey(VK_S, true, false, true, false, false, true, 0),
+            (true, Some(ShellHotkeyAction::OpenScreenSnip), VK_S)
+        );
+        assert_eq!(
+            reduce_shell_hotkey(VK_S, true, false, true, false, false, true, VK_S),
+            (true, None, VK_S)
+        );
+        assert_eq!(
+            reduce_shell_hotkey(VK_S, false, true, false, false, false, false, VK_S),
+            (true, None, 0)
+        );
+        assert_eq!(
+            reduce_shell_hotkey(VK_S, true, false, true, true, false, true, 0),
+            (false, None, 0)
+        );
+        assert_eq!(
+            reduce_shell_hotkey(VK_S, true, false, true, false, true, true, 0),
+            (false, None, 0)
+        );
+        assert_eq!(
             reduce_shell_hotkey(VK_D, true, false, true, true, false, false, 0),
             (false, None, 0)
         );
@@ -380,5 +423,49 @@ mod tests {
             0
         );
         REQUESTED.store(0, Ordering::Release);
+    }
+
+    #[test]
+    fn screen_snip_action_round_trips_through_the_bounded_queue() {
+        REQUESTED.store(0, Ordering::Release);
+        request(ShellHotkeyAction::OpenScreenSnip);
+        let code = REQUESTED.swap(0, Ordering::AcqRel);
+        assert_eq!(code, ShellHotkeyAction::OpenScreenSnip as u32);
+        assert_eq!(
+            ShellHotkeyAction::from_code(code),
+            Some(ShellHotkeyAction::OpenScreenSnip)
+        );
+    }
+
+    #[test]
+    fn screen_snip_activation_is_fixed_fallible_and_has_no_fallback() {
+        let source = include_str!("shell_hotkey.rs");
+        let helper = source
+            .split("pub fn open_screen_snipping_overlay")
+            .nth(1)
+            .and_then(|tail| tail.split("unsafe extern").next())
+            .expect("screen snip helper");
+        for required in [
+            "ShellExecuteExW",
+            "w!(\"ms-screenclip:///?source=HotKey\")",
+            "SEE_MASK_FLAG_NO_UI",
+        ] {
+            assert!(
+                helper.contains(required),
+                "missing fixed protocol contract: {required}"
+            );
+        }
+        for forbidden in [
+            "explorer.exe",
+            "SnippingTool.exe",
+            "CreateProcess",
+            "keybd_event",
+            "SendInput",
+        ] {
+            assert!(
+                !helper.contains(forbidden),
+                "forbidden screen snip fallback: {forbidden}"
+            );
+        }
     }
 }

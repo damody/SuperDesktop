@@ -5383,6 +5383,16 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                                 trace_action("shell-hotkey:search");
                                             }
                                         }
+                                        ShellHotkeyAction::OpenScreenSnip => {
+                                            trace_action("shell-hotkey:screen-snip-requested");
+                                            match platform_win::common::shell_hotkey::open_screen_snipping_overlay() {
+                                                Ok(()) => trace_action("shell-hotkey:screen-snip-accepted"),
+                                                Err(error) => report_error(
+                                                    "shell-hotkey:screen-snip",
+                                                    error,
+                                                ),
+                                            }
+                                        }
                                         ShellHotkeyAction::OpenTaskView => {
                                             let callback = refresh_handles.iter().find_map(|handle| {
                                                 handle
@@ -6041,6 +6051,10 @@ mod live_parity_tests {
             "ShellHotkeyAction::OpenTaskView",
             "ShellHotkeyAction::OpenNetworkPower",
             "ShellHotkeyAction::OpenNotifications",
+            "ShellHotkeyAction::OpenScreenSnip",
+            "open_screen_snipping_overlay()",
+            "shell-hotkey:screen-snip-requested",
+            "shell-hotkey:screen-snip-accepted",
             "adjacent_input_profile_id",
         ] {
             assert!(
