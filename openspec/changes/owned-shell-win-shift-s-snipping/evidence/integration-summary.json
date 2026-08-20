@@ -1,0 +1,9 @@
+{
+  "schema": "owned-shell-win-shift-s-snipping-integration/v1",
+  "nested_evidence_revision": "e557129e30ac1db302c10adde6cf8ca7c7942784",
+  "parent_integration_revision": "d7eadf1cda142a59e0f3fb1c30972c046395db84",
+  "parent_commit_subject": "整合 SuperDesktop Win Shift S 剪取工具",
+  "parent_changed_paths": ["SuperDesktop"],
+  "unrelated_staged_paths": [],
+  "final_task_closure_requires_gitlink_resynchronization": true
+}
