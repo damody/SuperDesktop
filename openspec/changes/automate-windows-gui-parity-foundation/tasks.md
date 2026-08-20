@@ -86,6 +86,7 @@
 - [x] 2.3.2 Correct taskbar/Start/context/overflow proportions and popup anchors from measured deltas.
 - [x] 2.3.3 Correct system flyout/notification/preview/Jump List proportions and popup lifecycles from measured deltas.
 - [ ] 2.3.4 Re-run the matrix and retain normalized reports, screenshots, traces, hashes, and recovery results.
+- [x] 2.3.5 Remove the implicit SuperExplorer taskbar entry and verify that only explicit pins or running windows use a normal task slot.
 
 ## 3. Close integration gates
 

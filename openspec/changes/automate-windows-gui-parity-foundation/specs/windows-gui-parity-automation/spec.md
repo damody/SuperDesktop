@@ -29,6 +29,10 @@ Taskbar, Start, system flyouts, notification overflow, system/taskbar context me
 - **WHEN** first-wave surfaces render at supported rows and DPI
 - **THEN** taskbar rows are 40 DIP, primary targets are at least 44×40 DIP, status targets at least 36×36 DIP, and taskbar popups use a nominal 8 DIP gap within 2–16 DIP
 
+#### Scenario: No implicit SuperExplorer pin
+- **WHEN** the owned taskbar renders without an explicit user pin or running SuperExplorer window
+- **THEN** it does not render or reserve space for a fixed SuperExplorer taskbar entry
+
 #### Scenario: Bounded system panels
 - **WHEN** input/volume/network/calendar or notification overflow opens
 - **THEN** it uses its declared 360/380/344 DIP preferred width, remains monitor-contained, and preserves declared internal proportions

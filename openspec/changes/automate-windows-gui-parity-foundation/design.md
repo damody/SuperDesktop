@@ -22,6 +22,8 @@ Scripts record physical rectangles and window DPI. Rust validation performs `phy
 
 First-wave shell chrome uses `WindowsGuiMetrics` constants for row heights, target sizes, widths, padding, radii, and gaps. Content-dependent heights remain bounded formulas. Composition owns monitor clamping and popup anchors; views own internal layout.
 
+The taskbar has no implicit SuperExplorer entry. SuperExplorer participates only through the ordinary tracked-task path when running, or through an explicit persisted user pin; Win+E and the desktop entry remain separate launch surfaces.
+
 ### Explorer policy is path-aware
 
 A source auditor classifies explicit allowed modules/actions: guardian recovery, installer rollback, test watchdog, and Return to default Explorer. Any Explorer token in normal product composition, UI callbacks, providers, or SuperExplorer launch paths fails. Headful cases also prove Explorer absence during measurement.
