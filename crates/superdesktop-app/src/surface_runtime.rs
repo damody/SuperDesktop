@@ -34,7 +34,9 @@ use platform_win::common::{
     },
 };
 use raw_window_handle::{HasWindowHandle, RawWindowHandle};
-use settings_store::{DesktopSortDirection, DesktopSortKey, TaskbarSearchMode, TaskbarSettings};
+use settings_store::{
+    DesktopSortDirection, DesktopSortKey, TaskbarAlignment, TaskbarSearchMode, TaskbarSettings,
+};
 use shell_provider_protocol::{
     CURRENT_PROTOCOL, CommandDescriptor, CommandId, CommandRisk, Envelope, IconData, IconKey,
     JumpListRequest, MenuContext, MenuEnumeration, MenuInvocation, NotificationEvent,
@@ -2370,12 +2372,14 @@ fn start_window_geometry(
     monitor: &MonitorRecord,
     shell: bool,
     taskbar_rows: u8,
+    alignment: TaskbarAlignment,
 ) -> StartWindowGeometry {
     let scale = monitor.dpi_x as f32 / 96.0;
     let monitor_width = (monitor.work_area.right - monitor.work_area.left) as f32 / scale;
     let width = (monitor_width - WindowsGuiMetrics::START_HORIZONTAL_MARGIN * 2.0)
         .clamp(1.0, WindowsGuiMetrics::START_WIDTH);
     let work_left = monitor.work_area.left as f32 / scale;
+    let work_right = monitor.work_area.right as f32 / scale;
     let work_top = monitor.work_area.top as f32 / scale;
     let taskbar_bottom = if shell {
         monitor.bounds.bottom as f32 / scale
@@ -2387,16 +2391,27 @@ fn start_window_geometry(
         - WindowsGuiMetrics::START_TASKBAR_GAP)
         .max(work_top + 1.0);
     let height = (start_bottom - work_top).clamp(1.0, WindowsGuiMetrics::START_MAX_HEIGHT);
+    let centered_left = work_left + (monitor_width - width).max(0.0) / 2.0;
+    let desired_left = match alignment {
+        TaskbarAlignment::Left => work_left + WindowsGuiMetrics::START_HORIZONTAL_MARGIN,
+        TaskbarAlignment::Center => centered_left,
+    };
+    let maximum_left = (work_right - width).max(work_left);
     StartWindowGeometry {
-        left: work_left + (monitor_width - width).max(0.0) / 2.0,
+        left: desired_left.clamp(work_left, maximum_left),
         top: (start_bottom - height).max(work_top),
         width,
         height,
     }
 }
 
-fn start_options(monitor: &MonitorRecord, shell: bool, taskbar_rows: u8) -> WindowOptions {
-    let geometry = start_window_geometry(monitor, shell, taskbar_rows);
+fn start_options(
+    monitor: &MonitorRecord,
+    shell: bool,
+    taskbar_rows: u8,
+    alignment: TaskbarAlignment,
+) -> WindowOptions {
+    let geometry = start_window_geometry(monitor, shell, taskbar_rows, alignment);
     WindowOptions {
         window_bounds: Some(WindowBounds::Windowed(Bounds {
             origin: point(px(geometry.left), px(geometry.top)),
@@ -4033,7 +4048,15 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                 let persist_store = Rc::clone(&start_settings_store);
                                 let persist_target = Rc::clone(&start_settings_target);
                                 let persist_settings = Rc::clone(&start_persisted_settings);
-                                let opened = app.open_window(start_options(&start_monitor, shell, start_taskbar_rows), move |window, cx| {
+                                let start_alignment = {
+                                    start_persisted_settings.borrow().taskbar.alignment
+                                };
+                                let opened = app.open_window(start_options(
+                                    &start_monitor,
+                                    shell,
+                                    start_taskbar_rows,
+                                    start_alignment,
+                                ), move |window, cx| {
                                     window.activate_window();
                                     let provider = Rc::clone(&search_provider);
                                     let dismiss_slot = Rc::clone(&dismiss_slot);
@@ -5959,7 +5982,7 @@ mod live_parity_tests {
     use gpui::{WindowBounds, point, px};
     use platform_win::common::appbar_shell_hook::OwnedShellHookEvent;
     use platform_win::common::monitor_dpi_start::ScreenRect;
-    use settings_store::{TaskbarSearchMode, TaskbarSettings};
+    use settings_store::{TaskbarAlignment, TaskbarSearchMode, TaskbarSettings};
     use std::collections::{BTreeMap, BTreeSet};
     use std::path::Path;
     use std::time::Instant;
@@ -6417,7 +6440,7 @@ mod live_parity_tests {
     }
 
     #[test]
-    fn start_geometry_centers_clamps_and_preserves_bottom_gap() {
+    fn start_geometry_defaults_left_centers_on_request_and_preserves_bottom_gap() {
         let monitor = MonitorRecord {
             device_name: "fixture".into(),
             primary: true,
@@ -6436,19 +6459,23 @@ mod live_parity_tests {
             dpi_x: 168,
             dpi_y: 168,
         };
-        let geometry = start_window_geometry(&monitor, false, 1);
+        let left_geometry = start_window_geometry(&monitor, false, 1, TaskbarAlignment::Left);
+        let center_geometry = start_window_geometry(&monitor, false, 1, TaskbarAlignment::Center);
         let logical_width = 1920.0 / 1.75;
         let logical_bottom = 1000.0 / 1.75 - 40.0;
-        assert_eq!(geometry.width, 640.0);
-        assert!((geometry.left - (logical_width - 640.0) / 2.0).abs() < 0.01);
-        assert!((logical_bottom - geometry.top - geometry.height - 12.0).abs() < 0.01);
+        assert_eq!(left_geometry.width, 640.0);
+        assert!((left_geometry.left - 12.0).abs() < 0.01);
+        assert!((center_geometry.left - (logical_width - 640.0) / 2.0).abs() < 0.01);
+        assert!((logical_bottom - left_geometry.top - left_geometry.height - 12.0).abs() < 0.01);
+        assert_eq!(left_geometry.top, center_geometry.top);
+        assert_eq!(left_geometry.height, center_geometry.height);
 
         let mut small = monitor;
         small.work_area.right = 500;
         small.work_area.bottom = 400;
         small.dpi_x = 96;
         small.dpi_y = 96;
-        let geometry = start_window_geometry(&small, false, 1);
+        let geometry = start_window_geometry(&small, false, 1, TaskbarAlignment::Left);
         assert_eq!((geometry.left, geometry.top), (12.0, 0.0));
         assert_eq!((geometry.width, geometry.height), (476.0, 348.0));
     }
@@ -6473,8 +6500,8 @@ mod live_parity_tests {
             dpi_x: 168,
             dpi_y: 168,
         };
-        let preview = start_window_geometry(&monitor, false, 2);
-        let shell = start_window_geometry(&monitor, true, 2);
+        let preview = start_window_geometry(&monitor, false, 2, TaskbarAlignment::Left);
+        let shell = start_window_geometry(&monitor, true, 2, TaskbarAlignment::Left);
         let preview_bottom = 2020.0 / 1.75 - 80.0 - 12.0;
         let shell_bottom = 2160.0 / 1.75 - 80.0 - 12.0;
         assert!((preview.top + preview.height - preview_bottom).abs() < 0.01);
@@ -6509,19 +6536,52 @@ mod live_parity_tests {
             let work_width = 3840.0 / scale;
             for shell in [false, true] {
                 for rows in 1..=3 {
-                    let geometry = start_window_geometry(&monitor, shell, rows);
-                    let taskbar_bottom = if shell { 2160.0 } else { 2040.0 } / scale;
-                    let start_bottom = taskbar_bottom - 40.0 * rows as f32 - 12.0;
-                    assert_eq!(geometry.width, 640.0_f32.min(work_width - 24.0));
-                    assert_eq!(geometry.height, 720.0_f32.min(start_bottom - work_top));
-                    assert!(
-                        (geometry.left - (work_left + (work_width - geometry.width) / 2.0)).abs()
-                            < 0.01
-                    );
-                    assert!(geometry.top >= work_top);
-                    assert!((geometry.top + geometry.height - start_bottom).abs() < 0.01);
+                    for alignment in [TaskbarAlignment::Left, TaskbarAlignment::Center] {
+                        let geometry = start_window_geometry(&monitor, shell, rows, alignment);
+                        let taskbar_bottom = if shell { 2160.0 } else { 2040.0 } / scale;
+                        let start_bottom = taskbar_bottom - 40.0 * rows as f32 - 12.0;
+                        assert_eq!(geometry.width, 640.0_f32.min(work_width - 24.0));
+                        assert_eq!(geometry.height, 720.0_f32.min(start_bottom - work_top));
+                        let expected_left = match alignment {
+                            TaskbarAlignment::Left => work_left + 12.0,
+                            TaskbarAlignment::Center => {
+                                work_left + (work_width - geometry.width) / 2.0
+                            }
+                        };
+                        assert!((geometry.left - expected_left).abs() < 0.01);
+                        assert!(geometry.top >= work_top);
+                        assert!((geometry.top + geometry.height - start_bottom).abs() < 0.01);
+                    }
                 }
             }
+        }
+    }
+
+    #[test]
+    fn start_geometry_clamps_both_alignments_inside_extremely_narrow_work_area() {
+        let monitor = MonitorRecord {
+            device_name: "narrow-offset".into(),
+            primary: false,
+            bounds: ScreenRect {
+                left: 300,
+                top: 100,
+                right: 310,
+                bottom: 500,
+            },
+            work_area: ScreenRect {
+                left: 300,
+                top: 100,
+                right: 310,
+                bottom: 460,
+            },
+            dpi_x: 96,
+            dpi_y: 96,
+        };
+        for alignment in [TaskbarAlignment::Left, TaskbarAlignment::Center] {
+            let geometry = start_window_geometry(&monitor, false, 1, alignment);
+            assert_eq!(geometry.width, 1.0);
+            assert!(geometry.left >= 300.0);
+            assert!(geometry.left + geometry.width <= 310.0);
         }
     }
 
@@ -6599,6 +6659,11 @@ mod live_parity_tests {
             "let existing_jump_list = *jump_list_window_for_taskbar.borrow()",
             "let existing_context = *context_window_for_taskbar.borrow()",
             "let existing_settings = *settings_slot_for_action.borrow()",
+            "let start_alignment = {",
+            "start_persisted_settings.borrow().taskbar.alignment",
+            "start_options(",
+            "ShellHotkeyAction::OpenSearch",
+            "Rc::clone(&callbacks.start)",
             "taskbar:monitor-geometry-reconciled",
             "\"taskbar:monitor-geometry\"",
         ] {

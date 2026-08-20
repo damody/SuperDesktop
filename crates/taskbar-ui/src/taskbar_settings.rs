@@ -650,7 +650,7 @@ impl TaskbarSettingsModel {
                 TaskbarSettingId::Alignment,
                 TaskbarSettingsSection::Behaviors,
                 "Taskbar alignment",
-                "Choose where taskbar buttons appear",
+                "Choose where taskbar buttons and Start appear",
                 match s.alignment {
                     TaskbarAlignment::Left => "Left",
                     TaskbarAlignment::Center => "Center",
@@ -866,7 +866,7 @@ fn localized_row(row: &TaskbarSettingRow, zh: bool) -> (String, String, String) 
         TaskbarSettingId::PenMenu => "使用手寫筆時顯示功能表圖示",
         TaskbarSettingId::TouchKeyboard => "顯示觸控式鍵盤圖示",
         TaskbarSettingId::OtherTrayIcons => "選擇溢位區域顯示的圖示",
-        TaskbarSettingId::Alignment => "選擇工作列按鈕顯示位置",
+        TaskbarSettingId::Alignment => "選擇工作列按鈕與開始選單的顯示位置",
         TaskbarSettingId::Labels => "顯示可閱讀的應用程式標籤",
         TaskbarSettingId::CombineGroups => "將相同應用程式的視窗分組",
         TaskbarSettingId::Previews => "游標停留時顯示縮圖預覽",
@@ -1424,6 +1424,45 @@ mod tests {
         assert_eq!(model.settings(), &authoritative_before_failure);
         assert_eq!(model.revision(), revision_before_failure);
         assert_eq!(model.error(), Some("simulated atomic save failure"));
+    }
+
+    #[test]
+    fn alignment_defaults_left_toggles_both_directions_and_describes_start() {
+        let mut model = TaskbarSettingsModel::new(TaskbarSettings::default(), 12);
+        assert_eq!(model.settings().alignment, TaskbarAlignment::Left);
+        let row = model
+            .rows()
+            .into_iter()
+            .find(|row| row.id == TaskbarSettingId::Alignment)
+            .expect("alignment row");
+        assert_eq!(row.value, "Left");
+        assert_eq!(
+            localized_row(&row, false).1,
+            "Choose where taskbar buttons and Start appear"
+        );
+        assert_eq!(
+            localized_row(&row, true).1,
+            "選擇工作列按鈕與開始選單的顯示位置"
+        );
+
+        let Some(TaskbarSettingsEffect::Save {
+            candidate: centered,
+            base_revision: 12,
+        }) = model.activate(TaskbarSettingId::Alignment)
+        else {
+            panic!("center alignment save effect")
+        };
+        assert_eq!(centered.alignment, TaskbarAlignment::Center);
+        model.apply_saved(centered, 13);
+
+        let Some(TaskbarSettingsEffect::Save {
+            candidate: left,
+            base_revision: 13,
+        }) = model.activate(TaskbarSettingId::Alignment)
+        else {
+            panic!("left alignment save effect")
+        };
+        assert_eq!(left.alignment, TaskbarAlignment::Left);
     }
 
     #[test]
