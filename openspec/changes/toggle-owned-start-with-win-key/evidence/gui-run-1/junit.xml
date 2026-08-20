@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="SuperDesktop UTIT shell-parity" tests="1" failures="1" skipped="0">
+  <testcase classname="superdesktop.utit" name="Standalone Windows key opens and closes owned Start" time="7.452"><failure message="nonzero-exit" /></testcase>
+</testsuite>

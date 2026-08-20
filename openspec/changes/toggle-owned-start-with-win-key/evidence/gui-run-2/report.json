@@ -1,0 +1,80 @@
+{
+  "schema": "superdesktop-utit-run/v1",
+  "run_id": "gui-run-2",
+  "suite": "shell-parity",
+  "partial": true,
+  "started_unix_ms": 1787253165926,
+  "finished_unix_ms": 1787253168529,
+  "workspace": "\\\\?\\D:\\SuperExplorer\\SuperDesktop",
+  "host": {
+    "windows_build": 26200,
+    "architecture": "AMD64",
+    "interactive": true,
+    "monitor_count": 1,
+    "explorer_running": true,
+    "workspace_revision": "2810f50403079f93f776e41206f65183f9eaec13",
+    "tools": [
+      "cargo",
+      "certutil",
+      "git",
+      "openspec",
+      "powershell"
+    ]
+  },
+  "counts": {
+    "selected": 1,
+    "passed": 1,
+    "failed": 0,
+    "blocked": 0,
+    "skipped": 0,
+    "not_applicable": 0
+  },
+  "decision": "partial",
+  "cases": [
+    {
+      "id": "gui-win-key-start-toggle",
+      "title": "Standalone Windows key opens and closes owned Start",
+      "state": "passed",
+      "reason": "passed",
+      "duration_ms": 2472,
+      "exit_code": 0,
+      "timed_out": false,
+      "argv": [
+        "powershell.exe",
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "D:\\SuperExplorer\\SuperDesktop\\scripts\\capture-win-key-start-toggle.ps1",
+        "-Workspace",
+        "D:\\SuperExplorer\\SuperDesktop",
+        "-EvidenceDirectory",
+        "D:\\SuperExplorer\\SuperDesktop\\openspec\\changes\\toggle-owned-start-with-win-key\\evidence\\gui-run-2\\cases\\gui-win-key-start-toggle/win-key-start"
+      ],
+      "stdout": {
+        "path": "cases/gui-win-key-start-toggle/stdout.log",
+        "bytes": 1764,
+        "sha256": "9410946d498e09008c67c4f5fafd0c1895d39112beb2ae99676bfe1a96f81738"
+      },
+      "stderr": null,
+      "artifacts": [
+        {
+          "path": "cases/gui-win-key-start-toggle/win-key-start/headful-report.json",
+          "bytes": 1764,
+          "sha256": "9410946d498e09008c67c4f5fafd0c1895d39112beb2ae99676bfe1a96f81738"
+        },
+        {
+          "path": "cases/gui-win-key-start-toggle/win-key-start/start-open.png",
+          "bytes": 124564,
+          "sha256": "46f36fdf053a18546537a448b52ab28059b38f55558b0dba5711e7dc8d35d9a5"
+        },
+        {
+          "path": "cases/gui-win-key-start-toggle/win-key-start/win-key-start.log",
+          "bytes": 715,
+          "sha256": "5312bff0827d9e9d1a5cf79ff5ee1a86dafd4ab791470475cc8e8e2f837e0b45"
+        }
+      ],
+      "recovery_verified": true
+    }
+  ]
+}

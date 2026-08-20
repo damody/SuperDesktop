@@ -1,0 +1,25 @@
+{
+  "nested_revision": "2810f50403079f93f776e41206f65183f9eaec13",
+  "parent_revision": "3d702487ffaa5edc6e3cc83fd416e155ab968396",
+  "tracked_worktrees_clean_before_change": true,
+  "preserved_untracked_roots": [
+    "openspec/changes/align-start-footer-windows11-parity/evidence/",
+    "openspec/changes/align-start-menu-with-taskbar-setting/",
+    "openspec/changes/owned-context-popup-topmost/evidence/resize-1/",
+    "utit-results/",
+    "all pre-existing parent build, evidence, fixture dist, and temporary outputs"
+  ],
+  "current_hotkey_path": [
+    "platform-win::shell_hotkey::keyboard_hook",
+    "platform-win::shell_hotkey::reduce_shell_hotkey",
+    "ShellHotkeys::take_requested",
+    "superdesktop-app foreground refresh action match"
+  ],
+  "baseline_behavior": {
+    "standalone_windows_key": "passed onward with no owned Start action",
+    "supported_chords": "queued once and matching non-Win key-up consumed",
+    "start_callback": "TaskbarCallbacks::start toggles one guarded owned Start window",
+    "search_route": "OpenSearch resolves and invokes callbacks.start",
+    "hook_scope": "run(shell) only"
+  }
+}

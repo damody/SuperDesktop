@@ -1,0 +1,26 @@
+{
+  "timestamp": "2026-08-21T03:14:41+08:00",
+  "focused": {
+    "cargo_fmt_check": 0,
+    "powershell_parser": 0,
+    "platform_win_shell_hotkey": { "exit_status": 0, "passed": 9 },
+    "superdesktop_app_start_contract": { "exit_status": 0, "passed": 1 },
+    "utit_catalog_contract": { "exit_status": 0, "passed": 1 }
+  },
+  "workspace": {
+    "command": "cargo test --workspace --locked --offline",
+    "exit_status": 0
+  },
+  "clippy": {
+    "command": "cargo clippy --workspace --all-targets --locked --offline -- -D warnings",
+    "exit_status": 0,
+    "warnings_denied": true
+  },
+  "release": {
+    "command": "cargo build --release -p superdesktop-app",
+    "exit_status": 0,
+    "path": "target/release/superdesktop-app.exe",
+    "sha256": "B1B02FF6B45B2069DC61F37205AD2A6B9E3FBD12C216EEEF37FEE6A4FB7C4FAC",
+    "matches_gui_candidate": true
+  }
+}

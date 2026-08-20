@@ -5520,6 +5520,27 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                                 trace_action("shell-hotkey:search");
                                             }
                                         }
+                                        ShellHotkeyAction::ToggleStart => {
+                                            let callback = refresh_handles.iter().find_map(|handle| {
+                                                handle
+                                                    .update(app, |view, _, _| {
+                                                        view.callbacks.as_ref().map(|callbacks| {
+                                                            Rc::clone(&callbacks.start)
+                                                        })
+                                                    })
+                                                    .ok()
+                                                    .flatten()
+                                            });
+                                            if let Some(callback) = callback {
+                                                callback(app);
+                                                trace_action("shell-hotkey:start-toggle");
+                                            } else {
+                                                report_error(
+                                                    "shell-hotkey:start-toggle",
+                                                    "no live taskbar Start callback is available",
+                                                );
+                                            }
+                                        }
                                         ShellHotkeyAction::OpenScreenSnip => {
                                             trace_action("shell-hotkey:screen-snip-requested");
                                             if let Err(error) = std::thread::Builder::new()
@@ -6481,6 +6502,7 @@ mod live_parity_tests {
             "ShellHotkeyAction::OpenNetworkPower",
             "ShellHotkeyAction::OpenNotifications",
             "ShellHotkeyAction::OpenScreenSnip",
+            "ShellHotkeyAction::ToggleStart",
             "open_screen_snipping_overlay()",
             "shell-hotkey:screen-snip-requested",
             "shell-hotkey:screen-snip-accepted",
@@ -7065,7 +7087,10 @@ mod live_parity_tests {
             "start_persisted_settings.borrow().taskbar.alignment",
             "start_options(",
             "ShellHotkeyAction::OpenSearch",
+            "ShellHotkeyAction::ToggleStart",
             "Rc::clone(&callbacks.start)",
+            "shell-hotkey:start-toggle",
+            "no live taskbar Start callback is available",
             "taskbar:monitor-geometry-reconciled",
             "\"taskbar:monitor-geometry\"",
         ] {

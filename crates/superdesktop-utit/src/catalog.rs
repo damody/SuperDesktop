@@ -417,6 +417,24 @@ pub fn catalog() -> Vec<TestCase> {
             false,
             75,
         ),
+        headful_case(
+            "gui-win-key-start-toggle",
+            "Standalone Windows key opens and closes owned Start",
+            "capture-win-key-start-toggle.ps1",
+            &[
+                "-Workspace",
+                "{workspace}",
+                "-EvidenceDirectory",
+                "{out}/win-key-start",
+            ],
+            &[
+                "win-key-start/headful-report.json",
+                "win-key-start/start-open.png",
+                "win-key-start/win-key-start.log",
+            ],
+            false,
+            75,
+        ),
     ];
     for case in &mut cases {
         if matches!(
@@ -432,6 +450,7 @@ pub fn catalog() -> Vec<TestCase> {
                 | "gui-taskbar-auto-hide"
                 | "gui-taskbar-hover-preview"
                 | "gui-win-shift-s-snipping"
+                | "gui-win-key-start-toggle"
                 | "unit-taskbar-ui"
         ) {
             case.tags.push("gui-parity".into());
@@ -633,6 +652,39 @@ mod tests {
                 .iter()
                 .any(|artifact| artifact.path.ends_with(".png"))
         );
+    }
+
+    #[test]
+    fn win_key_start_toggle_case_is_mandatory_visual_and_recovery_bounded() {
+        let case = catalog()
+            .into_iter()
+            .find(|case| case.id == "gui-win-key-start-toggle")
+            .expect("Win-key Start toggle case");
+        assert!(case.mandatory && !case.explorer_free);
+        assert!(matches!(case.recovery, Recovery::None));
+        for suffix in ["headful-report.json", "start-open.png", "win-key-start.log"] {
+            assert!(
+                case.artifacts
+                    .iter()
+                    .any(|artifact| artifact.path.ends_with(suffix)),
+                "missing Win-key Start artifact: {suffix}"
+            );
+        }
+        let source = include_str!("../../../scripts/capture-win-key-start-toggle.ps1");
+        for required in [
+            "Send-WindowsKey",
+            "start:owned-opened",
+            "start:closed",
+            "shell-hotkey:start-toggle",
+            "shell_restored",
+            "explorer_restored",
+            "finally",
+        ] {
+            assert!(
+                source.contains(required),
+                "missing recovery contract: {required}"
+            );
+        }
     }
 
     #[test]

@@ -1,0 +1,27 @@
+{
+    "schema":  "owned-win-key-start-toggle-headful/v1",
+    "result":  "failed",
+    "app_path":  "D:\\SuperExplorer\\SuperDesktop\\target\\release\\superdesktop-app.exe",
+    "app_sha256":  "B1B02FF6B45B2069DC61F37205AD2A6B9E3FBD12C216EEEF37FEE6A4FB7C4FAC",
+    "physical_gesture":  "Left Windows key down/up twice",
+    "injected_input":  true,
+    "observed":  {
+
+                 },
+    "screenshot":  "start-open.png",
+    "screenshot_sha256":  "0AE5C2E2203B8C4926D4B9C09588D31319ECADD38C6AEC7BA781DFCDB8A08F63",
+    "trace":  "win-key-start.log",
+    "trace_sha256":  "CE93DF6E8FB110F81B1F1B4E9A2FCF1EE3668D3188380B42527B5908B2CC8D55",
+    "shell_before":  {
+                         "present":  true,
+                         "value":  "explorer.exe"
+                     },
+    "shell_after":  {
+                        "present":  true,
+                        "value":  "explorer.exe"
+                    },
+    "shell_restored":  true,
+    "explorer_present_before":  true,
+    "explorer_restored":  true,
+    "failure":  "Second standalone Win key did not close owned Start"
+}

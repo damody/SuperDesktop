@@ -53,6 +53,7 @@ pub enum ShellHotkeyAction {
     AltTabCommit = 1 << 10,
     AltTabCancel = 1 << 11,
     OpenScreenSnip = 1 << 12,
+    ToggleStart = 1 << 13,
 }
 
 impl ShellHotkeyAction {
@@ -71,12 +72,14 @@ impl ShellHotkeyAction {
             1024 => Some(Self::AltTabCommit),
             2048 => Some(Self::AltTabCancel),
             4096 => Some(Self::OpenScreenSnip),
+            8192 => Some(Self::ToggleStart),
             _ => None,
         }
     }
 }
 
 static ACTIVE_KEY: AtomicU32 = AtomicU32::new(0);
+static WINDOWS_KEY_GESTURE: AtomicU32 = AtomicU32::new(0);
 static REQUESTED: AtomicU32 = AtomicU32::new(0);
 static ALT_TAB_ACTIVE: AtomicBool = AtomicBool::new(false);
 static ALT_TAB_DELTA: AtomicI32 = AtomicI32::new(0);
@@ -220,6 +223,95 @@ fn reduce_shell_hotkey(
     (false, None, active_key)
 }
 
+const WINDOWS_GESTURE_IDLE: u32 = 0;
+const WINDOWS_GESTURE_CANDIDATE_LWIN: u32 = 1;
+const WINDOWS_GESTURE_CANDIDATE_RWIN: u32 = 2;
+const WINDOWS_GESTURE_CANCELLED_LWIN: u32 = 3;
+const WINDOWS_GESTURE_CANCELLED_RWIN: u32 = 4;
+
+fn is_windows_key(vk_code: u32) -> bool {
+    vk_code == u32::from(VK_LWIN.0) || vk_code == u32::from(VK_RWIN.0)
+}
+
+fn candidate_windows_gesture(vk_code: u32) -> u32 {
+    if vk_code == u32::from(VK_LWIN.0) {
+        WINDOWS_GESTURE_CANDIDATE_LWIN
+    } else {
+        WINDOWS_GESTURE_CANDIDATE_RWIN
+    }
+}
+
+fn tracked_windows_key(state: u32) -> Option<u32> {
+    match state {
+        WINDOWS_GESTURE_CANDIDATE_LWIN | WINDOWS_GESTURE_CANCELLED_LWIN => {
+            Some(u32::from(VK_LWIN.0))
+        }
+        WINDOWS_GESTURE_CANDIDATE_RWIN | WINDOWS_GESTURE_CANCELLED_RWIN => {
+            Some(u32::from(VK_RWIN.0))
+        }
+        _ => None,
+    }
+}
+
+fn cancel_windows_gesture(state: u32) -> u32 {
+    match state {
+        WINDOWS_GESTURE_CANDIDATE_LWIN => WINDOWS_GESTURE_CANCELLED_LWIN,
+        WINDOWS_GESTURE_CANDIDATE_RWIN => WINDOWS_GESTURE_CANCELLED_RWIN,
+        _ => state,
+    }
+}
+
+fn reduce_standalone_windows_key(
+    vk_code: u32,
+    key_down: bool,
+    key_up: bool,
+    modifier_down: bool,
+    state: u32,
+) -> (bool, Option<ShellHotkeyAction>, u32) {
+    if key_down && is_windows_key(vk_code) {
+        if state == WINDOWS_GESTURE_IDLE {
+            let candidate = candidate_windows_gesture(vk_code);
+            return (
+                true,
+                None,
+                if modifier_down {
+                    cancel_windows_gesture(candidate)
+                } else {
+                    candidate
+                },
+            );
+        }
+        let next_state = if tracked_windows_key(state) == Some(vk_code) {
+            state
+        } else {
+            cancel_windows_gesture(state)
+        };
+        return (true, None, next_state);
+    }
+    if key_down {
+        return (false, None, cancel_windows_gesture(state));
+    }
+    if key_up && is_windows_key(vk_code) {
+        let matching = tracked_windows_key(state) == Some(vk_code);
+        let action = (matching
+            && matches!(
+                state,
+                WINDOWS_GESTURE_CANDIDATE_LWIN | WINDOWS_GESTURE_CANDIDATE_RWIN
+            ))
+        .then_some(ShellHotkeyAction::ToggleStart);
+        return (
+            true,
+            action,
+            if matching {
+                WINDOWS_GESTURE_IDLE
+            } else {
+                state
+            },
+        );
+    }
+    (false, None, state)
+}
+
 unsafe extern "system" fn keyboard_hook(code: i32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
     catch_unwind(AssertUnwindSafe(|| {
         if code != HC_ACTION as i32 || lparam.0 == 0 {
@@ -236,6 +328,7 @@ unsafe extern "system" fn keyboard_hook(code: i32, wparam: WPARAM, lparam: LPARA
         let alt = unsafe { GetAsyncKeyState(i32::from(VK_MENU.0)) } < 0;
         let shift = unsafe { GetAsyncKeyState(i32::from(VK_SHIFT.0)) } < 0;
         let active_key = ACTIVE_KEY.load(Ordering::Acquire);
+        let windows_key_gesture = WINDOWS_KEY_GESTURE.load(Ordering::Acquire);
         let alt_tab_active = ALT_TAB_ACTIVE.load(Ordering::Acquire);
         if (alt_tab_active || (key_down && alt && !windows_down && !control))
             && event.vkCode == VK_TAB
@@ -259,7 +352,16 @@ unsafe extern "system" fn keyboard_hook(code: i32, wparam: WPARAM, lparam: LPARA
             ALT_TAB_ACTIVE.store(false, Ordering::Release);
             request(ShellHotkeyAction::AltTabCommit);
         }
-        let (consume, request, next_key) = reduce_shell_hotkey(
+        let (windows_consume, windows_request, next_windows_key_gesture) =
+            reduce_standalone_windows_key(
+                event.vkCode,
+                key_down,
+                key_up,
+                control || alt || shift,
+                windows_key_gesture,
+            );
+        WINDOWS_KEY_GESTURE.store(next_windows_key_gesture, Ordering::Release);
+        let (chord_consume, chord_request, next_key) = reduce_shell_hotkey(
             event.vkCode,
             key_down,
             key_up,
@@ -270,10 +372,10 @@ unsafe extern "system" fn keyboard_hook(code: i32, wparam: WPARAM, lparam: LPARA
             active_key,
         );
         ACTIVE_KEY.store(next_key, Ordering::Release);
-        if let Some(request) = request {
+        if let Some(request) = windows_request.or(chord_request) {
             self::request(request);
         }
-        if consume {
+        if windows_consume || chord_consume {
             return LRESULT(1);
         }
         unsafe { CallNextHookEx(None, code, wparam, lparam) }
@@ -290,6 +392,7 @@ impl ShellHotkeys {
     pub fn start() -> Result<Self, String> {
         REQUESTED.store(0, Ordering::Release);
         ACTIVE_KEY.store(0, Ordering::Release);
+        WINDOWS_KEY_GESTURE.store(WINDOWS_GESTURE_IDLE, Ordering::Release);
         ALT_TAB_ACTIVE.store(false, Ordering::Release);
         ALT_TAB_DELTA.store(0, Ordering::Release);
         let (ready_tx, ready_rx) = mpsc::sync_channel(1);
@@ -323,6 +426,7 @@ impl ShellHotkeys {
                 }
                 let _ = unsafe { UnhookWindowsHookEx(hook) };
                 ACTIVE_KEY.store(0, Ordering::Release);
+                WINDOWS_KEY_GESTURE.store(WINDOWS_GESTURE_IDLE, Ordering::Release);
                 ALT_TAB_ACTIVE.store(false, Ordering::Release);
                 ALT_TAB_DELTA.store(0, Ordering::Release);
             })
@@ -391,6 +495,16 @@ impl Drop for ShellHotkeys {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::{Mutex, MutexGuard};
+
+    static TEST_REQUEST_LOCK: Mutex<()> = Mutex::new(());
+
+    fn lock_request_tests() -> MutexGuard<'static, ()> {
+        match TEST_REQUEST_LOCK.lock() {
+            Ok(guard) => guard,
+            Err(poisoned) => poisoned.into_inner(),
+        }
+    }
 
     #[test]
     fn reducer_routes_supported_shell_keys_once_and_passes_unsupported_chords() {
@@ -454,6 +568,93 @@ mod tests {
     }
 
     #[test]
+    fn standalone_windows_key_toggles_once_on_matching_release() {
+        for (key, candidate) in [
+            (u32::from(VK_LWIN.0), WINDOWS_GESTURE_CANDIDATE_LWIN),
+            (u32::from(VK_RWIN.0), WINDOWS_GESTURE_CANDIDATE_RWIN),
+        ] {
+            assert_eq!(
+                reduce_standalone_windows_key(key, true, false, false, WINDOWS_GESTURE_IDLE),
+                (true, None, candidate)
+            );
+            assert_eq!(
+                reduce_standalone_windows_key(key, true, false, false, candidate),
+                (true, None, candidate),
+                "repeat keydown must not emit or change eligibility"
+            );
+            assert_eq!(
+                reduce_standalone_windows_key(key, false, true, false, candidate),
+                (
+                    true,
+                    Some(ShellHotkeyAction::ToggleStart),
+                    WINDOWS_GESTURE_IDLE
+                )
+            );
+        }
+    }
+
+    #[test]
+    fn windows_chords_cancel_trailing_start_for_supported_and_unsupported_keys() {
+        let left = u32::from(VK_LWIN.0);
+        let candidate =
+            reduce_standalone_windows_key(left, true, false, false, WINDOWS_GESTURE_IDLE).2;
+        let (consume, action, cancelled) =
+            reduce_standalone_windows_key(VK_E, true, false, false, candidate);
+        assert_eq!((consume, action), (false, None));
+        assert_eq!(cancelled, WINDOWS_GESTURE_CANCELLED_LWIN);
+        assert_eq!(
+            reduce_shell_hotkey(VK_E, true, false, true, false, false, false, 0),
+            (true, Some(ShellHotkeyAction::OpenExplorer), VK_E)
+        );
+        assert_eq!(
+            reduce_standalone_windows_key(left, false, true, false, cancelled),
+            (true, None, WINDOWS_GESTURE_IDLE)
+        );
+
+        let unsupported =
+            reduce_standalone_windows_key(0x46, true, false, false, WINDOWS_GESTURE_CANDIDATE_LWIN);
+        assert_eq!(unsupported, (false, None, WINDOWS_GESTURE_CANCELLED_LWIN));
+        assert_eq!(
+            reduce_shell_hotkey(0x46, true, false, true, false, false, false, 0),
+            (false, None, 0)
+        );
+    }
+
+    #[test]
+    fn modified_dual_and_mismatched_windows_gestures_never_toggle() {
+        let left = u32::from(VK_LWIN.0);
+        let right = u32::from(VK_RWIN.0);
+        assert_eq!(
+            reduce_standalone_windows_key(left, true, false, true, WINDOWS_GESTURE_IDLE),
+            (true, None, WINDOWS_GESTURE_CANCELLED_LWIN)
+        );
+        assert_eq!(
+            reduce_standalone_windows_key(
+                right,
+                true,
+                false,
+                false,
+                WINDOWS_GESTURE_CANDIDATE_LWIN
+            ),
+            (true, None, WINDOWS_GESTURE_CANCELLED_LWIN)
+        );
+        assert_eq!(
+            reduce_standalone_windows_key(
+                right,
+                false,
+                true,
+                false,
+                WINDOWS_GESTURE_CANCELLED_LWIN
+            ),
+            (true, None, WINDOWS_GESTURE_CANCELLED_LWIN)
+        );
+        assert_eq!(
+            reduce_standalone_windows_key(0x70, false, true, false, WINDOWS_GESTURE_CANDIDATE_LWIN),
+            (false, None, WINDOWS_GESTURE_CANDIDATE_LWIN)
+        );
+    }
+
+    #[test]
     fn production_hook_is_shell_scoped_bounded_and_has_no_registerhotkey_fallback() {
         let source = include_str!("shell_hotkey.rs");
         let production = source.split("#[cfg(test)]").next().unwrap_or(source);
@@ -466,6 +667,9 @@ mod tests {
             "pending & !code",
             "ALT_TAB_DELTA",
             "ShellHotkeyAction::AltTabCommit",
+            "WINDOWS_KEY_GESTURE",
+            "reduce_standalone_windows_key",
+            "ShellHotkeyAction::ToggleStart",
         ] {
             assert!(
                 production.contains(required),
@@ -477,6 +681,7 @@ mod tests {
 
     #[test]
     fn alt_tab_queue_preserves_repeated_cycles_before_commit() {
+        let _guard = lock_request_tests();
         REQUESTED.store(0, Ordering::Release);
         ALT_TAB_DELTA.store(0, Ordering::Release);
         request(ShellHotkeyAction::AltTabForward);
@@ -492,6 +697,7 @@ mod tests {
 
     #[test]
     fn screen_snip_action_round_trips_through_the_bounded_queue() {
+        let _guard = lock_request_tests();
         REQUESTED.store(0, Ordering::Release);
         request(ShellHotkeyAction::OpenScreenSnip);
         let code = REQUESTED.swap(0, Ordering::AcqRel);
@@ -499,6 +705,19 @@ mod tests {
         assert_eq!(
             ShellHotkeyAction::from_code(code),
             Some(ShellHotkeyAction::OpenScreenSnip)
+        );
+    }
+
+    #[test]
+    fn start_toggle_action_round_trips_through_the_bounded_queue() {
+        let _guard = lock_request_tests();
+        REQUESTED.store(0, Ordering::Release);
+        request(ShellHotkeyAction::ToggleStart);
+        let code = REQUESTED.swap(0, Ordering::AcqRel);
+        assert_eq!(code, ShellHotkeyAction::ToggleStart as u32);
+        assert_eq!(
+            ShellHotkeyAction::from_code(code),
+            Some(ShellHotkeyAction::ToggleStart)
         );
     }
 

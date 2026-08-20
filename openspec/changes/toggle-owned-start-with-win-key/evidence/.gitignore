@@ -1,0 +1,5 @@
+gui-run-*/cases/*/win-key-start/profile/
+gui-run-*/cases/*/stderr.log
+gui-run-*/cases/*/stdout.log
+gui-run-*/cases/*/win-key-start/app-stderr.log
+gui-run-*/cases/*/win-key-start/app-stdout.log

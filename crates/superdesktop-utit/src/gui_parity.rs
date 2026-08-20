@@ -322,6 +322,28 @@ pub fn gui_parity_manifest() -> Vec<GuiSurfaceSpec> {
             mandatory: true,
         },
         GuiSurfaceSpec {
+            id: "win-key-start-toggle",
+            owner: "platform-win",
+            reference_family: "windows-11-native-hotkey",
+            case_ids: &["gui-win-key-start-toggle"],
+            variants: &[GuiVariant {
+                mode: "shell",
+                theme: "system",
+                locale: "system",
+                dpi: 96,
+                rows: 1,
+            }],
+            rules: &[GeometryRule::Contained {
+                inner: "owned-start",
+                outer: "monitor",
+            }],
+            required_controls: &["owned-start"],
+            required_actions: &["keyboard-open", "keyboard-close"],
+            artifacts: HEADFUL_ARTIFACTS,
+            explorer_policy: ManifestExplorerPolicy::RecoveryOnly,
+            mandatory: true,
+        },
+        GuiSurfaceSpec {
             id: "task-view-alt-tab",
             owner: "taskbar-ui",
             reference_family: "windows-11-26200",

@@ -1,0 +1,40 @@
+{
+    "schema":  "owned-win-key-start-toggle-headful/v1",
+    "result":  "passed",
+    "app_path":  "D:\\SuperExplorer\\SuperDesktop\\target\\release\\superdesktop-app.exe",
+    "app_sha256":  "B1B02FF6B45B2069DC61F37205AD2A6B9E3FBD12C216EEEF37FEE6A4FB7C4FAC",
+    "physical_gesture":  "Left Windows key down/up twice",
+    "injected_input":  true,
+    "observed":  {
+                     "app_process_id":  28480,
+                     "start_handle":  1574352,
+                     "start_bounds":  [
+                                          9,
+                                          803,
+                                          1153,
+                                          2075
+                                      ],
+                     "open_observed":  true,
+                     "close_observed":  true,
+                     "exact_toggle_trace_count":  2,
+                     "superdesktop_survived":  true,
+                     "explorer_absent_during_capture":  true,
+                     "runtime_error_signature_absent":  true
+                 },
+    "screenshot":  "start-open.png",
+    "screenshot_sha256":  "08B010367E4310A7DF42440EC673EF2662E99C6CD1792E3D6A91F137A0CC3B57",
+    "trace":  "win-key-start.log",
+    "trace_sha256":  "340C31E355F858EEF91114E8AE1CE2D3CA40C58772B67DCE52D2505DB826B31F",
+    "shell_before":  {
+                         "present":  true,
+                         "value":  "explorer.exe"
+                     },
+    "shell_after":  {
+                        "present":  true,
+                        "value":  "explorer.exe"
+                    },
+    "shell_restored":  true,
+    "explorer_present_before":  true,
+    "explorer_restored":  true,
+    "failure":  null
+}
