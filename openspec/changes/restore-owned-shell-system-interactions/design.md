@@ -27,7 +27,9 @@ The hook records left/right Windows and Shift down/up state and uses it as the p
 
 ### Merge the minimized shelf into Show Desktop restore planning
 
-The first Win+D records only exact windows successfully minimized. The second planning snapshot is the live task snapshot transformed through `MinimizedWindowShelf`, which truthfully re-exposes request-owned hidden iconic windows to the model. Restore still requires matching HWND, process ID, stable window identity, eligibility, and minimized state. This preserves the hidden-window UI fix without weakening stale-HWND protection.
+The first Win+D records only exact windows successfully minimized. `MinimizedWindowShelf` keeps the window iconic and visible to Windows but saves its `WINDOWPLACEMENT` and moves only the minimized-icon position beyond the virtual screen; it does not use `SW_HIDE`, which physical evidence proved non-reversible for some application frameworks. The second Win+D restores the default minimized-icon placement before restoring the exact window. Matching HWND, process ID, stable window identity, eligibility, and minimized state remain mandatory.
+
+This is B-level correction `B-2026-08-21-MINIMIZED-PLACEMENT`: physical UTIT showed that externally hidden WinForms windows stayed invisible after a successful `SW_RESTORE`. The correction retains the approved hidden-shelf behavior and exact-identity gates while replacing the unreasonable native mechanism; all prior Show Desktop evidence is stale and rerun.
 
 ### Preserve the fixed screen-clipping protocol route
 
@@ -39,7 +41,9 @@ Pointer motion mutates a local displayed value immediately and submits the lates
 
 ### Resynchronize identity-bound commands once
 
-Tray and input commands validate the current host generation and exact native identity. A stale-generation response triggers one snapshot refresh and one replay only when the same target still exists. Input activation uses the exact TSF/HKL identity and a bounded observation loop that refreshes authoritative foreground/profile state until success or deadline. Timeouts never fabricate success.
+Tray and ordinary status commands validate the current host generation and exact native identity. A stale-generation response triggers one snapshot refresh and one replay only when the same target still exists. Input activation is the exception required by Windows' per-thread TSF contract: the SuperDesktop foreground process validates and activates the exact TSF/HKL identity, performs a bounded local observation, and then lets the isolated status host publish subsequent authoritative snapshots. Timeouts never fabricate success.
+
+This is B-level correction `B-2026-08-21-FOREGROUND-TSF`: physical evidence proved that an out-of-process host can activate and observe its own TSF profile without changing the foreground GPUI thread, producing false deadline failures. Moving only the exact activation boundary into the foreground process preserves identity validation and provider isolation for observation while removing host-generation races from input switching.
 
 ### Keep native callbacks data-only
 

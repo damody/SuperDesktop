@@ -319,6 +319,15 @@ $explorerBefore = @(Get-Process explorer -ErrorAction SilentlyContinue | Select-
 $geometryRecords = @()
 
 try {
+    $arguments = @('--verification-capture-ms','20000')
+    if ($SuppressExplorer) { $arguments += '--shell' }
+    $process = Start-Process -FilePath $appPath -ArgumentList $arguments -PassThru
+    $deadline = [DateTime]::UtcNow.AddSeconds(5)
+    do {
+        Start-Sleep -Milliseconds 100
+        $process.Refresh()
+    } while ($process.MainWindowHandle -eq [IntPtr]::Zero -and [DateTime]::UtcNow -lt $deadline)
+    if ($process.MainWindowHandle -eq [IntPtr]::Zero) { throw 'SuperDesktop taskbar HWND did not appear.' }
     if ($SuppressExplorer) {
         if (-not (Test-Path -LiteralPath $explorerPath -PathType Leaf)) {
             throw "Missing Explorer recovery binary: $explorerPath"
@@ -342,15 +351,6 @@ try {
             throw 'Explorer suppression did not reach an absent state.'
         }
     }
-    $arguments = @('--verification-capture-ms','20000')
-    if ($SuppressExplorer) { $arguments += '--shell' }
-    $process = Start-Process -FilePath $appPath -ArgumentList $arguments -PassThru
-    $deadline = [DateTime]::UtcNow.AddSeconds(5)
-    do {
-        Start-Sleep -Milliseconds 100
-        $process.Refresh()
-    } while ($process.MainWindowHandle -eq [IntPtr]::Zero -and [DateTime]::UtcNow -lt $deadline)
-    if ($process.MainWindowHandle -eq [IntPtr]::Zero) { throw 'SuperDesktop taskbar HWND did not appear.' }
     $taskbar = [System.Windows.Automation.AutomationElement]::FromHandle($process.MainWindowHandle)
     $button = [System.Windows.Automation.ControlType]::Button
 

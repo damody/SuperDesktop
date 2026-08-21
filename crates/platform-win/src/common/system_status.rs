@@ -48,8 +48,8 @@ use windows::Win32::{
         TextServices::{
             CLSID_TF_InputProcessorProfiles, GUID_TFCAT_TIP_KEYBOARD, ITfInputProcessorProfileMgr,
             ITfInputProcessorProfiles, TF_INPUTPROCESSORPROFILE, TF_IPP_FLAG_ENABLED,
-            TF_IPPMF_DONTCARECURRENTINPUTLANGUAGE, TF_IPPMF_FORPROCESS, TF_IPPMF_FORSESSION,
-            TF_PROFILETYPE_INPUTPROCESSOR, TF_PROFILETYPE_KEYBOARDLAYOUT,
+            TF_IPPMF_FORPROCESS, TF_IPPMF_FORSESSION, TF_PROFILETYPE_INPUTPROCESSOR,
+            TF_PROFILETYPE_KEYBOARDLAYOUT,
         },
         WindowsAndMessaging::{
             GetForegroundWindow, GetWindowThreadProcessId, PostMessageW, SW_SHOWNORMAL,
@@ -848,15 +848,51 @@ pub fn request_input_profile_for_session(
     }
     if profile_id.starts_with("input:v1:") {
         let _apartment = ComApartment::enter()?;
-        let (profiles, _) = enumerate_tsf_input_profiles()?;
+        let (profiles, active_profile_id) = enumerate_tsf_input_profiles()?;
         let profile = profiles
-            .into_iter()
+            .iter()
             .find(|profile| profile.dto.id == profile_id)
+            .cloned()
             .ok_or_else(|| "requested input profile identity is stale".to_owned())?;
         if profile.profile_type == TF_PROFILETYPE_INPUTPROCESSOR {
+            let language_profiles: ITfInputProcessorProfiles =
+                unsafe { CoCreateInstance(&CLSID_TF_InputProcessorProfiles, None, CLSCTX_ALL) }
+                    .map_err(|error| format!("TSF language profiles are unavailable: {error}"))?;
+            unsafe { language_profiles.ChangeCurrentLanguage(profile.dto.language_id) }
+                .map_err(|error| format!("TSF current language request failed: {error}"))?;
+            unsafe {
+                language_profiles.ActivateLanguageProfile(
+                    &profile.class_id,
+                    profile.dto.language_id,
+                    &profile.profile_id,
+                )
+            }
+            .map_err(|error| format!("TSF language profile request failed: {error}"))?;
             let manager: ITfInputProcessorProfileMgr =
                 unsafe { CoCreateInstance(&CLSID_TF_InputProcessorProfiles, None, CLSCTX_ALL) }
                     .map_err(|error| format!("TSF profile manager is unavailable: {error}"))?;
+            let active_language_id = profiles
+                .iter()
+                .find(|candidate| candidate.dto.id == active_profile_id)
+                .map(|candidate| candidate.dto.language_id);
+            if active_language_id != Some(profile.dto.language_id)
+                && let Some(layout) = profiles.iter().find(|candidate| {
+                    candidate.profile_type == TF_PROFILETYPE_KEYBOARDLAYOUT
+                        && candidate.dto.language_id == profile.dto.language_id
+                })
+            {
+                unsafe {
+                    manager.ActivateProfile(
+                        layout.profile_type,
+                        layout.dto.language_id,
+                        &layout.class_id,
+                        &layout.profile_id,
+                        layout.hkl,
+                        TF_IPPMF_FORSESSION | TF_IPPMF_FORPROCESS,
+                    )
+                }
+                .map_err(|error| format!("TSF input language request failed: {error}"))?;
+            }
             unsafe {
                 manager.ActivateProfile(
                     profile.profile_type,
@@ -864,9 +900,7 @@ pub fn request_input_profile_for_session(
                     &profile.class_id,
                     &profile.profile_id,
                     profile.hkl,
-                    TF_IPPMF_FORSESSION
-                        | TF_IPPMF_FORPROCESS
-                        | TF_IPPMF_DONTCARECURRENTINPUTLANGUAGE,
+                    TF_IPPMF_FORSESSION | TF_IPPMF_FORPROCESS,
                 )
             }
             .map_err(|error| format!("TSF input profile request failed: {error}"))?;
@@ -1081,7 +1115,7 @@ mod tests {
             "ActivateProfile(",
             "TF_IPPMF_FORSESSION",
             "TF_IPPMF_FORPROCESS",
-            "TF_IPPMF_DONTCARECURRENTINPUTLANGUAGE",
+            "TSF input language request failed",
             "ms-settings:regionlanguage",
             "ShellExecuteExW",
             "SEE_MASK_FLAG_NO_UI",

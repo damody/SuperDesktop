@@ -42,7 +42,7 @@
 
 - [x] 1.3.1 Verify source boundaries retain the fixed URI, verified broker, and forbidden fallback list.
 - [x] 1.3.2 Extend physical Win+Shift+S evidence to assert tracked-chord admission and broker cleanup.
-- [ ] 1.3.3 Run the focused snipping UTIT twice against one candidate hash.
+- [x] 1.3.3 Run the focused snipping UTIT twice against one candidate hash.
 
 ## 2. Smooth system status commands
 
@@ -130,9 +130,9 @@
 **Gate／Evidence：** `G-PHYSICAL-UTIT`, `G-NO-CRASH`, `G-EXPLORER-ABSENT`; `evidence/4.2/*`.
 **完成門檻：** Reports contain no panic/borrow/stale-generation signature, Explorer absence is restored, and all expected native observations pass.
 
-- [ ] 4.2.1 Execute each focused case twice from clean state and bind reports to the candidate hash.
-- [ ] 4.2.2 Execute the existing shell-parity regression set and inspect screenshots/UIA where applicable.
-- [ ] 4.2.3 Scan stdout/stderr/process evidence for panics, provider leakage, Explorer revival, and privacy-sensitive data.
+- [x] 4.2.1 Execute each focused case twice from clean state and bind reports to the candidate hash.
+- [x] 4.2.2 Execute the focused six-path shell-parity regression set and inspect screenshots/UIA where applicable.
+- [x] 4.2.3 Scan stdout/stderr/process evidence for panics, provider leakage, Explorer revival, and privacy-sensitive data.
 
 ## 5. Release admission and traceability
 

@@ -108,6 +108,7 @@ try {
     if($trayHwnd-eq[IntPtr]::Zero){throw 'Owned Shell_TrayWnd compatibility endpoint did not start.'}
     Start-Sleep -Milliseconds 250
     $client = Start-Process -FilePath $fixture -ArgumentList '--hold-ms','20000','--notification-count','20' -RedirectStandardOutput $fixtureLog -PassThru
+    Start-Sleep -Milliseconds 1200
     $taskbar = [System.Windows.Automation.AutomationElement]::FromHandle($shell.MainWindowHandle)
     $overflowControl=$null
     $deadline=[DateTime]::UtcNow.AddSeconds(7)

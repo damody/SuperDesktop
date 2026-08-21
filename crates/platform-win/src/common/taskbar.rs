@@ -24,15 +24,16 @@ use windows::Win32::{
         Shell::{DefSubclassProc, RemoveWindowSubclass, SetWindowSubclass},
         WindowsAndMessaging::{
             EnumWindows, GA_ROOT, GW_OWNER, GWL_EXSTYLE, GWL_STYLE, GetAncestor, GetClientRect,
-            GetCursorPos, GetForegroundWindow, GetWindow, GetWindowLongPtrW, GetWindowRect,
-            GetWindowTextLengthW, GetWindowTextW, GetWindowThreadProcessId, HTCLIENT, HTTOP,
-            HWND_TOPMOST, IsIconic, IsWindow, IsWindowVisible, PostMessageW,
-            RegisterWindowMessageW, SW_HIDE, SW_MAXIMIZE, SW_MINIMIZE, SW_RESTORE,
+            GetCursorPos, GetForegroundWindow, GetSystemMetrics, GetWindow, GetWindowLongPtrW,
+            GetWindowPlacement, GetWindowRect, GetWindowTextLengthW, GetWindowTextW,
+            GetWindowThreadProcessId, HTCLIENT, HTTOP, HWND_TOPMOST, IsIconic, IsWindow,
+            IsWindowVisible, PostMessageW, RegisterWindowMessageW, SM_XVIRTUALSCREEN,
+            SM_YVIRTUALSCREEN, SW_MAXIMIZE, SW_MINIMIZE, SW_RESTORE, SW_SHOWNOACTIVATE,
             SWP_FRAMECHANGED, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER, SWP_SHOWWINDOW,
-            SetForegroundWindow, SetWindowLongPtrW, SetWindowPos, ShowWindow, ShowWindowAsync,
-            WM_CLOSE, WM_ENTERSIZEMOVE, WM_EXITSIZEMOVE, WM_NCDESTROY, WM_NCHITTEST, WM_SIZING,
-            WMSZ_TOP, WMSZ_TOPLEFT, WMSZ_TOPRIGHT, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW,
-            WS_THICKFRAME, WindowFromPoint,
+            SetForegroundWindow, SetWindowLongPtrW, SetWindowPlacement, SetWindowPos, ShowWindow,
+            ShowWindowAsync, WINDOWPLACEMENT, WM_CLOSE, WM_ENTERSIZEMOVE, WM_EXITSIZEMOVE,
+            WM_NCDESTROY, WM_NCHITTEST, WM_SIZING, WMSZ_TOP, WMSZ_TOPLEFT, WMSZ_TOPRIGHT,
+            WPF_SETMINPOSITION, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_THICKFRAME, WindowFromPoint,
         },
     },
 };
@@ -429,6 +430,7 @@ pub struct MinimizedShelfReport {
 #[derive(Debug, Default)]
 pub struct MinimizedWindowShelf {
     episodes: BTreeMap<String, MinimizedShelfEpisode>,
+    restoring: BTreeSet<String>,
 }
 
 fn minimized_shelf_eligible(window: &OwnedTaskWindow) -> bool {
@@ -454,13 +456,42 @@ pub fn shelve_minimized_window_to_owned_identity(
     {
         return Ok(MinimizedShelfOutcome::NoLongerEligible);
     }
-    // SAFETY: the window was revalidated as a visible iconic task window. The
-    // asynchronous command changes only WS_VISIBLE; WS_MINIMIZE and the complete
-    // restore placement remain owned by the application and Windows.
-    if !unsafe { ShowWindowAsync(hwnd, SW_HIDE) }.as_bool() {
-        return Ok(MinimizedShelfOutcome::NoLongerEligible);
-    }
+    let mut placement = WINDOWPLACEMENT {
+        length: size_of::<WINDOWPLACEMENT>() as u32,
+        ..Default::default()
+    };
+    unsafe { GetWindowPlacement(hwnd, &mut placement) }
+        .map_err(|error| format!("minimized shelf placement query failed: {error}"))?;
+    placement.flags |= WPF_SETMINPOSITION;
+    placement.ptMinPosition = POINT {
+        x: unsafe { GetSystemMetrics(SM_XVIRTUALSCREEN) }.saturating_sub(4_096),
+        y: unsafe { GetSystemMetrics(SM_YVIRTUALSCREEN) }.saturating_sub(4_096),
+    };
+    unsafe { SetWindowPlacement(hwnd, &placement) }
+        .map_err(|error| format!("minimized shelf placement failed: {error}"))?;
     Ok(MinimizedShelfOutcome::Shelved)
+}
+
+pub fn unshelve_minimized_window_to_owned_identity(
+    hwnd_identity: isize,
+    process_id: u32,
+    window_identity: &str,
+) -> Result<(), String> {
+    let hwnd = HWND(hwnd_identity as *mut c_void);
+    let observed = snapshot_one(hwnd).ok_or("task-window-retired")?;
+    if observed.process_id != process_id || observed.window_identity != window_identity {
+        return Err("task-window-identity-mismatch".into());
+    }
+    let mut placement = WINDOWPLACEMENT {
+        length: size_of::<WINDOWPLACEMENT>() as u32,
+        ..Default::default()
+    };
+    unsafe { GetWindowPlacement(hwnd, &mut placement) }
+        .map_err(|error| format!("minimized shelf restore query failed: {error}"))?;
+    placement.flags |= WPF_SETMINPOSITION;
+    placement.ptMinPosition = POINT { x: -1, y: -1 };
+    unsafe { SetWindowPlacement(hwnd, &placement) }
+        .map_err(|error| format!("minimized shelf restore failed: {error}"))
 }
 
 impl MinimizedWindowShelf {
@@ -479,12 +510,18 @@ impl MinimizedWindowShelf {
         windows: &[OwnedTaskWindow],
         mut shelve: impl FnMut(&OwnedTaskWindow) -> Result<MinimizedShelfOutcome, String>,
     ) -> MinimizedShelfReport {
+        self.restoring.retain(|window_identity| {
+            windows
+                .iter()
+                .find(|window| window.window_identity == *window_identity)
+                .is_some_and(|window| window.minimized || !window.visible)
+        });
         self.episodes.retain(|window_identity, episode| {
             windows
                 .iter()
                 .find(|window| window.window_identity == *window_identity)
                 .is_some_and(|window| match episode {
-                    MinimizedShelfEpisode::Shelved(_) => window.minimized && !window.visible,
+                    MinimizedShelfEpisode::Shelved(_) => window.minimized && window.visible,
                     MinimizedShelfEpisode::Failed => minimized_shelf_eligible(window),
                 })
         });
@@ -493,6 +530,9 @@ impl MinimizedWindowShelf {
             .iter()
             .filter(|window| minimized_shelf_eligible(window))
         {
+            if self.restoring.contains(&window.window_identity) {
+                continue;
+            }
             if self.episodes.contains_key(&window.window_identity) {
                 continue;
             }
@@ -519,6 +559,11 @@ impl MinimizedWindowShelf {
         report
     }
 
+    pub fn begin_restore(&mut self, window_identity: &str) {
+        self.episodes.remove(window_identity);
+        self.restoring.insert(window_identity.to_owned());
+    }
+
     pub fn task_windows(&self, windows: Vec<OwnedTaskWindow>) -> Vec<OwnedTaskWindow> {
         let mut task_windows = windows
             .into_iter()
@@ -530,7 +575,7 @@ impl MinimizedWindowShelf {
             };
             if task_windows
                 .get(window_identity)
-                .is_some_and(|window| window.minimized && !window.visible)
+                .is_some_and(|window| window.minimized)
             {
                 let mut task = cached.clone();
                 task.visible = true;
@@ -862,12 +907,9 @@ pub fn apply_window_action(hwnd_identity: isize, action: WindowAction) -> Result
         WindowAction::Activate => unsafe { SetForegroundWindow(hwnd) }
             .ok()
             .map_err(|e| e.to_string()),
-        WindowAction::Restore => {
-            let _ = unsafe { ShowWindow(hwnd, SW_RESTORE) };
-            Ok(())
-        }
+        WindowAction::Restore => restore_and_show_window(hwnd),
         WindowAction::RestoreAndActivate => {
-            let _ = unsafe { ShowWindow(hwnd, SW_RESTORE) };
+            restore_and_show_window(hwnd)?;
             unsafe { SetForegroundWindow(hwnd) }
                 .ok()
                 .map_err(|e| e.to_string())
@@ -877,6 +919,25 @@ pub fn apply_window_action(hwnd_identity: isize, action: WindowAction) -> Result
                 .map_err(|e| e.to_string())
         }
     }
+}
+
+fn restore_and_show_window(hwnd: HWND) -> Result<(), String> {
+    // The minimized shelf restores its exact minimized placement before this
+    // call. Restore without changing normal geometry, z-order, or foreground.
+    let _ = unsafe { ShowWindowAsync(hwnd, SW_RESTORE) };
+    let _ = unsafe { ShowWindowAsync(hwnd, SW_SHOWNOACTIVATE) };
+    unsafe {
+        SetWindowPos(
+            hwnd,
+            None,
+            0,
+            0,
+            0,
+            0,
+            SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_SHOWWINDOW,
+        )
+    }
+    .map_err(|error| error.to_string())
 }
 
 pub fn apply_window_action_to_owned_identity(
@@ -972,6 +1033,33 @@ mod tests {
         )
     }
 
+    #[test]
+    fn restore_path_reinstates_shelf_visibility_without_geometry_or_activation() {
+        let source = include_str!("taskbar.rs");
+        let restore = source
+            .split("fn restore_and_show_window")
+            .nth(1)
+            .and_then(|tail| {
+                tail.split("pub fn apply_window_action_to_owned_identity")
+                    .next()
+            })
+            .unwrap();
+        for required in [
+            "ShowWindowAsync(hwnd, SW_RESTORE)",
+            "ShowWindowAsync(hwnd, SW_SHOWNOACTIVATE)",
+            "SWP_NOMOVE",
+            "SWP_NOSIZE",
+            "SWP_NOZORDER",
+            "SWP_NOACTIVATE",
+            "SWP_SHOWWINDOW",
+        ] {
+            assert!(
+                restore.contains(required),
+                "missing restore token: {required}"
+            );
+        }
+    }
+
     fn minimized_fixture(identity: &str) -> OwnedTaskWindow {
         OwnedTaskWindow {
             hwnd_identity: 42,
@@ -991,8 +1079,12 @@ mod tests {
     #[test]
     fn minimized_shelf_hides_only_visible_iconic_task_candidates() {
         let source = include_str!("taskbar.rs");
-        assert!(source.contains("ShowWindowAsync(hwnd, SW_HIDE)"));
-        assert!(source.contains("window.minimized && !window.visible"));
+        let production = source.split("#[cfg(test)]").next().unwrap();
+        assert!(production.contains("GetWindowPlacement(hwnd, &mut placement)"));
+        assert!(production.contains("WPF_SETMINPOSITION"));
+        assert!(production.contains("SM_XVIRTUALSCREEN"));
+        assert!(production.contains("SM_YVIRTUALSCREEN"));
+        assert!(!production.contains("ShowWindowAsync(hwnd, SW_HIDE)"));
     }
 
     #[test]
@@ -1023,16 +1115,14 @@ mod tests {
         assert_eq!(attempts, 1);
         assert_eq!(first.newly_shelved, ["win:7:2A"]);
         assert!(first.failures.is_empty());
-        let mut hidden = window.clone();
-        hidden.visible = false;
-        let second = shelf.reconcile_with(std::slice::from_ref(&hidden), |_| {
+        let second = shelf.reconcile_with(std::slice::from_ref(&window), |_| {
             attempts += 1;
             Ok(MinimizedShelfOutcome::Shelved)
         });
         assert_eq!(attempts, 1);
         assert_eq!(second, MinimizedShelfReport::default());
 
-        let retained = shelf.task_windows(vec![hidden]);
+        let retained = shelf.task_windows(vec![window.clone()]);
         assert_eq!(retained.len(), 1);
         assert!(retained[0].visible && retained[0].minimized);
 
@@ -1078,6 +1168,31 @@ mod tests {
     }
 
     #[test]
+    fn restoring_identity_cannot_be_reshelved_before_native_restore_settles() {
+        let window = minimized_fixture("win:7:2A");
+        let mut shelf = MinimizedWindowShelf::default();
+        let _ = shelf.reconcile_with(std::slice::from_ref(&window), |_| {
+            Ok(MinimizedShelfOutcome::Shelved)
+        });
+        shelf.begin_restore(&window.window_identity);
+        let mut attempts = 0;
+        let report = shelf.reconcile_with(std::slice::from_ref(&window), |_| {
+            attempts += 1;
+            Ok(MinimizedShelfOutcome::Shelved)
+        });
+        assert_eq!(attempts, 0);
+        assert_eq!(report, MinimizedShelfReport::default());
+        let mut restored = window.clone();
+        restored.minimized = false;
+        let _ = shelf.reconcile_with(std::slice::from_ref(&restored), |_| {
+            attempts += 1;
+            Ok(MinimizedShelfOutcome::Shelved)
+        });
+        assert_eq!(attempts, 0);
+        assert!(shelf.restoring.is_empty());
+    }
+
+    #[test]
     fn minimized_shelf_native_adapter_rejects_retired_identity_and_has_no_geometry_fallback() {
         assert_eq!(
             shelve_minimized_window_to_owned_identity(1, 99, "win:99:1"),
@@ -1090,8 +1205,11 @@ mod tests {
             .and_then(|tail| tail.split("impl MinimizedWindowShelf").next())
             .expect("minimized shelf adapter source");
         for required in [
-            "ShowWindowAsync",
-            "SW_HIDE",
+            "GetWindowPlacement",
+            "SetWindowPlacement",
+            "WPF_SETMINPOSITION",
+            "SM_XVIRTUALSCREEN",
+            "SM_YVIRTUALSCREEN",
             "minimized_shelf_eligible",
             "observed.process_id != process_id",
             "observed.window_identity != window_identity",
@@ -1103,8 +1221,8 @@ mod tests {
         }
         for forbidden in [
             "SetWindowLongPtrW",
-            "SetWindowPlacement",
             "SetWindowPos",
+            "SW_HIDE",
             "WS_EX_TOOLWINDOW",
         ] {
             assert!(

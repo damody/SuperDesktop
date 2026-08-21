@@ -1507,12 +1507,29 @@ fn run_show_desktop_cycle(
         }
         ShowDesktopPlan::Restore(targets) => {
             for target in targets {
-                let _ = platform_win::common::taskbar::apply_window_action_to_owned_identity(
-                    target.hwnd_identity,
-                    target.process_id,
-                    &target.window_identity,
-                    platform_win::common::taskbar::WindowAction::Restore,
-                );
+                if let Err(error) =
+                    platform_win::common::taskbar::unshelve_minimized_window_to_owned_identity(
+                        target.hwnd_identity,
+                        target.process_id,
+                        &target.window_identity,
+                    )
+                {
+                    report_error("show-desktop:unshelve", error);
+                    continue;
+                }
+                minimized_window_shelf
+                    .borrow_mut()
+                    .begin_restore(&target.window_identity);
+                if let Err(error) =
+                    platform_win::common::taskbar::apply_window_action_to_owned_identity(
+                        target.hwnd_identity,
+                        target.process_id,
+                        &target.window_identity,
+                        platform_win::common::taskbar::WindowAction::Restore,
+                    )
+                {
+                    report_error("show-desktop:restore", error);
+                }
             }
             session.borrow_mut().complete_restore();
             trace_action("show-desktop:restored");
@@ -3373,6 +3390,23 @@ fn apply_system_status_action(
     reconciler: &Rc<RefCell<StatusReconciler>>,
     start_window: &Rc<RefCell<Option<gpui::WindowHandle<StartView>>>>,
 ) {
+    if let SystemStatusAction::ActivateInputProfile(profile_id) = &action {
+        match platform_win::common::system_status::request_input_profile(
+            profile_id,
+            Duration::from_secs(5),
+        ) {
+            Ok(_) => trace_action("status:input-profile-observed"),
+            Err(error) => report_error("status:input-profile", error),
+        }
+        if let Some(start) = *start_window.borrow() {
+            let _ = start.update(app, |_, window, cx| {
+                window.activate_window();
+                cx.notify();
+            });
+            trace_action("start:ime-focus-restored");
+        }
+        return;
+    }
     let restore_start_focus = matches!(&action, SystemStatusAction::ActivateInputProfile(_));
     let command_timeout = if restore_start_focus {
         Duration::from_millis(5_000)

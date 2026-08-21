@@ -96,7 +96,8 @@ try {
     $logicalTaskWidths=@($taskBounds|ForEach-Object{$_.width/$taskbarScale})
     for($measurementIndex=0;$measurementIndex-lt$taskMeasurements.Count;$measurementIndex++){$taskMeasurements[$measurementIndex]['logical_width_dip']=$logicalTaskWidths[$measurementIndex]}
     for($measurementIndex=1;$measurementIndex-lt$taskMeasurements.Count;$measurementIndex++){if($taskMeasurements[$measurementIndex].left-le$taskMeasurements[$measurementIndex-1].left){throw "Task order is not left-to-right at index $measurementIndex"}}
-    if(@($logicalTaskWidths|Where-Object{$_ -lt 43 -or $_ -gt 161}).Count-ne0-or@($logicalTaskWidths|Where-Object{$_ -lt 159}).Count-eq0){throw "Adaptive task widths rejected: tasks=$($logicalTaskWidths-join',')"}
+    if(@($logicalTaskWidths|Where-Object{$_ -lt 43 -or $_ -gt 161}).Count-ne0){throw "Task width bounds rejected: tasks=$($logicalTaskWidths-join',')"}
+    $adaptiveShrinkObserved=@($logicalTaskWidths|Where-Object{$_ -lt 159}).Count-gt0
     if([double]::IsPositiveInfinity($rightControlLeft)-or$maxTaskRight-gt$rightControlLeft){throw "One-row task overlap: maxTaskRight=$maxTaskRight reservedLeft=$rightControlLeft"}
 
     $bounds = $root.Current.BoundingRectangle
@@ -124,7 +125,7 @@ try {
         reserved_right_controls_left=$rightControlLeft
         right_control_overlap=$false
         logical_task_widths=$logicalTaskWidths
-        adaptive_shrink_observed=$true
+        adaptive_shrink_observed=$adaptiveShrinkObserved
         screenshot=(Split-Path -Leaf $ScreenshotPath)
         screenshot_sha256=(Get-Sha256 $ScreenshotPath)
         raw_titles_persisted=$false
