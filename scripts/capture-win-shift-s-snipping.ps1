@@ -200,7 +200,12 @@ try {
         if ($overlayCoordinates.Count -ne 4) { throw "Malformed overlay bounds: $overlayBounds" }
         $centerX = [int](($overlayCoordinates[0] + $overlayCoordinates[2]) / 2)
         $centerY = [int](($overlayCoordinates[1] + $overlayCoordinates[3]) / 2)
+        Start-Sleep -Milliseconds 400
         [SuperDesktopScreenSnipNative]::Drag($centerX - 160, $centerY - 100, $centerX + 160, $centerY + 100)
+        Start-Sleep -Milliseconds 600
+        if (@([SuperDesktopScreenSnipNative]::OverlayWindows()).Count -ne 0) {
+            [SuperDesktopScreenSnipNative]::Drag($centerX - 140, $centerY - 90, $centerX + 140, $centerY + 90)
+        }
         Wait-Until { @([SuperDesktopScreenSnipNative]::OverlayWindows()).Count -eq 0 } 4000 'Snipping Tool overlay did not close after rectangle selection' | Out-Null
         $clipboardMetadata = Wait-Until {
             $metadata = [SuperDesktopScreenSnipNative]::ClipboardImageMetadata()
