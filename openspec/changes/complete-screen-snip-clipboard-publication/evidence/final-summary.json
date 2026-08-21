@@ -1,0 +1,70 @@
+{
+  "schema": "built-in-screen-snip-clipboard-final/v1",
+  "recorded_at": "2026-08-21T13:45:00+08:00",
+  "candidate": {
+    "superdesktop_app_sha256": "42409DD5392425ACDA62FCAB8FFF21F87E4AFB07C5003BFB67657FFDA181A784",
+    "installer_sha256": "2740DBB29AD7D4801A5BCAF8AD63FADD6B60E7EE0AD4065EB4ECAD240D0F8899",
+    "packaged_app_matches_release": true
+  },
+  "implementation": {
+    "fixed_protocol": "ms-screenclip HotKey source",
+    "microsoft_store_snipping_tool_only": true,
+    "clipboard_completion_requires_changed_sequence": true,
+    "clipboard_completion_requires_image_format": true,
+    "clipboard_completion_requires_non_empty_data_handle": true,
+    "clipboard_handle_locked_or_pixels_read": false,
+    "temporary_explorer_cleanup_after_completion": true,
+    "preexisting_explorer_preserved": true,
+    "custom_capture_or_clipboard_writer": false
+  },
+  "physical_capture_runs": [
+    {
+      "run": 1,
+      "result": "passed",
+      "sequence_before": 806,
+      "sequence_after": 818,
+      "format": "CF_DIBV5",
+      "width": 320,
+      "height": 200,
+      "captured_trace": true,
+      "broker_removed_after_materialization": true
+    },
+    {
+      "run": 2,
+      "result": "passed",
+      "sequence_before": 818,
+      "sequence_after": 830,
+      "format": "CF_DIBV5",
+      "width": 320,
+      "height": 200,
+      "captured_trace": true,
+      "broker_removed_after_materialization": true
+    }
+  ],
+  "physical_cancel_run": {
+    "result": "passed",
+    "sequence_before": 830,
+    "sequence_after": 830,
+    "cancelled_trace": true,
+    "broker_removed": true
+  },
+  "privacy": {
+    "captured_pixel_artifacts": 0,
+    "screen_content_artifacts": 0,
+    "clipboard_payload_persisted": false
+  },
+  "error_scan": {
+    "screen_snip_errors": 0,
+    "panic": 0,
+    "refcell_already_borrowed": 0,
+    "explorer_broker_leaks": 0
+  },
+  "automated_gates": {
+    "format": "passed",
+    "workspace_tests_locked_offline": "passed",
+    "clippy_deny_warnings": "passed",
+    "release_build_locked_offline": "passed",
+    "strict_openspec": "passed",
+    "installer_without_launch": "passed"
+  }
+}
