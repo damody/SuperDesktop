@@ -1,0 +1,57 @@
+{
+  "schema": "guardian-shell-lifecycle-final/v1",
+  "recorded_at": "2026-08-21T13:01:00+08:00",
+  "candidate": {
+    "superdesktop_app_sha256": "D686F14F77EE2A993F4448407C4385A6EDD1BD00EC3A27B10F2165D103C6D5EA",
+    "superdesktop_guardian_sha256": "4768232159535228BC01FD215737C52894E0AD45B703F10B082A865DCDC52298",
+    "installer_sha256": "657729A59C2C299C16D06E7613B853F346829560F12BCB5577EFB6C5A67EF1A3",
+    "packaged_app_matches_release": true,
+    "packaged_guardian_matches_release": true
+  },
+  "guardian_fixture": {
+    "clean_report_count": 2,
+    "child_cycle_count": 4,
+    "all_nonce_bound_acceptances": true,
+    "all_explicit_allowlists_exact": true,
+    "all_unique_success_terminal_counts": 1,
+    "registry_unchanged": true,
+    "explorer_recovered": true,
+    "maximum_elapsed_ms": 404
+  },
+  "production_lifecycle": {
+    "owned_shell_started": true,
+    "guardian_child_alive_after_acceptance": true,
+    "explorer_absent_after_takeover": true,
+    "missing_rollback_reconstructed": true,
+    "reconstructed_prior": "default Explorer shell",
+    "return_plan_disposition": "applied",
+    "return_registry_verified": true,
+    "rollback_record_removed": true,
+    "guardian_finished_after_parent_exit": true,
+    "explorer_recovered_after_return": true
+  },
+  "appbar_fallback": {
+    "forced_unavailable_result": "passed",
+    "owned_geometry_active": true,
+    "one_two_three_row_geometry_valid": true,
+    "process_survived": true,
+    "fallback_trace_present": true,
+    "console_warning_absent": true
+  },
+  "reported_signature_scan": {
+    "guardian_rejected_guardian_lease_validation": 0,
+    "guardian_arm_child_acceptance_timeout": 0,
+    "appbar_console_warning": 0,
+    "explorer_return_missing_rollback": 0,
+    "panic": 0,
+    "refcell_already_borrowed": 0
+  },
+  "automated_gates": {
+    "cargo_fmt_check": "passed",
+    "cargo_test_workspace_all_targets_locked_offline": "passed",
+    "cargo_clippy_workspace_all_targets_locked_offline_deny_warnings": "passed",
+    "cargo_build_workspace_all_targets_release_locked_offline": "passed",
+    "installer_build_without_launch": "passed"
+  },
+  "privacy": "Only aggregate lifecycle observations and content hashes are committed; raw screen and machine-profile artifacts remain local."
+}

@@ -104,7 +104,7 @@
 
 - [x] 4.1.1 Run formatting plus focused and locked/offline workspace tests.
 - [x] 4.1.2 Run Clippy warnings-as-errors and the locked/offline release build.
-- [ ] 4.1.3 Run strict OpenSpec, detailed-task, placeholder, contradiction, and 24-record evidence validation.
+- [x] 4.1.3 Run strict OpenSpec, detailed-task, placeholder, contradiction, and 24-record evidence validation.
 
 ### 4.2 Package and integrate the candidate
 
@@ -116,6 +116,6 @@
 **Gate／Evidence：** `G-PACKAGE`, `G-TRACE`; `evidence/4.2/*`.
 **完成門檻：** Installer builds without launch, packaged binaries match admitted hashes, tracked worktrees are clean, and the change remains unarchived.
 
-- [ ] 4.2.1 Commit the nested implementation and update the parent submodule pointer without staging unrelated files.
-- [ ] 4.2.2 Build the installer without launch and compare packaged app/guardian hashes with the admitted release binaries.
-- [ ] 4.2.3 Write the final evidence summary/index and rerun strict validation plus tracked-status checks.
+- [x] 4.2.1 Commit the nested implementation and update the parent submodule pointer without staging unrelated files.
+- [x] 4.2.2 Build the installer without launch and compare packaged app/guardian hashes with the admitted release binaries.
+- [x] 4.2.3 Write the final evidence summary/index and rerun strict validation plus tracked-status checks.
