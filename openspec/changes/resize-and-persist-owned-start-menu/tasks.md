@@ -87,5 +87,5 @@
 **完成門檻：** Format/tests/Clippy/release/strict validation pass, installer hash matches, tracked worktrees are clean, and change remains unarchived.
 
 - [x] 3.2.1 Run formatting, focused and locked/offline workspace tests, and Clippy warnings-as-errors.
-- [ ] 3.2.2 Run release build, installer without launch, and packaged app hash comparison.
-- [ ] 3.2.3 Write 18 unique evidence records, commit nested/parent revisions, and rerun strict/status checks.
+- [x] 3.2.2 Run release build, installer without launch, and packaged app hash comparison.
+- [x] 3.2.3 Write 18 unique evidence records, commit nested/parent revisions, and rerun strict/status checks.

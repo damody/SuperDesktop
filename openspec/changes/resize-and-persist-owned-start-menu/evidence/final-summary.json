@@ -1,0 +1,63 @@
+{
+  "schema": "owned-start-resize-persistence-final/v1",
+  "recorded_at": "2026-08-21T17:00:00+08:00",
+  "candidate": {
+    "superdesktop_app_sha256": "0B0E7908620EDC00B5B957DDEFA1A521AB016EBE5282EEBE64D85A74D663D897",
+    "installer_sha256": "D75621B2AECE532EFA4444607FB98C85AE64C3FBC775883B5DB685994A0C69DB",
+    "packaged_app_matches_release": true
+  },
+  "implementation": {
+    "native_border_resize": true,
+    "titlebar_free_popup": true,
+    "logical_dip_storage": true,
+    "debounce_milliseconds": 250,
+    "flush_on_deactivation_and_toggle_close": true,
+    "atomic_settings_write": true,
+    "default_width_dip": 640,
+    "default_height_dip": 720,
+    "minimum_width_dip": 420,
+    "minimum_height_dip": 360,
+    "current_monitor_clamp": true
+  },
+  "physical_resize_runs": [
+    {
+      "run": 1,
+      "result": "passed",
+      "dpi": 168,
+      "target_outer_dip": [820, 620],
+      "resized_outer_dip": [821.1428571428571, 621.1428571428571],
+      "reopened_outer_dip": [820.5714285714286, 621.1428571428571],
+      "restarted_outer_dip": [820.5714285714286, 621.1428571428571],
+      "native_thickframe": true,
+      "persist_count": 1,
+      "contained": true
+    },
+    {
+      "run": 2,
+      "result": "passed",
+      "dpi": 168,
+      "target_outer_dip": [760, 560],
+      "resized_outer_dip": [761.1428571428571, 561.1428571428571],
+      "reopened_outer_dip": [760.5714285714286, 561.1428571428571],
+      "restarted_outer_dip": [760.5714285714286, 561.1428571428571],
+      "native_thickframe": true,
+      "persist_count": 1,
+      "contained": true
+    }
+  ],
+  "error_scan": {
+    "panic": 0,
+    "refcell_already_borrowed": 0,
+    "stale_generation": 0,
+    "persistence_failure": 0,
+    "sensitive_artifacts": 0
+  },
+  "automated_gates": {
+    "format": "passed",
+    "workspace_tests_locked_offline": "passed",
+    "clippy_deny_warnings": "passed",
+    "release_build_locked_offline": "passed",
+    "strict_openspec": "passed",
+    "installer_without_launch": "passed"
+  }
+}

@@ -1,0 +1,56 @@
+{
+    "schema":  "owned-start-resize-persistence/v1",
+    "result":  "passed",
+    "app_sha256":  "0B0E7908620EDC00B5B957DDEFA1A521AB016EBE5282EEBE64D85A74D663D897",
+    "target":  {
+                   "width_dip":  820,
+                   "height_dip":  620
+               },
+    "before":  {
+                   "left":  9,
+                   "top":  803,
+                   "right":  1153,
+                   "bottom":  2075,
+                   "width_dip":  653.71428571428567,
+                   "height_dip":  726.85714285714289,
+                   "dpi":  168
+               },
+    "resized":  {
+                    "left":  9,
+                    "top":  988,
+                    "right":  1446,
+                    "bottom":  2075,
+                    "width_dip":  821.14285714285711,
+                    "height_dip":  621.14285714285711,
+                    "dpi":  168
+                },
+    "saved":  {
+                  "width_dip":  807,
+                  "height_dip":  614,
+                  "revision":  1
+              },
+    "reopened":  {
+                     "left":  9,
+                     "top":  989,
+                     "right":  1445,
+                     "bottom":  2076,
+                     "width_dip":  820.57142857142856,
+                     "height_dip":  621.14285714285711,
+                     "dpi":  168
+                 },
+    "restarted":  {
+                      "left":  9,
+                      "top":  989,
+                      "right":  1445,
+                      "bottom":  2076,
+                      "width_dip":  820.57142857142856,
+                      "height_dip":  621.14285714285711,
+                      "dpi":  168
+                  },
+    "native_thickframe":  true,
+    "persist_count":  1,
+    "contained":  true,
+    "sensitive_artifacts":  [
+
+                            ]
+}
