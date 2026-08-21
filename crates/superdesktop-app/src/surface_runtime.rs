@@ -6,6 +6,7 @@ use std::{
     sync::{
         Arc, Mutex,
         atomic::{AtomicBool, AtomicU64, Ordering},
+        mpsc::{self, SyncSender, TrySendError},
     },
     time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
@@ -76,6 +77,99 @@ const HSHELL_WINDOWACTIVATED: u32 = 4;
 const HSHELL_RUDEAPPACTIVATED: u32 = 0x8004;
 const HSHELL_FLASH: u32 = 0x8006;
 const DEFAULT_FLASH_EDGES: u8 = 14;
+
+#[derive(Clone)]
+struct VolumeCommandCoordinator {
+    desired: Arc<std::sync::atomic::AtomicU8>,
+    pending: Arc<AtomicBool>,
+    wake: SyncSender<()>,
+}
+
+impl VolumeCommandCoordinator {
+    fn start() -> Result<Self, &'static str> {
+        let desired = Arc::new(std::sync::atomic::AtomicU8::new(0));
+        let pending = Arc::new(AtomicBool::new(false));
+        let (wake, receiver) = mpsc::sync_channel(1);
+        let worker_desired = Arc::clone(&desired);
+        let worker_pending = Arc::clone(&pending);
+        std::thread::Builder::new()
+            .name("superdesktop-volume-command".into())
+            .spawn(move || {
+                let mut client = match SystemStatusClient::adjacent() {
+                    Ok(client) => client,
+                    Err(error) => {
+                        report_error("status:volume-worker", error);
+                        return;
+                    }
+                };
+                let mut reconciler = StatusReconciler::default();
+                while receiver.recv().is_ok() {
+                    loop {
+                        let volume_percent = worker_desired.load(Ordering::Acquire).min(100);
+                        if reconciler.snapshot().is_none() {
+                            match client.request(
+                                &SystemStatusHostRequest::Snapshot,
+                                Duration::from_millis(750),
+                            ) {
+                                Ok(snapshot) => {
+                                    reconciler.apply(snapshot);
+                                }
+                                Err(error) => {
+                                    report_error("status:volume-snapshot", error);
+                                }
+                            }
+                        }
+                        let result = execute_system_status_command(
+                            SystemStatusCommand::SetVolume { volume_percent },
+                            Duration::from_millis(1_000),
+                            &mut reconciler,
+                            |request, timeout| client.request(request, timeout),
+                            unix_time_ms,
+                        );
+                        if let Err(error) = result {
+                            report_error("status:volume-command", error.message());
+                            if error.provider_failed() {
+                                reconciler.provider_unavailable();
+                            }
+                        }
+                        worker_pending.store(false, Ordering::Release);
+                        let latest = worker_desired.load(Ordering::Acquire).min(100);
+                        if latest == volume_percent
+                            || worker_pending
+                                .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+                                .is_err()
+                        {
+                            break;
+                        }
+                    }
+                }
+            })
+            .map_err(|_| "status-volume-worker-spawn")?;
+        Ok(Self {
+            desired,
+            pending,
+            wake,
+        })
+    }
+
+    fn submit(&self, volume_percent: u8) {
+        self.desired
+            .store(volume_percent.min(100), Ordering::Release);
+        if self
+            .pending
+            .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+            .is_ok()
+        {
+            match self.wake.try_send(()) {
+                Ok(()) | Err(TrySendError::Full(())) => {}
+                Err(TrySendError::Disconnected(())) => {
+                    self.pending.store(false, Ordering::Release);
+                    report_error("status:volume-command", "volume worker is unavailable");
+                }
+            }
+        }
+    }
+}
 
 #[derive(Clone, Debug)]
 struct WindowAttention {
@@ -1380,6 +1474,7 @@ fn run_show_desktop_cycle(
         trace_action("show-desktop:snapshot-rejected");
         return;
     };
+    let windows = minimized_window_shelf.borrow().task_windows(windows);
     let snapshot = windows
         .into_iter()
         .map(show_desktop_observation)
@@ -3280,7 +3375,7 @@ fn apply_system_status_action(
 ) {
     let restore_start_focus = matches!(&action, SystemStatusAction::ActivateInputProfile(_));
     let command_timeout = if restore_start_focus {
-        Duration::from_millis(2_500)
+        Duration::from_millis(5_000)
     } else {
         Duration::from_millis(1_000)
     };
@@ -3333,6 +3428,22 @@ fn apply_system_status_action(
             cx.notify();
         });
         trace_action("start:ime-focus-restored");
+    }
+}
+
+fn apply_system_status_action_or_queue_volume(
+    action: SystemStatusAction,
+    app: &mut App,
+    client: &Rc<RefCell<SystemStatusClient>>,
+    reconciler: &Rc<RefCell<StatusReconciler>>,
+    start_window: &Rc<RefCell<Option<gpui::WindowHandle<StartView>>>>,
+    volume: &VolumeCommandCoordinator,
+) {
+    if let SystemStatusAction::SetVolume(volume_percent) = action {
+        volume.submit(volume_percent);
+        trace_action("status:volume-coalesced");
+    } else {
+        apply_system_status_action(action, app, client, reconciler, start_window);
     }
 }
 
@@ -3476,6 +3587,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
     let notification_client = Rc::new(RefCell::new(initial_notification_client));
     let notification_snapshot = Rc::new(RefCell::new(initial_notification_snapshot));
     let status_client = Rc::new(RefCell::new(SystemStatusClient::adjacent()?));
+    let volume_commands = VolumeCommandCoordinator::start()?;
     let taskbar_state_reconciler = Rc::new(RefCell::new(TaskbarStateReconciler::default()));
     let status_reconciler = Rc::new(RefCell::new(StatusReconciler::default()));
     if let Ok(response) = status_client.borrow_mut().request(
@@ -3894,6 +4006,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                 let status_for_taskbar = Rc::clone(&status_reconciler);
                 let status_client_for_taskbar = Rc::clone(&status_client);
                 let status_commands_for_taskbar = Rc::clone(&status_reconciler);
+                let volume_commands_for_taskbar = volume_commands.clone();
                 let system_flyout_window = Rc::new(RefCell::new(None::<(
                     SystemFlyoutKind,
                     gpui::WindowHandle<SystemFlyoutView>,
@@ -3905,6 +4018,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                 let system_flyout_settings = Rc::clone(&persisted_settings);
                 let system_flyout_status = Rc::clone(&status_reconciler);
                 let system_flyout_client = Rc::clone(&status_client);
+                let system_flyout_volume = volume_commands.clone();
                 let system_flyout_start = Rc::clone(&start_window);
                 let system_context_window = Rc::new(RefCell::new(None::<(
                     SystemControlContextKind,
@@ -4911,12 +5025,13 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                 }
                             }),
                             system_status: Rc::new(move |action, app| {
-                                apply_system_status_action(
+                                apply_system_status_action_or_queue_volume(
                                     action,
                                     app,
                                     &status_client_for_taskbar,
                                     &status_commands_for_taskbar,
                                     &start_window_for_status,
+                                    &volume_commands_for_taskbar,
                                 );
                             }),
                             system_flyout: Rc::new(move |kind, app| {
@@ -4962,6 +5077,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                 let action_client = Rc::clone(&system_flyout_client);
                                 let action_status = Rc::clone(&system_flyout_status);
                                 let action_start = Rc::clone(&system_flyout_start);
+                                let action_volume = system_flyout_volume.clone();
                                 let center_client = Rc::clone(&notification_client_for_center);
                                 let center_snapshot = Rc::clone(&notification_snapshot_for_center);
                                 let dismiss_slot =
@@ -4991,12 +5107,13 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                                 notifications,
                                                 presentation,
                                                 Rc::new(move |action, app| {
-                                                    apply_system_status_action(
+                                                    apply_system_status_action_or_queue_volume(
                                                         action,
                                                         app,
                                                         &action_client,
                                                         &action_status,
                                                         &action_start,
+                                                        &action_volume,
                                                     );
                                                 }),
                                                 Rc::new(move |action, _| {
@@ -6074,13 +6191,11 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                         let updated = handle.update(app, |view, _, cx| {
                                             let current_notifications =
                                                 refresh_notification_snapshot.borrow().clone();
-                                            if view.snapshot != current_system_snapshot
-                                                || view.status != current_status
-                                                || view.notifications != current_notifications
-                                            {
-                                                view.snapshot = current_system_snapshot.clone();
-                                                view.status = current_status.clone();
-                                                view.notifications = current_notifications;
+                                            if view.reconcile(
+                                                current_system_snapshot.clone(),
+                                                current_status.clone(),
+                                                current_notifications,
+                                            ) {
                                                 cx.notify();
                                             }
                                         });
@@ -6622,6 +6737,7 @@ mod live_parity_tests {
             .expect("show desktop implementation source");
         for required in [
             "snapshot_task_windows()",
+            "minimized_window_shelf.borrow().task_windows(windows)",
             "ShowDesktopPlan::Minimize",
             "ShowDesktopPlan::Restore",
             "apply_window_action_to_owned_identity",
@@ -6855,8 +6971,10 @@ mod live_parity_tests {
         let production = source.split("#[cfg(test)]").next().unwrap_or(source);
         assert_eq!(
             production.matches("SystemStatusClient::adjacent()").count(),
-            2
+            3
         );
+        assert!(production.contains("superdesktop-volume-command"));
+        assert!(production.contains("status:volume-coalesced"));
         assert!(production.contains("superdesktop-provider-refresh"));
         assert!(production.contains("status:restart-capacity-exhausted"));
         assert!(production.contains("status:owned-flyout-opened"));

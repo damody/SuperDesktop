@@ -968,6 +968,19 @@ mod tests {
             assert!(!package.contains(forbidden));
             assert!(!executable.contains(forbidden));
         }
+        let registration = include_str!("../../../scripts/register-windows-identity-package.ps1");
+        for required in [
+            "Cert:\\LocalMachine\\TrustedPeople",
+            "Add-AppxPackage",
+            "-ExternalLocation $install",
+            "-ForceUpdateFromAnyVersion",
+            "Get-AppxPackage -Name SuperDesktop.WindowsShell",
+        ] {
+            assert!(
+                registration.contains(required),
+                "missing identity installation route: {required}"
+            );
+        }
     }
 
     #[test]

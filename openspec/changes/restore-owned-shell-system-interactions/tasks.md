@@ -12,9 +12,9 @@
 **Gate／Evidence：** `G-KEYBOARD`; `evidence/1.1/*.json`.
 **完成門檻：** Initial, repeat, release, standalone Win, unsupported modifiers, and left/right variants pass.
 
-- [ ] 1.1.1 Add explicit left/right Windows and Shift state to the production hook boundary.
-- [ ] 1.1.2 Route chord admission and standalone Start cancellation through the tracked state.
-- [ ] 1.1.3 Add reducer/source tests for Win+D, Win+Shift+S, Win+Space, repeats, releases, and recovery sampling.
+- [x] 1.1.1 Add explicit left/right Windows and Shift state to the production hook boundary.
+- [x] 1.1.2 Route chord admission and standalone Start cancellation through the tracked state.
+- [x] 1.1.3 Add reducer/source tests for Win+D, Win+Shift+S, Win+Space, repeats, releases, and recovery sampling.
 
 ### 1.2 Restore hidden exact windows on the second Win+D
 
@@ -26,9 +26,9 @@
 **Gate／Evidence：** `G-SHOW-DESKTOP`; `evidence/1.2/*.json`.
 **完成門檻：** First-cycle success set restores on the second cycle while stale/new windows remain unchanged.
 
-- [ ] 1.2.1 Merge minimized-shelf observations into the runtime snapshot only for truthful task modeling.
-- [ ] 1.2.2 Preserve exact HWND/process/stable-identity validation through minimize and restore completion.
-- [ ] 1.2.3 Add hidden-restore, partial-failure, stale-HWND, new-window, and repeated-cycle tests.
+- [x] 1.2.1 Merge minimized-shelf observations into the runtime snapshot only for truthful task modeling.
+- [x] 1.2.2 Preserve exact HWND/process/stable-identity validation through minimize and restore completion.
+- [x] 1.2.3 Add hidden-restore, partial-failure, stale-HWND, new-window, and repeated-cycle tests.
 
 ### 1.3 Revalidate the fixed built-in screen-snipping route
 
@@ -40,8 +40,8 @@
 **Gate／Evidence：** `G-SNIPPING`; `evidence/1.3/*`.
 **完成門檻：** Overlay opens once, Escape dismisses it, Explorer remains absent afterward, and failure has no fallback.
 
-- [ ] 1.3.1 Verify source boundaries retain the fixed URI, verified broker, and forbidden fallback list.
-- [ ] 1.3.2 Extend physical Win+Shift+S evidence to assert tracked-chord admission and broker cleanup.
+- [x] 1.3.1 Verify source boundaries retain the fixed URI, verified broker, and forbidden fallback list.
+- [x] 1.3.2 Extend physical Win+Shift+S evidence to assert tracked-chord admission and broker cleanup.
 - [ ] 1.3.3 Run the focused snipping UTIT twice against one candidate hash.
 
 ## 2. Smooth system status commands
@@ -56,9 +56,9 @@
 **Gate／Evidence：** `G-VOLUME-COALESCE`; `evidence/2.1/*.json`.
 **完成門檻：** Every local pointer value renders, only latest native values dispatch, and release commits exactly once.
 
-- [ ] 2.1.1 Separate displayed/desired volume from the last authoritative provider snapshot.
-- [ ] 2.1.2 Add a one-in-flight latest-value coordinator with final-release commit and bounded refresh.
-- [ ] 2.1.3 Add drag-storm, keyboard, clamp, mute, failure, and final-value unit/integration tests.
+- [x] 2.1.1 Separate displayed/desired volume from the last authoritative provider snapshot.
+- [x] 2.1.2 Add a one-in-flight latest-value coordinator with final-release commit and bounded refresh.
+- [x] 2.1.3 Add drag-storm, keyboard, clamp, mute, failure, and final-value unit/integration tests.
 
 ### 2.2 Recover exact input-profile activation
 
@@ -70,9 +70,9 @@
 **Gate／Evidence：** `G-INPUT-PROFILE`; `evidence/2.2/*.json`.
 **完成門檻：** Fresh exact profiles activate; stale/disappeared identities never redirect; timeout remains non-fatal and truthful.
 
-- [ ] 2.2.1 Trace the stale-generation and observation-timeout paths with structured provider identities.
-- [ ] 2.2.2 Implement one generation resynchronization and bounded exact-profile observation recovery.
-- [ ] 2.2.3 Add host-restart, delayed-observation, disappeared-profile, pointer, Win+Space, and deadline tests.
+- [x] 2.2.1 Trace the stale-generation and observation-timeout paths with structured provider identities.
+- [x] 2.2.2 Implement one generation resynchronization and bounded exact-profile observation recovery.
+- [x] 2.2.3 Add host-restart, delayed-observation, disappeared-profile, pointer, Win+Space, and deadline tests.
 
 ## 3. Native notification interactions
 
@@ -86,9 +86,9 @@
 **Gate／Evidence：** `G-TRAY-CALLBACK`; `evidence/3.1/*.json`.
 **完成門檻：** Version-4/legacy left, keyboard, and right-click fixtures receive exact payloads once; stale owners receive none.
 
-- [ ] 3.1.1 Audit and correct modern/legacy callback message, `wParam`/`lParam`, coordinates, and foreground sequencing.
-- [ ] 3.1.2 Reconcile stale generation or owner identity before dispatch and remove invalid registrations.
-- [ ] 3.1.3 Add fixture-window tests for visible/overflow pointer, Enter/Space, right-click menu, and reused HWND.
+- [x] 3.1.1 Audit and correct modern/legacy callback message, `wParam`/`lParam`, coordinates, and foreground sequencing.
+- [x] 3.1.2 Reconcile stale generation or owner identity before dispatch and remove invalid registrations.
+- [x] 3.1.3 Add fixture-window tests for visible/overflow pointer, Enter/Space, right-click menu, and reused HWND.
 
 ### 3.2 Recover Windows notification event and mutation flow
 
@@ -100,9 +100,9 @@
 **Gate／Evidence：** `G-WINDOWS-NOTIFICATIONS`; `evidence/3.2/*.json`.
 **完成門檻：** Added/removed/storm/recovery events reconcile; exact dismiss/clear confirm; access failure preserves prior state and tray function.
 
-- [ ] 3.2.1 Verify WinRT apartment/listener/subscription lifetime and make callback state panic-contained and data-only.
-- [ ] 3.2.2 Coalesce dirty refreshes and require authoritative absence after exact dismiss and clear.
-- [ ] 3.2.3 Add added/removed/storm/malformed/access-denied/dismiss/clear/recovery host and app tests.
+- [x] 3.2.1 Verify WinRT apartment/listener/subscription lifetime and make callback state panic-contained and data-only.
+- [x] 3.2.2 Coalesce dirty refreshes and require authoritative absence after exact dismiss and clear.
+- [x] 3.2.3 Add added/removed/storm/malformed/access-denied/dismiss/clear/recovery host and app tests.
 
 ## 4. Physical GUI integration
 
@@ -116,9 +116,9 @@
 **Gate／Evidence：** `G-PHYSICAL-UTIT`; `evidence/4.1/*`.
 **完成門檻：** Six requested interaction paths pass against the same candidate hash with Explorer absent where required.
 
-- [ ] 4.1.1 Add/extend Win+D two-cycle and continuous volume-drag physical cases.
-- [ ] 4.1.2 Add/extend tray left/right and pointer/Win+Space input-profile physical cases.
-- [ ] 4.1.3 Add/extend Win+Shift+S and controlled Windows notification add/remove/clear cases with privacy redaction.
+- [x] 4.1.1 Add/extend Win+D two-cycle and continuous volume-drag physical cases.
+- [x] 4.1.2 Add/extend tray left/right and pointer/Win+Space input-profile physical cases.
+- [x] 4.1.3 Add/extend Win+Shift+S and controlled Windows notification add/remove/clear cases with privacy redaction.
 
 ### 4.2 Run focused and regression GUI evidence
 

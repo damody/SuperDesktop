@@ -141,10 +141,10 @@ impl Render for NotificationOverflowView {
                         click_action(&click_key, NotificationEventKind::Activate);
                     })
                     .on_mouse_down(gpui::MouseButton::Right, move |_, _, cx| {
-                        context_action(&context_key, NotificationEventKind::Context);
                         cx.stop_propagation();
                     })
                     .on_mouse_up(gpui::MouseButton::Right, move |_, _, cx| {
+                        context_action(&context_key, NotificationEventKind::Context);
                         cx.stop_propagation();
                     })
                     .on_key_down(move |event, _, _| {
@@ -193,5 +193,17 @@ mod tests {
                 "missing overflow contract: {required}"
             );
         }
+        let down = source
+            .find(".on_mouse_down(gpui::MouseButton::Right")
+            .unwrap();
+        let up = source[down..]
+            .find(".on_mouse_up(gpui::MouseButton::Right")
+            .map(|offset| down + offset)
+            .unwrap();
+        let context = source[up..]
+            .find("context_action(&context_key, NotificationEventKind::Context)")
+            .map(|offset| up + offset)
+            .unwrap();
+        assert!(down < up && up < context);
     }
 }

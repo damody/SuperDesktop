@@ -33,6 +33,11 @@ public static class ShowDesktopCaptureNative {
     [DllImport("user32.dll")] public static extern bool IsIconic(IntPtr hwnd);
     [DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y);
     [DllImport("user32.dll")] public static extern void mouse_event(uint flags, uint dx, uint dy, uint data, UIntPtr extra);
+    [DllImport("user32.dll")] public static extern void keybd_event(byte key, byte scan, uint flags, UIntPtr extra);
+    public static void WinD() {
+        keybd_event(0x5B,0,0,UIntPtr.Zero); keybd_event(0x44,0,0,UIntPtr.Zero);
+        keybd_event(0x44,0,2,UIntPtr.Zero); keybd_event(0x5B,0,2,UIntPtr.Zero);
+    }
 }
 '@
 [ShowDesktopCaptureNative]::SetProcessDpiAwarenessContext([IntPtr](-4)) | Out-Null
@@ -176,6 +181,14 @@ try {
         Wait-Iconic $fixtures[0].MainWindowHandle $false 'fixture A pointer restored'
         Wait-Iconic $fixtures[1].MainWindowHandle $false 'fixture B pointer restored'
         Wait-Iconic $fixtures[2].MainWindowHandle $true 'fixture preserved after pointer restore'
+        [ShowDesktopCaptureNative]::WinD()
+        Wait-Iconic $fixtures[0].MainWindowHandle $true 'fixture A Win+D minimized'
+        Wait-Iconic $fixtures[1].MainWindowHandle $true 'fixture B Win+D minimized'
+        Wait-Iconic $fixtures[2].MainWindowHandle $true 'fixture preserved after Win+D minimize'
+        [ShowDesktopCaptureNative]::WinD()
+        Wait-Iconic $fixtures[0].MainWindowHandle $false 'fixture A Win+D restored'
+        Wait-Iconic $fixtures[1].MainWindowHandle $false 'fixture B Win+D restored'
+        Wait-Iconic $fixtures[2].MainWindowHandle $true 'fixture preserved after Win+D restore'
     }
     $corner.SetFocus()
     [ShowDesktopCaptureNative]::SetCursorPos([int]($cornerBounds.Left + $cornerBounds.Width / 2),[int]($cornerBounds.Top + $cornerBounds.Height / 2)) | Out-Null
@@ -198,7 +211,7 @@ try {
         root_bounds=@{left=[int]$rootBounds.Left;top=[int]$rootBounds.Top;width=[int]$rootBounds.Width;height=[int]$rootBounds.Height}
         monitor_bounds=@{left=$monitorBounds.Left;top=$monitorBounds.Top;width=$monitorBounds.Width;height=$monitorBounds.Height}
         corner_bounds=@{left=[int]$cornerBounds.Left;top=[int]$cornerBounds.Top;width=[int]$cornerBounds.Width;height=[int]$cornerBounds.Height;right_gap=[double]$rightGap}
-        cycle_exercised=[bool]$ExerciseCycle; uia_cycle=[bool]$ExerciseCycle; pointer_cycle=[bool]$ExerciseCycle
+        cycle_exercised=[bool]$ExerciseCycle; uia_cycle=[bool]$ExerciseCycle; pointer_cycle=[bool]$ExerciseCycle; physical_win_d_cycle=[bool]$ExerciseCycle
         visible_minimized=if($ExerciseCycle){2}else{0}; visible_restored=if($ExerciseCycle){2}else{0}; pre_minimized_preserved=[bool]$ExerciseCycle
         screenshots=@($beforePath,$focusPath) | ForEach-Object { @{name=(Split-Path -Leaf $_);sha256=(Get-FileHash $_ -Algorithm SHA256).Hash.ToLowerInvariant()} }
         forbidden_processes_launched=$forbiddenLaunched; shell_delegation=$false

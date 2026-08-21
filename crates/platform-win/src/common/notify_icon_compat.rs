@@ -36,9 +36,9 @@ use windows::Win32::{
             DispatchMessageW, FindWindowW, GWLP_USERDATA, GetCursorPos, GetMessageW,
             GetWindowLongPtrW, GetWindowThreadProcessId, HWND_BROADCAST, IsWindow, MSG,
             PostMessageW, PostQuitMessage, RegisterClassW, RegisterWindowMessageW,
-            SetWindowLongPtrW, TranslateMessage, UnregisterClassW, WINDOW_EX_STYLE, WINDOW_STYLE,
-            WM_CLOSE, WM_CONTEXTMENU, WM_COPYDATA, WM_DESTROY, WM_LBUTTONUP, WM_MOUSEMOVE,
-            WM_NCCREATE, WM_RBUTTONUP, WNDCLASSW,
+            SetForegroundWindow, SetWindowLongPtrW, TranslateMessage, UnregisterClassW,
+            WINDOW_EX_STYLE, WINDOW_STYLE, WM_CLOSE, WM_CONTEXTMENU, WM_COPYDATA, WM_DESTROY,
+            WM_LBUTTONUP, WM_MOUSEMOVE, WM_NCCREATE, WM_RBUTTONUP, WNDCLASSW,
         },
     },
 };
@@ -822,9 +822,15 @@ pub fn deliver_callback(
     // SAFETY: cursor is local writable storage; failure falls back to the documented zero point.
     let _ = unsafe { GetCursorPos(&mut cursor) };
     let payload = callback_payload_at(icon, kind, cursor.x, cursor.y);
+    let owner = HWND(icon.client.window_identity as isize as *mut _);
+    if kind == NotificationEventKind::Context {
+        // Explorer gives the target foreground permission before the callback so the
+        // application's TrackPopupMenu result is not immediately dismissed.
+        let _ = unsafe { SetForegroundWindow(owner) };
+    }
     unsafe {
         PostMessageW(
-            Some(HWND(icon.client.window_identity as isize as *mut _)),
+            Some(owner),
             payload.message,
             WPARAM(payload.wparam),
             LPARAM(payload.lparam),
@@ -1128,6 +1134,13 @@ mod tests {
         assert_eq!(context.wparam as u32 & 0xffff, (-10_i16) as u16 as u32);
         assert_eq!(context.wparam as u32 >> 16, 700);
         assert_eq!(context.lparam as u32 & 0xffff, WM_CONTEXTMENU);
+        let production = include_str!("notify_icon_compat.rs")
+            .split("#[cfg(test)]")
+            .next()
+            .unwrap();
+        let foreground = production.find("SetForegroundWindow(owner)").unwrap();
+        let post = production[foreground..].find("PostMessageW(").unwrap() + foreground;
+        assert!(foreground < post);
         icon.callback.negotiated_version = NotifyIconLayoutVersion::V2;
         let legacy = callback_payload(&icon, NotificationEventKind::Context);
         assert_eq!(legacy.wparam, 77);

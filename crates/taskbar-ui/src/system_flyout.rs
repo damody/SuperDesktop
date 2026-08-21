@@ -1,9 +1,12 @@
-use std::rc::Rc;
+use std::{
+    rc::Rc,
+    time::{Duration, Instant},
+};
 
 use gpui::{
-    Context, FocusHandle, InteractiveElement, IntoElement, ObjectFit, ParentElement, Render,
-    StatefulInteractiveElement, Styled, StyledImage, Subscription, Window, div, img,
-    prelude::FluentBuilder as _, px, rgb, svg,
+    Context, FocusHandle, InteractiveElement, IntoElement, MouseButton, MouseDownEvent,
+    MouseMoveEvent, ObjectFit, ParentElement, Render, StatefulInteractiveElement, Styled,
+    StyledImage, Subscription, Window, div, img, prelude::FluentBuilder as _, px, rgb, svg,
 };
 use shell_provider_protocol::{
     InputProfile, InputProfileKind, NotificationSnapshot, StatusAvailability, SystemStatusSnapshot,
@@ -124,6 +127,8 @@ pub struct SystemFlyoutView {
     action: SystemFlyoutAction,
     notification_action: NotificationCenterActionHandler,
     notification_error: Option<String>,
+    optimistic_volume: Option<u8>,
+    optimistic_volume_deadline: Option<Instant>,
     dismiss: SystemFlyoutDismiss,
     focus: FocusHandle,
     _activation_subscription: Subscription,
@@ -159,10 +164,58 @@ impl SystemFlyoutView {
             action,
             notification_action,
             notification_error: None,
+            optimistic_volume: None,
+            optimistic_volume_deadline: None,
             dismiss,
             focus,
             _activation_subscription: activation_subscription,
         }
+    }
+
+    fn volume(&self) -> Option<(u8, bool)> {
+        match (&self.status.core.volume, &self.status.core.muted) {
+            (crate::ProviderState::Available(volume), crate::ProviderState::Available(muted)) => {
+                Some((self.optimistic_volume.unwrap_or(*volume).min(100), *muted))
+            }
+            _ => None,
+        }
+    }
+
+    fn set_volume(&mut self, value: u8, cx: &mut Context<Self>) {
+        let value = value.min(100);
+        self.optimistic_volume = Some(value);
+        self.optimistic_volume_deadline = Some(Instant::now() + Duration::from_secs(2));
+        (self.action)(SystemStatusAction::SetVolume(value), cx);
+        cx.notify();
+    }
+
+    pub fn reconcile(
+        &mut self,
+        snapshot: Option<SystemStatusSnapshot>,
+        status: StatusRegion,
+        notifications: Option<NotificationSnapshot>,
+    ) -> bool {
+        let provider_volume = match &status.core.volume {
+            crate::ProviderState::Available(value) => Some(*value),
+            _ => None,
+        };
+        if self
+            .optimistic_volume
+            .is_some_and(|desired| provider_volume == Some(desired))
+            || self
+                .optimistic_volume_deadline
+                .is_some_and(|deadline| Instant::now() >= deadline)
+        {
+            self.optimistic_volume = None;
+            self.optimistic_volume_deadline = None;
+        }
+        let changed = self.snapshot != snapshot
+            || self.status != status
+            || self.notifications != notifications;
+        self.snapshot = snapshot;
+        self.status = status;
+        self.notifications = notifications;
+        changed
     }
 
     fn apply_notification_action(
@@ -498,13 +551,7 @@ impl Render for SystemFlyoutView {
         let notification_error = self.notification_error.clone();
         let presentation = self.presentation;
         let tokens = SystemFlyoutChromeTokens::new(presentation.theme);
-        let volume = match (&self.status.core.volume, &self.status.core.muted) {
-            (crate::ProviderState::Available(volume), crate::ProviderState::Available(muted)) => {
-                Some((*volume, *muted))
-            }
-            _ => None,
-        };
-        let root_volume_key = action.clone();
+        let volume = self.volume();
         let root_volume = volume;
         let calendar = calendar_month(&self.status.date);
         let (network_name, network_detail, network_available) =
@@ -544,7 +591,7 @@ impl Render for SystemFlyoutView {
             .flex_col()
             .gap_2()
             .on_key_down(
-                cx.listener(move |_, event: &gpui::KeyDownEvent, window, cx| {
+                cx.listener(move |this, event: &gpui::KeyDownEvent, window, cx| {
                     if event.keystroke.key == "escape" {
                         dismiss(window, cx);
                         cx.stop_propagation();
@@ -559,7 +606,7 @@ impl Render for SystemFlyoutView {
                             _ => None,
                         };
                         if let Some(value) = value {
-                            root_volume_key(SystemStatusAction::SetVolume(value), cx);
+                            this.set_volume(value, cx);
                             cx.stop_propagation();
                         }
                     }
@@ -830,7 +877,6 @@ impl Render for SystemFlyoutView {
                     let mute_key = action.clone();
                     let higher = action.clone();
                     let higher_key = action.clone();
-                    let slider_key = action.clone();
                     root.child(
                         div()
                             .id("owned-volume-heading")
@@ -867,7 +913,8 @@ impl Render for SystemFlyoutView {
                             .h(px(34.))
                             .mt_2()
                             .mb_2()
-                            .on_key_down(move |event, _, cx| {
+                            .on_key_down(cx.listener(
+                                move |this, event: &gpui::KeyDownEvent, _, cx| {
                                 let value = match event.keystroke.key.as_str() {
                                     "left" | "down" => Some(current.saturating_sub(5)),
                                     "right" | "up" => Some(current.saturating_add(5).min(100)),
@@ -876,9 +923,10 @@ impl Render for SystemFlyoutView {
                                     _ => None,
                                 };
                                 if let Some(value) = value {
-                                    slider_key(SystemStatusAction::SetVolume(value), cx);
+                                    this.set_volume(value, cx);
                                 }
-                            })
+                                },
+                            ))
                             .child(
                                 div()
                                     .absolute()
@@ -911,23 +959,33 @@ impl Render for SystemFlyoutView {
                                     .border_color(rgb(tokens.accent))
                                     .bg(rgb(tokens.card)),
                             )
-                            .children((0u8..=10).map(|step| {
-                                let slider_click = action.clone();
-                                let value = step * 10;
+                            .children((0u8..=100).map(|value| {
                                 div()
                                     .id(format!("owned-volume-step-{value}"))
                                     .role(gpui::Role::Button)
                                     .aria_label(format!("Set volume to {value} percent"))
                                     .absolute()
-                                    .left(px(f32::from(step) * 31.0))
+                                    .left(px(f32::from(value) * 3.1))
                                     .top_0()
-                                    .w(px(31.))
+                                    .w(px(3.2))
                                     .h(px(34.))
                                     .cursor_pointer()
                                     .opacity(0.01)
-                                    .on_click(move |_, _, cx| {
-                                        slider_click(SystemStatusAction::SetVolume(value), cx);
-                                    })
+                                    .on_mouse_down(
+                                        MouseButton::Left,
+                                        cx.listener(move |this, _: &MouseDownEvent, _, cx| {
+                                            this.set_volume(value, cx);
+                                            cx.stop_propagation();
+                                        }),
+                                    )
+                                    .on_mouse_move(cx.listener(
+                                        move |this, event: &MouseMoveEvent, _, cx| {
+                                            if event.dragging() {
+                                                this.set_volume(value, cx);
+                                                cx.stop_propagation();
+                                            }
+                                        },
+                                    ))
                             })),
                     )
                     .child(
@@ -2028,7 +2086,10 @@ mod tests {
             "owned-volume-actions",
             "owned-volume-slider",
             "Role::Slider",
-            "root_volume_key(SystemStatusAction::SetVolume(value), cx)",
+            "this.set_volume(value, cx)",
+            "(0u8..=100).map(|value|",
+            "event.dragging()",
+            "optimistic_volume_deadline",
             "\"home\" => Some(0)",
             "\"end\" => Some(100)",
             "observe_window_activation",

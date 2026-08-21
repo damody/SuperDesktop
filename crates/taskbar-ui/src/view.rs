@@ -566,12 +566,12 @@ impl Render for TaskbarView {
                                 }
                             })
                             .on_mouse_down(gpui::MouseButton::Right, move |_, _, cx| {
-                                if let Some(callback) = &context_callback {
-                                    callback(&context_key, NotificationEventKind::Context);
-                                    cx.stop_propagation();
-                                }
+                                cx.stop_propagation();
                             })
                             .on_mouse_up(gpui::MouseButton::Right, move |_, _, cx| {
+                                if let Some(callback) = &context_callback {
+                                    callback(&context_key, NotificationEventKind::Context);
+                                }
                                 cx.stop_propagation();
                             })
                             .when_some(icon, |element, image| {

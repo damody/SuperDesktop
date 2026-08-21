@@ -427,6 +427,33 @@ try {
     if ($null -eq $volumeDialog) { throw 'Owned volume flyout did not appear after the physical left click.' }
     $slider = Find-Element $volumeDialog { param($item) $item.Current.ControlType -eq [System.Windows.Automation.ControlType]::Slider }
     if ($null -eq $slider) { throw 'Owned volume slider is missing.' }
+    $range = $slider.GetCurrentPattern([System.Windows.Automation.RangeValuePattern]::Pattern)
+    $originalVolume = [double]$range.Current.Value
+    $sliderBounds = $slider.Current.BoundingRectangle
+    $startX = [int]($sliderBounds.Left + [Math]::Max(1.0, $sliderBounds.Width * $originalVolume / 100.0))
+    $targetPercent = if ($originalVolume -lt 60.0) { 80.0 } else { 20.0 }
+    $targetX = [int]($sliderBounds.Left + $sliderBounds.Width * $targetPercent / 100.0)
+    $sliderY = [int]($sliderBounds.Top + $sliderBounds.Height / 2.0)
+    [SuperDesktopFlyoutFocus]::SetCursorPos($startX,$sliderY) | Out-Null
+    [SuperDesktopFlyoutFocus]::mouse_event(0x0002,0,0,0,[UIntPtr]::Zero)
+    foreach ($step in 1..24) {
+        $x = [int]($startX + (($targetX - $startX) * $step / 24.0))
+        [SuperDesktopFlyoutFocus]::SetCursorPos($x,$sliderY) | Out-Null
+        [SuperDesktopFlyoutFocus]::mouse_event(0x0001,0,0,0,[UIntPtr]::Zero)
+        Start-Sleep -Milliseconds 12
+    }
+    [SuperDesktopFlyoutFocus]::mouse_event(0x0004,0,0,0,[UIntPtr]::Zero)
+    Start-Sleep -Milliseconds 250
+    $restoreX = [int]($sliderBounds.Left + [Math]::Max(1.0, $sliderBounds.Width * $originalVolume / 100.0))
+    [SuperDesktopFlyoutFocus]::SetCursorPos($targetX,$sliderY) | Out-Null
+    [SuperDesktopFlyoutFocus]::mouse_event(0x0002,0,0,0,[UIntPtr]::Zero)
+    foreach ($step in 1..24) {
+        $x = [int]($targetX + (($restoreX - $targetX) * $step / 24.0))
+        [SuperDesktopFlyoutFocus]::SetCursorPos($x,$sliderY) | Out-Null
+        [SuperDesktopFlyoutFocus]::mouse_event(0x0001,0,0,0,[UIntPtr]::Zero)
+        Start-Sleep -Milliseconds 12
+    }
+    [SuperDesktopFlyoutFocus]::mouse_event(0x0004,0,0,0,[UIntPtr]::Zero)
     $geometryRecords += Measure-OwnedFlyout 'volume' $process.Id $taskbar $process.MainWindowHandle 360.0
     Capture-Screen (Join-Path $EvidenceDirectory 'volume-flyout.png')
 
@@ -588,6 +615,8 @@ try {
             volume_right_context=$true
             background_context_absent=$true
             physical_pointer=$true
+            volume_continuous_drag=$true
+            volume_drag_steps=24
         }
         context_topmost=[ordered]@{
             input=$inputContextEvidence

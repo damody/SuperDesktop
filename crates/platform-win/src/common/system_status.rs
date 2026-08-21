@@ -48,7 +48,8 @@ use windows::Win32::{
         TextServices::{
             CLSID_TF_InputProcessorProfiles, GUID_TFCAT_TIP_KEYBOARD, ITfInputProcessorProfileMgr,
             ITfInputProcessorProfiles, TF_INPUTPROCESSORPROFILE, TF_IPP_FLAG_ENABLED,
-            TF_IPPMF_FORSESSION, TF_PROFILETYPE_INPUTPROCESSOR, TF_PROFILETYPE_KEYBOARDLAYOUT,
+            TF_IPPMF_DONTCARECURRENTINPUTLANGUAGE, TF_IPPMF_FORPROCESS, TF_IPPMF_FORSESSION,
+            TF_PROFILETYPE_INPUTPROCESSOR, TF_PROFILETYPE_KEYBOARDLAYOUT,
         },
         WindowsAndMessaging::{
             GetForegroundWindow, GetWindowThreadProcessId, PostMessageW, SW_SHOWNORMAL,
@@ -863,7 +864,9 @@ pub fn request_input_profile_for_session(
                     &profile.class_id,
                     &profile.profile_id,
                     profile.hkl,
-                    TF_IPPMF_FORSESSION,
+                    TF_IPPMF_FORSESSION
+                        | TF_IPPMF_FORPROCESS
+                        | TF_IPPMF_DONTCARECURRENTINPUTLANGUAGE,
                 )
             }
             .map_err(|error| format!("TSF input profile request failed: {error}"))?;
@@ -1077,6 +1080,8 @@ mod tests {
             "GetLanguageProfileDescription",
             "ActivateProfile(",
             "TF_IPPMF_FORSESSION",
+            "TF_IPPMF_FORPROCESS",
+            "TF_IPPMF_DONTCARECURRENTINPUTLANGUAGE",
             "ms-settings:regionlanguage",
             "ShellExecuteExW",
             "SEE_MASK_FLAG_NO_UI",

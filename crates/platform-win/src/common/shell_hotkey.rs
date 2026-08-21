@@ -16,7 +16,7 @@ use windows::Win32::{
     System::Threading::GetCurrentThreadId,
     UI::{
         Input::KeyboardAndMouse::{
-            GetAsyncKeyState, VK_CONTROL, VK_LWIN, VK_MENU, VK_RWIN, VK_SHIFT,
+            GetAsyncKeyState, VK_CONTROL, VK_LSHIFT, VK_LWIN, VK_MENU, VK_RSHIFT, VK_RWIN, VK_SHIFT,
         },
         Shell::{SEE_MASK_FLAG_NO_UI, SHELLEXECUTEINFOW, ShellExecuteExW},
         WindowsAndMessaging::{
@@ -80,9 +80,38 @@ impl ShellHotkeyAction {
 
 static ACTIVE_KEY: AtomicU32 = AtomicU32::new(0);
 static WINDOWS_KEY_GESTURE: AtomicU32 = AtomicU32::new(0);
+static TRACKED_MODIFIERS: AtomicU32 = AtomicU32::new(0);
 static REQUESTED: AtomicU32 = AtomicU32::new(0);
 static ALT_TAB_ACTIVE: AtomicBool = AtomicBool::new(false);
 static ALT_TAB_DELTA: AtomicI32 = AtomicI32::new(0);
+
+const TRACKED_LWIN: u32 = 1 << 0;
+const TRACKED_RWIN: u32 = 1 << 1;
+const TRACKED_LSHIFT: u32 = 1 << 2;
+const TRACKED_RSHIFT: u32 = 1 << 3;
+
+fn modifier_bit(vk_code: u32) -> u32 {
+    match vk_code {
+        code if code == u32::from(VK_LWIN.0) => TRACKED_LWIN,
+        code if code == u32::from(VK_RWIN.0) => TRACKED_RWIN,
+        code if code == u32::from(VK_LSHIFT.0) => TRACKED_LSHIFT,
+        code if code == u32::from(VK_RSHIFT.0) => TRACKED_RSHIFT,
+        _ => 0,
+    }
+}
+
+fn update_tracked_modifiers(state: u32, vk_code: u32, key_down: bool, key_up: bool) -> u32 {
+    let bit = modifier_bit(vk_code);
+    if bit == 0 {
+        state
+    } else if key_down {
+        state | bit
+    } else if key_up {
+        state & !bit
+    } else {
+        state
+    }
+}
 
 fn request(action: ShellHotkeyAction) {
     match action {
@@ -322,11 +351,20 @@ unsafe extern "system" fn keyboard_hook(code: i32, wparam: WPARAM, lparam: LPARA
         let message = wparam.0 as u32;
         let key_down = message == WM_KEYDOWN || message == WM_SYSKEYDOWN;
         let key_up = message == WM_KEYUP || message == WM_SYSKEYUP;
-        let windows_down = unsafe { GetAsyncKeyState(i32::from(VK_LWIN.0)) } < 0
+        let tracked = update_tracked_modifiers(
+            TRACKED_MODIFIERS.load(Ordering::Acquire),
+            event.vkCode,
+            key_down,
+            key_up,
+        );
+        TRACKED_MODIFIERS.store(tracked, Ordering::Release);
+        let windows_down = tracked & (TRACKED_LWIN | TRACKED_RWIN) != 0
+            || unsafe { GetAsyncKeyState(i32::from(VK_LWIN.0)) } < 0
             || unsafe { GetAsyncKeyState(i32::from(VK_RWIN.0)) } < 0;
         let control = unsafe { GetAsyncKeyState(i32::from(VK_CONTROL.0)) } < 0;
         let alt = unsafe { GetAsyncKeyState(i32::from(VK_MENU.0)) } < 0;
-        let shift = unsafe { GetAsyncKeyState(i32::from(VK_SHIFT.0)) } < 0;
+        let shift = tracked & (TRACKED_LSHIFT | TRACKED_RSHIFT) != 0
+            || unsafe { GetAsyncKeyState(i32::from(VK_SHIFT.0)) } < 0;
         let active_key = ACTIVE_KEY.load(Ordering::Acquire);
         let windows_key_gesture = WINDOWS_KEY_GESTURE.load(Ordering::Acquire);
         let alt_tab_active = ALT_TAB_ACTIVE.load(Ordering::Acquire);
@@ -393,6 +431,7 @@ impl ShellHotkeys {
         REQUESTED.store(0, Ordering::Release);
         ACTIVE_KEY.store(0, Ordering::Release);
         WINDOWS_KEY_GESTURE.store(WINDOWS_GESTURE_IDLE, Ordering::Release);
+        TRACKED_MODIFIERS.store(0, Ordering::Release);
         ALT_TAB_ACTIVE.store(false, Ordering::Release);
         ALT_TAB_DELTA.store(0, Ordering::Release);
         let (ready_tx, ready_rx) = mpsc::sync_channel(1);
@@ -427,6 +466,7 @@ impl ShellHotkeys {
                 let _ = unsafe { UnhookWindowsHookEx(hook) };
                 ACTIVE_KEY.store(0, Ordering::Release);
                 WINDOWS_KEY_GESTURE.store(WINDOWS_GESTURE_IDLE, Ordering::Release);
+                TRACKED_MODIFIERS.store(0, Ordering::Release);
                 ALT_TAB_ACTIVE.store(false, Ordering::Release);
                 ALT_TAB_DELTA.store(0, Ordering::Release);
             })
@@ -565,6 +605,32 @@ mod tests {
             reduce_shell_hotkey(0x46, true, false, true, false, false, false, 0),
             (false, None, 0)
         );
+    }
+
+    #[test]
+    fn tracked_modifier_state_survives_consumed_windows_and_shift_events() {
+        let lwin = u32::from(VK_LWIN.0);
+        let rshift = u32::from(VK_RSHIFT.0);
+        let mut state = update_tracked_modifiers(0, lwin, true, false);
+        assert_eq!(state, TRACKED_LWIN);
+        state = update_tracked_modifiers(state, rshift, true, false);
+        assert_eq!(state, TRACKED_LWIN | TRACKED_RSHIFT);
+        assert_eq!(
+            reduce_shell_hotkey(
+                VK_S,
+                true,
+                false,
+                state & TRACKED_LWIN != 0,
+                false,
+                false,
+                state & TRACKED_RSHIFT != 0,
+                0
+            ),
+            (true, Some(ShellHotkeyAction::OpenScreenSnip), VK_S)
+        );
+        state = update_tracked_modifiers(state, rshift, false, true);
+        state = update_tracked_modifiers(state, lwin, false, true);
+        assert_eq!(state, 0);
     }
 
     #[test]

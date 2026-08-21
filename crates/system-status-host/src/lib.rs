@@ -296,11 +296,13 @@ impl SystemStatusRuntime {
                 "command deadline expired".into(),
             );
         }
+        let remaining =
+            Duration::from_millis(request.deadline_unix_ms.saturating_sub(unix_ms()).max(1));
         let (result, accepted_event, accepted_message) = match request.command {
             SystemStatusCommand::ActivateInputProfile { profile_id } => (
                 platform_win::common::system_status::request_input_profile(
                     &profile_id,
-                    Duration::from_secs(2),
+                    remaining.min(Duration::from_secs(5)),
                 )
                 .map(|_| ()),
                 None,
