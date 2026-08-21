@@ -4,6 +4,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+Import-Module PKI -ErrorAction Stop
 $output = [IO.Path]::GetFullPath($OutputDirectory)
 New-Item -ItemType Directory -Path $output -Force | Out-Null
 $certificate = Get-ChildItem Cert:\CurrentUser\My |
