@@ -119,6 +119,8 @@ pub struct StartSettings {
     pub initialized: bool,
     pub pinned_ids: Vec<String>,
     pub recent_ids: Vec<String>,
+    pub width_dip: Option<u16>,
+    pub height_dip: Option<u16>,
 }
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -259,6 +261,12 @@ impl SettingsV1 {
                 take_string_array(&mut start, "pinned_ids").unwrap_or_default();
             settings.start.recent_ids =
                 take_string_array(&mut start, "recent_ids").unwrap_or_default();
+            settings.start.width_dip = take_u64(&mut start, "width_dip")
+                .and_then(|value| u16::try_from(value).ok())
+                .filter(|value| *value > 0);
+            settings.start.height_dip = take_u64(&mut start, "height_dip")
+                .and_then(|value| u16::try_from(value).ok())
+                .filter(|value| *value > 0);
         }
         if let Some(Value::Object(mut wallpaper)) = object.remove("wallpaper") {
             settings.wallpaper.source = take_optional_string(&mut wallpaper, "source");
@@ -423,6 +431,20 @@ impl SettingsV1 {
                             .map(Value::String)
                             .collect(),
                     ),
+                ),
+                (
+                    "width_dip".into(),
+                    self.start
+                        .width_dip
+                        .map(|value| Value::Number(i64::from(value)))
+                        .unwrap_or(Value::Null),
+                ),
+                (
+                    "height_dip".into(),
+                    self.start
+                        .height_dip
+                        .map(|value| Value::Number(i64::from(value)))
+                        .unwrap_or(Value::Null),
                 ),
             ])),
         );
@@ -770,6 +792,38 @@ mod tests {
         assert_eq!(decoded.settings.start.pinned_ids, vec!["app:a"]);
         assert_eq!(decoded.settings.start.recent_ids, vec!["app:b"]);
         assert!(decoded.settings.start.initialized);
+    }
+
+    #[test]
+    fn start_dimensions_are_optional_bounded_and_round_trip() {
+        let legacy = SettingsV1::decode(
+            r#"{"schema_version":1,"start":{"initialized":true,"pinned_ids":[],"recent_ids":[]}}"#,
+        )
+        .unwrap()
+        .settings;
+        assert_eq!(legacy.start.width_dip, None);
+        assert_eq!(legacy.start.height_dip, None);
+        assert!(legacy.encode().contains("\"width_dip\":null"));
+
+        let configured = SettingsV1::decode(
+            r#"{"schema_version":1,"future":{"kept":true},"start":{"width_dip":812,"height_dip":634}}"#,
+        )
+        .unwrap()
+        .settings;
+        assert_eq!(configured.start.width_dip, Some(812));
+        assert_eq!(configured.start.height_dip, Some(634));
+        let encoded = configured.encode();
+        assert!(encoded.contains("\"future\""));
+        assert_eq!(SettingsV1::decode(&encoded).unwrap().settings, configured);
+
+        for invalid in [
+            r#"{"schema_version":1,"start":{"width_dip":0,"height_dip":-1}}"#,
+            r#"{"schema_version":1,"start":{"width_dip":70000,"height_dip":"large"}}"#,
+        ] {
+            let settings = SettingsV1::decode(invalid).unwrap().settings;
+            assert_eq!(settings.start.width_dip, None);
+            assert_eq!(settings.start.height_dip, None);
+        }
     }
 
     #[test]

@@ -54,13 +54,13 @@ use taskbar_ui::{
     HoverPreviewController, JumpListModel, JumpListView, NotificationAreaModel,
     NotificationCenterAction, NotificationOverflowView, PreviewCard, ProgressState, ProviderState,
     ShowDesktopObservation, ShowDesktopPlan, ShowDesktopSession, ShowDesktopTarget, StartActions,
-    StartPowerAction, StartSnapshot, StartView, StatusRegion, SystemControlContextCommand,
-    SystemControlContextKind, SystemControlContextView, SystemFlyoutKind, SystemFlyoutPresentation,
-    SystemFlyoutTheme, SystemFlyoutView, SystemStatusAction, TaskAction, TaskFlyoutView,
-    TaskViewEffect, TaskViewModel, TaskViewSurface, TaskbarCallbacks, TaskbarContextCommand,
-    TaskbarContextView, TaskbarLayout, TaskbarSettingId, TaskbarSettingsEffect,
-    TaskbarSettingsView, TaskbarView, TestClock, WindowsGuiMetrics, auto_hide_endpoints,
-    reduce_auto_hide,
+    StartPowerAction, StartResizeLimits, StartSnapshot, StartView, StatusRegion,
+    SystemControlContextCommand, SystemControlContextKind, SystemControlContextView,
+    SystemFlyoutKind, SystemFlyoutPresentation, SystemFlyoutTheme, SystemFlyoutView,
+    SystemStatusAction, TaskAction, TaskFlyoutView, TaskViewEffect, TaskViewModel, TaskViewSurface,
+    TaskbarCallbacks, TaskbarContextCommand, TaskbarContextView, TaskbarLayout, TaskbarSettingId,
+    TaskbarSettingsEffect, TaskbarSettingsView, TaskbarView, TestClock, WindowsGuiMetrics,
+    auto_hide_endpoints, reduce_auto_hide,
 };
 
 use crate::{
@@ -2532,16 +2532,84 @@ struct StartWindowGeometry {
     height: f32,
 }
 
-fn start_window_geometry(
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct StartWindowSize {
+    width: f32,
+    height: f32,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct StartWindowSizeLimits {
+    minimum: StartWindowSize,
+    maximum: StartWindowSize,
+}
+
+const START_MIN_WIDTH: f32 = 420.0;
+const START_MIN_HEIGHT: f32 = 360.0;
+
+fn start_window_size_limits(
+    monitor: &MonitorRecord,
+    shell: bool,
+    taskbar_rows: u8,
+) -> StartWindowSizeLimits {
+    let scale = monitor.dpi_x as f32 / 96.0;
+    let monitor_width = (monitor.work_area.right - monitor.work_area.left) as f32 / scale;
+    let work_top = monitor.work_area.top as f32 / scale;
+    let taskbar_bottom = if shell {
+        monitor.bounds.bottom as f32 / scale
+    } else {
+        monitor.work_area.bottom as f32 / scale
+    };
+    let start_bottom = (taskbar_bottom
+        - WindowsGuiMetrics::taskbar_height(taskbar_rows)
+        - WindowsGuiMetrics::START_TASKBAR_GAP)
+        .max(work_top + 1.0);
+    let maximum = StartWindowSize {
+        width: (monitor_width - WindowsGuiMetrics::START_HORIZONTAL_MARGIN * 2.0).max(1.0),
+        height: (start_bottom - work_top).max(1.0),
+    };
+    StartWindowSizeLimits {
+        minimum: StartWindowSize {
+            width: START_MIN_WIDTH.min(maximum.width),
+            height: START_MIN_HEIGHT.min(maximum.height),
+        },
+        maximum,
+    }
+}
+
+fn normalized_start_window_size(
+    monitor: &MonitorRecord,
+    shell: bool,
+    taskbar_rows: u8,
+    requested_width: Option<u16>,
+    requested_height: Option<u16>,
+) -> StartWindowSize {
+    let limits = start_window_size_limits(monitor, shell, taskbar_rows);
+    StartWindowSize {
+        width: f32::from(requested_width.unwrap_or(WindowsGuiMetrics::START_WIDTH as u16))
+            .clamp(limits.minimum.width, limits.maximum.width),
+        height: f32::from(requested_height.unwrap_or(WindowsGuiMetrics::START_MAX_HEIGHT as u16))
+            .clamp(limits.minimum.height, limits.maximum.height),
+    }
+}
+
+fn start_window_geometry_with_size(
     monitor: &MonitorRecord,
     shell: bool,
     taskbar_rows: u8,
     alignment: TaskbarAlignment,
+    requested_width: Option<u16>,
+    requested_height: Option<u16>,
 ) -> StartWindowGeometry {
+    let size = normalized_start_window_size(
+        monitor,
+        shell,
+        taskbar_rows,
+        requested_width,
+        requested_height,
+    );
     let scale = monitor.dpi_x as f32 / 96.0;
     let monitor_width = (monitor.work_area.right - monitor.work_area.left) as f32 / scale;
-    let width = (monitor_width - WindowsGuiMetrics::START_HORIZONTAL_MARGIN * 2.0)
-        .clamp(1.0, WindowsGuiMetrics::START_WIDTH);
     let work_left = monitor.work_area.left as f32 / scale;
     let work_right = monitor.work_area.right as f32 / scale;
     let work_top = monitor.work_area.top as f32 / scale;
@@ -2554,19 +2622,28 @@ fn start_window_geometry(
         - WindowsGuiMetrics::taskbar_height(taskbar_rows)
         - WindowsGuiMetrics::START_TASKBAR_GAP)
         .max(work_top + 1.0);
-    let height = (start_bottom - work_top).clamp(1.0, WindowsGuiMetrics::START_MAX_HEIGHT);
-    let centered_left = work_left + (monitor_width - width).max(0.0) / 2.0;
+    let centered_left = work_left + (monitor_width - size.width).max(0.0) / 2.0;
     let desired_left = match alignment {
         TaskbarAlignment::Left => work_left + WindowsGuiMetrics::START_HORIZONTAL_MARGIN,
         TaskbarAlignment::Center => centered_left,
     };
-    let maximum_left = (work_right - width).max(work_left);
+    let maximum_left = (work_right - size.width).max(work_left);
     StartWindowGeometry {
         left: desired_left.clamp(work_left, maximum_left),
-        top: (start_bottom - height).max(work_top),
-        width,
-        height,
+        top: (start_bottom - size.height).max(work_top),
+        width: size.width,
+        height: size.height,
     }
+}
+
+#[allow(dead_code)]
+fn start_window_geometry(
+    monitor: &MonitorRecord,
+    shell: bool,
+    taskbar_rows: u8,
+    alignment: TaskbarAlignment,
+) -> StartWindowGeometry {
+    start_window_geometry_with_size(monitor, shell, taskbar_rows, alignment, None, None)
 }
 
 fn start_options(
@@ -2574,8 +2651,18 @@ fn start_options(
     shell: bool,
     taskbar_rows: u8,
     alignment: TaskbarAlignment,
+    requested_width: Option<u16>,
+    requested_height: Option<u16>,
 ) -> WindowOptions {
-    let geometry = start_window_geometry(monitor, shell, taskbar_rows, alignment);
+    let geometry = start_window_geometry_with_size(
+        monitor,
+        shell,
+        taskbar_rows,
+        alignment,
+        requested_width,
+        requested_height,
+    );
+    let limits = start_window_size_limits(monitor, shell, taskbar_rows);
     WindowOptions {
         window_bounds: Some(WindowBounds::Windowed(Bounds {
             origin: point(px(geometry.left), px(geometry.top)),
@@ -2586,8 +2673,9 @@ fn start_options(
         show: true,
         kind: WindowKind::PopUp,
         is_movable: false,
-        is_resizable: false,
+        is_resizable: true,
         is_minimizable: false,
+        window_min_size: Some(size(px(limits.minimum.width), px(limits.minimum.height))),
         window_background: WindowBackgroundAppearance::Opaque,
         ..Default::default()
     }
@@ -4327,7 +4415,10 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                 let existing_start = *start_window_for_taskbar.borrow();
                                 if let Some(existing) = existing_start {
                                     if existing
-                                        .update(app, |_, window, _| window.remove_window())
+                                        .update(app, |view, window, _| {
+                                            view.flush_window_size(window);
+                                            window.remove_window();
+                                        })
                                         .is_ok()
                                     {
                                         *start_window_for_taskbar.borrow_mut() = None;
@@ -4365,20 +4456,41 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                 let persist_store = Rc::clone(&start_settings_store);
                                 let persist_target = Rc::clone(&start_settings_target);
                                 let persist_settings = Rc::clone(&start_persisted_settings);
+                                let resize_store = Rc::clone(&start_settings_store);
+                                let resize_target = Rc::clone(&start_settings_target);
+                                let resize_settings = Rc::clone(&start_persisted_settings);
+                                let resize_monitor = start_monitor.clone();
                                 let start_alignment = {
                                     start_persisted_settings.borrow().taskbar.alignment
+                                };
+                                let (start_width, start_height) = {
+                                    let settings = start_persisted_settings.borrow();
+                                    (settings.start.width_dip, settings.start.height_dip)
+                                };
+                                let start_limits = start_window_size_limits(
+                                    &start_monitor,
+                                    shell,
+                                    start_taskbar_rows,
+                                );
+                                let resize_limits = StartResizeLimits {
+                                    minimum_width: start_limits.minimum.width.round() as u16,
+                                    minimum_height: start_limits.minimum.height.round() as u16,
+                                    maximum_width: start_limits.maximum.width.round() as u16,
+                                    maximum_height: start_limits.maximum.height.round() as u16,
                                 };
                                 let opened = app.open_window(start_options(
                                     &start_monitor,
                                     shell,
                                     start_taskbar_rows,
                                     start_alignment,
+                                    start_width,
+                                    start_height,
                                 ), move |window, cx| {
                                     window.activate_window();
                                     let provider = Rc::clone(&search_provider);
                                     let dismiss_slot = Rc::clone(&dismiss_slot);
                                     cx.new(move |cx| {
-                                        StartView::new(
+                                        let mut view = StartView::new(
                                             catalog,
                                             snapshot,
                                             StartActions {
@@ -4414,9 +4526,43 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                                         Err(_) => trace_action("start:power-failed"),
                                                     }
                                                 }),
+                                                resize: Rc::new(move |width, height| {
+                                                    let normalized = normalized_start_window_size(
+                                                        &resize_monitor,
+                                                        shell,
+                                                        start_taskbar_rows,
+                                                        Some(width),
+                                                        Some(height),
+                                                    );
+                                                    let width = normalized.width.round() as u16;
+                                                    let height = normalized.height.round() as u16;
+                                                    let mut settings = resize_settings.borrow().clone();
+                                                    if settings.start.width_dip == Some(width)
+                                                        && settings.start.height_dip == Some(height)
+                                                    {
+                                                        trace_action("start:size-unchanged");
+                                                        return true;
+                                                    }
+                                                    settings.start.width_dip = Some(width);
+                                                    settings.start.height_dip = Some(height);
+                                                    match resize_store.borrow_mut().save(&resize_target, &settings) {
+                                                        Ok(saved) => {
+                                                            *resize_settings.borrow_mut() = saved;
+                                                            trace_action("start:size-persisted");
+                                                            true
+                                                        }
+                                                        Err(_) => {
+                                                            trace_action("start:size-persist-failed");
+                                                            false
+                                                        }
+                                                    }
+                                                }),
+                                                resize_limits,
                                             },
                                             cx,
-                                        )
+                                        );
+                                        view.attach_resize_observers(window, cx);
+                                        view
                                     })
                                 });
                                 match opened {
@@ -6349,8 +6495,9 @@ mod live_parity_tests {
     use super::{
         AttentionRuntime, DEFAULT_FLASH_EDGES, HSHELL_FLASH, HSHELL_WINDOWACTIVATED,
         ICON_CACHE_LIMIT, MonitorRecord, SystemStatusCommandFailure, apply_taskbar_context_setting,
-        execute_system_status_command, prune_icon_cache, reconcile_desktop_item_positions,
-        start_window_geometry, taskbar_physical_geometry,
+        execute_system_status_command, normalized_start_window_size, prune_icon_cache,
+        reconcile_desktop_item_positions, start_window_geometry, start_window_geometry_with_size,
+        start_window_size_limits, taskbar_physical_geometry,
     };
     use crate::status_client::StatusReconciler;
     use desktop_ui::AccessibleNode;
@@ -7283,6 +7430,84 @@ mod live_parity_tests {
             assert_eq!(geometry.width, 1.0);
             assert!(geometry.left >= 300.0);
             assert!(geometry.left + geometry.width <= 310.0);
+        }
+    }
+
+    #[test]
+    fn start_geometry_saved_size_is_dpi_independent_and_clamped_to_current_monitor() {
+        for dpi in [96, 120, 144, 168, 192] {
+            let scale = dpi as f32 / 96.0;
+            let monitor = MonitorRecord {
+                device_name: format!("saved-{dpi}"),
+                primary: dpi == 96,
+                bounds: ScreenRect {
+                    left: 0,
+                    top: 0,
+                    right: (1920.0 * scale) as i32,
+                    bottom: (1080.0 * scale) as i32,
+                },
+                work_area: ScreenRect {
+                    left: 0,
+                    top: 0,
+                    right: (1920.0 * scale) as i32,
+                    bottom: (1000.0 * scale) as i32,
+                },
+                dpi_x: dpi,
+                dpi_y: dpi,
+            };
+            let saved = start_window_geometry_with_size(
+                &monitor,
+                false,
+                1,
+                TaskbarAlignment::Center,
+                Some(812),
+                Some(634),
+            );
+            assert_eq!((saved.width, saved.height), (812.0, 634.0));
+            assert!((saved.left - (1920.0 - 812.0) / 2.0).abs() < 0.01);
+
+            let minimum = normalized_start_window_size(&monitor, false, 1, Some(1), Some(1));
+            assert_eq!((minimum.width, minimum.height), (420.0, 360.0));
+            let maximum =
+                normalized_start_window_size(&monitor, false, 3, Some(u16::MAX), Some(u16::MAX));
+            let limits = start_window_size_limits(&monitor, false, 3);
+            assert_eq!(maximum, limits.maximum);
+        }
+    }
+
+    #[test]
+    fn start_resize_source_is_native_bounded_and_atomically_persisted() {
+        let source = include_str!("surface_runtime.rs");
+        let options = source
+            .split("fn start_options")
+            .nth(1)
+            .and_then(|tail| tail.split("enum PreviewOpenSource").next())
+            .expect("Start window options");
+        for required in [
+            "is_resizable: true",
+            "is_movable: false",
+            "window_min_size: Some",
+            "start_window_geometry_with_size",
+        ] {
+            assert!(
+                options.contains(required),
+                "missing Start option: {required}"
+            );
+        }
+        for required in [
+            "settings.start.width_dip",
+            "settings.start.height_dip",
+            "normalized_start_window_size",
+            "attach_resize_observers",
+            "flush_window_size",
+            "start:size-persisted",
+            "start:size-persist-failed",
+            "resize_store.borrow_mut().save",
+        ] {
+            assert!(
+                source.contains(required),
+                "missing Start persistence route: {required}"
+            );
         }
     }
 

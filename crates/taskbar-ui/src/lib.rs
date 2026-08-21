@@ -49,7 +49,8 @@ pub use show_desktop::{
 };
 pub use start::{
     StartAccessibilityNode, StartActions, StartAvailability, StartControl, StartEffect,
-    StartFailure, StartModel, StartPage, StartPowerAction, StartSnapshot, StartSource, StartView,
+    StartFailure, StartModel, StartPage, StartPowerAction, StartResizeLimits, StartSnapshot,
+    StartSource, StartView,
 };
 pub use status::{
     ClockLocale, CoreStatus, ProviderState, StatusRegion, SystemFlyoutKind, SystemStatusAction,

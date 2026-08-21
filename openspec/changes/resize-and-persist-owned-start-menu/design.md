@@ -33,7 +33,7 @@ The default is 640×720 DIP, minimum 420×360 DIP, and maximum is the active wor
 
 ### Use native resize edges and derived positioning
 
-The popup becomes resizable but remains titlebar-free and immovable. Windows/GPUI supplies edge hit testing. Reopen derives left/top from saved size, current alignment, monitor, taskbar rows, and preview/shell anchor. Position is not persisted.
+The popup becomes resizable but remains titlebar-free and immovable. Physical evidence showed that the vendored Windows GPUI backend ignores `is_resizable` for `WindowKind::PopUp`; the backend therefore adds only `WS_THICKFRAME` when a popup explicitly requests resizing. Non-resizable popups remain style-identical, and resizable popups do not gain maximize, caption, or app-window styles. Reopen derives left/top from saved size, current alignment, monitor, taskbar rows, and preview/shell anchor. Position is not persisted.
 
 ### Debounce atomic persistence and flush terminal paths
 
@@ -46,6 +46,7 @@ A-level refinements may change debounce implementation or test mechanics without
 ## Risks / Trade-offs
 
 - **Risk: resize events create excessive writes** → Generation-fenced 250ms debounce plus terminal flush.
+- **Risk: backend change affects other popups** → Gate `WS_THICKFRAME` strictly on `PopUp + is_resizable` and add positive/negative style tests.
 - **Risk: close races the debounce** → Flush the latest observed size before explicit removal and on deactivation.
 - **Risk: saved geometry no longer fits a monitor** → Normalize every open against the current work area.
 - **Risk: small content clips** → Enforce 420×360 minimum when space permits; existing content already uses wrapping and vertical scrolling.

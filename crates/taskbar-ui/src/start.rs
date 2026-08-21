@@ -13,8 +13,8 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use gpui::{
     AppContext, Bounds, Context, ElementInputHandler, EntityInputHandler, FocusHandle,
     InteractiveElement, IntoElement, ObjectFit, ParentElement, Pixels, Render, RenderImage,
-    StatefulInteractiveElement, Styled, StyledImage, UTF16Selection, Window, canvas, div, img,
-    prelude::FluentBuilder as _, px, rgb,
+    StatefulInteractiveElement, Styled, StyledImage, Subscription, UTF16Selection, Window, canvas,
+    div, img, prelude::FluentBuilder as _, px, rgb,
 };
 use shell_provider_protocol::{IconData, SearchCategory};
 
@@ -549,6 +549,62 @@ pub struct StartActions {
     pub dismiss: DismissAction,
     pub persist: PersistStartAction,
     pub power: PowerAction,
+    pub resize: Rc<dyn Fn(u16, u16) -> bool>,
+    pub resize_limits: StartResizeLimits,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct StartResizeLimits {
+    pub minimum_width: u16,
+    pub minimum_height: u16,
+    pub maximum_width: u16,
+    pub maximum_height: u16,
+}
+
+impl StartResizeLimits {
+    fn clamp(self, size: (u16, u16)) -> (u16, u16) {
+        (
+            size.0.clamp(self.minimum_width, self.maximum_width),
+            size.1.clamp(self.minimum_height, self.maximum_height),
+        )
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+struct StartResizePersistence {
+    generation: u64,
+    observed: Option<(u16, u16)>,
+    persisted: Option<(u16, u16)>,
+}
+
+impl StartResizePersistence {
+    fn initialize(&mut self, size: (u16, u16)) {
+        self.observed = Some(size);
+        self.persisted = Some(size);
+    }
+
+    fn observe(&mut self, size: (u16, u16)) -> Option<u64> {
+        if self.observed == Some(size) {
+            return None;
+        }
+        self.observed = Some(size);
+        self.generation = self.generation.wrapping_add(1);
+        Some(self.generation)
+    }
+
+    fn pending_for_generation(&self, generation: u64) -> Option<(u16, u16)> {
+        (self.generation == generation)
+            .then(|| self.pending())
+            .flatten()
+    }
+
+    fn pending(&self) -> Option<(u16, u16)> {
+        self.observed.filter(|size| Some(*size) != self.persisted)
+    }
+
+    fn mark_persisted(&mut self, size: (u16, u16)) {
+        self.persisted = Some(size);
+    }
 }
 
 pub struct StartView {
@@ -558,8 +614,13 @@ pub struct StartView {
     dismiss: DismissAction,
     persist: PersistStartAction,
     power: PowerAction,
+    resize: Rc<dyn Fn(u16, u16) -> bool>,
+    resize_limits: StartResizeLimits,
     focus: FocusHandle,
     icon_cache: BTreeMap<String, Option<IconData>>,
+    resize_state: StartResizePersistence,
+    resize_subscription: Option<Subscription>,
+    activation_subscription: Option<Subscription>,
 }
 
 impl StartView {
@@ -601,9 +662,78 @@ impl StartView {
             dismiss: actions.dismiss,
             persist: actions.persist,
             power: actions.power,
+            resize: actions.resize,
+            resize_limits: actions.resize_limits,
             focus: cx.focus_handle(),
             icon_cache: BTreeMap::new(),
+            resize_state: StartResizePersistence::default(),
+            resize_subscription: None,
+            activation_subscription: None,
         }
+    }
+
+    fn logical_window_size(window: &Window) -> (u16, u16) {
+        let size = window.bounds().size;
+        (
+            size.width.as_f32().round().clamp(1.0, f32::from(u16::MAX)) as u16,
+            size.height.as_f32().round().clamp(1.0, f32::from(u16::MAX)) as u16,
+        )
+    }
+
+    fn flush_resize(&mut self) -> bool {
+        let Some(size) = self.resize_state.pending() else {
+            return false;
+        };
+        if (self.resize)(size.0, size.1) {
+            self.resize_state.mark_persisted(size);
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn flush_window_size(&mut self, window: &Window) -> bool {
+        self.resize_state
+            .observe(self.resize_limits.clamp(Self::logical_window_size(window)));
+        self.flush_resize()
+    }
+
+    pub fn attach_resize_observers(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let initial = self.resize_limits.clamp(Self::logical_window_size(window));
+        self.resize_state.initialize(initial);
+        self.resize_subscription = Some(cx.observe_window_bounds(window, |this, window, cx| {
+            let raw_size = Self::logical_window_size(window);
+            let size = this.resize_limits.clamp(raw_size);
+            if size != raw_size {
+                window.resize(gpui::size(px(f32::from(size.0)), px(f32::from(size.1))));
+            }
+            let Some(generation) = this.resize_state.observe(size) else {
+                return;
+            };
+            cx.spawn(async move |this, cx| {
+                cx.background_spawn(async {
+                    std::thread::sleep(Duration::from_millis(250));
+                })
+                .await;
+                this.update(cx, |this, _| {
+                    if this
+                        .resize_state
+                        .pending_for_generation(generation)
+                        .is_some()
+                    {
+                        this.flush_resize();
+                    }
+                })
+                .ok();
+            })
+            .detach();
+        }));
+        self.activation_subscription =
+            Some(cx.observe_window_activation(window, |this, window, _| {
+                if !window.is_window_active() {
+                    this.flush_window_size(window);
+                }
+            }));
     }
 
     fn dispatch_search(&mut self, query: SearchQuery) {
@@ -752,6 +882,7 @@ impl StartView {
                         "escape" => {
                             if !this.model.dismiss_power() {
                                 this.model.close();
+                                this.flush_window_size(window);
                                 dismiss_for_key(window, cx);
                             }
                         }
@@ -761,6 +892,7 @@ impl StartView {
                             if let Some(result) = this.model.focused_result() {
                                 this.activate_result(result);
                                 this.model.close();
+                                this.flush_window_size(window);
                                 dismiss_for_key(window, cx);
                             }
                         }
@@ -894,6 +1026,7 @@ impl StartView {
                                         .on_click(cx.listener(move |this, _, window, cx| {
                                             this.activate_result(activate_result.clone());
                                             this.model.close();
+                                            this.flush_window_size(window);
                                             dismiss(window, cx);
                                         }))
                                         .child(start_icon_tile(icon, result.category.clone(), 34.0))
@@ -950,6 +1083,7 @@ impl StartView {
                                         .on_click(cx.listener(move |this, _, window, cx| {
                                             this.activate_result(activate_result.clone());
                                             this.model.close();
+                                            this.flush_window_size(window);
                                             dismiss(window, cx);
                                         }))
                                         .child(start_icon_tile(icon, result.category.clone(), 32.0))
@@ -1062,6 +1196,7 @@ impl StartView {
                                         .on_click(cx.listener(move |this, _, window, cx| {
                                             this.activate_result(activate_result.clone());
                                             this.model.close();
+                                            this.flush_window_size(window);
                                             dismiss(window, cx);
                                         }))
                                         .child(start_icon_tile(icon, result.category.clone(), 32.0))
@@ -1493,6 +1628,31 @@ mod tests {
                 children: Vec::new(),
             },
         }
+    }
+
+    #[test]
+    fn resize_persistence_ignores_initial_coalesces_and_retries_failure() {
+        let limits = StartResizeLimits {
+            minimum_width: 420,
+            minimum_height: 360,
+            maximum_width: 1200,
+            maximum_height: 900,
+        };
+        assert_eq!(limits.clamp((100, 1000)), (420, 900));
+        assert_eq!(limits.clamp((812, 634)), (812, 634));
+        let mut state = StartResizePersistence::default();
+        state.initialize((640, 720));
+        assert_eq!(state.observe((640, 720)), None);
+        assert_eq!(state.pending(), None);
+        let stale = state.observe((700, 680)).expect("first generation");
+        let latest = state.observe((812, 634)).expect("latest generation");
+        assert_eq!(state.pending_for_generation(stale), None);
+        assert_eq!(state.pending_for_generation(latest), Some((812, 634)));
+        assert_eq!(state.pending(), Some((812, 634)));
+        assert_eq!(state.pending(), Some((812, 634)), "failed save retries");
+        state.mark_persisted((812, 634));
+        assert_eq!(state.pending(), None);
+        assert_eq!(state.observe((812, 634)), None);
     }
 
     #[test]

@@ -18,7 +18,7 @@ Only size is persisted. Position continues to derive from the taskbar alignment:
 
 ## Resize and persistence lifecycle
 
-The GPUI Start window uses native resizable window styles while remaining a titlebar-free popup. `StartView` observes window bounds and records only real size changes. It debounces the persistence callback for 250ms so a drag does not create a settings write storm.
+The GPUI Start window uses native resizable window styles while remaining a titlebar-free popup. The Windows backend currently ignores `is_resizable` for every popup, so the vendored backend is corrected to add only `WS_THICKFRAME` for `PopUp + is_resizable`; ordinary popups remain unchanged and Start does not receive maximize/taskbar styles. `StartView` observes window bounds and records only real size changes. It debounces the persistence callback for 250ms so a drag does not create a settings write storm.
 
 The latest size is flushed when the debounce expires, when the window loses activation, and before the taskbar toggle closes an existing Start window. The app callback clamps and rounds the size, clones the latest settings revision, and saves through the existing atomic `SettingsStore`. Successful and failed persistence have distinct trace markers.
 

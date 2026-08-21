@@ -1,11 +1,15 @@
 ## ADDED Requirements
 
 ### Requirement: Owned Start supports native edge resizing
-The system SHALL expose native resize hit targets on the titlebar-free owned Start window. It SHALL allow width and height changes while keeping the window contained above the active taskbar.
+The system SHALL expose native resize hit targets on the titlebar-free owned Start window. The Windows backend SHALL apply `WS_THICKFRAME` only to popups that explicitly request resizing and MUST leave non-resizable popups unchanged. It SHALL allow width and height changes while keeping the window contained above the active taskbar.
 
 #### Scenario: User resizes from a window edge
 - **WHEN** the user drags any supported Start window resize edge
 - **THEN** the window updates continuously and remains between its effective minimum and maximum size
+
+#### Scenario: Ordinary popup does not request resizing
+- **WHEN** a titlebar-free popup is created with resizing disabled
+- **THEN** it does not receive `WS_THICKFRAME`, maximize, caption, or app-window styles from this change
 
 #### Scenario: Monitor is smaller than the normal minimum
 - **WHEN** available work area is narrower or shorter than 420×360 DIP

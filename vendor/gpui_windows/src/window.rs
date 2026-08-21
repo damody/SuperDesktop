@@ -555,7 +555,7 @@ impl WindowsWindow {
         );
 
         let (mut dwexstyle, dwstyle) = if params.kind == WindowKind::PopUp {
-            (WS_EX_TOOLWINDOW, WINDOW_STYLE(0x0))
+            (WS_EX_TOOLWINDOW, popup_window_style(params.is_resizable))
         } else {
             let mut dwstyle = WS_SYSMENU;
 
@@ -655,6 +655,14 @@ impl WindowsWindow {
         }
 
         Ok(Self(this))
+    }
+}
+
+fn popup_window_style(is_resizable: bool) -> WINDOW_STYLE {
+    if is_resizable {
+        WS_THICKFRAME
+    } else {
+        WINDOW_STYLE(0)
     }
 }
 
@@ -1951,11 +1959,18 @@ fn set_non_rude_hwnd(hwnd: HWND, non_rude: bool) {
 
 #[cfg(test)]
 mod tests {
-    use super::{ClickState, negotiate_external_effect};
+    use super::{ClickState, negotiate_external_effect, popup_window_style};
     use gpui::{
         DevicePixels, ExternalDropEffect, ExternalDropEffects, Modifiers, MouseButton, point,
     };
     use std::time::Duration;
+    use windows::Win32::UI::WindowsAndMessaging::WS_THICKFRAME;
+
+    #[test]
+    fn popup_resize_style_is_strictly_opt_in() {
+        assert_eq!(popup_window_style(false).0, 0);
+        assert_eq!(popup_window_style(true), WS_THICKFRAME);
+    }
 
     #[test]
     fn external_drop_negotiation_honors_modifiers_preference_and_capability() {

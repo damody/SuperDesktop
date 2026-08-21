@@ -23,7 +23,7 @@
                   "src/system_settings.rs":  "6b22e6e4300185476e7346165fdc2d1dbd518ccce4955ada3890ffa52d06b8d6",
                   "src/util.rs":  "aefa5e955754533e72dd0a4886d5bed4ecf483d58a0bad28222d5731d2a4dfd9",
                   "src/vsync.rs":  "1c36a7a7284b96881157b5d17d540d4d724bf37aa695ba5ea500ee7b31ca74d7",
-                  "src/window.rs":  "0a1f6b3efb67424e1c8b21fe171a132e3423676bef9eb66b2f756f2df0e99d73",
+                  "src/window.rs":  "9b7c480706f60188e5c6e7306de17197646372b5b253d8378cb86b9bc4a4e504",
                   "src/wrapper.rs":  "a17bfb94697904d650a0db4007880262256d06bf96cb00af387e73fde7536c8b"
               },
     "package":  null
