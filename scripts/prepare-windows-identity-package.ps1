@@ -4,9 +4,14 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+$windowsPowerShellModules = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\Modules'
+$machineModules = [Environment]::GetEnvironmentVariable('PSModulePath', 'Machine')
+$userModules = [Environment]::GetEnvironmentVariable('PSModulePath', 'User')
+$env:PSModulePath = (@($windowsPowerShellModules, $machineModules, $userModules) |
+    Where-Object { -not [string]::IsNullOrWhiteSpace($_) }) -join ';'
 Import-Module PKI -ErrorAction Stop
 if (-not (Get-PSDrive -Name Cert -ErrorAction SilentlyContinue)) {
-    New-PSDrive -Name Cert -PSProvider Microsoft.PowerShell.Security\Certificate -Root '\' | Out-Null
+    throw 'The Windows certificate provider is unavailable.'
 }
 $output = [IO.Path]::GetFullPath($OutputDirectory)
 New-Item -ItemType Directory -Path $output -Force | Out-Null
