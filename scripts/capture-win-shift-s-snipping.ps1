@@ -1,6 +1,7 @@
 param(
     [string]$Workspace = '',
-    [Parameter(Mandatory = $true)][string]$EvidenceDirectory
+    [Parameter(Mandatory = $true)][string]$EvidenceDirectory,
+    [ValidateSet('capture','cancel')][string]$Mode = 'capture'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -46,6 +47,21 @@ public static class SuperDesktopScreenSnipNative {
     [DllImport("user32.dll", CharSet=CharSet.Unicode)] static extern int GetClassNameW(IntPtr hwnd, StringBuilder value, int capacity);
     [DllImport("user32.dll")] static extern bool GetWindowRect(IntPtr hwnd, out Rect rect);
     [DllImport("user32.dll")] public static extern void keybd_event(byte key, byte scan, uint flags, UIntPtr extra);
+    [DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y);
+    [DllImport("user32.dll")] public static extern void mouse_event(uint flags, uint x, uint y, uint data, UIntPtr extra);
+    [DllImport("user32.dll")] public static extern uint GetClipboardSequenceNumber();
+    [DllImport("user32.dll")] static extern bool IsClipboardFormatAvailable(uint format);
+    [DllImport("user32.dll")] static extern bool OpenClipboard(IntPtr owner);
+    [DllImport("user32.dll")] static extern bool CloseClipboard();
+    [DllImport("user32.dll")] static extern IntPtr GetClipboardData(uint format);
+    [DllImport("kernel32.dll")] static extern IntPtr GlobalLock(IntPtr memory);
+    [DllImport("kernel32.dll")] static extern bool GlobalUnlock(IntPtr memory);
+    [DllImport("gdi32.dll", CharSet=CharSet.Unicode)] static extern int GetObjectW(IntPtr value, int size, out Bitmap valueInfo);
+    [StructLayout(LayoutKind.Sequential)] struct Bitmap {
+        public int Type, Width, Height, WidthBytes;
+        public ushort Planes, BitsPixel;
+        public IntPtr Bits;
+    }
     public static string[] OverlayWindows() {
         var result = new List<string>();
         EnumWindows((hwnd, state) => {
@@ -60,6 +76,36 @@ public static class SuperDesktopScreenSnipNative {
             return true;
         }, IntPtr.Zero);
         return result.ToArray();
+    }
+    public static void Drag(int left, int top, int right, int bottom) {
+        SetCursorPos(left, top); mouse_event(0x0002,0,0,0,UIntPtr.Zero);
+        System.Threading.Thread.Sleep(120);
+        for(int step=1;step<=20;step++) {
+            SetCursorPos(left+(right-left)*step/20,top+(bottom-top)*step/20);
+            System.Threading.Thread.Sleep(20);
+        }
+        System.Threading.Thread.Sleep(120); mouse_event(0x0004,0,0,0,UIntPtr.Zero);
+    }
+    public static string ClipboardImageMetadata() {
+        uint sequence = GetClipboardSequenceNumber();
+        if (!OpenClipboard(IntPtr.Zero)) return null;
+        try {
+            foreach (uint format in new uint[] { 17, 8 }) {
+                if (!IsClipboardFormatAvailable(format)) continue;
+                IntPtr memory=GetClipboardData(format); if(memory==IntPtr.Zero) continue;
+                IntPtr header=GlobalLock(memory); if(header==IntPtr.Zero) continue;
+                try {
+                    int width=Marshal.ReadInt32(header,4), height=Math.Abs(Marshal.ReadInt32(header,8));
+                    if(width>0 && height>0) return sequence+"|"+format+"|"+width+"|"+height;
+                } finally { GlobalUnlock(memory); }
+            }
+            if (IsClipboardFormatAvailable(2)) {
+                IntPtr handle=GetClipboardData(2); Bitmap bitmap;
+                if(handle!=IntPtr.Zero && GetObjectW(handle,Marshal.SizeOf<Bitmap>(),out bitmap)>0 && bitmap.Width>0 && bitmap.Height!=0)
+                    return sequence+"|2|"+bitmap.Width+"|"+Math.Abs(bitmap.Height);
+            }
+            return null;
+        } finally { CloseClipboard(); }
     }
 }
 '@
@@ -124,6 +170,7 @@ try {
     Wait-Until { (Test-Path $tracePath) -and ((Get-Content $tracePath -Raw -Encoding UTF8) -match 'win-e:hook-active') } 4000 'Owned-shell hotkey hook did not become active' | Out-Null
 
     $triggeredAt = [DateTime]::UtcNow
+    $clipboardSequenceBefore = [SuperDesktopScreenSnipNative]::GetClipboardSequenceNumber()
     if ($suppressor -and -not $suppressor.HasExited) { Stop-Process -Id $suppressor.Id -Force }
     $suppressor = $null
     Send-ScreenSnipChord
@@ -147,9 +194,26 @@ try {
     } | Select-Object -First 1
     if ($null -eq $screenSketchPackage) { throw "Unexpected Snipping Tool path: $($process.ExecutablePath)" }
 
-    Send-Escape
-    Wait-Until { @([SuperDesktopScreenSnipNative]::OverlayWindows()).Count -eq 0 } 4000 'Snipping Tool overlay did not dismiss after Escape' | Out-Null
-    Wait-Until { (Get-Content $tracePath -Raw -Encoding UTF8) -match 'shell-hotkey:screen-snip-accepted' } 5000 'Screen-snip accepted trace missing after dismissal' | Out-Null
+    $clipboardMetadata = $null
+    if ($Mode -eq 'capture') {
+        $overlayCoordinates = @($overlayBounds -split ',' | ForEach-Object { [int]$_ })
+        if ($overlayCoordinates.Count -ne 4) { throw "Malformed overlay bounds: $overlayBounds" }
+        $centerX = [int](($overlayCoordinates[0] + $overlayCoordinates[2]) / 2)
+        $centerY = [int](($overlayCoordinates[1] + $overlayCoordinates[3]) / 2)
+        [SuperDesktopScreenSnipNative]::Drag($centerX - 160, $centerY - 100, $centerX + 160, $centerY + 100)
+        Wait-Until { @([SuperDesktopScreenSnipNative]::OverlayWindows()).Count -eq 0 } 4000 'Snipping Tool overlay did not close after rectangle selection' | Out-Null
+        $clipboardMetadata = Wait-Until {
+            $metadata = [SuperDesktopScreenSnipNative]::ClipboardImageMetadata()
+            if ($metadata -and [uint32](($metadata -split '\|')[0]) -ne $clipboardSequenceBefore) { $metadata } else { $null }
+        } 10000 'Snipping Tool did not publish a changed clipboard image'
+        Wait-Until { (Get-Content $tracePath -Raw -Encoding UTF8) -match 'shell-hotkey:screen-snip-captured' } 5000 'Screen-snip captured trace missing after clipboard publication' | Out-Null
+    } else {
+        Send-Escape
+        Wait-Until { @([SuperDesktopScreenSnipNative]::OverlayWindows()).Count -eq 0 } 4000 'Snipping Tool overlay did not dismiss after Escape' | Out-Null
+        Wait-Until { (Get-Content $tracePath -Raw -Encoding UTF8) -match 'shell-hotkey:screen-snip-cancelled' } 5000 'Screen-snip cancelled trace missing after Escape' | Out-Null
+        if ([SuperDesktopScreenSnipNative]::GetClipboardSequenceNumber() -ne $clipboardSequenceBefore) { throw 'Escape cancellation unexpectedly changed the clipboard sequence' }
+    }
+    Wait-Until { (Get-Content $tracePath -Raw -Encoding UTF8) -match 'shell-hotkey:screen-snip-accepted' } 2000 'Screen-snip accepted compatibility trace missing' | Out-Null
     $postSuppressor = Start-Process powershell.exe -WindowStyle Hidden -PassThru -ArgumentList '-NoProfile', '-WindowStyle', 'Hidden', '-Command', '$deadline=[DateTime]::UtcNow.AddSeconds(8);while([DateTime]::UtcNow-lt$deadline){Get-Process explorer -ErrorAction SilentlyContinue|Stop-Process -Force -ErrorAction SilentlyContinue;Start-Sleep -Milliseconds 10}'
     Wait-Until { -not (Get-Process explorer -ErrorAction SilentlyContinue) } 4000 'Temporary Explorer broker did not terminate after overlay dismissal' | Out-Null
     $explorerAbsent = $true
@@ -181,7 +245,19 @@ try {
         overlay_package_publisher = $screenSketchPackage.Publisher
         overlay_signature = [string]$screenSketchPackage.SignatureKind
         triggered_utc = $triggeredAt.ToString('o')
-        escape_dismissed = $true
+        mode = $Mode
+        capture_completed = $Mode -eq 'capture'
+        cancellation_completed = $Mode -eq 'cancel'
+        clipboard_sequence_before = $clipboardSequenceBefore
+        clipboard_sequence_after = [SuperDesktopScreenSnipNative]::GetClipboardSequenceNumber()
+        clipboard_image = if ($clipboardMetadata) {
+            $metadataParts = $clipboardMetadata -split '\|'
+            [ordered]@{ format = [uint32]$metadataParts[1]; width = [int]$metadataParts[2]; height = [int]$metadataParts[3] }
+        } else { $null }
+        clipboard_pixels_persisted = $false
+        captured_trace = $Mode -eq 'capture' -and $trace -match 'shell-hotkey:screen-snip-captured'
+        cancelled_trace = $Mode -eq 'cancel' -and $trace -match 'shell-hotkey:screen-snip-cancelled'
+        escape_dismissed = $Mode -eq 'cancel'
         superdesktop_survived = $true
         runtime_error_signature_absent = $true
         explorer_absent_during_capture = $false

@@ -23,9 +23,9 @@ The implementation must keep using Microsoft's registered Snipping Tool, preserv
 
 ## Decisions
 
-### Use clipboard sequence and image-format availability as the completion fence
+### Use clipboard sequence and materialized image payload as the completion fence
 
-The worker snapshots `GetClipboardSequenceNumber` before activation. After the overlay closes, capture succeeds only when the sequence differs and `IsClipboardFormatAvailable` reports `CF_BITMAP`, `CF_DIB`, or `CF_DIBV5`. Sequence change alone is insufficient because another application may write text. This is preferred over a fixed delay, which cannot prove completion, and over opening the clipboard, which could interfere with delayed rendering.
+The worker snapshots `GetClipboardSequenceNumber` before activation. After the overlay closes, capture succeeds only when the sequence differs, `IsClipboardFormatAvailable` reports `CF_BITMAP`, `CF_DIB`, or `CF_DIBV5`, and a brief `OpenClipboard` / `GetClipboardData` probe returns a non-empty handle. Physical evidence showed that Snipping Tool advertises delayed-rendering formats before the payload is usable. SuperDesktop closes the clipboard immediately and never locks or reads the handle. This is preferred over a fixed delay, which cannot prove completion.
 
 ### Track capture intent and explicit cancellation while the overlay is visible
 
@@ -48,7 +48,7 @@ A-level changes may refine test mechanics without changing the completion fence.
 - **Risk: unrelated image clipboard write is mistaken for capture** → Require capture intent or an overlay completion boundary in addition to sequence/image checks and keep the observation window bounded.
 - **Risk: Escape polling misses a very short key press** → Treat unclassified dismissal as ambiguous and wait for publication rather than falsely report cancellation.
 - **Risk: Snipping Tool publishes slowly** → Use a ten-second completion deadline and keep broker cleanup in all terminals.
-- **Risk: clipboard delayed rendering is disturbed** → Never call `OpenClipboard` or read the image; use sequence and format availability only.
+- **Risk: clipboard delayed rendering is disturbed** → Open only for the shortest bounded handle probe, always close immediately, and never lock or read the image.
 
 ## Migration Plan
 

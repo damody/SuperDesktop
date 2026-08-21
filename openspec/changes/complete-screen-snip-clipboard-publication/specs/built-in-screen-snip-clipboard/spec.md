@@ -1,11 +1,15 @@
 ## ADDED Requirements
 
 ### Requirement: Built-in screen snip completes through the Windows clipboard
-The system SHALL activate the Windows-registered built-in image-snipping overlay through the fixed `ms-screenclip:///?source=HotKey` protocol. A completed capture SHALL be successful only after the clipboard sequence changes and at least one native image format is available.
+The system SHALL activate the Windows-registered built-in image-snipping overlay through the fixed `ms-screenclip:///?source=HotKey` protocol. A completed capture SHALL be successful only after the clipboard sequence changes, at least one native image format is available, and Windows returns a non-empty clipboard data handle. The system MUST close the clipboard immediately and MUST NOT lock or read the payload.
 
 #### Scenario: Rectangular selection publishes an image
 - **WHEN** the user invokes Win+Shift+S and completes a rectangular selection
-- **THEN** the clipboard sequence changes, `CF_BITMAP`, `CF_DIB`, or `CF_DIBV5` becomes available, and the command reports a captured terminal
+- **THEN** the clipboard sequence changes, `CF_BITMAP`, `CF_DIB`, or `CF_DIBV5` becomes available with a non-empty data handle, and the command reports a captured terminal
+
+#### Scenario: Delayed format is advertised before payload materialization
+- **WHEN** Snipping Tool advertises an image format but `GetClipboardData` still returns an empty handle
+- **THEN** the system retains its temporary broker and continues waiting instead of reporting capture success
 
 #### Scenario: Clipboard changes to non-image data
 - **WHEN** the overlay closes after capture intent but the clipboard sequence changes only to non-image data

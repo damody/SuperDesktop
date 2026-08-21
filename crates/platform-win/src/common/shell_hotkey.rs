@@ -13,10 +13,17 @@ use std::{
 
 use windows::Win32::{
     Foundation::{LPARAM, LRESULT, WPARAM},
-    System::Threading::GetCurrentThreadId,
+    System::{
+        DataExchange::{
+            CloseClipboard, GetClipboardData, GetClipboardSequenceNumber,
+            IsClipboardFormatAvailable, OpenClipboard,
+        },
+        Threading::GetCurrentThreadId,
+    },
     UI::{
         Input::KeyboardAndMouse::{
-            GetAsyncKeyState, VK_CONTROL, VK_LSHIFT, VK_LWIN, VK_MENU, VK_RSHIFT, VK_RWIN, VK_SHIFT,
+            GetAsyncKeyState, VK_CONTROL, VK_ESCAPE, VK_LBUTTON, VK_LSHIFT, VK_LWIN, VK_MENU,
+            VK_RSHIFT, VK_RWIN, VK_SHIFT,
         },
         Shell::{SEE_MASK_FLAG_NO_UI, SHELLEXECUTEINFOW, ShellExecuteExW},
         WindowsAndMessaging::{
@@ -36,6 +43,96 @@ const VK_N: u32 = 0x4e;
 const VK_S: u32 = 0x53;
 const VK_SPACE: u32 = 0x20;
 const VK_TAB: u32 = 0x09;
+const CF_BITMAP_FORMAT: u32 = 2;
+const CF_DIB_FORMAT: u32 = 8;
+const CF_DIBV5_FORMAT: u32 = 17;
+const SCREEN_SNIP_CLIPBOARD_DEADLINE: Duration = Duration::from_secs(10);
+const SCREEN_SNIP_CANCEL_GRACE: Duration = Duration::from_millis(500);
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ScreenSnipCompletion {
+    Captured,
+    Cancelled,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+struct ClipboardObservation {
+    sequence: u32,
+    image_advertised: bool,
+    image_materialized: bool,
+}
+
+fn clipboard_observation() -> ClipboardObservation {
+    // SAFETY: both APIs are observation-only and do not open or retain the clipboard.
+    unsafe {
+        let formats = [CF_BITMAP_FORMAT, CF_DIB_FORMAT, CF_DIBV5_FORMAT]
+            .map(|format| IsClipboardFormatAvailable(format).is_ok());
+        let image_advertised = any_image_format_available(formats);
+        let image_materialized = image_advertised && clipboard_image_handle_available(formats);
+        ClipboardObservation {
+            sequence: GetClipboardSequenceNumber(),
+            image_advertised,
+            image_materialized,
+        }
+    }
+}
+
+fn any_image_format_available(formats: [bool; 3]) -> bool {
+    formats.into_iter().any(|available| available)
+}
+
+unsafe fn clipboard_image_handle_available(formats: [bool; 3]) -> bool {
+    // SAFETY: the clipboard is opened only for non-owning handle observation and is
+    // closed before return. The returned handles are neither locked nor read.
+    if unsafe { OpenClipboard(None) }.is_err() {
+        return false;
+    }
+    let available = formats
+        .into_iter()
+        .zip([CF_BITMAP_FORMAT, CF_DIB_FORMAT, CF_DIBV5_FORMAT])
+        .any(|(advertised, format)| advertised && unsafe { GetClipboardData(format) }.is_ok());
+    let _ = unsafe { CloseClipboard() };
+    available
+}
+
+fn clipboard_image_completed(
+    baseline: ClipboardObservation,
+    current: ClipboardObservation,
+) -> bool {
+    current.sequence != baseline.sequence && current.image_advertised && current.image_materialized
+}
+
+fn async_key_observed(key: i32) -> bool {
+    // SAFETY: key is a fixed virtual-key code and the call has no retained state.
+    let state = unsafe { GetAsyncKeyState(key) } as u16;
+    state & 0x8001 != 0
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum ScreenSnipTerminalDecision {
+    Wait,
+    Captured,
+    Cancelled,
+    TimedOut,
+}
+
+fn screen_snip_terminal_decision(
+    baseline: ClipboardObservation,
+    current: ClipboardObservation,
+    capture_intent: bool,
+    escape_observed: bool,
+    deadline_elapsed: bool,
+) -> ScreenSnipTerminalDecision {
+    if clipboard_image_completed(baseline, current) {
+        ScreenSnipTerminalDecision::Captured
+    } else if !deadline_elapsed {
+        ScreenSnipTerminalDecision::Wait
+    } else if escape_observed && !capture_intent {
+        ScreenSnipTerminalDecision::Cancelled
+    } else {
+        ScreenSnipTerminalDecision::TimedOut
+    }
+}
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[repr(u32)]
@@ -150,8 +247,9 @@ fn action_for_key(
     }
 }
 
-/// Opens the Windows-registered built-in image-snipping overlay.
-pub fn open_screen_snipping_overlay() -> Result<(), String> {
+/// Opens the Windows-registered built-in image-snipping overlay and waits for
+/// Snipping Tool to publish a selected image before releasing its protocol broker.
+pub fn open_screen_snipping_overlay() -> Result<ScreenSnipCompletion, String> {
     let explorer_preexisting = super::explorer_recovery::trusted_explorer_shell_present()
         .map_err(|error| format!("screen-snipping Explorer observation failed: {error}"))?;
     if !explorer_preexisting {
@@ -179,6 +277,16 @@ pub fn open_screen_snipping_overlay() -> Result<(), String> {
             Ok(())
         }
     };
+    let finish = |result: Result<ScreenSnipCompletion, String>| {
+        let cleanup = cleanup_broker();
+        match (result, cleanup) {
+            (Ok(completion), Ok(())) => Ok(completion),
+            (Err(error), Ok(())) => Err(error),
+            (Ok(_), Err(cleanup)) => Err(cleanup),
+            (Err(error), Err(cleanup)) => Err(format!("{error}; {cleanup}")),
+        }
+    };
+    let clipboard_before = clipboard_observation();
     let mut execute = SHELLEXECUTEINFOW {
         cbSize: size_of::<SHELLEXECUTEINFOW>() as u32,
         fMask: SEE_MASK_FLAG_NO_UI,
@@ -191,34 +299,58 @@ pub fn open_screen_snipping_overlay() -> Result<(), String> {
     let result = unsafe { ShellExecuteExW(&mut execute) }
         .map_err(|error| format!("screen-snipping Shell activation failed: {error}"));
     if let Err(error) = result {
-        return match cleanup_broker() {
-            Ok(()) => Err(error),
-            Err(cleanup) => Err(format!("{error}; {cleanup}")),
-        };
+        return finish(Err(error));
     }
     let appear_deadline = Instant::now() + Duration::from_secs(5);
     while Instant::now() < appear_deadline && !screen_snipping_overlay_visible() {
         std::thread::sleep(Duration::from_millis(50));
     }
     if !screen_snipping_overlay_visible() {
-        let cleanup = cleanup_broker();
-        return Err(cleanup.err().map_or_else(
-            || "screen-snipping overlay did not appear".to_owned(),
-            |cleanup| format!("screen-snipping overlay did not appear; {cleanup}"),
-        ));
+        return finish(Err("screen-snipping overlay did not appear".to_owned()));
     }
+    let mut capture_intent = false;
+    let mut escape_observed = false;
     let dismiss_deadline = Instant::now() + Duration::from_secs(600);
     while Instant::now() < dismiss_deadline && screen_snipping_overlay_visible() {
-        std::thread::sleep(Duration::from_millis(50));
+        capture_intent |= async_key_observed(i32::from(VK_LBUTTON.0));
+        escape_observed |= async_key_observed(i32::from(VK_ESCAPE.0));
+        std::thread::sleep(Duration::from_millis(25));
     }
     if screen_snipping_overlay_visible() {
-        let cleanup = cleanup_broker();
-        return Err(cleanup.err().map_or_else(
-            || "screen-snipping overlay dismissal timed out".to_owned(),
-            |cleanup| format!("screen-snipping overlay dismissal timed out; {cleanup}"),
-        ));
+        return finish(Err("screen-snipping overlay dismissal timed out".to_owned()));
     }
-    cleanup_broker()
+    let completion_deadline = Instant::now()
+        + if escape_observed && !capture_intent {
+            SCREEN_SNIP_CANCEL_GRACE
+        } else {
+            SCREEN_SNIP_CLIPBOARD_DEADLINE
+        };
+    while Instant::now() < completion_deadline {
+        if screen_snip_terminal_decision(
+            clipboard_before,
+            clipboard_observation(),
+            capture_intent,
+            escape_observed,
+            false,
+        ) == ScreenSnipTerminalDecision::Captured
+        {
+            return finish(Ok(ScreenSnipCompletion::Captured));
+        }
+        std::thread::sleep(Duration::from_millis(25));
+    }
+    match screen_snip_terminal_decision(
+        clipboard_before,
+        clipboard_observation(),
+        capture_intent,
+        escape_observed,
+        true,
+    ) {
+        ScreenSnipTerminalDecision::Captured => finish(Ok(ScreenSnipCompletion::Captured)),
+        ScreenSnipTerminalDecision::Cancelled => finish(Ok(ScreenSnipCompletion::Cancelled)),
+        ScreenSnipTerminalDecision::Wait | ScreenSnipTerminalDecision::TimedOut => finish(Err(
+            "screen-snipping clipboard image publication timed out".to_owned(),
+        )),
+    }
 }
 
 fn screen_snipping_overlay_visible() -> bool {
@@ -790,6 +922,7 @@ mod tests {
     #[test]
     fn screen_snip_activation_is_fixed_fallible_and_has_no_fallback() {
         let source = include_str!("shell_hotkey.rs");
+        let production = source.split("#[cfg(test)]").next().unwrap_or(source);
         let helper = source
             .split("pub fn open_screen_snipping_overlay")
             .nth(1)
@@ -803,6 +936,10 @@ mod tests {
             "shutdown_trusted_explorer_shell",
             "SnipOverlayRootWindow",
             "Shell_TrayWnd",
+            "clipboard_observation",
+            "screen_snip_terminal_decision",
+            "ScreenSnipCompletion::Captured",
+            "ScreenSnipCompletion::Cancelled",
         ] {
             assert!(
                 helper.contains(required),
@@ -818,11 +955,102 @@ mod tests {
             "CreateProcess",
             "keybd_event",
             "SendInput",
+            "GlobalLock",
+            "GetObjectW",
+            "SetClipboardData",
         ] {
             assert!(
                 !helper.contains(forbidden),
                 "forbidden screen snip fallback: {forbidden}"
             );
         }
+        for required in ["OpenClipboard", "GetClipboardData", "CloseClipboard"] {
+            assert!(
+                production.contains(required),
+                "missing delayed-rendering handle fence: {required}"
+            );
+        }
+    }
+
+    #[test]
+    fn clipboard_image_formats_and_sequence_define_completion() {
+        assert!(!any_image_format_available([false, false, false]));
+        assert!(any_image_format_available([true, false, false]));
+        assert!(any_image_format_available([false, true, false]));
+        assert!(any_image_format_available([false, false, true]));
+        let baseline = ClipboardObservation {
+            sequence: 41,
+            image_advertised: true,
+            image_materialized: true,
+        };
+        assert!(!clipboard_image_completed(baseline, baseline));
+        assert!(!clipboard_image_completed(
+            baseline,
+            ClipboardObservation {
+                sequence: 42,
+                image_advertised: false,
+                image_materialized: false,
+            }
+        ));
+        assert!(!clipboard_image_completed(
+            baseline,
+            ClipboardObservation {
+                sequence: 42,
+                image_advertised: true,
+                image_materialized: false,
+            }
+        ));
+        assert!(clipboard_image_completed(
+            baseline,
+            ClipboardObservation {
+                sequence: 42,
+                image_advertised: true,
+                image_materialized: true,
+            }
+        ));
+    }
+
+    #[test]
+    fn screen_snip_terminal_distinguishes_capture_cancel_and_timeout() {
+        let baseline = ClipboardObservation {
+            sequence: 7,
+            image_advertised: false,
+            image_materialized: false,
+        };
+        let unchanged = baseline;
+        let text_update = ClipboardObservation {
+            sequence: 8,
+            image_advertised: false,
+            image_materialized: false,
+        };
+        let image_update = ClipboardObservation {
+            sequence: 9,
+            image_advertised: true,
+            image_materialized: true,
+        };
+        assert_eq!(
+            screen_snip_terminal_decision(baseline, unchanged, false, false, false),
+            ScreenSnipTerminalDecision::Wait
+        );
+        assert_eq!(
+            screen_snip_terminal_decision(baseline, text_update, true, false, false),
+            ScreenSnipTerminalDecision::Wait
+        );
+        assert_eq!(
+            screen_snip_terminal_decision(baseline, image_update, true, false, false),
+            ScreenSnipTerminalDecision::Captured
+        );
+        assert_eq!(
+            screen_snip_terminal_decision(baseline, unchanged, false, true, true),
+            ScreenSnipTerminalDecision::Cancelled
+        );
+        assert_eq!(
+            screen_snip_terminal_decision(baseline, unchanged, true, false, true),
+            ScreenSnipTerminalDecision::TimedOut
+        );
+        assert_eq!(
+            screen_snip_terminal_decision(baseline, text_update, true, false, true),
+            ScreenSnipTerminalDecision::TimedOut
+        );
     }
 }

@@ -5780,7 +5780,14 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                                 .name("superdesktop-screen-snip".into())
                                                 .spawn(|| {
                                                     match platform_win::common::shell_hotkey::open_screen_snipping_overlay() {
-                                                        Ok(()) => trace_action("shell-hotkey:screen-snip-accepted"),
+                                                        Ok(platform_win::common::shell_hotkey::ScreenSnipCompletion::Captured) => {
+                                                            trace_action("shell-hotkey:screen-snip-accepted");
+                                                            trace_action("shell-hotkey:screen-snip-captured");
+                                                        }
+                                                        Ok(platform_win::common::shell_hotkey::ScreenSnipCompletion::Cancelled) => {
+                                                            trace_action("shell-hotkey:screen-snip-accepted");
+                                                            trace_action("shell-hotkey:screen-snip-cancelled");
+                                                        }
                                                         Err(error) => report_error("shell-hotkey:screen-snip", error),
                                                     }
                                                 })
@@ -6737,6 +6744,8 @@ mod live_parity_tests {
             "open_screen_snipping_overlay()",
             "shell-hotkey:screen-snip-requested",
             "shell-hotkey:screen-snip-accepted",
+            "shell-hotkey:screen-snip-captured",
+            "shell-hotkey:screen-snip-cancelled",
             "superdesktop-screen-snip",
             "adjacent_input_profile_id",
         ] {
@@ -6750,6 +6759,7 @@ mod live_parity_tests {
             "ShellExecuteW",
             "keybd_event",
             "SendInput",
+            "Ok(()) => trace_action(\"shell-hotkey:screen-snip-accepted\")",
         ] {
             assert!(
                 !production.contains(forbidden),

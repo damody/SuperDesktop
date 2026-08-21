@@ -10,11 +10,11 @@ The current implementation treats disappearance of `SnipOverlayRootWindow` as co
 
 ## Design
 
-Before protocol activation, SuperDesktop records `GetClipboardSequenceNumber`. It launches the fixed `ms-screenclip:///?source=HotKey` URI through the existing verified temporary Explorer broker and waits for the built-in overlay. After the overlay disappears, it polls for both a changed clipboard sequence and at least one Windows image format (`CF_BITMAP`, `CF_DIB`, or `CF_DIBV5`) for up to ten seconds.
+Before protocol activation, SuperDesktop records `GetClipboardSequenceNumber`. It launches the fixed `ms-screenclip:///?source=HotKey` URI through the existing verified temporary Explorer broker and waits for the built-in overlay. After the overlay disappears, it polls for a changed clipboard sequence, at least one Windows image format (`CF_BITMAP`, `CF_DIB`, or `CF_DIBV5`), and a non-empty `GetClipboardData` handle for up to ten seconds. The handle check is required because Snipping Tool advertises delayed-rendering formats before their payload is usable.
 
 If an image appears, SuperDesktop records successful clipboard completion, then removes the temporary Explorer broker. If the overlay was cancelled and the clipboard remains unchanged, it uses a short cancellation grace period and cleans up without reporting a false capture success. If the sequence changes without an image or no image arrives within the bounded completion deadline after a selection, the command returns a precise console error and still cleans up the broker. Existing Explorer processes are never stopped.
 
-The clipboard check is observation-only: SuperDesktop does not open, replace, transform, or retain the user's clipboard payload. This preserves delayed-rendering ownership in Snipping Tool and avoids implementing a competing screenshot pipeline.
+The clipboard check opens the clipboard only long enough to ask Windows for a non-empty delayed-rendering handle, then closes it immediately. SuperDesktop does not lock the handle, read pixels, replace, transform, or retain the payload.
 
 ## Verification
 
