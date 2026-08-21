@@ -12,9 +12,9 @@
 **Gate／Evidence：** `G-GUARDIAN-IDENTITY`; `evidence/1.1/*`.
 **完成門檻：** Extended-prefix and casing variants pass only with the same volume/file identity; different files fail.
 
-- [ ] 1.1.1 Implement normalized case-insensitive Windows executable path comparison with extended-prefix handling.
-- [ ] 1.1.2 Retain immutable file identity as a mandatory independent guardian validation gate.
-- [ ] 1.1.3 Add equivalent-path, different-path, and different-file guardian identity tests.
+- [x] 1.1.1 Implement normalized case-insensitive Windows executable path comparison with extended-prefix handling.
+- [x] 1.1.2 Retain immutable file identity as a mandatory independent guardian validation gate.
+- [x] 1.1.3 Add equivalent-path, different-path, and different-file guardian identity tests.
 
 ### 1.2 Make child acceptance bounded and diagnosable
 
@@ -26,9 +26,9 @@
 **Gate／Evidence：** `G-GUARDIAN-ACCEPTANCE`; `evidence/1.2/*`.
 **完成門檻：** Valid acceptance succeeds; early exit returns immediately; only a live non-accepting child times out; Explorer is not closed on failure.
 
-- [ ] 1.2.1 Observe the guardian process handle while polling the nonce-bound acknowledgement for at most five seconds.
-- [ ] 1.2.2 Preserve the typed lease rejection in guardian console diagnostics and distinguish early child exit in the parent.
-- [ ] 1.2.3 Add acceptance, early-exit, invalid-acknowledgement, and live-timeout tests.
+- [x] 1.2.1 Observe the guardian process handle while polling the nonce-bound acknowledgement for at most five seconds.
+- [x] 1.2.2 Preserve the typed lease rejection in guardian console diagnostics and distinguish early child exit in the parent.
+- [x] 1.2.3 Add acceptance, early-exit, invalid-acknowledgement, and live-timeout tests.
 
 ## 2. Shell rollback and AppBar behavior
 
@@ -42,9 +42,9 @@
 **Gate／Evidence：** `G-ROLLBACK-RECONSTRUCTION`; `evidence/2.1/*`.
 **完成門檻：** Missing records reconstruct only for the exact owned command; unknown shells are unchanged.
 
-- [ ] 2.1.1 Add an exact current-owned-shell value helper shared by registration and restoration paths.
-- [ ] 2.1.2 Atomically create a default-Explorer rollback record before guardian arming when the exact owned value lacks one.
-- [ ] 2.1.3 Add exact-owned, Explorer-default, malformed-owned, and third-party-shell reconstruction tests.
+- [x] 2.1.1 Add an exact current-owned-shell value helper shared by registration and restoration paths.
+- [x] 2.1.2 Atomically create a default-Explorer rollback record before guardian arming when the exact owned value lacks one.
+- [x] 2.1.3 Add exact-owned, Explorer-default, malformed-owned, and third-party-shell reconstruction tests.
 
 ### 2.2 Make Explorer restoration idempotent
 
@@ -56,9 +56,9 @@
 **Gate／Evidence：** `G-EXPLORER-RETURN`; `evidence/2.2/*`.
 **完成門檻：** Owned shell restores once; already-default Explorer succeeds repeatedly; unknown shell remains fail-closed.
 
-- [ ] 2.2.1 Treat an already-default Explorer registration without a rollback record as a successful no-op.
-- [ ] 2.2.2 Restore an exact owned registration through a valid or reconstructed record and remove the record after verification.
-- [ ] 2.2.3 Add repeated return, missing-record, state-drift, and unknown-shell tests.
+- [x] 2.2.1 Treat an already-default Explorer registration without a rollback record as a successful no-op.
+- [x] 2.2.2 Restore an exact owned registration through a valid or reconstructed record and remove the record after verification.
+- [x] 2.2.3 Add repeated return, missing-record, state-drift, and unknown-shell tests.
 
 ### 2.3 Keep expected AppBar fallback trace-only
 
@@ -70,9 +70,9 @@
 **Gate／Evidence：** `G-APPBAR-FALLBACK`; `evidence/2.3/*`.
 **完成門檻：** Fallback traces remain, stderr warning is absent, and genuine failures remain visible.
 
-- [ ] 2.3.1 Remove only the direct expected AppBar fallback warning while retaining both action trace markers.
-- [ ] 2.3.2 Verify owned monitor geometry remains active and usable when AppBar registration is unavailable.
-- [ ] 2.3.3 Add source and runtime assertions separating expected fallback from genuine taskbar errors.
+- [x] 2.3.1 Remove only the direct expected AppBar fallback warning while retaining both action trace markers.
+- [x] 2.3.2 Verify owned monitor geometry remains active and usable when AppBar registration is unavailable.
+- [x] 2.3.3 Add source and runtime assertions separating expected fallback from genuine taskbar errors.
 
 ## 3. Lifecycle integration
 
@@ -86,9 +86,9 @@
 **Gate／Evidence：** `G-LIFECYCLE-PHYSICAL`, `G-NO-CRASH`; `evidence/3.1/*`.
 **完成門檻：** Guardian accepts, Explorer shutdown occurs afterward, abnormal parent exit recovers Explorer, and reported signatures are absent twice.
 
-- [ ] 3.1.1 Extend the guardian-parent/lifecycle fixture to record acceptance, ordering, recovery, and console signatures.
-- [ ] 3.1.2 Run the release lifecycle fixture twice against one candidate hash with isolated rollback state.
-- [ ] 3.1.3 Scan both runs for guardian rejection, child timeout, AppBar warning, missing rollback, panic, and Explorer recovery duplication.
+- [x] 3.1.1 Extend the guardian-parent/lifecycle fixture to record acceptance, ordering, recovery, and console signatures.
+- [x] 3.1.2 Run the release lifecycle fixture twice against one candidate hash with isolated rollback state.
+- [x] 3.1.3 Scan both runs for guardian rejection, child timeout, AppBar warning, missing rollback, panic, and Explorer recovery duplication.
 
 ## 4. Admission, packaging, and traceability
 
@@ -102,8 +102,8 @@
 **Gate／Evidence：** `G-AUTOMATED`, `G-OPENSPEC`; `evidence/4.1/*`.
 **完成門檻：** Every command exits zero and all 24 leaves have a unique passed evidence record.
 
-- [ ] 4.1.1 Run formatting plus focused and locked/offline workspace tests.
-- [ ] 4.1.2 Run Clippy warnings-as-errors and the locked/offline release build.
+- [x] 4.1.1 Run formatting plus focused and locked/offline workspace tests.
+- [x] 4.1.2 Run Clippy warnings-as-errors and the locked/offline release build.
 - [ ] 4.1.3 Run strict OpenSpec, detailed-task, placeholder, contradiction, and 24-record evidence validation.
 
 ### 4.2 Package and integrate the candidate

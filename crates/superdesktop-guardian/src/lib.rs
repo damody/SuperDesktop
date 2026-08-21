@@ -36,11 +36,11 @@ fn recovery_success_terminal(
     )
 }
 
-pub fn run_guardian(invocation: GuardianInvocation) -> Result<(), &'static str> {
+pub fn run_guardian(invocation: GuardianInvocation) -> Result<(), String> {
     let app = std::env::current_exe()
-        .map_err(|_| "guardian-current-exe")?
+        .map_err(|_| "guardian-current-exe".to_owned())?
         .parent()
-        .ok_or("guardian-no-parent-directory")?
+        .ok_or_else(|| "guardian-no-parent-directory".to_owned())?
         .join("superdesktop-app.exe");
     let handles =
         platform_win::common::guardian_lease::child_accept_and_wait_expected_deferred_terminal(
@@ -50,9 +50,9 @@ pub fn run_guardian(invocation: GuardianInvocation) -> Result<(), &'static str> 
             invocation.parent_wait_ms,
             &app.to_string_lossy(),
         )
-        .map_err(|_| "guardian-lease-validation")?;
+        .map_err(|error| format!("guardian-lease-validation:{error:?}"))?;
     let outcome = platform_win::common::explorer_recovery::recover_explorer_shell()
-        .map_err(|_| "guardian-shell-recovery")?;
+        .map_err(|_| "guardian-shell-recovery".to_owned())?;
     let (recovery_disposition, explorer_pid) = match outcome {
         platform_win::common::explorer_recovery::ShellRecoveryOutcome::ShownExisting {
             process_id,
@@ -71,7 +71,7 @@ pub fn run_guardian(invocation: GuardianInvocation) -> Result<(), &'static str> 
             file.write_all(terminal.as_bytes())?;
             file.sync_all()
         })
-        .map_err(|_| "guardian-success-terminal")
+        .map_err(|_| "guardian-success-terminal".to_owned())
 }
 
 pub const APP_USER_MODEL_ID: &str = identity::APP_USER_MODEL_ID;
@@ -98,5 +98,12 @@ mod tests {
         assert!(terminal.contains("\"explorer_pid\":42"));
         assert!(terminal.contains("\"child_handles_before\":7"));
         assert!(terminal.contains("\"child_handles_after\":5"));
+    }
+
+    #[test]
+    fn guardian_diagnostic_preserves_typed_lease_rejection() {
+        let source = include_str!("lib.rs");
+        assert!(source.contains("guardian-lease-validation:{error:?}"));
+        assert!(!source.contains(".map_err(|_| \"guardian-lease-validation\")"));
     }
 }

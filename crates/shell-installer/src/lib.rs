@@ -16,6 +16,7 @@ pub use process_quiescence::quiesce_installation;
 pub use windows_registry::WindowsShellRegistry;
 
 pub const SHELL_TARGET: &str = r"HKCU\Software\Microsoft\Windows NT\CurrentVersion\Winlogon\Shell";
+pub const DEFAULT_EXPLORER_SHELL: &str = "explorer.exe";
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]

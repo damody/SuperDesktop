@@ -4169,9 +4169,6 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                         if !appbar_available && (shell || force_appbar_unavailable) {
                             trace_action("taskbar:appbar-unavailable-owned-shell");
                             trace_action("taskbar:appbar-fallback-geometry-active");
-                            eprintln!(
-                                "SuperDesktop warning [taskbar:appbar]: AppBar registration unavailable; continuing with owned monitor geometry"
-                            );
                         } else if shell && production_taskbar_settings.auto_hide {
                             trace_action("taskbar:auto-hide-appbar-skipped");
                         } else {
@@ -7497,7 +7494,8 @@ mod live_parity_tests {
             .expect("AppBar fallback branch");
         assert!(fallback.contains("taskbar:appbar-unavailable-owned-shell"));
         assert!(fallback.contains("taskbar:appbar-fallback-geometry-active"));
-        assert!(fallback.contains("SuperDesktop warning [taskbar:appbar]"));
+        assert!(!fallback.contains("SuperDesktop warning [taskbar:appbar]"));
+        assert!(!fallback.contains("eprintln!"));
         assert!(!fallback.contains("return"));
         assert!(!fallback.contains("app.quit"));
         assert!(production.contains("refresh_foreground"));

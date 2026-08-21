@@ -31,6 +31,7 @@ const FILE_ATTRIBUTE_REPARSE_POINT: u32 = 0x400;
 const INVALID_FILE_ATTRIBUTES: u32 = 0xffff_ffff;
 const ERROR_BROKEN_PIPE: u32 = 109;
 const ERROR_ACCESS_DENIED: u32 = 5;
+const CHILD_ACCEPTANCE_DEADLINE: Duration = Duration::from_secs(5);
 
 #[repr(C)]
 struct SecurityAttributes {
@@ -363,8 +364,32 @@ fn canonical_file(path: &str) -> Result<(String, FileIdentity), LeaseReject> {
     ))
 }
 
+fn normalized_windows_path(path: &str) -> String {
+    let path = if let Some(rest) = path.strip_prefix(r"\\?\UNC\") {
+        format!(r"\\{rest}")
+    } else if let Some(rest) = path
+        .strip_prefix(r"\\?\")
+        .or_else(|| path.strip_prefix(r"\??\"))
+    {
+        rest.to_owned()
+    } else {
+        path.to_owned()
+    };
+    path.replace('/', "\\").to_lowercase()
+}
+
+fn equivalent_windows_path(left: &str, right: &str) -> bool {
+    normalized_windows_path(left) == normalized_windows_path(right)
+}
+
 pub fn canonical_file_identity(path: &str) -> Result<(String, FileIdentity), LeaseReject> {
     canonical_file(path)
+}
+
+pub fn equivalent_executable_identity(left: &str, right: &str) -> Result<bool, LeaseReject> {
+    let (left_path, left_file) = canonical_file(left)?;
+    let (right_path, right_file) = canonical_file(right)?;
+    Ok(equivalent_windows_path(&left_path, &right_path) && left_file == right_file)
 }
 fn process_identity(handle: RawHandle, nonce: String) -> Result<LeaseIdentity, LeaseReject> {
     // SAFETY: caller supplies the candidate process handle; failure is converted to typed reject.
@@ -514,7 +539,7 @@ pub fn validate_identity(actual: &LeaseIdentity, claim: &LeaseIdentity) -> Resul
     if actual.session_id != claim.session_id {
         return Err(LeaseReject::WrongSession);
     };
-    if actual.executable != claim.executable {
+    if !equivalent_windows_path(&actual.executable, &claim.executable) {
         return Err(LeaseReject::WrongExecutable);
     };
     if actual.file != claim.file {
@@ -690,6 +715,22 @@ fn read_once_claim(handle: RawHandle) -> Result<LeaseIdentity, LeaseReject> {
 fn valid_acknowledgement(bytes: &[u8], nonce: &str) -> bool {
     bytes == format!("guardian-lease-accepted:{nonce}").as_bytes()
 }
+
+fn acceptance_poll(
+    acknowledgement: Option<&[u8]>,
+    nonce: &str,
+    child_wait: u32,
+) -> Result<bool, &'static str> {
+    if acknowledgement.is_some_and(|bytes| valid_acknowledgement(bytes, nonce)) {
+        return Ok(true);
+    }
+    match child_wait {
+        WAIT_OBJECT_0 => Err("child-exited-before-acceptance"),
+        WAIT_TIMEOUT => Ok(false),
+        WAIT_FAILED => Err("child-acceptance-wait-failed"),
+        _ => Err("child-acceptance-wait-unexpected"),
+    }
+}
 pub fn spawn_restricted_child(
     executable: &str,
     terminal_path: &str,
@@ -815,12 +856,17 @@ pub fn spawn_restricted_child(
     write_once(channel_write.raw(), &identity)?;
     channel_write.close()?;
     let acknowledgement = format!("{terminal_path}.accepted");
-    let deadline = Instant::now() + Duration::from_secs(2);
+    let deadline = Instant::now() + CHILD_ACCEPTANCE_DEADLINE;
     let mut acknowledged = false;
     while Instant::now() < deadline {
-        if std::fs::read(&acknowledgement)
-            .is_ok_and(|bytes| valid_acknowledgement(&bytes, &identity.nonce))
-        {
+        let acknowledgement_bytes = std::fs::read(&acknowledgement).ok();
+        // SAFETY: the child process handle remains owned until ParentLease is returned.
+        let child_wait = unsafe { WaitForSingleObject(process.raw(), 0) };
+        if acceptance_poll(
+            acknowledgement_bytes.as_deref(),
+            &identity.nonce,
+            child_wait,
+        )? {
             acknowledged = true;
             break;
         }
@@ -911,7 +957,7 @@ pub fn child_accept_and_wait_expected_deferred_terminal(
     let actual = process_identity(parent.raw(), claim.nonce.clone())?;
     LeaseValidator::default().validate_once(&actual, &claim)?;
     let (expected_executable, expected_file) = canonical_file(expected_parent_executable)?;
-    if actual.executable != expected_executable {
+    if !equivalent_windows_path(&actual.executable, &expected_executable) {
         return Err(LeaseReject::WrongExecutable);
     }
     if actual.file != expected_file {
@@ -1073,6 +1119,45 @@ mod tests {
             Err(LeaseReject::FileIdentityMismatch)
         );
     }
+
+    #[test]
+    fn windows_path_identity_accepts_extended_prefix_and_case_only() {
+        assert!(equivalent_windows_path(
+            r"D:\SuperExplorer\SuperDesktop\superdesktop-app.exe",
+            r"\\?\d:\superexplorer\superdesktop\SUPERDESKTOP-APP.EXE"
+        ));
+        assert!(equivalent_windows_path(
+            r"\\server\share\SuperDesktop.exe",
+            r"\\?\UNC\SERVER\SHARE\superdesktop.exe"
+        ));
+        assert!(!equivalent_windows_path(
+            r"D:\SuperDesktop\superdesktop-app.exe",
+            r"D:\Other\superdesktop-app.exe"
+        ));
+    }
+
+    #[test]
+    fn equivalent_executable_identity_requires_the_same_file() {
+        let current = std::env::current_exe().expect("current exe");
+        let normal = current.to_string_lossy();
+        let extended = if normal.starts_with(r"\\?\") {
+            normal.to_string()
+        } else {
+            format!(r"\\?\{normal}")
+        };
+        assert_eq!(equivalent_executable_identity(&normal, &extended), Ok(true));
+        let other = std::env::temp_dir().join("missing-superdesktop-guardian-fixture.exe");
+        assert!(equivalent_executable_identity(&normal, &other.to_string_lossy()).is_err());
+    }
+
+    #[test]
+    fn child_acceptance_deadline_is_bounded_at_five_seconds() {
+        assert_eq!(CHILD_ACCEPTANCE_DEADLINE, Duration::from_secs(5));
+        let source = include_str!("guardian_lease.rs");
+        assert!(source.contains("child-exited-before-acceptance"));
+        assert!(source.contains("valid_acknowledgement"));
+        assert!(source.contains("WaitForSingleObject(process.raw(), 0)"));
+    }
     #[test]
     fn claim_round_trip_is_not_argv() {
         let value = id();
@@ -1093,6 +1178,33 @@ mod tests {
             b"guardian-lease-accepted:forged",
             &value.nonce
         ));
+    }
+
+    #[test]
+    fn acceptance_poll_distinguishes_invalid_ack_live_child_and_early_exit() {
+        let nonce = "0123456789abcdef0123456789abcdef";
+        assert_eq!(
+            acceptance_poll(
+                Some(format!("guardian-lease-accepted:{nonce}").as_bytes()),
+                nonce,
+                WAIT_OBJECT_0
+            ),
+            Ok(true),
+            "a valid acknowledgement wins a simultaneous clean child exit"
+        );
+        assert_eq!(
+            acceptance_poll(Some(b"guardian-lease-accepted:forged"), nonce, WAIT_TIMEOUT),
+            Ok(false)
+        );
+        assert_eq!(acceptance_poll(None, nonce, WAIT_TIMEOUT), Ok(false));
+        assert_eq!(
+            acceptance_poll(None, nonce, WAIT_OBJECT_0),
+            Err("child-exited-before-acceptance")
+        );
+        assert_eq!(
+            acceptance_poll(None, nonce, WAIT_FAILED),
+            Err("child-acceptance-wait-failed")
+        );
     }
     #[test]
     fn duplicate_roles_are_rejected() {
