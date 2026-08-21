@@ -5,6 +5,10 @@ param(
 
 $ErrorActionPreference = 'Stop'
 Import-Module PKI -ErrorAction Stop
+Import-Module Microsoft.PowerShell.Security -ErrorAction Stop
+if (-not (Get-PSDrive -Name Cert -ErrorAction SilentlyContinue)) {
+    New-PSDrive -Name Cert -PSProvider Certificate -Root '\' | Out-Null
+}
 $output = [IO.Path]::GetFullPath($OutputDirectory)
 New-Item -ItemType Directory -Path $output -Force | Out-Null
 $certificate = Get-ChildItem Cert:\CurrentUser\My |

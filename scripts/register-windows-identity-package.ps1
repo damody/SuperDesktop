@@ -9,6 +9,10 @@ param(
 
 $ErrorActionPreference = 'Stop'
 Import-Module PKI -ErrorAction Stop
+Import-Module Microsoft.PowerShell.Security -ErrorAction Stop
+if (-not (Get-PSDrive -Name Cert -ErrorAction SilentlyContinue)) {
+    New-PSDrive -Name Cert -PSProvider Certificate -Root '\' | Out-Null
+}
 $package = (Resolve-Path -LiteralPath $PackagePath).Path
 $install = (Resolve-Path -LiteralPath $InstallDirectory).Path
 $certificatePath = (Resolve-Path -LiteralPath $CertificatePath).Path
