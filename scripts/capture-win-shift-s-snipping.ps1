@@ -13,10 +13,11 @@ $superExplorerSource = Join-Path (Split-Path -Parent $Workspace) 'target/release
 if (-not (Test-Path -LiteralPath $superExplorerSource -PathType Leaf)) { throw "Missing SuperExplorer release companion: $superExplorerSource" }
 $superExplorerAdjacent = Join-Path (Split-Path -Parent $appPath) 'SuperExplorer.exe'
 Copy-Item -LiteralPath $superExplorerSource -Destination $superExplorerAdjacent -Force
-$screenSketchPackage = @(Get-AppxPackage -Name Microsoft.ScreenSketch | Where-Object { $_.Status -eq 'Ok' }) | Select-Object -First 1
-if ($null -eq $screenSketchPackage) { throw 'Microsoft ScreenSketch package is unavailable' }
-if ([string]$screenSketchPackage.SignatureKind -ne 'Store' -or [string]$screenSketchPackage.Publisher -notmatch '^CN=Microsoft Corporation,') { throw "ScreenSketch package identity rejected: $($screenSketchPackage.PackageFullName)" }
-$screenSketchRoot = [IO.Path]::GetFullPath([string]$screenSketchPackage.InstallLocation)
+$screenSketchPackages = @(Get-AppxPackage -Name Microsoft.ScreenSketch | Where-Object {
+    $_.Status -eq 'Ok' -and [string]$_.SignatureKind -eq 'Store' -and
+    [string]$_.Publisher -match '^CN=Microsoft Corporation,'
+})
+if ($screenSketchPackages.Count -eq 0) { throw 'A trusted Microsoft ScreenSketch package is unavailable' }
 New-Item -ItemType Directory -Force -Path $EvidenceDirectory | Out-Null
 $tracePath = Join-Path $EvidenceDirectory 'screen-snip.log'
 $stdoutPath = Join-Path $EvidenceDirectory 'app-stdout.log'
@@ -139,8 +140,12 @@ try {
     $process = Get-CimInstance Win32_Process -Filter "ProcessId=$overlayPid"
     if ($null -eq $process -or $process.Name -ne 'SnippingTool.exe') { throw "Unexpected overlay owner: pid=$overlayPid name=$($process.Name)" }
     if (-not ([string]$process.CommandLine).Contains('ms-screenclip:///?source=HotKey')) { throw "Unexpected Snipping Tool command line: $($process.CommandLine)" }
-    $expectedSnippingTool = Join-Path $screenSketchRoot 'SnippingTool\SnippingTool.exe'
-    if ([IO.Path]::GetFullPath([string]$process.ExecutablePath) -ne [IO.Path]::GetFullPath($expectedSnippingTool)) { throw "Unexpected Snipping Tool path: $($process.ExecutablePath)" }
+    $actualSnippingTool = [IO.Path]::GetFullPath([string]$process.ExecutablePath)
+    $screenSketchPackage = $screenSketchPackages | Where-Object {
+        $expectedSnippingTool = Join-Path ([IO.Path]::GetFullPath([string]$_.InstallLocation)) 'SnippingTool\SnippingTool.exe'
+        $actualSnippingTool -eq [IO.Path]::GetFullPath($expectedSnippingTool)
+    } | Select-Object -First 1
+    if ($null -eq $screenSketchPackage) { throw "Unexpected Snipping Tool path: $($process.ExecutablePath)" }
 
     Send-Escape
     Wait-Until { @([SuperDesktopScreenSnipNative]::OverlayWindows()).Count -eq 0 } 4000 'Snipping Tool overlay did not dismiss after Escape' | Out-Null

@@ -1,0 +1,55 @@
+{
+  "schema": "restore-owned-shell-system-interactions-final/v1",
+  "recorded_at": "2026-08-21T10:42:00+08:00",
+  "candidate": {
+    "superdesktop_app_sha256": "DABDC8715E4C2C69B40281254BB04B386CFA404502F1FBEBF2BC29661C3FFCC5",
+    "installer_sha256": "379CC358F4CCF1BDD79C4C9B3CEC2D666C2EE0FBDD68B87B3563B055CCC2BD50",
+    "windows_identity_msix_sha256": "042C20D300310A0208016CD7713C7F58E6CF39BCD1C53D6C65C2B0A34FB5276A",
+    "packaged_app_hash_matches_release": true,
+    "packaged_identity_hash_matches_release": true
+  },
+  "physical_runs": [
+    {
+      "run": "admitted-run1",
+      "result": "passed",
+      "win_d": { "physical_two_cycle": true, "minimized": 2, "restored": 2, "pre_minimized_preserved": true },
+      "volume": { "continuous_drag": true, "steps": 24 },
+      "screen_snip": { "physical_chord": "Win+Shift+S", "microsoft_store_overlay": true, "escape_dismissed": true },
+      "tray": { "context_event": 123, "select_event": 1024, "background_context_absent": true },
+      "input_profile": { "pointer_switch": true, "exact_profile_observed": true, "original_profile_restored": true },
+      "notifications": { "initial_count": 9, "dismissed_count": 1, "clear_confirmed_empty": true }
+    },
+    {
+      "run": "admitted-run2",
+      "result": "passed",
+      "win_d": { "physical_two_cycle": true, "minimized": 2, "restored": 2, "pre_minimized_preserved": true },
+      "volume": { "continuous_drag": true, "steps": 24 },
+      "screen_snip": { "physical_chord": "Win+Shift+S", "microsoft_store_overlay": true, "escape_dismissed": true },
+      "tray": { "context_event": 123, "select_event": 1024, "background_context_absent": true },
+      "input_profile": { "pointer_switch": true, "exact_profile_observed": true, "original_profile_restored": true },
+      "notifications": { "initial_count": 9, "dismissed_count": 1, "clear_confirmed_empty": true }
+    }
+  ],
+  "windows_notification_identity": {
+    "manifest_user_notification_listener_capability": true,
+    "signed_sparse_msix_built": true,
+    "certificate_and_registration_script_packaged": true,
+    "installer_registers_identity_before_launch": true,
+    "host_listener_lifetime_and_event_reconciliation_tests": true
+  },
+  "error_scan": {
+    "provider_failure": 0,
+    "input_activation_deadline": 0,
+    "stale_generation": 0,
+    "panic": 0,
+    "refcell_already_borrowed": 0
+  },
+  "automated_gates": {
+    "cargo_fmt_check": "passed",
+    "cargo_test_workspace_all_targets_locked_offline": "passed",
+    "cargo_clippy_workspace_all_targets_locked_offline_deny_warnings": "passed",
+    "cargo_build_workspace_all_targets_release_locked_offline": "passed",
+    "installer_build_without_launch": "passed"
+  },
+  "privacy": "Raw screenshots and machine-local profiles are intentionally not indexed as distributable evidence."
+}

@@ -146,9 +146,9 @@
 **Gate／Evidence：** `G-AUTOMATED`, `G-OPENSPEC`; `evidence/5.1/*`.
 **完成門檻：** All required commands exit zero without warnings-as-errors or placeholder/traceability failures.
 
-- [ ] 5.1.1 Run format checks plus focused and locked/offline workspace tests.
-- [ ] 5.1.2 Run Clippy warnings-as-errors, architecture/source-boundary checks, and release build.
-- [ ] 5.1.3 Run strict OpenSpec, detailed task validation, placeholder scan, and proposal-to-evidence traceability review.
+- [x] 5.1.1 Run format checks plus focused and locked/offline workspace tests.
+- [x] 5.1.2 Run Clippy warnings-as-errors, architecture/source-boundary checks, and release build.
+- [x] 5.1.3 Run strict OpenSpec, detailed task validation, placeholder scan, and proposal-to-evidence traceability review.
 
 ### 5.2 Package, hash, and integrate the candidate
 
@@ -160,6 +160,6 @@
 **Gate／Evidence：** `G-PACKAGE`, `G-TRACE`; `evidence/5.2/*`.
 **完成門檻：** Installer succeeds, installed binaries match admitted package artifacts, all 33 leaves have unique evidence, and the change remains unarchived.
 
-- [ ] 5.2.1 Commit the nested implementation and update the parent submodule pointer without touching unrelated untracked files.
-- [ ] 5.2.2 Build/install the package without launch races and compare packaged/installed executable hashes.
-- [ ] 5.2.3 Write the 33-leaf evidence index, commit final evidence, and re-run clean status plus strict validation.
+- [x] 5.2.1 Commit the nested implementation and update the parent submodule pointer without touching unrelated untracked files.
+- [x] 5.2.2 Build/install the package without launch races and compare packaged/installed executable hashes.
+- [x] 5.2.3 Write the 33-leaf evidence index, commit final evidence, and re-run clean status plus strict validation.
