@@ -9,6 +9,7 @@ license.workspace = true
 workspace = true
 
 [dependencies]
+explorer-i18n.workspace = true
 gpui.workspace = true
 image.workspace = true
 platform-win = { path = "../platform-win" }

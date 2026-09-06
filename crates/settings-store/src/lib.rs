@@ -7,6 +7,7 @@ mod json;
 mod schema;
 mod store;
 
+pub use explorer_i18n::AppLocale;
 pub use schema::{
     AccessibilitySettings, DecodeOutcome, DesktopPosition, DesktopSettings, DesktopSortDirection,
     DesktopSortKey, ExecutionPreference, RuntimeMode, SettingsCorrection, SettingsError,

@@ -1,5 +1,6 @@
 use std::{collections::BTreeSet, rc::Rc};
 
+use explorer_i18n::{AppLocale, Catalog, FluentArgs};
 use gpui::{
     Context, FocusHandle, InteractiveElement, IntoElement, MouseDownEvent, MouseMoveEvent,
     MouseUpEvent, ParentElement, Pixels, Render, ScrollHandle, StatefulInteractiveElement, Styled,
@@ -7,12 +8,36 @@ use gpui::{
 };
 use settings_store::{TaskbarAlignment, TaskbarSearchMode, TaskbarSettings};
 
-fn traditional_chinese() -> bool {
-    if let Ok(locale) = std::env::var("SUPERDESKTOP_LOCALE") {
-        return locale.eq_ignore_ascii_case("zh-TW");
+/// Resolves the active SuperDesktop UI locale.
+///
+/// Order: valid `SUPERDESKTOP_LOCALE` → `settings_locale` `Some` → Windows negotiate → `En`.
+#[must_use]
+pub fn resolve_desktop_locale(
+    env_override: Option<&str>,
+    settings_locale: Option<AppLocale>,
+    windows_tag: Option<&str>,
+) -> AppLocale {
+    if let Some(raw) = env_override.map(str::trim).filter(|value| !value.is_empty()) {
+        if let Some(locale) = AppLocale::from_bcp47(raw) {
+            return locale;
+        }
     }
-    platform_win::common::taskbar_status::user_locale_name()
-        .is_some_and(|locale| locale.eq_ignore_ascii_case("zh-TW"))
+    if let Some(locale) = settings_locale {
+        return locale;
+    }
+    windows_tag
+        .map(AppLocale::negotiate)
+        .unwrap_or(AppLocale::En)
+}
+
+fn active_catalog(settings_locale: Option<AppLocale>) -> Catalog {
+    let env_override = std::env::var("SUPERDESKTOP_LOCALE").ok();
+    let windows_tag = platform_win::common::taskbar_status::user_locale_name();
+    Catalog::new(resolve_desktop_locale(
+        env_override.as_deref(),
+        settings_locale,
+        windows_tag.as_deref(),
+    ))
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -286,6 +311,7 @@ pub struct TaskbarContextView {
     pub locked: bool,
     pub search_mode: TaskbarSearchMode,
     pub show_task_view: bool,
+    catalog: Catalog,
     action: TaskbarContextAction,
     dismiss: TaskbarSurfaceDismiss,
     focus: FocusHandle,
@@ -313,11 +339,17 @@ impl TaskbarContextView {
             locked,
             search_mode,
             show_task_view,
+            catalog: active_catalog(None),
             action,
             dismiss,
             focus: cx.focus_handle(),
             _activation_subscription: activation_subscription,
         }
+    }
+
+    pub fn with_catalog(mut self, catalog: Catalog) -> Self {
+        self.catalog = catalog;
+        self
     }
 }
 
@@ -387,8 +419,7 @@ impl Render for TaskbarContextView {
                         TaskbarContextCommand::OpenTaskbarSettings => "⚙",
                         TaskbarContextCommand::ReturnToDefaultExplorer => "↩",
                     };
-                    let label =
-                        taskbar_context_label(command, self.search_mode, traditional_chinese());
+                    let label = taskbar_context_label(command, self.search_mode, self.catalog);
                     let checked =
                         taskbar_context_checked(command, self.locked, self.show_task_view);
                     div()
@@ -442,38 +473,26 @@ fn taskbar_context_checked(
 fn taskbar_context_label(
     command: TaskbarContextCommand,
     search_mode: TaskbarSearchMode,
-    zh_tw: bool,
+    catalog: Catalog,
 ) -> String {
-    match (command, zh_tw) {
-        (TaskbarContextCommand::CycleSearchMode, true) => format!(
-            "搜尋：{}",
-            match search_mode {
-                TaskbarSearchMode::Hidden => "隱藏",
-                TaskbarSearchMode::Icon => "僅搜尋圖示",
-                TaskbarSearchMode::Box => "搜尋方塊",
-            }
-        ),
-        (TaskbarContextCommand::CycleSearchMode, false) => format!(
-            "Search: {}",
-            match search_mode {
-                TaskbarSearchMode::Hidden => "Hidden",
-                TaskbarSearchMode::Icon => "Search icon only",
-                TaskbarSearchMode::Box => "Search box",
-            }
-        ),
-        (TaskbarContextCommand::ToggleTaskView, true) => "顯示工作檢視按鈕".into(),
-        (TaskbarContextCommand::ToggleTaskView, false) => "Show Task View button".into(),
-        (TaskbarContextCommand::ShowDesktop, true) => "顯示桌面".into(),
-        (TaskbarContextCommand::ShowDesktop, false) => "Show the desktop".into(),
-        (TaskbarContextCommand::OpenTaskManager, true) => "工作管理員".into(),
-        (TaskbarContextCommand::OpenTaskManager, false) => "Task Manager".into(),
-        (TaskbarContextCommand::ToggleLockTaskbar, true) => "鎖定工作列".into(),
-        (TaskbarContextCommand::ToggleLockTaskbar, false) => "Lock the taskbar".into(),
-        (TaskbarContextCommand::OpenTaskbarSettings, true) => "工作列設定".into(),
-        (TaskbarContextCommand::OpenTaskbarSettings, false) => "Taskbar settings".into(),
-        (TaskbarContextCommand::ReturnToDefaultExplorer, true) => "回到預設 Explorer".into(),
-        (TaskbarContextCommand::ReturnToDefaultExplorer, false) => {
-            "Return to default Explorer".into()
+    match command {
+        TaskbarContextCommand::CycleSearchMode => {
+            let mode = match search_mode {
+                TaskbarSearchMode::Hidden => catalog.t("desktop-value-hidden"),
+                TaskbarSearchMode::Icon => catalog.t("desktop-value-search-icon"),
+                TaskbarSearchMode::Box => catalog.t("desktop-value-search-box"),
+            };
+            let mut args = FluentArgs::new();
+            args.set("mode", mode);
+            catalog.t_args("desktop-context-search", &args)
+        }
+        TaskbarContextCommand::ToggleTaskView => catalog.t("desktop-context-task-view"),
+        TaskbarContextCommand::ShowDesktop => catalog.t("desktop-context-show-desktop"),
+        TaskbarContextCommand::OpenTaskManager => catalog.t("desktop-context-task-manager"),
+        TaskbarContextCommand::ToggleLockTaskbar => catalog.t("desktop-context-lock-taskbar"),
+        TaskbarContextCommand::OpenTaskbarSettings => catalog.t("desktop-context-taskbar-settings"),
+        TaskbarContextCommand::ReturnToDefaultExplorer => {
+            catalog.t("desktop-context-return-explorer")
         }
     }
 }
@@ -837,62 +856,59 @@ const fn on_off(value: bool) -> &'static str {
     if value { "On" } else { "Off" }
 }
 
-fn localized_row(row: &TaskbarSettingRow, zh: bool) -> (String, String, String) {
-    if !zh {
-        return (row.title.into(), row.description.into(), row.value.clone());
-    }
+fn localized_row(row: &TaskbarSettingRow, catalog: Catalog) -> (String, String, String) {
     let title = match row.id {
-        TaskbarSettingId::Search => "搜尋",
-        TaskbarSettingId::TaskView => "工作檢視",
-        TaskbarSettingId::Widgets => "小工具",
-        TaskbarSettingId::PenMenu => "手寫筆功能表",
-        TaskbarSettingId::TouchKeyboard => "觸控式鍵盤",
-        TaskbarSettingId::OtherTrayIcons => "其他系統匣圖示",
-        TaskbarSettingId::Alignment => "工作列對齊",
-        TaskbarSettingId::Labels => "顯示標籤",
-        TaskbarSettingId::CombineGroups => "合併工作列按鈕",
-        TaskbarSettingId::Previews => "視窗預覽",
-        TaskbarSettingId::AllMonitors => "在所有顯示器上顯示",
-        TaskbarSettingId::Locked => "鎖定工作列",
-        TaskbarSettingId::Rows => "工作列列數",
-        TaskbarSettingId::AutoHide => "自動隱藏工作列",
-        TaskbarSettingId::DateTime => "日期和時間",
-        TaskbarSettingId::Notifications => "通知",
+        TaskbarSettingId::Search => catalog.t("desktop-setting-search"),
+        TaskbarSettingId::TaskView => catalog.t("desktop-setting-task-view"),
+        TaskbarSettingId::Widgets => catalog.t("desktop-setting-widgets"),
+        TaskbarSettingId::PenMenu => catalog.t("desktop-setting-pen-menu"),
+        TaskbarSettingId::TouchKeyboard => catalog.t("desktop-setting-touch-keyboard"),
+        TaskbarSettingId::OtherTrayIcons => catalog.t("desktop-setting-other-tray"),
+        TaskbarSettingId::Alignment => catalog.t("desktop-setting-alignment"),
+        TaskbarSettingId::Labels => catalog.t("desktop-setting-labels"),
+        TaskbarSettingId::CombineGroups => catalog.t("desktop-setting-combine"),
+        TaskbarSettingId::Previews => catalog.t("desktop-setting-previews"),
+        TaskbarSettingId::AllMonitors => catalog.t("desktop-setting-all-monitors"),
+        TaskbarSettingId::Locked => catalog.t("desktop-setting-locked"),
+        TaskbarSettingId::Rows => catalog.t("desktop-setting-rows"),
+        TaskbarSettingId::AutoHide => catalog.t("desktop-setting-autohide"),
+        TaskbarSettingId::DateTime => catalog.t("desktop-setting-datetime"),
+        TaskbarSettingId::Notifications => catalog.t("desktop-setting-notifications"),
     };
     let description = match row.id {
-        TaskbarSettingId::Search => "顯示或隱藏搜尋控制項",
-        TaskbarSettingId::TaskView => "顯示工作檢視按鈕",
-        TaskbarSettingId::Widgets => "顯示小工具按鈕",
-        TaskbarSettingId::PenMenu => "使用手寫筆時顯示功能表圖示",
-        TaskbarSettingId::TouchKeyboard => "顯示觸控式鍵盤圖示",
-        TaskbarSettingId::OtherTrayIcons => "選擇溢位區域顯示的圖示",
-        TaskbarSettingId::Alignment => "選擇工作列按鈕與開始選單的顯示位置",
-        TaskbarSettingId::Labels => "顯示可閱讀的應用程式標籤",
-        TaskbarSettingId::CombineGroups => "將相同應用程式的視窗分組",
-        TaskbarSettingId::Previews => "游標停留時顯示縮圖預覽",
-        TaskbarSettingId::AllMonitors => "在每個顯示器顯示工作列",
-        TaskbarSettingId::Locked => "防止變更工作列高度",
-        TaskbarSettingId::Rows => "選擇一列、兩列或三列工作",
-        TaskbarSettingId::AutoHide => "游標到達畫面邊緣前隱藏工作列",
-        TaskbarSettingId::DateTime => "時區、時鐘及行事曆",
-        TaskbarSettingId::Notifications => "應用程式和系統警示",
+        TaskbarSettingId::Search => catalog.t("desktop-setting-search-help"),
+        TaskbarSettingId::TaskView => catalog.t("desktop-setting-task-view-help"),
+        TaskbarSettingId::Widgets => catalog.t("desktop-setting-widgets-help"),
+        TaskbarSettingId::PenMenu => catalog.t("desktop-setting-pen-menu-help"),
+        TaskbarSettingId::TouchKeyboard => catalog.t("desktop-setting-touch-keyboard-help"),
+        TaskbarSettingId::OtherTrayIcons => catalog.t("desktop-setting-other-tray-help"),
+        TaskbarSettingId::Alignment => catalog.t("desktop-setting-alignment-help"),
+        TaskbarSettingId::Labels => catalog.t("desktop-setting-labels-help"),
+        TaskbarSettingId::CombineGroups => catalog.t("desktop-setting-combine-help"),
+        TaskbarSettingId::Previews => catalog.t("desktop-setting-previews-help"),
+        TaskbarSettingId::AllMonitors => catalog.t("desktop-setting-all-monitors-help"),
+        TaskbarSettingId::Locked => catalog.t("desktop-setting-locked-help"),
+        TaskbarSettingId::Rows => catalog.t("desktop-setting-rows-help"),
+        TaskbarSettingId::AutoHide => catalog.t("desktop-setting-autohide-help"),
+        TaskbarSettingId::DateTime => catalog.t("desktop-setting-datetime-help"),
+        TaskbarSettingId::Notifications => catalog.t("desktop-setting-notifications-help"),
     };
     let value = match row.value.as_str() {
-        "On" => "開啟",
-        "Off" => "關閉",
-        "Hidden" => "隱藏",
-        "Search icon only" => "僅搜尋圖示",
-        "Search box" => "搜尋方塊",
-        "Left" => "靠左",
-        "Center" => "置中",
-        "Never" => "永不",
-        "Open" => "開啟",
-        "1 row" => "1 列",
-        "2 rows" => "2 列",
-        "3 rows" => "3 列",
-        other => other,
+        "On" => catalog.t("desktop-value-on"),
+        "Off" => catalog.t("desktop-value-off"),
+        "Hidden" => catalog.t("desktop-value-hidden"),
+        "Search icon only" => catalog.t("desktop-value-search-icon"),
+        "Search box" => catalog.t("desktop-value-search-box"),
+        "Left" => catalog.t("desktop-value-left"),
+        "Center" => catalog.t("desktop-value-center"),
+        "Never" => catalog.t("desktop-value-never"),
+        "Open" => catalog.t("desktop-value-open"),
+        "1 row" => catalog.t("desktop-value-1-row"),
+        "2 rows" => catalog.t("desktop-value-2-rows"),
+        "3 rows" => catalog.t("desktop-value-3-rows"),
+        other => other.to_owned(),
     };
-    (title.into(), description.into(), value.into())
+    (title, description, value)
 }
 
 pub type TaskbarSettingsAction =
@@ -900,6 +916,7 @@ pub type TaskbarSettingsAction =
 
 pub struct TaskbarSettingsView {
     pub model: TaskbarSettingsModel,
+    catalog: Catalog,
     action: TaskbarSettingsAction,
     dismiss: TaskbarSurfaceDismiss,
     focus: FocusHandle,
@@ -918,6 +935,7 @@ impl TaskbarSettingsView {
     ) -> Self {
         Self {
             model: TaskbarSettingsModel::new(settings, revision),
+            catalog: active_catalog(None),
             action,
             dismiss,
             focus: cx.focus_handle(),
@@ -925,6 +943,11 @@ impl TaskbarSettingsView {
             scrollbar_drag_position: None,
             scrollbar_geometry_refreshes: 0,
         }
+    }
+
+    pub fn with_catalog(mut self, catalog: Catalog) -> Self {
+        self.catalog = catalog;
+        self
     }
 
     fn apply(&mut self, effect: TaskbarSettingsEffect) {
@@ -937,7 +960,7 @@ impl TaskbarSettingsView {
     fn render_scrollbar(
         &mut self,
         tokens: TaskbarSettingsTokens,
-        zh: bool,
+        catalog: Catalog,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> impl IntoElement + use<> {
@@ -945,11 +968,7 @@ impl TaskbarSettingsView {
         let close = div()
             .id("taskbar-settings-close")
             .role(gpui::Role::Button)
-            .aria_label(if zh {
-                "關閉工作列設定"
-            } else {
-                "Close Taskbar settings"
-            })
+            .aria_label(catalog.t("desktop-close-taskbar-settings"))
             .tab_index(0)
             .absolute()
             .top(px(-38.0))
@@ -998,11 +1017,7 @@ impl TaskbarSettingsView {
             div()
                 .id("taskbar-settings-scrollbar")
                 .role(gpui::Role::ScrollBar)
-                .aria_label(if zh {
-                    "工作列設定捲軸"
-                } else {
-                    "Taskbar settings scrollbar"
-                })
+                .aria_label(catalog.t("desktop-taskbar-settings-scrollbar"))
                 .aria_min_numeric_value(0.0)
                 .aria_max_numeric_value(100.0)
                 .aria_numeric_value(scrollbar_value)
@@ -1090,81 +1105,42 @@ impl Render for TaskbarSettingsView {
         let border = tokens.border;
         let focus = tokens.focus;
         let layout = TaskbarSettingsLayout::for_width(window.bounds().size.width.as_f32());
-        let zh = traditional_chinese();
+        let catalog = self.catalog;
+        let value_on = catalog.t("desktop-value-on");
         let dismiss_for_key = self.dismiss.clone();
         let scroll_for_key = self.scroll.clone();
         let sections = [
             (
                 TaskbarSettingsSection::Items,
-                if zh {
-                    "工作列項目"
-                } else {
-                    "Taskbar items"
-                },
-                if zh {
-                    "顯示或隱藏工作列上的按鈕"
-                } else {
-                    "Show or hide buttons that appear on the taskbar"
-                },
+                catalog.t("desktop-taskbar-items"),
+                catalog.t("desktop-taskbar-items-help"),
             ),
             (
                 TaskbarSettingsSection::SystemTray,
-                if zh {
-                    "系統匣圖示"
-                } else {
-                    "System tray icons"
-                },
-                if zh {
-                    "選擇系統匣中顯示的系統圖示"
-                } else {
-                    "Choose system icons shown in the tray"
-                },
+                catalog.t("desktop-system-tray-icons"),
+                catalog.t("desktop-system-tray-icons-help"),
             ),
             (
                 TaskbarSettingsSection::OtherTray,
-                if zh {
-                    "其他系統匣圖示"
-                } else {
-                    "Other system tray icons"
-                },
-                if zh {
-                    "選擇溢位區域顯示的圖示"
-                } else {
-                    "Choose icons shown in overflow"
-                },
+                catalog.t("desktop-other-tray-icons"),
+                catalog.t("desktop-other-tray-icons-help"),
             ),
             (
                 TaskbarSettingsSection::Behaviors,
-                if zh {
-                    "工作列行為"
-                } else {
-                    "Taskbar behaviors"
-                },
-                if zh {
-                    "工作列對齊、標籤、預覽及顯示器"
-                } else {
-                    "Alignment, labels, previews and displays"
-                },
+                catalog.t("desktop-taskbar-behaviors"),
+                catalog.t("desktop-taskbar-behaviors-help"),
             ),
             (
                 TaskbarSettingsSection::Related,
-                if zh {
-                    "相關設定"
-                } else {
-                    "Related settings"
-                },
-                if zh {
-                    "日期、時間及通知"
-                } else {
-                    "Date, time and notifications"
-                },
+                catalog.t("desktop-related-settings"),
+                catalog.t("desktop-related-settings-help"),
             ),
         ];
-        let scrollbar = self.render_scrollbar(tokens, zh, window, cx);
+        let scrollbar = self.render_scrollbar(tokens, catalog, window, cx);
         div()
             .id("owned-taskbar-settings")
             .role(gpui::Role::Dialog)
-            .aria_label(if zh { "個人化，工作列" } else { "Personalization, Taskbar" })
+            .aria_label(catalog.t("desktop-personalization-taskbar"))
             .tab_index(0)
             .track_focus(&self.focus)
             .absolute()
@@ -1242,11 +1218,11 @@ impl Render for TaskbarSettingsView {
                             .items_center()
                             .child(
                     div().w(px(layout.content_width)).min_w_0().flex_none().flex().flex_col().gap(px(16.))
-                    .child(div().flex_none().text_size(px(14.)).text_color(rgb(secondary)).child(if zh { "個人化  ›  工作列" } else { "Personalization  ›  Taskbar" }))
-                    .child(div().flex_none().text_size(px(28.)).child(if zh { "工作列" } else { "Taskbar" }))
+                    .child(div().flex_none().text_size(px(14.)).text_color(rgb(secondary)).child(catalog.t("desktop-personalization-breadcrumb")))
+                    .child(div().flex_none().text_size(px(28.)).child(catalog.t("desktop-taskbar")))
                     .child(
                         div().flex_none().p(px(16.)).rounded(px(tokens.card_radius as f32)).border_1().border_color(rgb(border)).bg(rgb(card))
-                            .flex().items_center().gap(px(12.)).child("ⓘ").child(div().flex_1().min_w_0().whitespace_normal().child(if zh { "部分 Windows 內建介面仍待 SuperDesktop 完整接管。" } else { "Some Windows inbox surfaces are unavailable until SuperDesktop owns them." })),
+                            .flex().items_center().gap(px(12.)).child("ⓘ").child(div().flex_1().min_w_0().whitespace_normal().child(catalog.t("desktop-inbox-surfaces-notice"))),
                     )
                     .when_some(self.model.error().map(str::to_owned), |element, error| {
                         element.child(div().id("taskbar-settings-error").role(gpui::Role::Alert).aria_label(error.clone()).flex_none().p(px(12.)).rounded(px(8.)).bg(rgb(0x5c1a1a)).text_color(rgb(0xffffff)).child(error))
@@ -1266,9 +1242,21 @@ impl Render for TaskbarSettingsView {
                             .when(expanded, |element| element.children(rows.into_iter().map(|row| {
                                 let enabled = row.enabled;
                                 let id = row.id;
-                                let (title, description, value) = localized_row(&row, zh);
+                                let (title, description, value) = localized_row(&row, catalog);
                                 let is_switch = matches!(id, TaskbarSettingId::TaskView | TaskbarSettingId::Widgets | TaskbarSettingId::Labels | TaskbarSettingId::CombineGroups | TaskbarSettingId::Previews | TaskbarSettingId::AllMonitors | TaskbarSettingId::Locked | TaskbarSettingId::PenMenu | TaskbarSettingId::AutoHide);
-                                let switch_on = matches!(value.as_str(), "On" | "開啟");
+                                let switch_on = value == value_on;
+                                let description = match row.unavailable_reason {
+                                    Some("Widgets are not yet owned by SuperDesktop") => {
+                                        catalog.t("desktop-widgets-unavailable")
+                                    }
+                                    Some("Pen menu ownership is unavailable") => {
+                                        catalog.t("desktop-pen-unavailable")
+                                    }
+                                    Some("Touch keyboard ownership is unavailable") => {
+                                        catalog.t("desktop-touch-keyboard-unavailable")
+                                    }
+                                    _ => description,
+                                };
                                 let aria = if let Some(reason) = row.unavailable_reason { format!("{title}, unavailable: {reason}") } else { format!("{title}, {value}") };
                                 div().id(format!("taskbar-setting-{id:?}")).role(if is_switch { gpui::Role::CheckBox } else { gpui::Role::Button }).aria_label(aria).tab_index(0)
                                     .when(is_switch, |element| element.aria_toggled(Toggled::from(switch_on)))
@@ -1277,7 +1265,7 @@ impl Render for TaskbarSettingsView {
                                     .when(!enabled, |element| element.opacity(0.5))
                                     .when(enabled, |element| element.cursor_pointer().on_click(cx.listener(move |this, _, _, cx| { if let Some(effect) = this.model.activate(id) { this.apply(effect); } cx.notify(); })))
                                     .child(div().w(px(32.)).flex_none().text_size(px(18.)).text_color(rgb(secondary)).child(setting_glyph(id)))
-                                    .child(div().flex_1().min_w_0().flex().flex_col().child(title).child(div().min_w_0().whitespace_normal().text_size(px(12.)).text_color(rgb(secondary)).child(if zh && !enabled { "此功能尚未由 SuperDesktop 擁有".to_owned() } else { description })))
+                                    .child(div().flex_1().min_w_0().flex().flex_col().child(title).child(div().min_w_0().whitespace_normal().text_size(px(12.)).text_color(rgb(secondary)).child(description)))
                                     .child(
                                         div().flex_none()
                                             .when(is_switch, |element| element.w(px(44.)).h(px(24.)).p(px(3.)).rounded_full().border_1().border_color(rgb(if switch_on { tokens.switch_on } else { border })).bg(rgb(if switch_on { tokens.switch_on } else { tokens.switch_off })).flex().items_center().when(switch_on, |element| element.justify_end()).child(div().w(px(18.)).h(px(18.)).rounded_full().bg(rgb(if switch_on && tokens.switch_on == 0xffff00 { 0x000000 } else { 0xffffff }))))
@@ -1295,6 +1283,13 @@ impl Render for TaskbarSettingsView {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn strip_isolates(value: &str) -> String {
+        value
+            .chars()
+            .filter(|ch| !matches!(*ch, '\u{2066}' | '\u{2067}' | '\u{2068}' | '\u{2069}'))
+            .collect()
+    }
 
     #[test]
     fn context_navigation_wraps_and_emits_one_typed_command() {
@@ -1340,27 +1335,29 @@ mod tests {
 
     #[test]
     fn context_labels_and_checked_states_are_truthful_in_both_locales() {
+        let en = Catalog::new(AppLocale::En);
+        let zh = Catalog::new(AppLocale::ZhTw);
         assert_eq!(
-            taskbar_context_label(
+            strip_isolates(&taskbar_context_label(
                 TaskbarContextCommand::CycleSearchMode,
                 TaskbarSearchMode::Icon,
-                false,
-            ),
+                en,
+            )),
             "Search: Search icon only"
         );
         assert_eq!(
-            taskbar_context_label(
+            strip_isolates(&taskbar_context_label(
                 TaskbarContextCommand::CycleSearchMode,
                 TaskbarSearchMode::Box,
-                true,
-            ),
+                zh,
+            )),
             "搜尋：搜尋方塊"
         );
         assert_eq!(
             taskbar_context_label(
                 TaskbarContextCommand::ToggleTaskView,
                 TaskbarSearchMode::Hidden,
-                true,
+                zh,
             ),
             "顯示工作檢視按鈕"
         );
@@ -1375,6 +1372,26 @@ mod tests {
         assert_eq!(
             taskbar_context_checked(TaskbarContextCommand::ShowDesktop, false, true),
             None
+        );
+    }
+
+    #[test]
+    fn resolve_desktop_locale_prefers_env_then_settings_then_windows() {
+        assert_eq!(
+            resolve_desktop_locale(Some("zh-CN"), Some(AppLocale::Ru), Some("ja")),
+            AppLocale::ZhCn
+        );
+        assert_eq!(
+            resolve_desktop_locale(None, Some(AppLocale::Ru), Some("ja")),
+            AppLocale::Ru
+        );
+        assert_eq!(
+            resolve_desktop_locale(None, None, Some("zh-HK")),
+            AppLocale::ZhTw
+        );
+        assert_eq!(
+            resolve_desktop_locale(Some("klingon"), None, Some("ja")),
+            AppLocale::Ja
         );
     }
 
@@ -1437,11 +1454,11 @@ mod tests {
             .expect("alignment row");
         assert_eq!(row.value, "Left");
         assert_eq!(
-            localized_row(&row, false).1,
+            localized_row(&row, Catalog::new(AppLocale::En)).1,
             "Choose where taskbar buttons and Start appear"
         );
         assert_eq!(
-            localized_row(&row, true).1,
+            localized_row(&row, Catalog::new(AppLocale::ZhTw)).1,
             "選擇工作列按鈕與開始選單的顯示位置"
         );
 

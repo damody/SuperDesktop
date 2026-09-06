@@ -1,6 +1,8 @@
 use std::collections::BTreeMap;
 use std::fmt;
 
+use explorer_i18n::AppLocale;
+
 use crate::json::{self, Value};
 
 pub const SETTINGS_SCHEMA_VERSION: u32 = 1;
@@ -160,6 +162,8 @@ pub struct SettingsV1 {
     pub desktop_positions: Vec<DesktopPosition>,
     pub monitor_mapping: BTreeMap<String, String>,
     pub superexplorer_path: Option<String>,
+    /// Explicit UI locale. `None` means follow the Windows display language.
+    pub locale: Option<AppLocale>,
     pub theme: ThemePreference,
     pub accessibility: AccessibilitySettings,
     extensions: BTreeMap<String, Value>,
@@ -178,6 +182,7 @@ impl Default for SettingsV1 {
             desktop_positions: Vec::new(),
             monitor_mapping: BTreeMap::new(),
             superexplorer_path: None,
+            locale: None,
             theme: ThemePreference::System,
             accessibility: AccessibilitySettings::default(),
             extensions: BTreeMap::new(),
@@ -301,6 +306,11 @@ impl SettingsV1 {
             .and_then(string_map)
             .unwrap_or_default();
         settings.superexplorer_path = take_optional_string(&mut object, "superexplorer_path");
+        settings.locale = match object.remove("locale") {
+            None | Some(Value::Null) => None,
+            Some(Value::String(value)) => AppLocale::from_bcp47(&value),
+            Some(_) => None,
+        };
         settings.theme = take_string(&mut object, "theme")
             .and_then(|value| match value.as_str() {
                 "system" => Some(ThemePreference::System),
@@ -510,6 +520,12 @@ impl SettingsV1 {
             self.superexplorer_path
                 .clone()
                 .map(Value::String)
+                .unwrap_or(Value::Null),
+        );
+        root.insert(
+            "locale".into(),
+            self.locale
+                .map(|locale| Value::String(locale.bcp47().to_owned()))
                 .unwrap_or(Value::Null),
         );
         root.insert(
@@ -881,5 +897,30 @@ mod tests {
             SettingsV1::decode(r#"{"schema_version":2}"#),
             Err(SettingsError::UnsupportedFutureVersion(2))
         );
+    }
+
+    #[test]
+    fn locale_option_round_trips_and_defaults_to_follow_windows() {
+        let legacy =
+            SettingsV1::decode(r#"{"schema_version":1,"taskbar":{"rows":2}}"#).unwrap().settings;
+        assert_eq!(legacy.locale, None);
+        assert!(legacy.encode().contains("\"locale\":null"));
+
+        let configured = SettingsV1::decode(
+            r#"{"schema_version":1,"locale":"zh-TW","taskbar":{"rows":2}}"#,
+        )
+        .unwrap()
+        .settings;
+        assert_eq!(configured.locale, Some(AppLocale::ZhTw));
+        let encoded = configured.encode();
+        assert!(encoded.contains("\"locale\":\"zh-TW\""));
+        assert_eq!(
+            SettingsV1::decode(&encoded).unwrap().settings.locale,
+            Some(AppLocale::ZhTw)
+        );
+
+        let invalid =
+            SettingsV1::decode(r#"{"schema_version":1,"locale":"klingon"}"#).unwrap().settings;
+        assert_eq!(invalid.locale, None);
     }
 }

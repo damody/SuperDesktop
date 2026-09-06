@@ -16,6 +16,7 @@ workspace = true
 [dependencies]
 desktop-ui = { path = "../desktop-ui" }
 explorer-bridge = { path = "../explorer-bridge" }
+explorer-i18n.workspace = true
 gpui.workspace = true
 gpui_windows.workspace = true
 platform-win = { path = "../platform-win" }

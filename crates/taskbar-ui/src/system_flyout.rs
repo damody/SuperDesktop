@@ -3,6 +3,7 @@ use std::{
     time::{Duration, Instant},
 };
 
+use explorer_i18n::{Catalog, FluentArgs};
 use gpui::{
     Context, FocusHandle, InteractiveElement, IntoElement, MouseButton, MouseDownEvent,
     MouseMoveEvent, ObjectFit, ParentElement, Render, StatefulInteractiveElement, Styled,
@@ -41,15 +42,12 @@ pub enum SystemFlyoutTheme {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct SystemFlyoutPresentation {
     pub theme: SystemFlyoutTheme,
-    pub traditional_chinese: bool,
+    pub catalog: Catalog,
 }
 
 impl SystemFlyoutPresentation {
-    pub const fn new(theme: SystemFlyoutTheme, traditional_chinese: bool) -> Self {
-        Self {
-            theme,
-            traditional_chinese,
-        }
+    pub const fn new(theme: SystemFlyoutTheme, catalog: Catalog) -> Self {
+        Self { theme, catalog }
     }
 }
 
@@ -261,14 +259,6 @@ fn notification_time_label(admitted_unix_ms: u64) -> String {
     format!("{:02}:{:02}", (minutes / 60) % 24, minutes % 60)
 }
 
-fn localized<'a>(presentation: SystemFlyoutPresentation, zh_tw: &'a str, en: &'a str) -> &'a str {
-    if presentation.traditional_chinese {
-        zh_tw
-    } else {
-        en
-    }
-}
-
 #[cfg(test)]
 fn compact_profile_tag(language_tag: &str) -> String {
     let normalized = language_tag.replace('_', "-");
@@ -329,21 +319,13 @@ fn input_profile_primary(
     }
     let normalized = profile.language_tag.replace('_', "-").to_ascii_lowercase();
     if normalized.starts_with("zh-tw") {
-        localized(
-            presentation,
-            "繁體中文（台灣）",
-            "Chinese (Traditional, Taiwan)",
-        )
+        presentation.catalog.t("desktop-chinese-traditional-taiwan")
         .into()
     } else if normalized.starts_with("zh-cn") {
-        localized(
-            presentation,
-            "簡體中文（中國）",
-            "Chinese (Simplified, China)",
-        )
+        presentation.catalog.t("desktop-chinese-simplified-china")
         .into()
     } else if normalized.starts_with("en") {
-        localized(presentation, "英文", "English").into()
+        presentation.catalog.t("desktop-english").into()
     } else {
         fallback.into()
     }
@@ -358,46 +340,47 @@ fn input_profile_subtitle(
     }
     let normalized = profile.language_tag.replace('_', "-").to_ascii_lowercase();
     if normalized.starts_with("zh-cn") {
-        localized(presentation, "微軟拼音", "Microsoft Pinyin").into()
+        presentation.catalog.t("desktop-microsoft-pinyin").into()
     } else if normalized.starts_with("zh-tw") {
-        localized(presentation, "微軟注音", "Microsoft Bopomofo").into()
+        presentation.catalog.t("desktop-microsoft-bopomofo").into()
     } else {
-        localized(presentation, "鍵盤", "Keyboard").into()
+        presentation.catalog.t("desktop-keyboard").into()
     }
 }
 
-fn calendar_weekdays(traditional_chinese: bool) -> [&'static str; 7] {
-    if traditional_chinese {
-        ["一", "二", "三", "四", "五", "六", "日"]
-    } else {
-        ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-    }
+fn calendar_weekdays(catalog: Catalog) -> [String; 7] {
+    [
+        catalog.t("desktop-weekday-mon"),
+        catalog.t("desktop-weekday-tue"),
+        catalog.t("desktop-weekday-wed"),
+        catalog.t("desktop-weekday-thu"),
+        catalog.t("desktop-weekday-fri"),
+        catalog.t("desktop-weekday-sat"),
+        catalog.t("desktop-weekday-sun"),
+    ]
 }
 
-fn calendar_month_heading(calendar: &CalendarMonth, traditional_chinese: bool) -> String {
-    const ENGLISH_MONTHS: [&str; 12] = [
-        "January",
-        "February",
-        "March",
-        "April",
-        "May",
-        "June",
-        "July",
-        "August",
-        "September",
-        "October",
-        "November",
-        "December",
+fn calendar_month_heading(calendar: &CalendarMonth, catalog: Catalog) -> String {
+    const MONTH_KEYS: [&str; 12] = [
+        "desktop-month-january",
+        "desktop-month-february",
+        "desktop-month-march",
+        "desktop-month-april",
+        "desktop-month-may",
+        "desktop-month-june",
+        "desktop-month-july",
+        "desktop-month-august",
+        "desktop-month-september",
+        "desktop-month-october",
+        "desktop-month-november",
+        "desktop-month-december",
     ];
-    if traditional_chinese {
-        format!("{}年{}月", calendar.year, calendar.month)
-    } else {
-        format!(
-            "{} {}",
-            ENGLISH_MONTHS[usize::from(calendar.month.saturating_sub(1))],
-            calendar.year
-        )
-    }
+    let month_index = usize::from(calendar.month.saturating_sub(1)).min(11);
+    let month = catalog.t(MONTH_KEYS[month_index]);
+    let mut args = FluentArgs::new();
+    args.set("month", month);
+    args.set("year", calendar.year);
+    catalog.t_args("desktop-calendar-heading", &args)
 }
 
 fn network_summary(
@@ -407,31 +390,27 @@ fn network_summary(
     match snapshot.map(|snapshot| &snapshot.network) {
         Some(StatusAvailability::Available(network)) => (
             if network.display_name.trim().is_empty() {
-                localized(presentation, "已連線的網路", "Connected network").into()
+                presentation.catalog.t("desktop-connected-network").into()
             } else {
                 network.display_name.clone()
             },
             if network.internet {
-                localized(presentation, "網際網路存取", "Internet access").into()
+                presentation.catalog.t("desktop-internet-access").into()
             } else if network.connected {
-                localized(presentation, "無網際網路", "No Internet").into()
+                presentation.catalog.t("desktop-no-internet").into()
             } else {
-                localized(presentation, "未連線", "Disconnected").into()
+                presentation.catalog.t("desktop-disconnected").into()
             },
             true,
         ),
         Some(StatusAvailability::NotPresent) => (
-            localized(presentation, "找不到網路介面", "No network adapter").into(),
-            localized(presentation, "未提供網路連線", "Network not present").into(),
+            presentation.catalog.t("desktop-no-network-adapter").into(),
+            presentation.catalog.t("desktop-network-not-present").into(),
             false,
         ),
         _ => (
-            localized(presentation, "網路無法使用", "Network unavailable").into(),
-            localized(
-                presentation,
-                "狀態提供者無法使用",
-                "Status provider unavailable",
-            )
+            presentation.catalog.t("desktop-network-unavailable").into(),
+            presentation.catalog.t("desktop-status-provider-unavailable")
             .into(),
             false,
         ),
@@ -448,41 +427,33 @@ fn power_summary(
                 if power.charging {
                     format!(
                         "{} {percent}% · {}",
-                        localized(presentation, "電池", "Battery"),
-                        localized(presentation, "充電中", "Charging")
+                        presentation.catalog.t("desktop-battery"),
+                        presentation.catalog.t("desktop-charging")
                     )
                 } else if power.ac_online {
                     format!(
                         "{} {percent}% · {}",
-                        localized(presentation, "電池", "Battery"),
-                        localized(presentation, "已接上電源", "Plugged in")
+                        presentation.catalog.t("desktop-battery"),
+                        presentation.catalog.t("desktop-plugged-in")
                     )
                 } else {
-                    format!("{} {percent}%", localized(presentation, "電池", "Battery"))
+                    format!("{} {percent}%", presentation.catalog.t("desktop-battery"))
                 },
                 true,
             ),
             None => (
-                localized(
-                    presentation,
-                    "交流電源 · 未偵測到電池",
-                    "AC power · No battery detected",
-                )
+                presentation.catalog.t("desktop-ac-no-battery")
                 .into(),
                 true,
             ),
         },
         Some(StatusAvailability::NotPresent) => (
-            localized(
-                presentation,
-                "交流電源 · 此裝置沒有電池",
-                "AC power · This device has no battery",
-            )
+            presentation.catalog.t("desktop-ac-no-battery-device")
             .into(),
             true,
         ),
         _ => (
-            localized(presentation, "電源狀態無法使用", "Power status unavailable").into(),
+            presentation.catalog.t("desktop-power-unavailable").into(),
             false,
         ),
     }
@@ -569,13 +540,13 @@ impl Render for SystemFlyoutView {
             .role(gpui::Role::Dialog)
             .aria_label(match kind {
                 SystemFlyoutKind::Input => {
-                    localized(presentation, "輸入法與鍵盤配置", "Input languages")
+                    presentation.catalog.t("desktop-input-languages")
                 }
-                SystemFlyoutKind::Volume => localized(presentation, "音量", "Volume"),
+                SystemFlyoutKind::Volume => presentation.catalog.t("desktop-volume"),
                 SystemFlyoutKind::NetworkPower => {
-                    localized(presentation, "網路與電源", "Network and power")
+                    presentation.catalog.t("desktop-network-and-power")
                 }
-                SystemFlyoutKind::Calendar => localized(presentation, "日期與時間", "Calendar"),
+                SystemFlyoutKind::Calendar => presentation.catalog.t("desktop-calendar"),
             })
             .tab_index(0)
             .track_focus(&self.focus)
@@ -629,7 +600,7 @@ impl Render for SystemFlyoutView {
                                 .items_center()
                                 .text_size(px(18.))
                                 .mb_1()
-                                .child(localized(presentation, "輸入法", "Input methods"))
+                                .child(presentation.catalog.t("desktop-input-methods"))
                                 .child(
                                     div()
                                         .ml_auto()
@@ -661,7 +632,7 @@ impl Render for SystemFlyoutView {
                                                 .bg(rgb(tokens.card))
                                                 .flex()
                                                 .items_center()
-                                                .child(localized(presentation, "空格鍵", "Space")),
+                                                .child(presentation.catalog.t("desktop-space")),
                                         ),
                                 ),
                         )
@@ -669,11 +640,7 @@ impl Render for SystemFlyoutView {
                             div()
                                 .id("owned-input-profile-list")
                                 .role(gpui::Role::Group)
-                                .aria_label(localized(
-                                    presentation,
-                                    "可用的輸入法",
-                                    "Available input methods",
-                                ))
+                                .aria_label(presentation.catalog.t("desktop-available-input-methods"))
                                 .flex_1()
                                 .min_h_0()
                                 .overflow_y_scroll()
@@ -686,11 +653,7 @@ impl Render for SystemFlyoutView {
                                             .role(gpui::Role::Status)
                                             .p_3()
                                             .text_color(rgb(tokens.secondary))
-                                            .child(localized(
-                                                presentation,
-                                                "找不到可用的輸入法",
-                                                "No input methods found",
-                                            )),
+                                            .child(presentation.catalog.t("desktop-no-input-methods")),
                                     )
                                 })
                                 .children(input.profiles.into_iter().enumerate().map(
@@ -710,9 +673,9 @@ impl Render for SystemFlyoutView {
                                         let accessible_name = format!(
                                             "{primary}. {subtitle}{}",
                                             if active {
-                                                localized(presentation, "，使用中", ", active")
+                                                presentation.catalog.t("desktop-active-suffix")
                                             } else {
-                                                ""
+                                                String::new()
                                             }
                                         );
                                         let glyph = input_profile_glyph(&profile);
@@ -815,11 +778,7 @@ impl Render for SystemFlyoutView {
                             div()
                                 .id("owned-input-settings-footer")
                                 .role(gpui::Role::Button)
-                                .aria_label(localized(
-                                    presentation,
-                                    "語言喜好設定",
-                                    "Language preferences",
-                                ))
+                                .aria_label(presentation.catalog.t("desktop-language-preferences"))
                                 .tab_index(0)
                                 .min_h(px(48.))
                                 .mt_1()
@@ -850,22 +809,14 @@ impl Render for SystemFlyoutView {
                                     }
                                 })
                                 .child(div().w(px(48.)).text_size(px(20.)).child("A字"))
-                                .child(localized(
-                                    presentation,
-                                    "語言喜好設定",
-                                    "Language preferences",
-                                )),
+                                .child(presentation.catalog.t("desktop-language-preferences")),
                         ),
                     None => root.child(
                         div()
                             .id("owned-input-unavailable")
                             .role(gpui::Role::Status)
                             .text_color(rgb(tokens.unavailable))
-                            .child(localized(
-                                presentation,
-                                "輸入設定檔無法使用",
-                                "Input profiles unavailable",
-                            )),
+                            .child(presentation.catalog.t("desktop-input-profiles-unavailable")),
                     ),
                 }
             })
@@ -896,14 +847,14 @@ impl Render for SystemFlyoutView {
                             )
                             .child(format!(
                                 "{}  {current}%",
-                                localized(presentation, "音量", "Volume")
+                                presentation.catalog.t("desktop-volume")
                             )),
                     )
                     .child(
                         div()
                             .id("owned-volume-slider")
                             .role(gpui::Role::Slider)
-                            .aria_label(localized(presentation, "音量", "Volume"))
+                            .aria_label(presentation.catalog.t("desktop-volume"))
                             .aria_min_numeric_value(0.0)
                             .aria_max_numeric_value(100.0)
                             .aria_numeric_value(f64::from(current))
@@ -998,7 +949,7 @@ impl Render for SystemFlyoutView {
                                 div()
                                     .id("owned-volume-lower")
                                     .role(gpui::Role::Button)
-                                    .aria_label(localized(presentation, "降低音量", "Lower volume"))
+                                    .aria_label(presentation.catalog.t("desktop-lower-volume"))
                                     .tab_index(0)
                                     .w(px(48.))
                                     .h(px(34.))
@@ -1040,9 +991,9 @@ impl Render for SystemFlyoutView {
                                     .id("owned-volume-mute")
                                     .role(gpui::Role::Button)
                                     .aria_label(if muted {
-                                        localized(presentation, "取消靜音", "Unmute")
+                                        presentation.catalog.t("desktop-unmute")
                                     } else {
-                                        localized(presentation, "靜音", "Mute")
+                                        presentation.catalog.t("desktop-mute")
                                     })
                                     .tab_index(0)
                                     .w(px(96.))
@@ -1069,16 +1020,16 @@ impl Render for SystemFlyoutView {
                                         }
                                     })
                                     .child(if muted {
-                                        localized(presentation, "取消靜音", "Unmute")
+                                        presentation.catalog.t("desktop-unmute")
                                     } else {
-                                        localized(presentation, "靜音", "Mute")
+                                        presentation.catalog.t("desktop-mute")
                                     }),
                             )
                             .child(
                                 div()
                                     .id("owned-volume-higher")
                                     .role(gpui::Role::Button)
-                                    .aria_label(localized(presentation, "提高音量", "Raise volume"))
+                                    .aria_label(presentation.catalog.t("desktop-raise-volume"))
                                     .tab_index(0)
                                     .w(px(48.))
                                     .h(px(34.))
@@ -1122,11 +1073,7 @@ impl Render for SystemFlyoutView {
                         .id("owned-volume-unavailable")
                         .role(gpui::Role::Status)
                         .text_color(rgb(tokens.unavailable))
-                        .child(localized(
-                            presentation,
-                            "音量無法使用",
-                            "Volume unavailable",
-                        )),
+                        .child(presentation.catalog.t("desktop-volume-unavailable")),
                 ),
             })
             .when(kind == SystemFlyoutKind::NetworkPower, |root| {
@@ -1142,17 +1089,13 @@ impl Render for SystemFlyoutView {
                                 .id("owned-wifi-heading")
                                 .role(gpui::Role::Heading)
                                 .text_size(px(18.))
-                                .child(localized(presentation, "Wi-Fi 網路", "Wi-Fi networks")),
+                                .child(presentation.catalog.t("desktop-wifi-networks")),
                         )
                         .child(
                             div()
                                 .id("owned-wifi-refresh")
                                 .role(gpui::Role::Button)
-                                .aria_label(localized(
-                                    presentation,
-                                    "重新整理 Wi-Fi 網路",
-                                    "Refresh Wi-Fi networks",
-                                ))
+                                .aria_label(presentation.catalog.t("desktop-refresh-wifi"))
                                 .tab_index(0)
                                 .ml_auto()
                                 .px_3()
@@ -1177,7 +1120,7 @@ impl Render for SystemFlyoutView {
                                         refresh_key(SystemStatusAction::RefreshWifi, cx);
                                     }
                                 })
-                                .child(localized(presentation, "重新整理", "Refresh")),
+                                .child(presentation.catalog.t("desktop-refresh")),
                         ),
                 )
                 .child(
@@ -1247,11 +1190,7 @@ impl Render for SystemFlyoutView {
                         div()
                             .id("owned-wifi-network-list")
                             .role(gpui::Role::Group)
-                            .aria_label(localized(
-                                presentation,
-                                "可用的 Wi-Fi 網路",
-                                "Available Wi-Fi networks",
-                            ))
+                            .aria_label(presentation.catalog.t("desktop-available-wifi"))
                             .flex_1()
                             .min_h_0()
                             .overflow_y_scroll()
@@ -1266,13 +1205,9 @@ impl Render for SystemFlyoutView {
                                         .p_3()
                                         .text_color(rgb(tokens.secondary))
                                         .child(if enabled {
-                                            localized(
-                                                presentation,
-                                                "找不到 Wi-Fi 網路",
-                                                "No Wi-Fi networks found",
-                                            )
+                                            presentation.catalog.t("desktop-no-wifi")
                                         } else {
-                                            localized(presentation, "Wi-Fi 已關閉", "Wi-Fi is off")
+                                            presentation.catalog.t("desktop-wifi-off")
                                         }),
                                 )
                             })
@@ -1281,14 +1216,14 @@ impl Render for SystemFlyoutView {
                                     let row_action = action.clone();
                                     let row_action_key = action.clone();
                                     let detail = if network.connected {
-                                        localized(presentation, "已連線", "Connected").to_owned()
+                                        presentation.catalog.t("desktop-connected").to_owned()
                                     } else if network.profile_name.is_some() {
-                                        localized(presentation, "已儲存", "Saved").to_owned()
+                                        presentation.catalog.t("desktop-saved").to_owned()
                                     } else if network.secure {
-                                        localized(presentation, "需要密碼", "Password required")
+                                        presentation.catalog.t("desktop-password-required")
                                             .to_owned()
                                     } else {
-                                        localized(presentation, "開放式網路", "Open network")
+                                        presentation.catalog.t("desktop-open-network")
                                             .to_owned()
                                     };
                                     let detail = format!("{detail} · {}%", network.signal_quality);
@@ -1345,15 +1280,15 @@ impl Render for SystemFlyoutView {
                                                 command,
                                                 SystemStatusAction::DisconnectWifi { .. }
                                             ) {
-                                                localized(presentation, "中斷連線", "Disconnect")
+                                                presentation.catalog.t("desktop-disconnect")
                                             } else {
-                                                localized(presentation, "連線", "Connect")
+                                                presentation.catalog.t("desktop-connect")
                                             };
                                             row.child(
                                                 div()
                                                     .id(("owned-wifi-action", index))
                                                     .role(gpui::Role::Button)
-                                                    .aria_label(label)
+                                                    .aria_label(label.clone())
                                                     .tab_index(0)
                                                     .px_3()
                                                     .h(px(32.))
@@ -1391,46 +1326,26 @@ impl Render for SystemFlyoutView {
                         .role(gpui::Role::Status)
                         .p_3()
                         .text_color(rgb(tokens.unavailable))
-                        .child(localized(
-                            presentation,
-                            "找不到 Wi-Fi 網路介面卡",
-                            "No Wi-Fi adapter found",
-                        )),
+                        .child(presentation.catalog.t("desktop-no-wifi-adapter")),
                     Some(StatusAvailability::Unavailable { .. }) | None => div()
                         .id("owned-wifi-unavailable")
                         .role(gpui::Role::Status)
                         .p_3()
                         .text_color(rgb(tokens.unavailable))
-                        .child(localized(
-                            presentation,
-                            "Wi-Fi 提供者無法使用",
-                            "Wi-Fi provider unavailable",
-                        )),
+                        .child(presentation.catalog.t("desktop-wifi-provider-unavailable")),
                 })
                 .child(
                     div()
                         .id("owned-network-quick-tiles")
                         .role(gpui::Role::Group)
-                        .aria_label(localized(
-                            presentation,
-                            "快速設定狀態",
-                            "Quick settings status",
-                        ))
+                        .aria_label(presentation.catalog.t("desktop-quick-settings"))
                         .flex()
                         .gap_2()
                         .children(
                             [
-                                localized(presentation, "Wi-Fi", "Wi-Fi"),
-                                localized(
-                                    presentation,
-                                    "飛航模式（無法使用）",
-                                    "Airplane mode (unavailable)",
-                                ),
-                                localized(
-                                    presentation,
-                                    "行動熱點（無法使用）",
-                                    "Mobile hotspot (unavailable)",
-                                ),
+                                presentation.catalog.t("desktop-wifi"),
+                                presentation.catalog.t("desktop-airplane-unavailable"),
+                                presentation.catalog.t("desktop-hotspot-unavailable"),
                             ]
                             .into_iter()
                             .enumerate()
@@ -1484,11 +1399,7 @@ impl Render for SystemFlyoutView {
                         _ => None,
                     })
                     .unwrap_or_else(|| {
-                        localized(
-                            presentation,
-                            "日期時間提供者無法使用",
-                            "Calendar provider unavailable",
-                        )
+                        presentation.catalog.t("desktop-calendar-provider-unavailable")
                         .into()
                     });
                 let Some(calendar) = calendar.clone() else {
@@ -1497,11 +1408,7 @@ impl Render for SystemFlyoutView {
                             .id("owned-calendar-unavailable")
                             .role(gpui::Role::Status)
                             .text_color(rgb(tokens.unavailable))
-                            .child(localized(
-                                presentation,
-                                "月曆無法使用",
-                                "Calendar unavailable",
-                            )),
+                            .child(presentation.catalog.t("desktop-calendar-unavailable")),
                     );
                 };
                 let selected_day = calendar.selected_day;
@@ -1515,26 +1422,10 @@ impl Render for SystemFlyoutView {
                     let status = &snapshot.windows_events;
                     match (&status.access, status.synchronized) {
                         (WindowsNotificationAccess::Allowed, true) => None,
-                        (WindowsNotificationAccess::Allowed, false) => Some(localized(
-                            presentation,
-                            "正在同步 Windows 通知",
-                            "Syncing Windows notifications",
-                        )),
-                        (WindowsNotificationAccess::Denied, _) => Some(localized(
-                            presentation,
-                            "Windows 通知存取遭拒，請在隱私權設定中允許通知存取",
-                            "Windows notification access was denied. Allow notification access in Privacy settings.",
-                        )),
-                        (WindowsNotificationAccess::Unspecified, _) => Some(localized(
-                            presentation,
-                            "正在等待 Windows 通知存取權限",
-                            "Waiting for Windows notification access",
-                        )),
-                        (WindowsNotificationAccess::Unavailable, _) => Some(localized(
-                            presentation,
-                            "Windows 通知事件目前無法使用",
-                            "Windows notification events are currently unavailable",
-                        )),
+                        (WindowsNotificationAccess::Allowed, false) => Some(presentation.catalog.t("desktop-syncing-notifications")),
+                        (WindowsNotificationAccess::Denied, _) => Some(presentation.catalog.t("desktop-notification-access-denied")),
+                        (WindowsNotificationAccess::Unspecified, _) => Some(presentation.catalog.t("desktop-waiting-notification-access")),
+                        (WindowsNotificationAccess::Unavailable, _) => Some(presentation.catalog.t("desktop-notification-events-unavailable")),
                     }
                 });
                 root.child(
@@ -1549,18 +1440,14 @@ impl Render for SystemFlyoutView {
                                 .role(gpui::Role::Heading)
                                 .flex_1()
                                 .text_size(px(18.))
-                                .child(localized(presentation, "通知", "Notifications")),
+                                .child(presentation.catalog.t("desktop-notifications")),
                         )
                         .when(notification_count > 0, |heading| {
                             heading.child(
                                 div()
                                     .id("owned-notification-clear-all")
                                     .role(gpui::Role::Button)
-                                    .aria_label(localized(
-                                        presentation,
-                                        "全部清除通知",
-                                        "Clear all notifications",
-                                    ))
+                                    .aria_label(presentation.catalog.t("desktop-clear-all-notifications"))
                                     .tab_index(0)
                                     .px_2()
                                     .h(px(32.))
@@ -1592,7 +1479,7 @@ impl Render for SystemFlyoutView {
                                             }
                                         },
                                     ))
-                                    .child(localized(presentation, "全部清除", "Clear all")),
+                                    .child(presentation.catalog.t("desktop-clear-all")),
                             )
                         }),
                 )
@@ -1630,11 +1517,7 @@ impl Render for SystemFlyoutView {
                         .border_1()
                         .border_color(rgb(tokens.border))
                         .text_color(rgb(tokens.unavailable))
-                        .child(localized(
-                            presentation,
-                            "通知提供者目前無法使用",
-                            "Notification provider unavailable",
-                        )),
+                        .child(presentation.catalog.t("desktop-notification-provider-unavailable")),
                     Some(snapshot) if snapshot.notifications.is_empty() => div()
                         .id("owned-notification-empty")
                         .role(gpui::Role::Status)
@@ -1647,15 +1530,11 @@ impl Render for SystemFlyoutView {
                         .items_center()
                         .justify_center()
                         .text_color(rgb(tokens.secondary))
-                        .child(localized(
-                            presentation,
-                            "沒有新的通知",
-                            "No new notifications",
-                        )),
+                        .child(presentation.catalog.t("desktop-no-new-notifications")),
                     Some(snapshot) => div()
                         .id("owned-notification-list")
                         .role(gpui::Role::List)
-                        .aria_label(localized(presentation, "通知", "Notifications"))
+                        .aria_label(presentation.catalog.t("desktop-notifications"))
                         .max_h(px(264.))
                         .overflow_y_scroll()
                         .flex()
@@ -1759,11 +1638,7 @@ impl Render for SystemFlyoutView {
                                     div()
                                         .id(format!("owned-notification-dismiss-{dismiss_id}"))
                                         .role(gpui::Role::Button)
-                                        .aria_label(localized(
-                                            presentation,
-                                            "關閉通知",
-                                            "Dismiss notification",
-                                        ))
+                                        .aria_label(presentation.catalog.t("desktop-dismiss-notification"))
                                         .tab_index(0)
                                         .w(px(32.))
                                         .h(px(32.))
@@ -1818,14 +1693,11 @@ impl Render for SystemFlyoutView {
                         .mt_2()
                         .mb_2()
                         .text_size(px(16.))
-                        .child(calendar_month_heading(
-                            &calendar,
-                            presentation.traditional_chinese,
-                        )),
+                        .child(calendar_month_heading(&calendar, presentation.catalog)),
                 )
                 .child(
                     div().flex().children(
-                        calendar_weekdays(presentation.traditional_chinese)
+                        calendar_weekdays(presentation.catalog)
                             .into_iter()
                             .enumerate()
                             .map(|(index, day)| {
@@ -1873,7 +1745,19 @@ impl Render for SystemFlyoutView {
 
 #[cfg(test)]
 mod tests {
+    use explorer_i18n::{AppLocale, Catalog};
     use shell_provider_protocol::{PowerStatus, StatusAvailability, SystemStatusSnapshot};
+
+    fn presentation(locale: AppLocale) -> super::SystemFlyoutPresentation {
+        super::SystemFlyoutPresentation::new(super::SystemFlyoutTheme::Light, Catalog::new(locale))
+    }
+
+    fn strip_isolates(value: &str) -> String {
+        value
+            .chars()
+            .filter(|ch| !matches!(*ch, '\u{2066}' | '\u{2067}' | '\u{2068}' | '\u{2069}'))
+            .collect()
+    }
 
     #[test]
     fn windows_style_calendar_grid_handles_leap_year_and_selected_day() {
@@ -1882,15 +1766,44 @@ mod tests {
         assert!(month.cells.contains(&Some(29)));
         assert_eq!(month.selected_day, 29);
         assert!(super::calendar_month("2026/13/01").is_none());
-        assert_eq!(super::calendar_month_heading(&month, true), "2028年2月");
         assert_eq!(
-            super::calendar_month_heading(&month, false),
+            strip_isolates(&super::calendar_month_heading(
+                &month,
+                Catalog::new(AppLocale::ZhTw)
+            )),
+            "2028年二月"
+        );
+        assert_eq!(
+            strip_isolates(&super::calendar_month_heading(
+                &month,
+                Catalog::new(AppLocale::En)
+            )),
             "February 2028"
         );
         assert_eq!(
-            super::calendar_weekdays(true),
-            ["一", "二", "三", "四", "五", "六", "日"]
+            super::calendar_weekdays(Catalog::new(AppLocale::ZhTw)),
+            [
+                String::from("一"),
+                String::from("二"),
+                String::from("三"),
+                String::from("四"),
+                String::from("五"),
+                String::from("六"),
+                String::from("日"),
+            ]
         );
+    }
+
+    #[test]
+    fn flyout_catalog_strings_cover_zh_tw_and_en() {
+        let zh = Catalog::new(AppLocale::ZhTw);
+        let en = Catalog::new(AppLocale::En);
+        assert_eq!(zh.t("desktop-volume"), "音量");
+        assert_eq!(en.t("desktop-volume"), "Volume");
+        assert_eq!(zh.t("desktop-input-languages"), "輸入法與鍵盤配置");
+        assert_eq!(en.t("desktop-input-languages"), "Input languages");
+        assert_eq!(zh.t("desktop-notifications"), "通知");
+        assert_eq!(en.t("desktop-notifications"), "Notifications");
     }
 
     #[test]
@@ -1901,10 +1814,10 @@ mod tests {
         assert_ne!(light.panel, dark.panel);
         assert_ne!(dark.panel, contrast.panel);
         assert_ne!(contrast.focus, contrast.accent);
-        let zh = super::SystemFlyoutPresentation::new(super::SystemFlyoutTheme::Light, true);
-        let en = super::SystemFlyoutPresentation::new(super::SystemFlyoutTheme::Dark, false);
-        assert_eq!(super::localized(zh, "音量", "Volume"), "音量");
-        assert_eq!(super::localized(en, "音量", "Volume"), "Volume");
+        let zh = presentation(AppLocale::ZhTw);
+        let en = presentation(AppLocale::En);
+        assert_eq!(zh.catalog.t("desktop-volume"), "音量");
+        assert_eq!(en.catalog.t("desktop-volume"), "Volume");
         assert_eq!(super::compact_profile_tag("zh-TW"), "中");
         assert_eq!(super::compact_profile_tag("en_US"), "ENG");
         assert_eq!(super::compact_profile_tag("de-DE"), "DE");
@@ -1959,8 +1872,7 @@ mod tests {
 
     #[test]
     fn network_and_power_summaries_distinguish_not_present_from_failure() {
-        let presentation =
-            super::SystemFlyoutPresentation::new(super::SystemFlyoutTheme::Light, false);
+        let presentation = presentation(AppLocale::En);
         let not_present = status_snapshot(StatusAvailability::NotPresent);
         let (network, _, network_available) =
             super::network_summary(Some(&not_present), presentation);
@@ -2049,14 +1961,8 @@ mod tests {
         assert_eq!(super::input_profile_glyph(&cangjie), "無");
         assert_eq!(super::input_profile_glyph(&bopomofo), "ㄅ");
         assert_ne!(
-            super::input_profile_subtitle(
-                &cangjie,
-                super::SystemFlyoutPresentation::new(super::SystemFlyoutTheme::Light, true)
-            ),
-            super::input_profile_subtitle(
-                &bopomofo,
-                super::SystemFlyoutPresentation::new(super::SystemFlyoutTheme::Light, true)
-            )
+            super::input_profile_subtitle(&cangjie, presentation(AppLocale::ZhTw)),
+            super::input_profile_subtitle(&bopomofo, presentation(AppLocale::ZhTw))
         );
         let maximum = (0..shell_provider_protocol::MAX_INPUT_PROFILES)
             .map(|index| profile(index, &format!("method-{index}")))

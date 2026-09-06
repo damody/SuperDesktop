@@ -48,6 +48,7 @@ use shell_provider_protocol::{
     SystemStatusSnapshot, SystemStatusTerminalKind, TaskbarProgressKind, TaskbarStateSnapshot,
     TaskbarWindowState, TerminalKind, reduce_group_progress,
 };
+use explorer_i18n::Catalog;
 use taskbar_ui::{
     AccessibleTask, AltTabView, AutoHideEffect, AutoHideInput, AutoHideState, ClockLocale,
     CoreStatus, FlyoutAction, HOVER_PREVIEW_CLOSE_GRACE_MS, HOVER_PREVIEW_DELAY_MS,
@@ -60,7 +61,7 @@ use taskbar_ui::{
     SystemStatusAction, TaskAction, TaskFlyoutView, TaskViewEffect, TaskViewModel, TaskViewSurface,
     TaskbarCallbacks, TaskbarContextCommand, TaskbarContextView, TaskbarLayout, TaskbarSettingId,
     TaskbarSettingsEffect, TaskbarSettingsView, TaskbarView, TestClock, WindowsGuiMetrics,
-    auto_hide_endpoints, reduce_auto_hide,
+    auto_hide_endpoints, reduce_auto_hide, resolve_desktop_locale,
 };
 
 use crate::{
@@ -3577,17 +3578,13 @@ fn fixed_label() -> &'static str {
     }
 }
 
-fn system_flyout_presentation() -> SystemFlyoutPresentation {
+fn system_flyout_presentation(catalog: Catalog) -> SystemFlyoutPresentation {
     let theme = match std::env::var("SUPERDESKTOP_THEME").as_deref() {
         Ok("dark") => SystemFlyoutTheme::Dark,
         Ok("high-contrast") => SystemFlyoutTheme::HighContrast,
         _ => SystemFlyoutTheme::Light,
     };
-    let traditional_chinese = std::env::var("SUPERDESKTOP_LOCALE")
-        .ok()
-        .or_else(platform_win::common::taskbar_status::user_locale_name)
-        .is_some_and(|locale| locale.eq_ignore_ascii_case("zh-TW"));
-    SystemFlyoutPresentation::new(theme, traditional_chinese)
+    SystemFlyoutPresentation::new(theme, catalog)
 }
 
 fn fixed_node(monitor: &str, icon: Option<IconData>) -> AccessibleNode {
@@ -3647,6 +3644,13 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
         .load(&settings_target)
         .map_err(|_| "settings-store-load")?
         .settings;
+    let active_locale = resolve_desktop_locale(
+        std::env::var("SUPERDESKTOP_LOCALE").ok().as_deref(),
+        persisted_settings.locale,
+        platform_win::common::taskbar_status::user_locale_name().as_deref(),
+    );
+    let active_catalog = Catalog::new(active_locale);
+    trace_action(&format!("locale:{}", active_locale.bcp47()));
     let verification_surface = std::env::var("SUPERDESKTOP_VERIFICATION_SURFACE").ok();
     if verification_surface.is_some()
         && let Ok(rows) = std::env::var("SUPERDESKTOP_VERIFICATION_TASKBAR_ROWS")
@@ -5010,7 +5014,8 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                                                         *settings_dismiss_slot_for_view.borrow_mut() = None;
                                                                     }),
                                                                     cx,
-                                                                ))
+                                                                )
+                                                                .with_catalog(active_catalog))
                                                             },
                                                         );
                                                         if let Ok(handle) = settings_opened {
@@ -5042,6 +5047,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                                 window,
                                                 cx,
                                             )
+                                            .with_catalog(active_catalog)
                                         })
                                     },
                                 );
@@ -5259,7 +5265,7 @@ pub fn run(shell: bool, duration: Option<Duration>) -> Result<(), &'static str> 
                                 let center_snapshot = Rc::clone(&notification_snapshot_for_center);
                                 let dismiss_slot =
                                     Rc::clone(&system_flyout_window_for_taskbar);
-                                let presentation = system_flyout_presentation();
+                                let presentation = system_flyout_presentation(active_catalog);
                                 let taskbar_rows =
                                     system_flyout_settings.borrow().taskbar.rows;
                                 let opened = app.open_window(
@@ -8335,8 +8341,9 @@ mod live_parity_tests {
         let source = include_str!("surface_runtime.rs");
         let production = source.split("#[cfg(test)]").next().unwrap_or(source);
         for required in [
-            "system_flyout_presentation()",
+            "system_flyout_presentation(active_catalog)",
             "SystemFlyoutPresentation::new",
+            "resolve_desktop_locale(",
             "system_flyout_geometry(",
             "system_flyout_settings.borrow().taskbar.rows",
             "SystemFlyoutView::new",
