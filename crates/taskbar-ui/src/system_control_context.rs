@@ -5,7 +5,12 @@ use gpui::{
     StatefulInteractiveElement, Styled, Subscription, Window, div, px, rgb,
 };
 
-use crate::{WindowsGuiMetrics, taskbar_settings::CommandSurfaceTokens};
+use explorer_i18n::Catalog;
+
+use crate::{
+    WindowsGuiMetrics,
+    taskbar_settings::{CommandSurfaceTokens, resolve_desktop_locale},
+};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum SystemControlContextKind {
@@ -66,41 +71,38 @@ impl SystemControlContextView {
     }
 }
 
-fn traditional_chinese() -> bool {
-    std::env::var("SUPERDESKTOP_LOCALE").is_ok_and(|locale| locale.eq_ignore_ascii_case("zh-TW"))
+fn context_catalog() -> Catalog {
+    let env_override = std::env::var("SUPERDESKTOP_LOCALE").ok();
+    let windows_tag = platform_win::common::taskbar_status::user_locale_name();
+    Catalog::new(resolve_desktop_locale(
+        env_override.as_deref(),
+        None,
+        windows_tag.as_deref(),
+    ))
 }
 
-fn label(command: SystemControlContextCommand, zh_tw: bool) -> &'static str {
-    match (command, zh_tw) {
-        (SystemControlContextCommand::LanguagePreferences, true) => "語言喜好設定",
-        (SystemControlContextCommand::LanguagePreferences, false) => "Language preferences",
-        (SystemControlContextCommand::OpenVolumeMixer, true) => "開啟音量混音程式",
-        (SystemControlContextCommand::OpenVolumeMixer, false) => "Open volume mixer",
-        (SystemControlContextCommand::OpenSoundSettings, true) => "音效設定",
-        (SystemControlContextCommand::OpenSoundSettings, false) => "Sound settings",
-    }
+fn label(command: SystemControlContextCommand, catalog: Catalog) -> String {
+    catalog.t(match command {
+        SystemControlContextCommand::LanguagePreferences => "desktop-language-preferences",
+        SystemControlContextCommand::OpenVolumeMixer => "desktop-open-volume-mixer",
+        SystemControlContextCommand::OpenSoundSettings => "desktop-sound-settings",
+    })
 }
 
 impl Render for SystemControlContextView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         window.focus(&self.focus, cx);
         let tokens = CommandSurfaceTokens::current();
-        let zh_tw = traditional_chinese();
+        let catalog = context_catalog();
         let dismiss = self.dismiss.clone();
         div()
             .id("owned-system-control-context")
             .role(gpui::Role::Menu)
             .aria_label(match self.kind {
                 SystemControlContextKind::Input => {
-                    label(SystemControlContextCommand::LanguagePreferences, zh_tw)
+                    label(SystemControlContextCommand::LanguagePreferences, catalog)
                 }
-                SystemControlContextKind::Volume => {
-                    if zh_tw {
-                        "音量功能表"
-                    } else {
-                        "Volume menu"
-                    }
-                }
+                SystemControlContextKind::Volume => catalog.t("desktop-volume-menu"),
             })
             .tab_index(0)
             .track_focus(&self.focus)
@@ -134,7 +136,7 @@ impl Render for SystemControlContextView {
                         div()
                             .id(("system-control-context-command", index))
                             .role(gpui::Role::MenuItem)
-                            .aria_label(label(command, zh_tw))
+                            .aria_label(label(command, catalog))
                             .tab_index(0)
                             .h(px(WindowsGuiMetrics::CONTEXT_ROW_HEIGHT))
                             .px(px(12.))
@@ -152,7 +154,7 @@ impl Render for SystemControlContextView {
                                     key_action(command, cx);
                                 }
                             })
-                            .child(label(command, zh_tw))
+                            .child(label(command, catalog))
                     }),
             )
     }
@@ -186,9 +188,9 @@ mod tests {
             "Role::MenuItem",
             "observe_window_activation",
             "event.keystroke.key == \"escape\"",
-            "Language preferences",
-            "Open volume mixer",
-            "Sound settings",
+            "desktop-language-preferences",
+            "desktop-open-volume-mixer",
+            "desktop-sound-settings",
         ] {
             assert!(
                 source.contains(required),

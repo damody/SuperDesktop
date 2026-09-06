@@ -7,17 +7,22 @@ use gpui::{
 };
 use shell_provider_protocol::{IconKey, NotificationEventKind};
 
+use explorer_i18n::Catalog;
+
+use crate::taskbar_settings::resolve_desktop_locale;
 use crate::{NotificationAccessibleNode, WindowsGuiMetrics, view::icon_render_image};
 
 pub type NotificationOverflowAction = Rc<dyn Fn(&IconKey, NotificationEventKind)>;
 pub type NotificationOverflowDismiss = Rc<dyn Fn(&mut Window, &mut gpui::App)>;
 
-fn traditional_chinese() -> bool {
-    if let Ok(locale) = std::env::var("SUPERDESKTOP_LOCALE") {
-        return locale.eq_ignore_ascii_case("zh-TW");
-    }
-    platform_win::common::taskbar_status::user_locale_name()
-        .is_some_and(|locale| locale.eq_ignore_ascii_case("zh-TW"))
+fn overflow_catalog() -> Catalog {
+    let env_override = std::env::var("SUPERDESKTOP_LOCALE").ok();
+    let windows_tag = platform_win::common::taskbar_status::user_locale_name();
+    Catalog::new(resolve_desktop_locale(
+        env_override.as_deref(),
+        None,
+        windows_tag.as_deref(),
+    ))
 }
 
 pub struct NotificationOverflowView {
@@ -62,17 +67,13 @@ impl Render for NotificationOverflowView {
         let hover_background = if high_contrast { 0x1a1a1a } else { 0xe7e7e7 };
         let pressed_background = if high_contrast { 0x303030 } else { 0xdcdcdc };
         let empty = self.nodes.is_empty();
-        let zh_tw = traditional_chinese();
+        let catalog = overflow_catalog();
         let dismiss = self.dismiss.clone();
         let action = self.action.clone();
         div()
             .id("owned-notification-overflow")
             .role(gpui::Role::Dialog)
-            .aria_label(if zh_tw {
-                "系統匣圖示"
-            } else {
-                "Tray icons"
-            })
+            .aria_label(catalog.t("desktop-tray-icons"))
             .tab_index(0)
             .track_focus(&self.focus)
             .size_full()
@@ -98,16 +99,8 @@ impl Render for NotificationOverflowView {
                     div()
                         .id("notification-overflow-empty")
                         .role(gpui::Role::Status)
-                        .aria_label(if zh_tw {
-                            "目前沒有系統匣圖示"
-                        } else {
-                            "No tray icons are currently registered"
-                        })
-                        .child(if zh_tw {
-                            "目前沒有系統匣圖示"
-                        } else {
-                            "No tray icons"
-                        }),
+                        .aria_label(catalog.t("desktop-no-tray-icons-registered"))
+                        .child(catalog.t("desktop-no-tray-icons")),
                 )
             })
             .children(self.nodes.iter().cloned().map(move |node| {
@@ -173,10 +166,10 @@ mod tests {
         let source = include_str!("notification_overflow.rs");
         for required in [
             "owned-notification-overflow",
-            "Tray icons",
+            "desktop-tray-icons",
             "notification-overflow-empty",
-            "No tray icons",
-            "目前沒有系統匣圖示",
+            "desktop-no-tray-icons",
+            "desktop-no-tray-icons-registered",
             "observe_window_activation",
             "event.keystroke.key == \"escape\"",
             "NotificationEventKind::Activate",

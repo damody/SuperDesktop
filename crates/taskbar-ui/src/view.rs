@@ -13,10 +13,12 @@ use gpui::{
     prelude::FluentBuilder as _, px, rgb, svg,
 };
 
+use explorer_i18n::Catalog;
+
 use crate::{
     AccessibleTask, NotificationAccessibleNode, NotificationAreaModel, NotificationPlacement,
     StatusRegion, SystemControlContextKind, SystemFlyoutKind, SystemStatusAction, TaskOverlay,
-    TaskVisualState, TaskbarLayout, WindowsGuiMetrics,
+    TaskVisualState, TaskbarLayout, WindowsGuiMetrics, taskbar_settings::resolve_desktop_locale,
 };
 use settings_store::{TaskbarAlignment, TaskbarSearchMode};
 use shell_provider_protocol::{
@@ -101,19 +103,20 @@ fn task_display_label(
     group_size: usize,
     show_labels: bool,
     has_real_icon: bool,
+    catalog: Catalog,
 ) -> String {
     if !show_labels && has_real_icon {
         return String::new();
     }
     let name = if name.trim().is_empty() {
-        "Untitled"
+        catalog.t("desktop-untitled")
     } else {
-        name
+        name.to_owned()
     };
     if group_size > 1 {
         format!("{name} ({group_size})")
     } else {
-        name.to_owned()
+        name
     }
 }
 
@@ -204,12 +207,12 @@ impl TaskbarChromeTokens {
     }
 }
 
-fn taskbar_search_label(locale: Option<&str>) -> &'static str {
-    if locale.is_some_and(|locale| locale.eq_ignore_ascii_case("zh-TW")) {
-        "搜尋"
-    } else {
-        "Search"
-    }
+fn taskbar_catalog(locale: Option<&str>) -> Catalog {
+    Catalog::new(resolve_desktop_locale(locale, None, locale))
+}
+
+fn taskbar_search_label(catalog: Catalog) -> String {
+    catalog.t("desktop-setting-search")
 }
 
 fn compact_input_language(locale: &str) -> String {
@@ -417,8 +420,8 @@ impl Render for TaskbarView {
         let locale = std::env::var("SUPERDESKTOP_LOCALE")
             .ok()
             .or_else(platform_win::common::taskbar_status::user_locale_name);
-        let search_label = taskbar_search_label(locale.as_deref());
-        let zh_tw = search_label == "搜尋";
+        let catalog = taskbar_catalog(locale.as_deref());
+        let search_label = taskbar_search_label(catalog);
         let reduced_motion = std::env::var("SUPERDESKTOP_REDUCED_MOTION").as_deref() == Ok("1");
         let search_width = match search_mode {
             TaskbarSearchMode::Hidden => 0.0,
@@ -504,11 +507,7 @@ impl Render for TaskbarView {
                     div()
                         .id("taskbar-resize-strip")
                         .role(gpui::Role::Button)
-                        .aria_label(if zh_tw {
-                            "調整工作列高度"
-                        } else {
-                            "Resize taskbar height"
-                        })
+                        .aria_label(catalog.t("desktop-resize-taskbar-height"))
                         .absolute()
                         .left_0()
                         .right_0()
@@ -525,7 +524,7 @@ impl Render for TaskbarView {
                 div()
                     .id("notification-area")
                     .role(gpui::Role::Group)
-                    .aria_label(if zh_tw { "通知區域" } else { "Notification area" })
+                    .aria_label(catalog.t("desktop-notification-area"))
                     .h(bar_height)
                     .absolute()
                     .right(px(210.))
@@ -588,11 +587,7 @@ impl Render for TaskbarView {
                         div()
                                 .id("notification-overflow-control")
                                 .role(gpui::Role::Button)
-                                .aria_label(if zh_tw {
-                                    "顯示所有系統匣圖示"
-                                } else {
-                                    "Show all tray icons"
-                                })
+                                .aria_label(catalog.t("desktop-show-all-tray-icons"))
                                 .tab_index(0)
                                 .w(px(32.))
                                 .h(px(36.))
@@ -682,7 +677,7 @@ impl Render for TaskbarView {
                 div()
                     .id("start-control")
                     .role(gpui::Role::Button)
-                    .aria_label(if search_label == "搜尋" { "開始" } else { "Start" })
+                    .aria_label(catalog.t("desktop-start"))
                     .tab_index(0)
                     .w(px(44.))
                     .h(bar_height)
@@ -726,7 +721,7 @@ impl Render for TaskbarView {
                     div()
                         .id("taskbar-search-control")
                         .role(gpui::Role::Button)
-                        .aria_label(search_label)
+                        .aria_label(search_label.clone())
                         .tab_index(0)
                         .h(bar_height)
                         .w(px(if search_mode == TaskbarSearchMode::Box {
@@ -757,7 +752,7 @@ impl Render for TaskbarView {
                 div()
                     .id("task-view-control")
                     .role(gpui::Role::Button)
-                    .aria_label(if zh_tw { "工作檢視" } else { "Task View" })
+                    .aria_label(catalog.t("desktop-setting-task-view"))
                     .tab_index(0)
                     .w(px(44.))
                     .h(bar_height)
@@ -846,6 +841,7 @@ impl Render for TaskbarView {
                             task.group_size,
                             show_labels,
                             icon.is_some(),
+                            catalog,
                         );
                         let labeled_button = show_labels || icon.is_none();
                         let task_width = if labeled_button {
@@ -1003,7 +999,7 @@ impl Render for TaskbarView {
                     .ml_auto()
                     .id("system-status-region")
                     .role(gpui::Role::Group)
-                    .aria_label(if zh_tw { "系統狀態" } else { "System status" })
+                    .aria_label(catalog.t("desktop-system-status"))
                     .w(px(210.))
                     .h(bar_height)
                     .flex_none()
@@ -1285,7 +1281,7 @@ impl Render for TaskbarView {
                         div()
                             .id("show-desktop-corner")
                             .role(gpui::Role::Button)
-                            .aria_label(if zh_tw { "顯示桌面" } else { "Show desktop" })
+                            .aria_label(catalog.t("desktop-show-desktop"))
                             .tab_index(0)
                             .w(px(SHOW_DESKTOP_CORNER_WIDTH))
                             .h(bar_height)
@@ -1438,10 +1434,11 @@ mod tests {
     use super::{
         CLOCK_CONTROL_WIDTH, SHOW_DESKTOP_CORNER_WIDTH, TaskbarChromeTokens, activates_button,
         adaptive_labeled_task_width, bc7_render_image, clock_accessible_label,
-        compact_input_language, icon_render_image, task_display_label,
+        compact_input_language, icon_render_image, task_display_label, taskbar_catalog,
         taskbar_rows_for_logical_height, taskbar_search_label, toggled_system_flyout,
         uncached_icon_render_image,
     };
+    use explorer_i18n::{AppLocale, Catalog};
     use crate::{
         ClockLocale, CoreStatus, ProviderState, StatusRegion, SystemFlyoutKind, TestClock,
     };
@@ -1449,19 +1446,26 @@ mod tests {
 
     #[test]
     fn no_icon_always_uses_readable_english_and_traditional_chinese_labels() {
-        assert_eq!(task_display_label("Discord", 1, true, false), "Discord");
+        let en = Catalog::new(AppLocale::En);
+        let zh = Catalog::new(AppLocale::ZhTw);
+        assert_eq!(task_display_label("Discord", 1, true, false, en), "Discord");
         assert_eq!(
-            task_display_label("工作管理員", 1, false, false),
+            task_display_label("工作管理員", 1, false, false, zh),
             "工作管理員"
         );
-        assert_eq!(task_display_label("瀏覽器", 3, false, false), "瀏覽器 (3)");
-        assert_eq!(task_display_label("", 1, false, false), "Untitled");
+        assert_eq!(
+            task_display_label("瀏覽器", 3, false, false, zh),
+            "瀏覽器 (3)"
+        );
+        assert_eq!(task_display_label("", 1, false, false, en), "Untitled");
+        assert_eq!(task_display_label("", 1, false, false, zh), "未命名");
     }
 
     #[test]
     fn labels_can_only_be_hidden_when_a_real_icon_exists() {
-        assert_eq!(task_display_label("Discord", 1, false, true), "");
-        assert_eq!(task_display_label("Discord", 1, true, true), "Discord");
+        let en = Catalog::new(AppLocale::En);
+        assert_eq!(task_display_label("Discord", 1, false, true, en), "");
+        assert_eq!(task_display_label("Discord", 1, true, true, en), "Discord");
     }
 
     #[test]
@@ -1671,8 +1675,14 @@ mod tests {
         assert_eq!(contrast.panel, 0x000000);
         assert_eq!(contrast.border, 0xffffff);
         assert_eq!(contrast.focus, 0xffff00);
-        assert_eq!(taskbar_search_label(Some("zh-TW")), "搜尋");
-        assert_eq!(taskbar_search_label(Some("en-US")), "Search");
+        assert_eq!(
+            taskbar_search_label(taskbar_catalog(Some("zh-TW"))),
+            "搜尋"
+        );
+        assert_eq!(
+            taskbar_search_label(taskbar_catalog(Some("en-US"))),
+            "Search"
+        );
         assert_eq!(compact_input_language("zh-TW"), "中");
         assert_eq!(compact_input_language("zh_CN"), "中");
         assert_eq!(compact_input_language("en-US"), "ENG");

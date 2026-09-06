@@ -18,6 +18,9 @@ use gpui::{
 };
 use shell_provider_protocol::{IconData, SearchCategory};
 
+use explorer_i18n::{AppLocale, Catalog};
+
+use crate::taskbar_settings::resolve_desktop_locale;
 use crate::view::icon_render_image;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -422,81 +425,65 @@ pub enum StartPowerAction {
     ShutDown,
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 struct StartStrings {
-    start: &'static str,
-    search_placeholder: &'static str,
-    pinned: &'static str,
-    all_apps: &'static str,
-    recommended: &'static str,
-    recent_empty: &'static str,
-    back_to_pinned: &'static str,
-    search_results: &'static str,
-    account_prefix: &'static str,
-    settings: &'static str,
-    power: &'static str,
-    footer_actions: &'static str,
-    power_options: &'static str,
-    sign_out: &'static str,
-    restart: &'static str,
-    shut_down: &'static str,
-    user_fallback: &'static str,
+    start: String,
+    search_placeholder: String,
+    pinned: String,
+    all_apps: String,
+    recommended: String,
+    recent_empty: String,
+    back_to_pinned: String,
+    search_results: String,
+    account_prefix: String,
+    settings: String,
+    power: String,
+    footer_actions: String,
+    power_options: String,
+    sign_out: String,
+    restart: String,
+    shut_down: String,
+    user_fallback: String,
 }
 
 impl StartStrings {
-    const ENGLISH: Self = Self {
-        start: "Start",
-        search_placeholder: "Search apps, settings, and files",
-        pinned: "Pinned",
-        all_apps: "All apps",
-        recommended: "Recommended",
-        recent_empty: "Recent apps and files will appear here.",
-        back_to_pinned: "Back to pinned",
-        search_results: "Search results",
-        account_prefix: "User account",
-        settings: "Settings",
-        power: "Power",
-        footer_actions: "Start footer actions",
-        power_options: "Power options",
-        sign_out: "Sign out",
-        restart: "Restart",
-        shut_down: "Shut down",
-        user_fallback: "User",
-    };
-
-    const TRADITIONAL_CHINESE: Self = Self {
-        start: "開始",
-        search_placeholder: "搜尋應用程式、設定及檔案",
-        pinned: "已釘選",
-        all_apps: "所有應用程式",
-        recommended: "建議",
-        recent_empty: "最近使用的應用程式和檔案將顯示在這裡。",
-        back_to_pinned: "返回已釘選",
-        search_results: "搜尋結果",
-        account_prefix: "使用者帳戶",
-        settings: "設定",
-        power: "電源",
-        footer_actions: "開始功能表動作",
-        power_options: "電源選項",
-        sign_out: "登出",
-        restart: "重新啟動",
-        shut_down: "關機",
-        user_fallback: "使用者",
-    };
-
-    fn from_locale(locale: Option<&str>) -> Self {
-        if locale.is_some_and(|locale| locale.eq_ignore_ascii_case("zh-TW")) {
-            Self::TRADITIONAL_CHINESE
-        } else {
-            Self::ENGLISH
+    fn from_catalog(catalog: Catalog) -> Self {
+        Self {
+            start: catalog.t("desktop-start"),
+            search_placeholder: catalog.t("desktop-start-search-placeholder"),
+            pinned: catalog.t("desktop-start-pinned"),
+            all_apps: catalog.t("desktop-start-all-apps"),
+            recommended: catalog.t("desktop-start-recommended"),
+            recent_empty: catalog.t("desktop-start-recent-empty"),
+            back_to_pinned: catalog.t("desktop-start-back-to-pinned"),
+            search_results: catalog.t("desktop-start-search-results"),
+            account_prefix: catalog.t("desktop-start-account"),
+            settings: catalog.t("desktop-start-settings"),
+            power: catalog.t("desktop-start-power"),
+            footer_actions: catalog.t("desktop-start-footer-actions"),
+            power_options: catalog.t("desktop-start-power-options"),
+            sign_out: catalog.t("desktop-start-sign-out"),
+            restart: catalog.t("desktop-start-restart"),
+            shut_down: catalog.t("desktop-start-shut-down"),
+            user_fallback: catalog.t("desktop-start-user-fallback"),
         }
     }
 
+    fn from_locale(locale: Option<&str>) -> Self {
+        let app = locale
+            .and_then(AppLocale::from_bcp47)
+            .unwrap_or(AppLocale::En);
+        Self::from_catalog(Catalog::new(app))
+    }
+
     fn current() -> Self {
-        let locale = std::env::var("SUPERDESKTOP_LOCALE")
-            .ok()
-            .or_else(platform_win::common::taskbar_status::user_locale_name);
-        Self::from_locale(locale.as_deref())
+        let env_override = std::env::var("SUPERDESKTOP_LOCALE").ok();
+        let windows_tag = platform_win::common::taskbar_status::user_locale_name();
+        Self::from_catalog(Catalog::new(resolve_desktop_locale(
+            env_override.as_deref(),
+            None,
+            windows_tag.as_deref(),
+        )))
     }
 }
 
@@ -855,7 +842,7 @@ impl StartView {
             .is_ok_and(|value| value.eq_ignore_ascii_case("high-contrast"));
         let tokens = StartVisualTokens::new(high_contrast);
         let account_name =
-            std::env::var("USERNAME").unwrap_or_else(|_| strings.user_fallback.into());
+            std::env::var("USERNAME").unwrap_or_else(|_| strings.user_fallback.clone());
         let account_initial = account_name.chars().next().unwrap_or('U').to_string();
 
         div()
@@ -966,12 +953,12 @@ impl StartView {
                                 .flex()
                                 .items_center()
                                 .justify_between()
-                                .child(div().text_size(px(18.)).child(strings.pinned))
+                                .child(div().text_size(px(18.)).child(strings.pinned.clone()))
                                 .child(
                                     div()
                                         .id("start-all-apps")
                                         .role(gpui::Role::Button)
-                                        .aria_label(strings.all_apps)
+                                        .aria_label(strings.all_apps.clone())
                                         .tab_index(0)
                                         .px_3()
                                         .py_1()
@@ -1042,12 +1029,12 @@ impl StartView {
                                         )
                                 })),
                         )
-                        .child(div().text_size(px(18.)).child(strings.recommended))
+                        .child(div().text_size(px(18.)).child(strings.recommended.clone()))
                         .child(
                             div()
                                 .id("start-recommended")
                                 .role(gpui::Role::List)
-                                .aria_label(strings.recommended)
+                                .aria_label(strings.recommended.clone())
                                 .flex()
                                 .flex_wrap()
                                 .when(recommendations.is_empty(), |element| {
@@ -1150,9 +1137,9 @@ impl StartView {
                                     )
                                 })
                                 .child(div().text_size(px(18.)).child(if query_active {
-                                    strings.search_results
+                                    strings.search_results.clone()
                                 } else {
-                                    strings.all_apps
+                                    strings.all_apps.clone()
                                 })),
                         )
                         .child(
@@ -1160,9 +1147,9 @@ impl StartView {
                                 .id("start-mode-results")
                                 .role(gpui::Role::List)
                                 .aria_label(if query_active {
-                                    strings.search_results
+                                    strings.search_results.clone()
                                 } else {
-                                    strings.all_apps
+                                    strings.all_apps.clone()
                                 })
                                 .flex_1()
                                 .min_h_0()
@@ -1235,7 +1222,7 @@ impl StartView {
                         div()
                             .id("start-account")
                             .role(gpui::Role::Button)
-                            .aria_label(format!("{} {account_name}", strings.account_prefix))
+                            .aria_label(format!("{} {account_name}", strings.account_prefix.clone()))
                             .tab_index(0)
                             .px_3()
                             .py_2()
@@ -1252,7 +1239,7 @@ impl StartView {
                             .on_click(move |_, _, _| {
                                 account_activate(&settings_command(
                                     "ms-settings:yourinfo",
-                                    strings.account_prefix,
+                                    &strings.account_prefix,
                                 ));
                             })
                             .child(
@@ -1390,7 +1377,7 @@ fn start_icon_tile(
 
 fn power_menu_item(
     id: &'static str,
-    label: &'static str,
+    label: String,
     tokens: StartVisualTokens,
     action: PowerAction,
     value: StartPowerAction,
@@ -1788,10 +1775,11 @@ mod tests {
         assert_eq!(zh.power_options, "電源選項");
         assert_eq!(zh.shut_down, "關機");
         let english = StartStrings::from_locale(Some("en-US"));
-        assert_eq!(english, StartStrings::ENGLISH);
+        assert_eq!(english.start, "Start");
+        assert_eq!(english.all_apps, "All apps");
         assert_eq!(
-            StartStrings::from_locale(Some("ar-SA")),
-            StartStrings::ENGLISH
+            StartStrings::from_locale(Some("ar-SA")).start,
+            english.start
         );
         for value in [
             zh.start,
