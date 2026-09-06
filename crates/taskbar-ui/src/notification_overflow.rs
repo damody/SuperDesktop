@@ -9,20 +9,14 @@ use shell_provider_protocol::{IconKey, NotificationEventKind};
 
 use explorer_i18n::Catalog;
 
-use crate::taskbar_settings::resolve_desktop_locale;
+use crate::taskbar_settings::live_desktop_catalog;
 use crate::{NotificationAccessibleNode, WindowsGuiMetrics, view::icon_render_image};
 
 pub type NotificationOverflowAction = Rc<dyn Fn(&IconKey, NotificationEventKind)>;
 pub type NotificationOverflowDismiss = Rc<dyn Fn(&mut Window, &mut gpui::App)>;
 
 fn overflow_catalog() -> Catalog {
-    let env_override = std::env::var("SUPERDESKTOP_LOCALE").ok();
-    let windows_tag = platform_win::common::taskbar_status::user_locale_name();
-    Catalog::new(resolve_desktop_locale(
-        env_override.as_deref(),
-        None,
-        windows_tag.as_deref(),
-    ))
+    live_desktop_catalog()
 }
 
 pub struct NotificationOverflowView {

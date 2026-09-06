@@ -75,7 +75,7 @@ pub use taskbar_settings::{
     TaskbarContextAction, TaskbarContextCommand, TaskbarContextEffect, TaskbarContextModel,
     TaskbarContextView, TaskbarSettingId, TaskbarSettingRow, TaskbarSettingsAction,
     TaskbarSettingsEffect, TaskbarSettingsModel, TaskbarSettingsSection, TaskbarSettingsView,
-    TaskbarSurfaceDismiss, resolve_desktop_locale,
+    TaskbarSurfaceDismiss, live_desktop_catalog, resolve_desktop_locale,
 };
 pub use tracker::{
     Eligibility, OwnedWindowEvent, TaskWindow, TrackerPush, WindowObservation, WindowTracker,

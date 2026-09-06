@@ -9,7 +9,7 @@ use explorer_i18n::Catalog;
 
 use crate::{
     WindowsGuiMetrics,
-    taskbar_settings::{CommandSurfaceTokens, resolve_desktop_locale},
+    taskbar_settings::{CommandSurfaceTokens, live_desktop_catalog},
 };
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -72,13 +72,7 @@ impl SystemControlContextView {
 }
 
 fn context_catalog() -> Catalog {
-    let env_override = std::env::var("SUPERDESKTOP_LOCALE").ok();
-    let windows_tag = platform_win::common::taskbar_status::user_locale_name();
-    Catalog::new(resolve_desktop_locale(
-        env_override.as_deref(),
-        None,
-        windows_tag.as_deref(),
-    ))
+    live_desktop_catalog()
 }
 
 fn label(command: SystemControlContextCommand, catalog: Catalog) -> String {

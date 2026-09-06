@@ -40,6 +40,18 @@ fn active_catalog(settings_locale: Option<AppLocale>) -> Catalog {
     ))
 }
 
+fn persisted_settings_locale() -> Option<AppLocale> {
+    let (mut store, target) =
+        platform_win::common::settings_file::production_settings_store().ok()?;
+    store.load(&target).ok()?.settings.locale
+}
+
+/// Env override, then persisted SuperDesktop settings, then Windows, then En.
+#[must_use]
+pub fn live_desktop_catalog() -> Catalog {
+    active_catalog(persisted_settings_locale())
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) struct CommandSurfaceTokens {
     pub background: u32,
@@ -1393,6 +1405,22 @@ mod tests {
             resolve_desktop_locale(Some("klingon"), None, Some("ja")),
             AppLocale::Ja
         );
+    }
+
+    #[test]
+    fn leftover_surfaces_read_persisted_settings_locale() {
+        assert!(include_str!("taskbar_settings.rs").contains("persisted_settings_locale()"));
+        for source in [
+            include_str!("start.rs"),
+            include_str!("notification_overflow.rs"),
+            include_str!("system_control_context.rs"),
+            include_str!("view.rs"),
+        ] {
+            assert!(
+                source.contains("live_desktop_catalog"),
+                "leftover surface must use live_desktop_catalog"
+            );
+        }
     }
 
     #[test]

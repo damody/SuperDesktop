@@ -13,12 +13,13 @@ use gpui::{
     prelude::FluentBuilder as _, px, rgb, svg,
 };
 
-use explorer_i18n::Catalog;
+use explorer_i18n::{Catalog, FluentArgs};
 
 use crate::{
     AccessibleTask, NotificationAccessibleNode, NotificationAreaModel, NotificationPlacement,
     StatusRegion, SystemControlContextKind, SystemFlyoutKind, SystemStatusAction, TaskOverlay,
-    TaskVisualState, TaskbarLayout, WindowsGuiMetrics, taskbar_settings::resolve_desktop_locale,
+    TaskVisualState, TaskbarLayout, WindowsGuiMetrics,
+    taskbar_settings::{live_desktop_catalog, resolve_desktop_locale},
 };
 use settings_store::{TaskbarAlignment, TaskbarSearchMode};
 use shell_provider_protocol::{
@@ -417,10 +418,7 @@ impl Render for TaskbarView {
         let theme = std::env::var("SUPERDESKTOP_THEME").ok();
         let high_contrast = theme.as_deref() == Some("high-contrast");
         let tokens = TaskbarChromeTokens::new(theme.as_deref());
-        let locale = std::env::var("SUPERDESKTOP_LOCALE")
-            .ok()
-            .or_else(platform_win::common::taskbar_status::user_locale_name);
-        let catalog = taskbar_catalog(locale.as_deref());
+        let catalog = live_desktop_catalog();
         let search_label = taskbar_search_label(catalog);
         let reduced_motion = std::env::var("SUPERDESKTOP_REDUCED_MOTION").as_deref() == Ok("1");
         let search_width = match search_mode {
@@ -1068,8 +1066,12 @@ impl Render for TaskbarView {
                                     .text_color(rgb(tokens.text)),
                             )
                             .child(match &self.status.core.network {
-                                crate::ProviderState::Available(_) => "Network",
-                                crate::ProviderState::Unavailable(_) => "Network —",
+                                crate::ProviderState::Available(_) => {
+                                    catalog.t("desktop-network-label")
+                                }
+                                crate::ProviderState::Unavailable(_) => {
+                                    catalog.t("desktop-network-dash")
+                                }
                             }),
                     )
                     .child(
@@ -1077,9 +1079,17 @@ impl Render for TaskbarView {
                             .id("volume-control")
                             .role(gpui::Role::Button)
                             .aria_label(match (&self.status.core.volume, &self.status.core.muted) {
-                                (crate::ProviderState::Available(volume), crate::ProviderState::Available(true)) => format!("Volume {volume} percent muted"),
-                                (crate::ProviderState::Available(volume), _) => format!("Volume {volume} percent"),
-                                _ => "Volume unavailable".into(),
+                                (crate::ProviderState::Available(volume), crate::ProviderState::Available(true)) => {
+                                    let mut args = FluentArgs::new();
+                                    args.set("volume", *volume);
+                                    catalog.t_args("desktop-volume-percent-muted", &args)
+                                }
+                                (crate::ProviderState::Available(volume), _) => {
+                                    let mut args = FluentArgs::new();
+                                    args.set("volume", *volume);
+                                    catalog.t_args("desktop-volume-percent-aria", &args)
+                                }
+                                _ => catalog.t("desktop-volume-unavailable"),
                             })
                             .tab_index(0)
                             .w(px(36.))
@@ -1138,9 +1148,17 @@ impl Render for TaskbarView {
                                     .text_color(rgb(tokens.text)),
                             )
                             .child(match (&self.status.core.volume, &self.status.core.muted) {
-                                (crate::ProviderState::Available(volume), crate::ProviderState::Available(true)) => format!("Muted {volume}%"),
-                                (crate::ProviderState::Available(volume), _) => format!("Volume {volume}%"),
-                                _ => "Volume —".into(),
+                                (crate::ProviderState::Available(volume), crate::ProviderState::Available(true)) => {
+                                    let mut args = FluentArgs::new();
+                                    args.set("volume", *volume);
+                                    catalog.t_args("desktop-muted-volume", &args)
+                                }
+                                (crate::ProviderState::Available(volume), _) => {
+                                    let mut args = FluentArgs::new();
+                                    args.set("volume", *volume);
+                                    catalog.t_args("desktop-volume-percent", &args)
+                                }
+                                _ => catalog.t("desktop-volume-dash"),
                             }),
                     )
                     .child(
@@ -1149,10 +1167,14 @@ impl Render for TaskbarView {
                             .role(gpui::Role::Button)
                             .aria_label(match &self.status.core.input_language {
                                 crate::ProviderState::Available(value) => {
-                                    format!("Input language {value}")
+                                    let mut args = FluentArgs::new();
+                                    args.set("value", value.clone());
+                                    catalog.t_args("desktop-input-language", &args)
                                 }
                                 crate::ProviderState::Unavailable(reason) => {
-                                    format!("Input language unavailable {reason}")
+                                    let mut args = FluentArgs::new();
+                                    args.set("reason", *reason);
+                                    catalog.t_args("desktop-input-language-unavailable", &args)
                                 }
                             })
                             .tab_index(0)
@@ -1318,10 +1340,12 @@ impl Render for TaskbarView {
                                 .id("system-status-flyout")
                                 .role(gpui::Role::Dialog)
                                 .aria_label(match flyout {
-                                    SystemFlyoutKind::Input => "Input languages",
-                                    SystemFlyoutKind::Volume => "Volume",
-                                    SystemFlyoutKind::NetworkPower => "Network and power",
-                                    SystemFlyoutKind::Calendar => "Calendar",
+                                    SystemFlyoutKind::Input => catalog.t("desktop-input-languages"),
+                                    SystemFlyoutKind::Volume => catalog.t("desktop-volume"),
+                                    SystemFlyoutKind::NetworkPower => {
+                                        catalog.t("desktop-network-and-power")
+                                    }
+                                    SystemFlyoutKind::Calendar => catalog.t("desktop-calendar"),
                                 })
                                 .absolute()
                                 .right_0()
@@ -1420,7 +1444,7 @@ impl Render for TaskbarView {
                                     ],
                                     SystemFlyoutKind::Calendar => vec![
                                         div().id("calendar-value").child(format!("{} {}", self.status.date, self.status.time)),
-                                        div().id("calendar-zone").child(system_snapshot.as_ref().and_then(|snapshot| match &snapshot.clock { StatusAvailability::Available(clock)=>Some(format!("{} · {}",clock.locale,clock.time_zone)), _=>None }).unwrap_or_else(|| "Calendar provider unavailable".into())),
+                                        div().id("calendar-zone").child(system_snapshot.as_ref().and_then(|snapshot| match &snapshot.clock { StatusAvailability::Available(clock)=>Some(format!("{} · {}",clock.locale,clock.time_zone)), _=>None }).unwrap_or_else(|| catalog.t("desktop-calendar-provider-unavailable"))),
                                     ],
                                 }),
                         )

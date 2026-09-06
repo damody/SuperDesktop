@@ -20,7 +20,7 @@ use shell_provider_protocol::{IconData, SearchCategory};
 
 use explorer_i18n::{AppLocale, Catalog};
 
-use crate::taskbar_settings::resolve_desktop_locale;
+use crate::taskbar_settings::live_desktop_catalog;
 use crate::view::icon_render_image;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -477,13 +477,7 @@ impl StartStrings {
     }
 
     fn current() -> Self {
-        let env_override = std::env::var("SUPERDESKTOP_LOCALE").ok();
-        let windows_tag = platform_win::common::taskbar_status::user_locale_name();
-        Self::from_catalog(Catalog::new(resolve_desktop_locale(
-            env_override.as_deref(),
-            None,
-            windows_tag.as_deref(),
-        )))
+        Self::from_catalog(live_desktop_catalog())
     }
 }
 
