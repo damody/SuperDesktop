@@ -10,8 +10,9 @@ use platform_win::common::{
 };
 use raw_window_handle::{HasWindowHandle, RawWindowHandle};
 use settings_store::{TaskbarAlignment, TaskbarSearchMode};
+use explorer_i18n::{AppLocale, Catalog};
 use taskbar_ui::{
-    ClockLocale, CoreStatus, NotificationAreaModel, ProviderState, StartAvailability, StartControl,
+    CoreStatus, NotificationAreaModel, ProviderState, StartAvailability, StartControl,
     StatusRegion, TaskbarLayout, TaskbarView, TestClock,
 };
 
@@ -33,7 +34,7 @@ fn status() -> StatusRegion {
             minute: 7,
             second: 5,
         },
-        ClockLocale::ZhTw,
+        Catalog::new(AppLocale::ZhTw),
         CoreStatus {
             network: ProviderState::Available("online".into()),
             volume: ProviderState::Available(40),

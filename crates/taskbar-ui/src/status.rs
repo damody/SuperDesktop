@@ -1,7 +1,10 @@
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum ClockLocale {
-    ZhTw,
-    En,
+use explorer_i18n::{Catalog, FluentArgs};
+
+fn strip_isolates(value: String) -> String {
+    value
+        .chars()
+        .filter(|ch| !matches!(*ch, '\u{2066}' | '\u{2067}' | '\u{2068}' | '\u{2069}'))
+        .collect()
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -15,60 +18,43 @@ pub struct TestClock {
 }
 
 impl TestClock {
-    pub fn format(self, locale: ClockLocale) -> (String, String) {
+    pub fn format(self, catalog: Catalog) -> (String, String) {
         let hour_12 = match self.hour % 12 {
             0 => 12,
             hour => hour,
         };
-        match locale {
-            ClockLocale::ZhTw => (
-                format!(
-                    "{} {:02}:{:02}:{:02}",
-                    if self.hour < 12 { "上午" } else { "下午" },
-                    hour_12,
-                    self.minute,
-                    self.second
-                ),
-                format!("{}/{}/{}", self.year, self.month, self.day),
-            ),
-            ClockLocale::En => (
-                format!(
-                    "{:02}:{:02}:{:02} {}",
-                    hour_12,
-                    self.minute,
-                    self.second,
-                    if self.hour < 12 { "AM" } else { "PM" }
-                ),
-                format!("{}/{}/{}", self.month, self.day, self.year),
-            ),
-        }
+        let period = if self.hour < 12 {
+            catalog.t("desktop-clock-am")
+        } else {
+            catalog.t("desktop-clock-pm")
+        };
+        let mut args = FluentArgs::new();
+        args.set("hour-12", format!("{hour_12:02}"));
+        args.set("hour-24", format!("{:02}", self.hour));
+        args.set("minute", format!("{:02}", self.minute));
+        args.set("second", format!("{:02}", self.second));
+        args.set("period", period);
+        args.set("year", i64::from(self.year));
+        args.set("month", i64::from(self.month));
+        args.set("day", i64::from(self.day));
+        (
+            strip_isolates(catalog.t_args("desktop-clock-time", &args)),
+            strip_isolates(catalog.t_args("desktop-clock-date", &args)),
+        )
     }
 
-    pub fn weekday(self, locale: ClockLocale) -> String {
-        const ZH_TW: [&str; 7] = [
-            "星期日",
-            "星期一",
-            "星期二",
-            "星期三",
-            "星期四",
-            "星期五",
-            "星期六",
+    pub fn weekday(self, catalog: Catalog) -> String {
+        const KEYS: [&str; 7] = [
+            "desktop-weekday-sunday",
+            "desktop-weekday-monday",
+            "desktop-weekday-tuesday",
+            "desktop-weekday-wednesday",
+            "desktop-weekday-thursday",
+            "desktop-weekday-friday",
+            "desktop-weekday-saturday",
         ];
-        const EN: [&str; 7] = [
-            "Sunday",
-            "Monday",
-            "Tuesday",
-            "Wednesday",
-            "Thursday",
-            "Friday",
-            "Saturday",
-        ];
-        let index = weekday_sunday_zero(self.year, self.month, self.day);
-        match (locale, index) {
-            (_, None) => "—".into(),
-            (ClockLocale::ZhTw, Some(index)) => ZH_TW[index].into(),
-            (ClockLocale::En, Some(index)) => EN[index].into(),
-        }
+        weekday_sunday_zero(self.year, self.month, self.day)
+            .map_or_else(|| "—".into(), |index| strip_isolates(catalog.t(KEYS[index])))
     }
     pub fn next_tick_delay_ms(second: u8, millisecond: u16) -> u64 {
         let second = second.min(59);
@@ -151,11 +137,11 @@ pub struct StatusRegion {
     pub fake_tray_icons: Vec<String>,
 }
 impl StatusRegion {
-    pub fn new(clock: TestClock, locale: ClockLocale, core: CoreStatus) -> Self {
-        let (time, date) = clock.format(locale);
+    pub fn new(clock: TestClock, catalog: Catalog, core: CoreStatus) -> Self {
+        let (time, date) = clock.format(catalog);
         Self {
             time,
-            weekday: clock.weekday(locale),
+            weekday: clock.weekday(catalog),
             date,
             core,
             fake_tray_icons: Vec::new(),
@@ -165,7 +151,18 @@ impl StatusRegion {
 
 #[cfg(test)]
 mod tests {
+    use explorer_i18n::{AppLocale, Catalog};
+
     use super::*;
+
+    fn zh() -> Catalog {
+        Catalog::new(AppLocale::ZhTw)
+    }
+
+    fn en() -> Catalog {
+        Catalog::new(AppLocale::En)
+    }
+
     fn core() -> CoreStatus {
         CoreStatus {
             network: ProviderState::Available("online".into()),
@@ -187,22 +184,20 @@ mod tests {
             second: 23,
         };
         assert_eq!(
-            c.format(ClockLocale::ZhTw),
+            c.format(zh()),
             ("下午 03:30:23".into(), "2026/8/19".into())
         );
-        assert_eq!(c.weekday(ClockLocale::ZhTw), "星期三");
+        assert_eq!(c.weekday(zh()), "星期三");
         assert_eq!(
-            c.format(ClockLocale::En),
+            c.format(en()),
             ("03:30:23 PM".into(), "8/19/2026".into())
         );
-        assert_eq!(c.weekday(ClockLocale::En), "Wednesday");
+        assert_eq!(c.weekday(en()), "Wednesday");
         let midnight = TestClock { hour: 0, ..c };
         let noon = TestClock { hour: 12, ..c };
-        assert!(midnight.format(ClockLocale::ZhTw).0.starts_with("上午 12:"));
-        assert!(
-            noon.format(ClockLocale::En).0.starts_with("12:")
-                && noon.format(ClockLocale::En).0.ends_with("PM")
-        );
+        assert!(midnight.format(zh()).0.starts_with("上午 12:"));
+        let noon_en = noon.format(en()).0;
+        assert!(noon_en.starts_with("12:") && noon_en.ends_with("PM"));
         for (day, weekday) in [
             (16, "Sunday"),
             (17, "Monday"),
@@ -212,7 +207,7 @@ mod tests {
             (21, "Friday"),
             (22, "Saturday"),
         ] {
-            assert_eq!(TestClock { day, ..c }.weekday(ClockLocale::En), weekday);
+            assert_eq!(TestClock { day, ..c }.weekday(en()), weekday);
         }
         assert_ne!(
             TestClock {
@@ -221,7 +216,7 @@ mod tests {
                 day: 29,
                 ..c
             }
-            .weekday(ClockLocale::En),
+            .weekday(en()),
             "—"
         );
         assert_eq!(TestClock::next_tick_delay_ms(30, 500), 29_500);
@@ -237,7 +232,7 @@ mod tests {
                 minute: 0,
                 second: 0,
             },
-            ClockLocale::En,
+            en(),
             core(),
         );
         assert!(matches!(region.core.battery, ProviderState::Unavailable(_)));

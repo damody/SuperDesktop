@@ -10,9 +10,10 @@ use settings_store::{TaskbarAlignment, TaskbarSearchMode};
 use shell_provider_protocol::{
     IconData, IconKey, NotificationIcon, NotificationSnapshot, RegisteredIcon,
 };
+use explorer_i18n::{AppLocale, Catalog};
 use taskbar_ui::{
-    ClockLocale, CoreStatus, NotificationAreaModel, NotificationOverflowView, ProviderState,
-    StatusRegion, TaskbarCallbacks, TaskbarLayout, TaskbarView, TestClock,
+    CoreStatus, NotificationAreaModel, NotificationOverflowView, ProviderState, StatusRegion,
+    TaskbarCallbacks, TaskbarLayout, TaskbarView, TestClock,
 };
 
 fn options(width: f32, height: f32, left: f32, top: f32, focus: bool) -> WindowOptions {
@@ -43,7 +44,7 @@ fn status() -> StatusRegion {
             minute: 20,
             second: 30,
         },
-        ClockLocale::ZhTw,
+        Catalog::new(AppLocale::ZhTw),
         CoreStatus {
             network: ProviderState::Available("online".into()),
             volume: ProviderState::Available(40),

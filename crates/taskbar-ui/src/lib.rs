@@ -53,8 +53,7 @@ pub use start::{
     StartSource, StartView,
 };
 pub use status::{
-    ClockLocale, CoreStatus, ProviderState, StatusRegion, SystemFlyoutKind, SystemStatusAction,
-    TestClock,
+    CoreStatus, ProviderState, StatusRegion, SystemFlyoutKind, SystemStatusAction, TestClock,
 };
 pub use surface::{
     AppBarEffect, AppBarMode, AppBarRegistry, MonitorBar, MonitorGeometry, SurfaceChange,

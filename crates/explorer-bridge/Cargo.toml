@@ -9,5 +9,6 @@ license.workspace = true
 workspace = true
 
 [dependencies]
+explorer-i18n.workspace = true
 platform-win = { path = "../platform-win" }
 shell-core = { path = "../shell-core" }

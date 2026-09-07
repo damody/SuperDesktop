@@ -1464,7 +1464,7 @@ mod tests {
     };
     use explorer_i18n::{AppLocale, Catalog};
     use crate::{
-        ClockLocale, CoreStatus, ProviderState, StatusRegion, SystemFlyoutKind, TestClock,
+        CoreStatus, ProviderState, StatusRegion, SystemFlyoutKind, TestClock,
     };
     use shell_provider_protocol::IconData;
 
@@ -1568,7 +1568,7 @@ mod tests {
                 minute: 30,
                 second: 23,
             },
-            ClockLocale::ZhTw,
+            Catalog::new(AppLocale::ZhTw),
             CoreStatus {
                 network: ProviderState::Unavailable("fixture"),
                 volume: ProviderState::Unavailable("fixture"),

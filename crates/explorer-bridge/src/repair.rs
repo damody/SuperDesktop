@@ -1,12 +1,9 @@
 use std::path::Path;
 
+use explorer_i18n::Catalog;
+
 use crate::{AdmissionTerminal, resolver::redact};
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum Locale {
-    ZhTw,
-    En,
-}
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum RepairAction {
     Retry,
@@ -15,87 +12,55 @@ pub enum RepairAction {
 }
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct RepairModel {
-    pub title: &'static str,
-    pub message: &'static str,
+    pub title: String,
+    pub message: String,
     pub actions: Vec<RepairAction>,
     pub accessible_role: &'static str,
     pub fallback_to_windows_explorer: bool,
 }
 
-pub fn repair_model(terminal: AdmissionTerminal, locale: Locale) -> Option<RepairModel> {
+pub fn repair_model(terminal: AdmissionTerminal, catalog: Catalog) -> Option<RepairModel> {
     if terminal == AdmissionTerminal::Launched {
         return None;
     }
-    let (title, message, actions) = match (locale, terminal) {
-        (Locale::ZhTw, AdmissionTerminal::ValidationFailed) => (
-            "無法找到 SuperExplorer",
-            "請在設定中選擇有效的 SuperExplorer 執行檔。",
+    let (title_key, message_key, actions) = match terminal {
+        AdmissionTerminal::ValidationFailed => (
+            "desktop-repair-unavailable-title",
+            "desktop-repair-unavailable-message",
             vec![
                 RepairAction::OpenSettings,
                 RepairAction::Retry,
                 RepairAction::Dismiss,
             ],
         ),
-        (Locale::En, AdmissionTerminal::ValidationFailed) => (
-            "SuperExplorer unavailable",
-            "Choose a valid SuperExplorer executable in Settings.",
-            vec![
-                RepairAction::OpenSettings,
-                RepairAction::Retry,
-                RepairAction::Dismiss,
-            ],
-        ),
-        (Locale::ZhTw, AdmissionTerminal::SpawnFailed) => (
-            "無法啟動 SuperExplorer",
-            "啟動失敗；請重試或檢查設定。",
+        AdmissionTerminal::SpawnFailed => (
+            "desktop-repair-spawn-title",
+            "desktop-repair-spawn-message",
             vec![
                 RepairAction::Retry,
                 RepairAction::OpenSettings,
                 RepairAction::Dismiss,
             ],
         ),
-        (Locale::En, AdmissionTerminal::SpawnFailed) => (
-            "Could not start SuperExplorer",
-            "Launch failed; retry or review Settings.",
-            vec![
-                RepairAction::Retry,
-                RepairAction::OpenSettings,
-                RepairAction::Dismiss,
-            ],
-        ),
-        (Locale::ZhTw, AdmissionTerminal::Cancelled) => (
-            "已取消",
-            "SuperExplorer 啟動已取消。",
+        AdmissionTerminal::Cancelled => (
+            "desktop-repair-cancelled-title",
+            "desktop-repair-cancelled-message",
             vec![RepairAction::Retry, RepairAction::Dismiss],
         ),
-        (Locale::En, AdmissionTerminal::Cancelled) => (
-            "Cancelled",
-            "SuperExplorer launch was cancelled.",
-            vec![RepairAction::Retry, RepairAction::Dismiss],
-        ),
-        (Locale::ZhTw, AdmissionTerminal::TimedOut) => (
-            "啟動逾時",
-            "SuperExplorer 未在五秒內回應。",
+        AdmissionTerminal::TimedOut => (
+            "desktop-repair-timeout-title",
+            "desktop-repair-timeout-message",
             vec![
                 RepairAction::Retry,
                 RepairAction::OpenSettings,
                 RepairAction::Dismiss,
             ],
         ),
-        (Locale::En, AdmissionTerminal::TimedOut) => (
-            "Launch timed out",
-            "SuperExplorer did not respond within five seconds.",
-            vec![
-                RepairAction::Retry,
-                RepairAction::OpenSettings,
-                RepairAction::Dismiss,
-            ],
-        ),
-        (_, AdmissionTerminal::Launched) => unreachable!(),
+        AdmissionTerminal::Launched => unreachable!(),
     };
     Some(RepairModel {
-        title,
-        message,
+        title: catalog.t(title_key),
+        message: catalog.t(message_key),
         actions,
         accessible_role: "alert",
         fallback_to_windows_explorer: false,
@@ -118,7 +83,17 @@ pub fn redacted_diagnostic(path: &Path, environment_keys: &[&str]) -> String {
 
 #[cfg(test)]
 mod tests {
+    use explorer_i18n::{AppLocale, Catalog};
+
     use super::*;
+
+    fn strip_isolates(value: &str) -> String {
+        value
+            .chars()
+            .filter(|ch| !matches!(*ch, '\u{2066}' | '\u{2067}' | '\u{2068}' | '\u{2069}'))
+            .collect()
+    }
+
     #[test]
     fn every_failure_has_localized_keyboard_repair_without_explorer_fallback() {
         for terminal in [
@@ -127,13 +102,27 @@ mod tests {
             AdmissionTerminal::Cancelled,
             AdmissionTerminal::TimedOut,
         ] {
-            for locale in [Locale::ZhTw, Locale::En] {
-                let model = repair_model(terminal, locale).unwrap();
+            for locale in AppLocale::ALL {
+                let model = repair_model(terminal, Catalog::new(locale)).unwrap();
                 assert_eq!(model.accessible_role, "alert");
                 assert!(!model.actions.is_empty());
-                assert!(!model.fallback_to_windows_explorer)
+                assert!(!model.fallback_to_windows_explorer);
+                assert_ne!(model.title, "");
+                assert_ne!(model.message, "");
             }
         }
+        let zh = repair_model(
+            AdmissionTerminal::ValidationFailed,
+            Catalog::new(AppLocale::ZhTw),
+        )
+        .unwrap();
+        assert_eq!(strip_isolates(&zh.title), "無法找到 SuperExplorer");
+        let ja = repair_model(
+            AdmissionTerminal::TimedOut,
+            Catalog::new(AppLocale::Ja),
+        )
+        .unwrap();
+        assert_eq!(strip_isolates(&ja.title), "起動がタイムアウトしました");
     }
     #[test]
     fn diagnostics_redact_profile_path_and_environment_value() {

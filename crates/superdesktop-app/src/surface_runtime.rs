@@ -50,8 +50,8 @@ use shell_provider_protocol::{
 };
 use explorer_i18n::Catalog;
 use taskbar_ui::{
-    AccessibleTask, AltTabView, AutoHideEffect, AutoHideInput, AutoHideState, ClockLocale,
-    CoreStatus, FlyoutAction, HOVER_PREVIEW_CLOSE_GRACE_MS, HOVER_PREVIEW_DELAY_MS,
+    AccessibleTask, AltTabView, AutoHideEffect, AutoHideInput, AutoHideState, CoreStatus,
+    FlyoutAction, HOVER_PREVIEW_CLOSE_GRACE_MS, HOVER_PREVIEW_DELAY_MS,
     HoverPreviewController, JumpListModel, JumpListView, NotificationAreaModel,
     NotificationCenterAction, NotificationOverflowView, PreviewCard, ProgressState, ProviderState,
     ShowDesktopObservation, ShowDesktopPlan, ShowDesktopSession, ShowDesktopTarget, StartActions,
@@ -61,7 +61,7 @@ use taskbar_ui::{
     SystemStatusAction, TaskAction, TaskFlyoutView, TaskViewEffect, TaskViewModel, TaskViewSurface,
     TaskbarCallbacks, TaskbarContextCommand, TaskbarContextView, TaskbarLayout, TaskbarSettingId,
     TaskbarSettingsEffect, TaskbarSettingsView, TaskbarView, TestClock, WindowsGuiMetrics,
-    auto_hide_endpoints, reduce_auto_hide, resolve_desktop_locale,
+    auto_hide_endpoints, live_desktop_catalog, reduce_auto_hide, resolve_desktop_locale,
 };
 
 use crate::{
@@ -1215,30 +1215,31 @@ fn activate_start_command(command: &CommandDescriptor) {
 }
 
 fn local_context_menu(stable_id: &str) -> Option<MenuModel> {
-    let command = |id: &str, label: &str, risk| CommandDescriptor {
+    let catalog = live_desktop_catalog();
+    let command = |id: &str, key: &str, risk| CommandDescriptor {
         id: CommandId(format!("local:{id}")),
-        label: label.into(),
+        label: catalog.t(key),
         enabled: true,
         risk,
         children: Vec::new(),
     };
     let commands = if stable_id == "desktop-background" {
         vec![
-            command("refresh", "Refresh", CommandRisk::Normal),
-            command("sort-name", "Sort by name", CommandRisk::Normal),
-            command("sort-kind", "Sort by kind", CommandRisk::Normal),
-            command("sort-size", "Sort by size", CommandRisk::Normal),
-            command("sort-modified", "Sort by modified", CommandRisk::Normal),
-            command("sort-ascending", "Ascending", CommandRisk::Normal),
-            command("sort-descending", "Descending", CommandRisk::Normal),
-            command("new", "New folder", CommandRisk::Normal),
+            command("refresh", "desktop-menu-refresh", CommandRisk::Normal),
+            command("sort-name", "desktop-menu-sort-name", CommandRisk::Normal),
+            command("sort-kind", "desktop-menu-sort-kind", CommandRisk::Normal),
+            command("sort-size", "desktop-menu-sort-size", CommandRisk::Normal),
+            command("sort-modified", "desktop-menu-sort-modified", CommandRisk::Normal),
+            command("sort-ascending", "desktop-menu-sort-ascending", CommandRisk::Normal),
+            command("sort-descending", "desktop-menu-sort-descending", CommandRisk::Normal),
+            command("new", "desktop-menu-new-folder", CommandRisk::Normal),
         ]
     } else {
         vec![
-            command("open", "Open", CommandRisk::Normal),
-            command("rename", "Rename", CommandRisk::Normal),
-            command("recycle", "Delete", CommandRisk::Destructive),
-            command("properties", "Properties", CommandRisk::Normal),
+            command("open", "desktop-menu-open", CommandRisk::Normal),
+            command("rename", "desktop-menu-rename", CommandRisk::Normal),
+            command("recycle", "desktop-menu-delete", CommandRisk::Destructive),
+            command("properties", "desktop-menu-properties", CommandRisk::Normal),
         ]
     };
     MenuModel::new(MenuEnumeration {
@@ -1345,7 +1346,7 @@ fn create_desktop_folder(runtime: &Rc<RefCell<DesktopNamespaceRuntime>>) -> bool
     };
     let created = platform_win::common::desktop_operations::create_directory(
         &user_root,
-        "New folder",
+        &live_desktop_catalog().t("desktop-new-folder-name"),
         &allowed_roots,
     )
     .is_ok();
@@ -3279,7 +3280,7 @@ fn status(snapshot: Option<&SystemStatusSnapshot>) -> StatusRegion {
             minute: local.minute,
             second: local.second,
         },
-        taskbar_clock_locale(),
+        live_desktop_catalog(),
         CoreStatus {
             network,
             volume,
@@ -3289,21 +3290,6 @@ fn status(snapshot: Option<&SystemStatusSnapshot>) -> StatusRegion {
             notifications: ProviderState::Unavailable("notification-provider-not-ready"),
         },
     )
-}
-
-fn taskbar_clock_locale() -> ClockLocale {
-    let locale = std::env::var("SUPERDESKTOP_LOCALE")
-        .ok()
-        .or_else(platform_win::common::taskbar_status::user_locale_name);
-    clock_locale_from_tag(locale.as_deref())
-}
-
-fn clock_locale_from_tag(locale: Option<&str>) -> ClockLocale {
-    if locale.is_some_and(|locale| locale.to_ascii_lowercase().starts_with("zh")) {
-        ClockLocale::ZhTw
-    } else {
-        ClockLocale::En
-    }
 }
 
 fn system_status_command(action: SystemStatusAction) -> SystemStatusCommand {
@@ -3570,12 +3556,8 @@ fn apply_system_status_action_or_queue_volume(
     }
 }
 
-fn fixed_label() -> &'static str {
-    match std::env::var("SUPERDESKTOP_LOCALE").as_deref() {
-        Ok("zh-CN") => "超级资源管理器",
-        Ok("zh-TW") => "超級檔案總管",
-        _ => "SuperExplorer",
-    }
+fn fixed_label() -> String {
+    live_desktop_catalog().t("desktop-superexplorer")
 }
 
 fn system_flyout_presentation(catalog: Catalog) -> SystemFlyoutPresentation {
@@ -3590,7 +3572,7 @@ fn system_flyout_presentation(catalog: Catalog) -> SystemFlyoutPresentation {
 fn fixed_node(monitor: &str, icon: Option<IconData>) -> AccessibleNode {
     let selected = std::env::var_os("SUPERDESKTOP_VERIFICATION_DESKTOP_SELECTED").is_some();
     let mut node = AccessibleNode::fixed_superexplorer(monitor, selected, selected);
-    node.name = fixed_label().into();
+    node.name = fixed_label();
     node.icon = icon;
     node
 }
@@ -8317,23 +8299,12 @@ mod live_parity_tests {
     }
 
     #[test]
-    fn taskbar_clock_locale_follows_configured_or_user_language_tag() {
-        assert_eq!(
-            super::clock_locale_from_tag(Some("zh-TW")),
-            taskbar_ui::ClockLocale::ZhTw
-        );
-        assert_eq!(
-            super::clock_locale_from_tag(Some("zh-Hant-TW")),
-            taskbar_ui::ClockLocale::ZhTw
-        );
-        assert_eq!(
-            super::clock_locale_from_tag(Some("en-US")),
-            taskbar_ui::ClockLocale::En
-        );
-        assert_eq!(
-            super::clock_locale_from_tag(None),
-            taskbar_ui::ClockLocale::En
-        );
+    fn taskbar_clock_uses_live_catalog_not_zh_en_helper() {
+        let source = include_str!("surface_runtime.rs");
+        let production = source.split("#[cfg(test)]").next().unwrap_or(source);
+        assert!(production.contains("live_desktop_catalog()"));
+        assert!(!production.contains("ClockLocale"));
+        assert!(!production.contains("clock_locale_from_tag"));
     }
 
     #[test]
